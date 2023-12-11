@@ -1,0 +1,27 @@
+[package]
+name = "actors"
+version = "0.0.1"
+authors = ["Querent AI LLC <contact@querent.xyz>"]
+edition = "2021"
+license = "MIT"
+description = "The Asynchronous Data Dynamo and Graph Neural Network Catalyst"
+repository = "https://github.com/querent-ai/querent"
+homepage = "https://querent.xyz/"
+documentation = "https:/querent.xyz/docs/"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+flume = { workspace = true }
+futures = { workspace = true }
+once_cell = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sync_wrapper = { workspace = true }
+
+[dev-dependencies]
+rand = { workspace = true }
+criterion = { workspace = true }
