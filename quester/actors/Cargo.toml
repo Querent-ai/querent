@@ -3,7 +3,7 @@ name = "actors"
 version = "0.0.1"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
-license = "MIT"
+license = "BSL-1.0"
 description = "The Asynchronous Data Dynamo and Graph Neural Network Catalyst"
 repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
@@ -21,6 +21,8 @@ tracing = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sync_wrapper = { workspace = true }
+
+common = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }

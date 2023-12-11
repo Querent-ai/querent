@@ -1,0 +1,47 @@
+[package]
+name = "common"
+version = "0.0.1"
+authors = ["Querent AI LLC <contact@querent.xyz>"]
+edition = "2021"
+license = "BSL-1.0"
+description = "Util crate of quester"
+repository = "https://github.com/querent-ai/quester"
+homepage = "https://querent.xyz/"
+documentation = "https://querent.xyz/docs/"
+
+[dependencies]
+anyhow = { workspace = true }
+async-speed-limit = { workspace = true }
+async-trait = { workspace = true }
+bytesize = { workspace = true }
+dyn-clone = { workspace = true }
+env_logger = { workspace = true }
+fnv = { workspace = true }
+futures = { workspace = true }
+home = { workspace = true }
+hostname = { workspace = true }
+http = { workspace = true }
+hyper = { workspace = true }
+itertools = { workspace = true }
+num_cpus = { workspace = true }
+once_cell = { workspace = true }
+pin-project = { workspace = true }
+pnet = { workspace = true }
+prometheus = { workspace = true }
+rand = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+tonic = { workspace = true }
+tower = { workspace = true }
+tracing = { workspace = true }
+
+[features]
+testsuite = []
+
+[dev-dependencies]
+serde_json = { workspace = true }
+tempfile = { workspace = true }
