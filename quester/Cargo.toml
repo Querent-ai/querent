@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "actors",
   "common",
+  "querent"
 ]
 
 [profile.dev]
@@ -186,6 +187,8 @@ zstd = "0.13.0"
 querent-rs = {version = "1.0.0"}
 actors = { version = "0.0.1", path = "./actors" }
 common = { version = "0.0.1", path = "./common" }
+querent = { version = "0.0.1", path = "./querent" }
+
 [profile.release]
 panic = "unwind"
 lto = true
