@@ -46,7 +46,7 @@ pub struct Qflow {
     pub publish_lock: EventLock,
     pub counters: Arc<EventsCounter>,
     event_receiver: mpsc::Receiver<(EventType, EventState)>,
-    pub workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
+    workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 }
 
 impl Qflow {
@@ -128,7 +128,7 @@ impl Source for Qflow {
         Ok(())
     }
 
-    async fn emit_batches(&mut self, _ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
+    async fn emit_events(&mut self, _ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
         loop {
             tokio::select! {
                 event_opt = self.event_receiver.recv() => {
