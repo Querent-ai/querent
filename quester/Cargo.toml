@@ -184,7 +184,7 @@ warp = "0.3"
 wiremock = "0.5"
 zstd = "0.13.0"
 
-querent-rs = {version = "1.0.0"}
+querent-rs = {version = "1.0.7"}
 actors = { version = "0.0.1", path = "./actors" }
 common = { version = "0.0.1", path = "./common" }
 querent = { version = "0.0.1", path = "./querent" }

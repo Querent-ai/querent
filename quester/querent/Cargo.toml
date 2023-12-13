@@ -11,6 +11,10 @@ documentation = "https://querent.xyz/docs/"
 
 [dependencies]
 querent-rs = { workspace = true }
+actors = { workspace = true }
+common = { workspace = true }
+async-trait = { workspace = true }
 tokio = { workspace =true }
+anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
