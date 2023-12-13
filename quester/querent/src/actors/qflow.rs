@@ -4,12 +4,13 @@ use querent_rs::callbacks::interface::EventHandler;
 use querent_rs::callbacks::{EventState, EventType};
 use querent_rs::config::config::WorkflowConfig;
 use querent_rs::config::Config;
-use querent_rs::querent::{Querent, Workflow, WorkflowBuilder};
+use querent_rs::querent::{Querent, QuerentError, Workflow, WorkflowBuilder};
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use tokio::time::sleep;
 
 use crate::{EventLock, Source, SourceContext};
@@ -44,8 +45,8 @@ pub struct Qflow {
     pub workflow: Workflow,
     pub publish_lock: EventLock,
     pub counters: Arc<EventsCounter>,
-    pub event_receiver: mpsc::Receiver<(EventType, EventState)>,
-    pub event_sender: mpsc::Sender<(EventType, EventState)>,
+    event_receiver: mpsc::Receiver<(EventType, EventState)>,
+    pub workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 }
 
 impl Qflow {
@@ -77,16 +78,8 @@ impl Qflow {
             publish_lock: EventLock::default(),
             counters: Arc::new(EventsCounter::new(id.clone())),
             event_receiver,
-            event_sender,
+            workflow_handle: None,
         }
-    }
-
-    pub async fn start_workflow(&self) -> Result<(), String> {
-        let querent = Querent::new().map_err(|e| e.to_string())?;
-        querent
-            .add_workflow(self.workflow.clone())
-            .map_err(|e| e.to_string())?;
-        querent.start_workflows().await.map_err(|e| e.to_string())
     }
 
     fn process_event(&self, event_type: EventType, event_data: EventState) {
@@ -106,10 +99,32 @@ impl Qflow {
 #[async_trait]
 impl Source for Qflow {
     async fn initialize(&mut self, _ctx: &SourceContext) -> Result<(), ActorExitStatus> {
-        self.start_workflow().await.map_err(|e| {
-            eprintln!("{}: Error starting workflow - {}", self.id, e);
-            ActorExitStatus::Failure(anyhow::anyhow!(e).into())
+        let querent = Querent::new().map_err(|e| {
+            ActorExitStatus::Failure(
+                anyhow::anyhow!("Failed to initialize querent: {:?}", e).into(),
+            )
         })?;
+        querent.add_workflow(self.workflow.clone()).map_err(|e| {
+            ActorExitStatus::Failure(anyhow::anyhow!("Failed to add workflow: {:?}", e).into())
+        })?;
+
+        // Store the JoinHandle with the result in the Qflow struct
+        self.workflow_handle = Some(tokio::spawn(async move {
+            let result = querent.start_workflows().await;
+            match result {
+                Ok(()) => {
+                    // Handle the success
+                    eprintln!("Successfully started workflows");
+                    Ok(())
+                }
+                Err(err) => {
+                    // Handle the error, e.g., log it
+                    eprintln!("Error starting workflows: {:?}", err);
+                    Err(err)
+                }
+            }
+        }));
+
         Ok(())
     }
 
