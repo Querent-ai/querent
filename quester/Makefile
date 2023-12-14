@@ -20,7 +20,7 @@ check:
 .PHONY: test
 test:
 	@echo "Running Cargo test..."
-	@cargo test --no-default-features
+	@cargo test
 
 .PHONY: clippy
 clippy:

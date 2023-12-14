@@ -6,6 +6,9 @@ use common::RuntimeType;
 use serde_json::Value as JsonValue;
 use tokio::runtime::Handle;
 
+// custom sources
+pub mod file_source;
+
 pub type SourceContext = ActorContext<SourceActor>;
 
 #[async_trait]

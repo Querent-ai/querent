@@ -151,3 +151,77 @@ impl Source for Qflow {
         serde_json::to_value(&self.counters).unwrap()
     }
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use std::collections::HashMap;
+
+//     use crate::SourceActor;
+
+//     use super::*;
+//     use actors::Universe;
+//     use querent_rs::config::config::WorkflowConfig;
+//     use querent_rs::config::Config;
+//     use querent_rs::cross::{CLRepr, StringType};
+
+//     const CODE_CONFIG_EVENT_HANDLER: &str = r#"
+//     import asyncio
+
+//     async def print_querent(config, text: str):
+//         """Prints the provided text and sends supported event_type and event_data"""
+//         print(text)
+//         if config['workflow'] is not None:
+//             event_type = "chat_completed"  # Replace with the desired event type
+//             event_data = {
+//                 "event_type": event_type,
+//                 "timestamp": 123.45,  # Replace with the actual timestamp
+//                 "payload": "🚀"  # Replace with the actual payload data
+//             }
+//             config['workflow']['event_handler'].handle_event(event_type, event_data)
+//     "#;
+
+//     #[tokio::test]
+//     async fn test_qflow() {
+//         let universe = Universe::with_accelerated_time();
+//         let config = Config {
+//             version: 1.0,
+//             querent_id: "event_handler".to_string(),
+//             querent_name: "Test Querent event_handler".to_string(),
+//             workflow: WorkflowConfig {
+//                 name: "test_workflow".to_string(),
+//                 id: "workflow_id".to_string(),
+//                 config: HashMap::new(),
+//                 channel: None,
+//                 inner_channel: None,
+//                 inner_event_handler: None,
+//                 event_handler: None,
+//             },
+//             collectors: vec![],
+//             engines: vec![],
+//             resource: None,
+//         };
+
+//         // Create a sample Workflow
+//         let workflow = Workflow {
+//             name: "test_workflow".to_string(),
+//             id: "workflow_id".to_string(),
+//             import: "".to_string(),
+//             attr: "print_querent".to_string(),
+//             code: Some(CODE_CONFIG_EVENT_HANDLER.to_string()),
+//             arguments: vec![CLRepr::String("Querent".to_string(), StringType::Normal)],
+//             config: Some(config),
+//         };
+
+//         // Create a sample Qflow
+//         let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+
+//         // Initialize the Qflow
+//         let qflow_source_actor = SourceActor {
+//             source: Box::new(qflow_actor),
+//         };
+
+//         let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);
+//         let (actor_termination, _) = qflow_source_handle.join().await;
+//         assert!(actor_termination.is_success());
+//     }
+// }

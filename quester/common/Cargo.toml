@@ -38,6 +38,7 @@ tokio-stream = { workspace = true }
 tonic = { workspace = true }
 tower = { workspace = true }
 tracing = { workspace = true }
+pyo3 = { workspace = true }
 
 [features]
 testsuite = []

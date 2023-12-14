@@ -9,6 +9,7 @@ repository = "https://github.com/querent-ai/quester"
 homepage = "https://querent.xyz/"
 documentation = "https://querent.xyz/docs/"
 
+
 [dependencies]
 querent-rs = { workspace = true }
 actors = { workspace = true }
@@ -18,3 +19,13 @@ tokio = { workspace =true }
 anyhow = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+pyo3-asyncio = { workspace = true }
+pyo3 = { workspace = true }
+
+[dev-dependencies]
+actors = { workspace = true, features = ["testsuite"] }
+common = { workspace = true, features = ["testsuite"] }
+
+[features]
+testsuite = []
+
