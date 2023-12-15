@@ -183,6 +183,7 @@ vrl = { version = "0.8.1", default-features = false, features = [
 warp = "0.3"
 wiremock = "0.5"
 zstd = "0.13.0"
+log = { version = "^0.4.17", features = ["std", "max_level_debug", "release_max_level_debug"] }
 
 querent-rs = {version = "1.0.7"}
 actors = { version = "0.0.1", path = "./actors" }
@@ -190,6 +191,7 @@ common = { version = "0.0.1", path = "./common" }
 querent = { version = "0.0.1", path = "./querent" }
 pyo3-asyncio = { version = "0.20.0", features = ["attributes", "tokio-runtime", "testing"] }
 pyo3 = { version = "0.20.0", features = ["auto-initialize"] }
+
 [profile.release]
 panic = "unwind"
 lto = true

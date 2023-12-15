@@ -21,6 +21,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 pyo3-asyncio = { workspace = true }
 pyo3 = { workspace = true }
+log = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }
@@ -28,4 +29,14 @@ common = { workspace = true, features = ["testsuite"] }
 
 [features]
 testsuite = []
+
+[[test]]
+name = "test_basic"
+path = "pytests/test_basic.rs"
+harness = false
+
+[[test]]
+name = "test_workflow_manager"
+path = "pytests/test_workflow_manager.rs"
+harness = false
 
