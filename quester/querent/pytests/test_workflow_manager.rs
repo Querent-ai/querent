@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
+use actors::Universe;
 use pyo3::exceptions::PyTypeError;
+use querent::{Qflow, SourceActor};
 use querent_rs::{
     callbacks::{interface::EventHandler, EventType},
     comm::ChannelHandler,
@@ -511,6 +513,53 @@ async fn workflow_manager_python_tests_with_config_events_mpsc_separate_receiver
         log::error!("Error joining tasks: {}", e);
         PyTypeError::new_err("error message")
     })?;
+
+    Ok(())
+}
+
+#[pyo3_asyncio::tokio::test]
+async fn workflow_manager_python_tests_with_config_events_qflow() -> pyo3::PyResult<()> {
+    let universe = Universe::with_accelerated_time();
+    let config = Config {
+        version: 1.0,
+        querent_id: "event_handler".to_string(),
+        querent_name: "Test Querent event_handler".to_string(),
+        workflow: WorkflowConfig {
+            name: "test_workflow".to_string(),
+            id: "workflow_id".to_string(),
+            config: HashMap::new(),
+            channel: None,
+            inner_channel: None,
+            inner_event_handler: None,
+            event_handler: None,
+        },
+        collectors: vec![],
+        engines: vec![],
+        resource: None,
+    };
+
+    // Create a sample Workflow
+    let workflow = Workflow {
+        name: "test_workflow".to_string(),
+        id: "workflow_id".to_string(),
+        import: "".to_string(),
+        attr: "print_querent".to_string(),
+        code: Some(CODE_CONFIG_EVENT_HANDLER.to_string()),
+        arguments: vec![CLRepr::String("Querent".to_string(), StringType::Normal)],
+        config: Some(config),
+    };
+
+    // Create a sample Qflow
+    let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+
+    // Initialize the Qflow
+    let qflow_source_actor = SourceActor {
+        source: Box::new(qflow_actor),
+    };
+
+    let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);
+    let (actor_termination, _) = qflow_source_handle.join().await;
+    assert!(actor_termination.is_success());
 
     Ok(())
 }

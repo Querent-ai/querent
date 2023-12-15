@@ -71,6 +71,7 @@ impl Qflow {
             .attr(Some(workflow.attr))
             .code(workflow.code)
             .config(config_copy)
+            .arguments(workflow.arguments)
             .build();
         Self {
             id: id.clone(),
@@ -119,7 +120,7 @@ impl Source for Qflow {
                 }
                 Err(err) => {
                     // Handle the error, e.g., log it
-                    eprintln!("Error starting workflows: {:?}", err);
+                    eprintln!("Error starting workflows from qflow: {:?}", err);
                     Err(err)
                 }
             }
