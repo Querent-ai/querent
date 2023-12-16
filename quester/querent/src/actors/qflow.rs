@@ -1,5 +1,6 @@
 use actors::ActorExitStatus;
 use async_trait::async_trait;
+use log;
 use querent_rs::callbacks::interface::EventHandler;
 use querent_rs::callbacks::{EventState, EventType};
 use querent_rs::config::config::WorkflowConfig;
@@ -109,18 +110,19 @@ impl Source for Qflow {
             ActorExitStatus::Failure(anyhow::anyhow!("Failed to add workflow: {:?}", e).into())
         })?;
 
+        let workflow_id = self.workflow.id.clone();
         // Store the JoinHandle with the result in the Qflow struct
         self.workflow_handle = Some(tokio::spawn(async move {
             let result = querent.start_workflows().await;
             match result {
                 Ok(()) => {
                     // Handle the success
-                    eprintln!("Successfully started workflows");
+                    log::info!("Successfully the workflow with id: {}", workflow_id);
                     Ok(())
                 }
                 Err(err) => {
                     // Handle the error, e.g., log it
-                    eprintln!("Error starting workflows from qflow: {:?}", err);
+                    log::error!("Failed to start the workflow with id: {}", workflow_id);
                     Err(err)
                 }
             }
@@ -138,7 +140,7 @@ impl Source for Qflow {
                     }
                 }
                 _ = sleep(Duration::from_secs(1)) => {
-                    // Placeholder for additional logic in the loop
+                    return Ok(Duration::from_secs(1));
                 }
             }
         }
