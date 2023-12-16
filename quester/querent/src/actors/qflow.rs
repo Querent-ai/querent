@@ -7,14 +7,15 @@ use querent_rs::config::config::WorkflowConfig;
 use querent_rs::config::Config;
 use querent_rs::querent::{Querent, QuerentError, Workflow, WorkflowBuilder};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
-use tokio::time::sleep;
+use tokio::time::{self};
 
-use crate::{EventLock, Source, SourceContext};
+use crate::{EventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT};
 
 #[derive(Debug, Serialize)]
 pub struct EventsCounter {
@@ -36,8 +37,8 @@ impl EventsCounter {
         self.total.fetch_add(1, Ordering::SeqCst);
     }
 
-    pub fn increment_processed(&self) {
-        self.processed.fetch_add(1, Ordering::SeqCst);
+    pub fn increment_processed(&self, count: u64) {
+        self.processed.fetch_add(count, Ordering::SeqCst);
     }
 }
 
@@ -46,6 +47,7 @@ pub struct Qflow {
     pub workflow: Workflow,
     pub publish_lock: EventLock,
     pub counters: Arc<EventsCounter>,
+    event_sender: mpsc::Sender<(EventType, EventState)>,
     event_receiver: mpsc::Receiver<(EventType, EventState)>,
     workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 }
@@ -79,18 +81,10 @@ impl Qflow {
             workflow,
             publish_lock: EventLock::default(),
             counters: Arc::new(EventsCounter::new(id.clone())),
+            event_sender,
             event_receiver,
             workflow_handle: None,
         }
-    }
-
-    fn process_event(&self, event_type: EventType, event_data: EventState) {
-        // Increment the total events counter
-        self.counters.increment_total();
-        eprintln!("{}: Processing event - {:?}", self.id, event_type);
-        eprintln!("{}: Processing event - {:?}", self.id, event_data);
-        // Increment the processed events counter
-        self.counters.increment_processed();
     }
 
     pub fn get_config(&self) -> Option<Config> {
@@ -111,6 +105,7 @@ impl Source for Qflow {
         })?;
 
         let workflow_id = self.workflow.id.clone();
+        let event_sender = self.event_sender.clone();
         // Store the JoinHandle with the result in the Qflow struct
         self.workflow_handle = Some(tokio::spawn(async move {
             let result = querent.start_workflows().await;
@@ -118,11 +113,37 @@ impl Source for Qflow {
                 Ok(()) => {
                     // Handle the success
                     log::info!("Successfully the workflow with id: {}", workflow_id);
+                    // send yourself a success message to stop
+                    event_sender
+                        .send((
+                            EventType::Success,
+                            EventState {
+                                event_type: EventType::Success,
+                                timestamp: chrono::Utc::now().timestamp_millis() as f64,
+                                payload: "".to_string(),
+                            },
+                        ))
+                        .await
+                        .unwrap();
                     Ok(())
                 }
                 Err(err) => {
                     // Handle the error, e.g., log it
                     log::error!("Failed to start the workflow with id: {}", workflow_id);
+                    event_sender
+                        .send((
+                            EventType::Failure,
+                            EventState {
+                                event_type: EventType::Failure,
+                                timestamp: chrono::Utc::now().timestamp_millis() as f64,
+                                payload: format!(
+                                    "workflow with id: {:?} failed with error: {:?}",
+                                    workflow_id, err
+                                ),
+                            },
+                        ))
+                        .await
+                        .unwrap();
                     Err(err)
                 }
             }
@@ -132,18 +153,33 @@ impl Source for Qflow {
     }
 
     async fn emit_events(&mut self, _ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
+        let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
+        tokio::pin!(deadline);
+        let mut events_collected = HashMap::new();
         loop {
             tokio::select! {
                 event_opt = self.event_receiver.recv() => {
                     if let Some((event_type, event_data)) = event_opt {
-                        self.process_event(event_type, event_data);
+                        if event_type == EventType::Success {
+                            return Err(ActorExitStatus::Success)
+                        }
+                        if event_type == EventType::Failure {
+                            return Err(ActorExitStatus::Failure(anyhow::anyhow!(event_data.payload).into()))
+                        }
+                        self.counters.increment_total();
+                        events_collected.insert(event_type, event_data);
+                    }
+                    if events_collected.len() >= BATCH_NUM_EVENTS_LIMIT {
+                        self.counters.increment_processed(events_collected.len() as u64);
+                        break;
                     }
                 }
-                _ = sleep(Duration::from_secs(1)) => {
-                    return Ok(Duration::from_secs(1));
+                _ = &mut deadline => {
+                    break;
                 }
             }
         }
+        Ok(Duration::default())
     }
 
     fn name(&self) -> String {
