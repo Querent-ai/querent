@@ -152,7 +152,7 @@ impl Source for Qflow {
         Ok(())
     }
 
-    async fn emit_events(&mut self, _ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
+    async fn emit_events(&mut self, ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
         let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
         tokio::pin!(deadline);
         let mut events_collected = HashMap::new();
@@ -173,6 +173,7 @@ impl Source for Qflow {
                         self.counters.increment_processed(events_collected.len() as u64);
                         break;
                     }
+                    ctx.record_progress();
                 }
                 _ = &mut deadline => {
                     break;
