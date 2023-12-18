@@ -20,7 +20,7 @@ async def print_querent(config, text: str):
     """Prints the provided text and sends supported event_type and event_data"""
     print(text)
     if config['workflow'] is not None:
-        event_type = "chat_completed"  # Replace with the desired event type
+        event_type = "ContextualTriples"  # Replace with the desired event type
         event_data = {
             "event_type": event_type,
             "timestamp": 123.45,  # Replace with the actual timestamp

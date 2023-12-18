@@ -185,7 +185,7 @@ wiremock = "0.5"
 zstd = "0.13.0"
 log = { version = "^0.4.17", features = ["std", "max_level_debug", "release_max_level_debug"] }
 
-querent-synapse = {version = "1.2.0"}
+querent-synapse = {version = "1.2.1"}
 actors = { version = "0.0.1", path = "./actors" }
 common = { version = "0.0.1", path = "./common" }
 querent = { version = "0.0.1", path = "./querent" }
