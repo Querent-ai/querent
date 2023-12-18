@@ -3,14 +3,14 @@ use std::collections::HashMap;
 use actors::Universe;
 use querent::{Qflow, SourceActor};
 use querent_synapse::{
-    config::{config::WorkflowConfig, Config},
-    cross::{CLRepr, StringType},
-    querent::workflow::Workflow,
+	config::{config::WorkflowConfig, Config},
+	cross::{CLRepr, StringType},
+	querent::workflow::Workflow,
 };
 
 #[pyo3_asyncio::tokio::main]
 async fn main() -> pyo3::PyResult<()> {
-    pyo3_asyncio::testing::main().await
+	pyo3_asyncio::testing::main().await
 }
 
 const CODE_CONFIG_EVENT_HANDLER: &str = r#"
@@ -31,54 +31,52 @@ async def print_querent(config, text: str):
 
 #[pyo3_asyncio::tokio::test]
 async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
-    let universe = Universe::with_accelerated_time();
-    let (event_streamer_messagebus, indexer_inbox) = universe.create_test_messagebus();
-    let config = Config {
-        version: 1.0,
-        querent_id: "event_handler".to_string(),
-        querent_name: "Test Querent event_handler".to_string(),
-        workflow: WorkflowConfig {
-            name: "test_workflow".to_string(),
-            id: "workflow_id".to_string(),
-            config: HashMap::new(),
-            channel: None,
-            inner_channel: None,
-            inner_event_handler: None,
-            event_handler: None,
-        },
-        collectors: vec![],
-        engines: vec![],
-        resource: None,
-    };
+	let universe = Universe::with_accelerated_time();
+	let (event_streamer_messagebus, indexer_inbox) = universe.create_test_messagebus();
+	let config = Config {
+		version: 1.0,
+		querent_id: "event_handler".to_string(),
+		querent_name: "Test Querent event_handler".to_string(),
+		workflow: WorkflowConfig {
+			name: "test_workflow".to_string(),
+			id: "workflow_id".to_string(),
+			config: HashMap::new(),
+			channel: None,
+			inner_channel: None,
+			inner_event_handler: None,
+			event_handler: None,
+		},
+		collectors: vec![],
+		engines: vec![],
+		resource: None,
+	};
 
-    // Create a sample Workflow
-    let workflow = Workflow {
-        name: "test_workflow".to_string(),
-        id: "workflow_id".to_string(),
-        import: "".to_string(),
-        attr: "print_querent".to_string(),
-        code: Some(CODE_CONFIG_EVENT_HANDLER.to_string()),
-        arguments: vec![CLRepr::String("Querent".to_string(), StringType::Normal)],
-        config: Some(config),
-    };
+	// Create a sample Workflow
+	let workflow = Workflow {
+		name: "test_workflow".to_string(),
+		id: "workflow_id".to_string(),
+		import: "".to_string(),
+		attr: "print_querent".to_string(),
+		code: Some(CODE_CONFIG_EVENT_HANDLER.to_string()),
+		arguments: vec![CLRepr::String("Querent".to_string(), StringType::Normal)],
+		config: Some(config),
+	};
 
-    // Create a sample Qflow
-    let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+	// Create a sample Qflow
+	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
 
-    // Initialize the Qflow
-    let qflow_source_actor = SourceActor {
-        source: Box::new(qflow_actor),
-        event_streamer_messagebus: event_streamer_messagebus,
-    };
+	// Initialize the Qflow
+	let qflow_source_actor =
+		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
 
-    let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);
-    let (actor_termination, _) = qflow_source_handle.join().await;
-    assert!(actor_termination.is_success());
+	let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);
+	let (actor_termination, _) = qflow_source_handle.join().await;
+	assert!(actor_termination.is_success());
 
-    let drained_messages = indexer_inbox.drain_for_test();
+	let drained_messages = indexer_inbox.drain_for_test();
 
-    // Verify that the event handler sent the expected event
-    assert_eq!(drained_messages.len(), 2);
+	// Verify that the event handler sent the expected event
+	assert_eq!(drained_messages.len(), 2);
 
-    Ok(())
+	Ok(())
 }

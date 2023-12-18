@@ -8,8 +8,7 @@
 //! - make these task modular and testable
 //! - detect when some task is stuck and does not progress anymore
 
-use std::fmt;
-use std::num::NonZeroU64;
+use std::{fmt, num::NonZeroU64};
 
 use once_cell::sync::Lazy;
 use tokio::time::Duration;
@@ -44,12 +43,14 @@ use thiserror::Error;
 use tracing::{info, warn};
 pub use universe::Universe;
 
-pub use self::actor_context::ActorContext;
-pub use self::actor_state::ActorState;
-pub use self::channel_with_priority::{QueueCapacity, RecvError, SendError, TrySendError};
-pub use self::messagebus::{Inbox, MessageBus, WeakMessagebus};
-pub use self::registry::ActorObservation;
-pub use self::supervisor::{Supervisor, SupervisorMetrics, SupervisorState};
+pub use self::{
+	actor_context::ActorContext,
+	actor_state::ActorState,
+	channel_with_priority::{QueueCapacity, RecvError, SendError, TrySendError},
+	messagebus::{Inbox, MessageBus, WeakMessagebus},
+	registry::ActorObservation,
+	supervisor::{Supervisor, SupervisorMetrics, SupervisorState},
+};
 
 /// Heartbeat used to verify that actors are progressing.
 ///
@@ -62,35 +63,35 @@ pub static HEARTBEAT: Lazy<Duration> = Lazy::new(heartbeat_from_env_or_default);
 /// - Derived from `QW_ACTOR_HEARTBEAT_SECS` if set and valid.
 /// - Defaults to 30 seconds or 500ms for tests.
 fn heartbeat_from_env_or_default() -> Duration {
-    if cfg!(any(test, feature = "testsuite")) {
-        // Right now some unit test end when we detect that a
-        // pipeline has terminated, which can require waiting
-        // for a heartbeat.
-        //
-        // We use a shorter heartbeat to reduce the time running unit tests.
-        return Duration::from_millis(500);
-    }
-    match std::env::var("QW_ACTOR_HEARTBEAT_SECS") {
-        Ok(actor_hearbeat_secs_str) => {
-            if let Ok(actor_hearbeat_secs) = actor_hearbeat_secs_str.parse::<NonZeroU64>() {
-                info!("set the actor heartbeat to {actor_hearbeat_secs} seconds");
-                return Duration::from_secs(actor_hearbeat_secs.get());
-            } else {
-                warn!(
-                    "failed to parse `QW_ACTOR_HEARTBEAT_SECS={actor_hearbeat_secs_str}` in \
+	if cfg!(any(test, feature = "testsuite")) {
+		// Right now some unit test end when we detect that a
+		// pipeline has terminated, which can require waiting
+		// for a heartbeat.
+		//
+		// We use a shorter heartbeat to reduce the time running unit tests.
+		return Duration::from_millis(500);
+	}
+	match std::env::var("QW_ACTOR_HEARTBEAT_SECS") {
+		Ok(actor_hearbeat_secs_str) => {
+			if let Ok(actor_hearbeat_secs) = actor_hearbeat_secs_str.parse::<NonZeroU64>() {
+				info!("set the actor heartbeat to {actor_hearbeat_secs} seconds");
+				return Duration::from_secs(actor_hearbeat_secs.get());
+			} else {
+				warn!(
+					"failed to parse `QW_ACTOR_HEARTBEAT_SECS={actor_hearbeat_secs_str}` in \
                      seconds > 0, using default heartbeat (30 seconds)"
-                );
-            };
-        }
-        Err(std::env::VarError::NotUnicode(os_str)) => {
-            warn!(
-                "failed to parse `QW_ACTOR_HEARTBEAT_SECS={os_str:?}` in a valid unicode string, \
+				);
+			};
+		},
+		Err(std::env::VarError::NotUnicode(os_str)) => {
+			warn!(
+				"failed to parse `QW_ACTOR_HEARTBEAT_SECS={os_str:?}` in a valid unicode string, \
                  using default heartbeat (30 seconds)"
-            );
-        }
-        Err(std::env::VarError::NotPresent) => {}
-    }
-    Duration::from_secs(30)
+			);
+		},
+		Err(std::env::VarError::NotPresent) => {},
+	}
+	Duration::from_secs(30)
 }
 
 /// Time we accept to wait for a new observation.
@@ -101,10 +102,10 @@ const OBSERVE_TIMEOUT: Duration = Duration::from_secs(3);
 /// Error that occurred while calling `ActorContext::ask(..)` or `Universe::ask`
 #[derive(Error, Debug)]
 pub enum AskError<E: fmt::Debug> {
-    #[error("message could not be delivered")]
-    MessageNotDelivered,
-    #[error("error while the message was being processed")]
-    ProcessMessageError,
-    #[error("the handler returned an error: `{0:?}`")]
-    ErrorReply(#[from] E),
+	#[error("message could not be delivered")]
+	MessageNotDelivered,
+	#[error("error while the message was being processed")]
+	ProcessMessageError,
+	#[error("the handler returned an error: `{0:?}`")]
+	ErrorReply(#[from] E),
 }

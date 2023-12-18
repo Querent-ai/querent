@@ -121,7 +121,7 @@ jobs:
       - name: Cargo build
         run: cd quester && make build
   generate-docs:
-    name: Generate querent rs rust docs
+    name: Generate quester rust docs
     runs-on: ubuntu-latest
     needs: [verify, test, lint, build]
     permissions:
