@@ -1,4 +1,4 @@
-use querent_rs::callbacks::{EventState, EventType};
+use querent_synapse::callbacks::{EventState, EventType};
 use std::fmt;
 
 pub struct ProcessedEvent {

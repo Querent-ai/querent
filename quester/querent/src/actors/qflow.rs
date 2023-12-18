@@ -1,11 +1,11 @@
 use actors::ActorExitStatus;
 use async_trait::async_trait;
 use log;
-use querent_rs::callbacks::interface::EventHandler;
-use querent_rs::callbacks::{EventState, EventType};
-use querent_rs::config::config::WorkflowConfig;
-use querent_rs::config::Config;
-use querent_rs::querent::{Querent, QuerentError, Workflow, WorkflowBuilder};
+use querent_synapse::callbacks::interface::EventHandler;
+use querent_synapse::callbacks::{EventState, EventType};
+use querent_synapse::config::config::WorkflowConfig;
+use querent_synapse::config::Config;
+use querent_synapse::querent::{Querent, QuerentError, Workflow, WorkflowBuilder};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -16,6 +16,43 @@ use tokio::task::JoinHandle;
 use tokio::time::{self};
 
 use crate::{EventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT};
+
+#[derive(Debug, Default)]
+pub struct EventsBatch {
+    pub qflow_id: String,
+    pub events: Vec<EventState>,
+    pub timestamp: u64,
+}
+
+impl EventsBatch {
+    pub fn new(qflow_id: String, events: Vec<EventState>, timestamp: u64) -> Self {
+        Self {
+            qflow_id,
+            events,
+            timestamp,
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.events.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.events.len()
+    }
+
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
+    }
+
+    pub fn qflow_id(&self) -> String {
+        self.qflow_id.clone()
+    }
+
+    pub fn events(&self) -> Vec<EventState> {
+        self.events.clone()
+    }
+}
 
 #[derive(Debug, Serialize)]
 pub struct EventsCounter {

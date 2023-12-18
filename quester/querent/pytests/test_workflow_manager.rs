@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use actors::Universe;
 use pyo3::exceptions::PyTypeError;
 use querent::{Qflow, SourceActor};
-use querent_rs::{
+use querent_synapse::{
     callbacks::{interface::EventHandler, EventType},
     comm::ChannelHandler,
     config::{config::WorkflowConfig, Config},

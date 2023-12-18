@@ -1,4 +1,4 @@
-use querent_rs::querent::py_runtime::py_runtime_init;
+use querent_synapse::querent::py_runtime::py_runtime_init;
 
 fn main() -> pyo3::PyResult<()> {
     match py_runtime_init() {
