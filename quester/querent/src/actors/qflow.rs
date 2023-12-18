@@ -142,6 +142,7 @@ impl Source for Qflow {
 		let mut events_collected = HashMap::new();
 		let mut is_success = false;
 		let mut is_failure = false;
+		let mut counter = 0;
 		loop {
 			tokio::select! {
 				event_opt = self.event_receiver.recv() => {
@@ -156,9 +157,10 @@ impl Source for Qflow {
 						}
 						self.counters.increment_total();
 						events_collected.insert(event_type, event_data);
+						counter += 1;
 					}
-					if events_collected.len() >= BATCH_NUM_EVENTS_LIMIT {
-						self.counters.increment_processed(events_collected.len() as u64);
+					if counter >= BATCH_NUM_EVENTS_LIMIT {
+						self.counters.increment_processed(counter as u64);
 						break;
 					}
 					ctx.record_progress();
