@@ -1,10 +1,12 @@
 use std::time::Duration;
 
-use actors::{Actor, ActorContext, ActorExitStatus, Handler};
+use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus};
 use async_trait::async_trait;
 use common::RuntimeType;
 use serde_json::Value as JsonValue;
 use tokio::runtime::Handle;
+
+use crate::EventStreamer;
 
 // custom sources
 pub mod file_source;
@@ -19,18 +21,26 @@ pub const EMIT_BATCHES_TIMEOUT: Duration =
 #[async_trait]
 pub trait Source: Send + 'static {
     /// This method will be called before any calls to `emit_events`.
-    async fn initialize(&mut self, _ctx: &SourceContext) -> Result<(), ActorExitStatus> {
+    async fn initialize(
+        &mut self,
+        _event_streamer_messagebus: &MessageBus<EventStreamer>,
+        _ctx: &SourceContext,
+    ) -> Result<(), ActorExitStatus> {
         Ok(())
     }
 
     /// Main part of the source implementation, `emit_events` can emit 0..n batches.
     ///
-    /// The `batch_sink` is a mailbox that has a bounded capacity.
+    /// The `batch_sink` is a messagebus that has a bounded capacity.
     /// In that case, `batch_sink` will block.
     ///
     /// It returns an optional duration specifying how long the batch requester
     /// should wait before pooling gain.
-    async fn emit_events(&mut self, ctx: &SourceContext) -> Result<Duration, ActorExitStatus>;
+    async fn emit_events(
+        &mut self,
+        event_streamer_messagebus: &MessageBus<EventStreamer>,
+        ctx: &SourceContext,
+    ) -> Result<Duration, ActorExitStatus>;
 
     /// Finalize is called once after the actor terminates.
     async fn finalize(
@@ -56,6 +66,7 @@ pub trait Source: Send + 'static {
 /// It mostly takes care of running a loop calling `emit_events(...)`.
 pub struct SourceActor {
     pub source: Box<dyn Source>,
+    pub event_streamer_messagebus: MessageBus<EventStreamer>,
 }
 
 #[derive(Debug)]
@@ -82,7 +93,9 @@ impl Actor for SourceActor {
     }
 
     async fn initialize(&mut self, ctx: &SourceContext) -> Result<(), ActorExitStatus> {
-        self.source.initialize(ctx).await?;
+        self.source
+            .initialize(&self.event_streamer_messagebus, ctx)
+            .await?;
         self.handle(Loop, ctx).await?;
         Ok(())
     }
@@ -102,7 +115,10 @@ impl Handler<Loop> for SourceActor {
     type Reply = ();
 
     async fn handle(&mut self, _message: Loop, ctx: &SourceContext) -> Result<(), ActorExitStatus> {
-        let wait_for = self.source.emit_events(ctx).await?;
+        let wait_for = self
+            .source
+            .emit_events(&self.event_streamer_messagebus, ctx)
+            .await?;
         if wait_for.is_zero() {
             ctx.send_self_message(Loop).await?;
             return Ok(());

@@ -17,7 +17,7 @@ use crate::spawn_builder::{SpawnBuilder, SpawnContext};
 #[cfg(any(test, feature = "testsuite"))]
 use crate::Universe;
 use crate::{
-    Actor, ActorExitStatus, ActorState, AskError, Command, DeferableReplyHandler, Mailbox,
+    Actor, ActorExitStatus, ActorState, AskError, Command, DeferableReplyHandler, MessageBus,
     SendError, TrySendError,
 };
 
@@ -44,7 +44,7 @@ impl<A: Actor> Deref for ActorContext<A> {
 
 pub struct ActorContextInner<A: Actor> {
     spawn_ctx: SpawnContext,
-    self_mailbox: Mailbox<A>,
+    self_messagebus: MessageBus<A>,
     progress: Progress,
     actor_state: AtomicState,
     backpressure_micros_counter_opt: Option<IntCounter>,
@@ -55,14 +55,14 @@ pub struct ActorContextInner<A: Actor> {
 
 impl<A: Actor> ActorContext<A> {
     pub(crate) fn new(
-        self_mailbox: Mailbox<A>,
+        self_messagebus: MessageBus<A>,
         spawn_ctx: SpawnContext,
         observable_state_tx: watch::Sender<A::ObservableState>,
         backpressure_micros_counter_opt: Option<IntCounter>,
     ) -> Self {
         ActorContext {
             inner: ActorContextInner {
-                self_mailbox,
+                self_messagebus,
                 spawn_ctx,
                 progress: Progress::default(),
                 actor_state: AtomicState::default(),
@@ -95,19 +95,19 @@ impl<A: Actor> ActorContext<A> {
     #[cfg(any(test, feature = "testsuite"))]
     pub fn for_test(
         universe: &Universe,
-        actor_mailbox: Mailbox<A>,
+        actor_messagebus: MessageBus<A>,
         observable_state_tx: watch::Sender<A::ObservableState>,
     ) -> Self {
         Self::new(
-            actor_mailbox,
+            actor_messagebus,
             universe.spawn_ctx.clone(),
             observable_state_tx,
             None,
         )
     }
 
-    pub fn mailbox(&self) -> &Mailbox<A> {
-        &self.self_mailbox
+    pub fn messagebus(&self) -> &MessageBus<A> {
+        &self.self_messagebus
     }
 
     pub(crate) fn registry(&self) -> &ActorRegistry {
@@ -115,7 +115,7 @@ impl<A: Actor> ActorContext<A> {
     }
 
     pub fn actor_instance_id(&self) -> &str {
-        self.mailbox().actor_instance_id()
+        self.messagebus().actor_instance_id()
     }
 
     /// This function returns a guard that prevents any supervisor from identifying the
@@ -213,7 +213,7 @@ impl<A: Actor> ActorContext<A> {
         }
     }
 
-    /// Posts a message in an actor's mailbox.
+    /// Posts a message in an actor's messagebus.
     ///
     /// This method does not wait for the message to be handled by the
     /// target actor. However, it returns a oneshot receiver that the caller
@@ -234,7 +234,7 @@ impl<A: Actor> ActorContext<A> {
     /// are simply experiencing back pressure.
     pub async fn send_message<DestActor: Actor, M>(
         &self,
-        mailbox: &Mailbox<DestActor>,
+        messagebus: &MessageBus<DestActor>,
         msg: M,
     ) -> Result<oneshot::Receiver<DestActor::Reply>, SendError>
     where
@@ -242,8 +242,8 @@ impl<A: Actor> ActorContext<A> {
         M: fmt::Debug + Send + 'static,
     {
         let _guard = self.protect_zone();
-        debug!(from=%self.self_mailbox.actor_instance_id(), send=%mailbox.actor_instance_id(), msg=?msg);
-        mailbox
+        debug!(from=%self.self_messagebus.actor_instance_id(), send=%messagebus.actor_instance_id(), msg=?msg);
+        messagebus
             .send_message_with_backpressure_counter(
                 msg,
                 self.backpressure_micros_counter_opt.as_ref(),
@@ -253,7 +253,7 @@ impl<A: Actor> ActorContext<A> {
 
     pub async fn ask<DestActor: Actor, M, T>(
         &self,
-        mailbox: &Mailbox<DestActor>,
+        messagebus: &MessageBus<DestActor>,
         msg: M,
     ) -> Result<T, AskError<Infallible>>
     where
@@ -261,8 +261,8 @@ impl<A: Actor> ActorContext<A> {
         M: fmt::Debug + Send + 'static,
     {
         let _guard = self.protect_zone();
-        debug!(from=%self.self_mailbox.actor_instance_id(), send=%mailbox.actor_instance_id(), msg=?msg, "ask");
-        mailbox
+        debug!(from=%self.self_messagebus.actor_instance_id(), send=%messagebus.actor_instance_id(), msg=?msg, "ask");
+        messagebus
             .ask_with_backpressure_counter(msg, self.backpressure_micros_counter_opt.as_ref())
             .await
     }
@@ -271,7 +271,7 @@ impl<A: Actor> ActorContext<A> {
     /// waits asynchronously for the actor reply.
     pub async fn ask_for_res<DestActor: Actor, M, T, E>(
         &self,
-        mailbox: &Mailbox<DestActor>,
+        messagebus: &MessageBus<DestActor>,
         msg: M,
     ) -> Result<T, AskError<E>>
     where
@@ -280,8 +280,8 @@ impl<A: Actor> ActorContext<A> {
         E: fmt::Debug,
     {
         let _guard = self.protect_zone();
-        debug!(from=%self.self_mailbox.actor_instance_id(), send=%mailbox.actor_instance_id(), msg=?msg, "ask");
-        mailbox.ask_for_res(msg).await
+        debug!(from=%self.self_messagebus.actor_instance_id(), send=%messagebus.actor_instance_id(), msg=?msg, "ask");
+        messagebus.ask_for_res(msg).await
     }
 
     /// Send the Success message to terminate the destination actor with the Success exit status.
@@ -290,15 +290,15 @@ impl<A: Actor> ActorContext<A> {
     /// first.
     pub async fn send_exit_with_success<Dest: Actor>(
         &self,
-        mailbox: &Mailbox<Dest>,
+        messagebus: &MessageBus<Dest>,
     ) -> Result<(), SendError> {
         let _guard = self.protect_zone();
-        debug!(from=%self.self_mailbox.actor_instance_id(), to=%mailbox.actor_instance_id(), "success");
-        mailbox.send_message(Command::ExitWithSuccess).await?;
+        debug!(from=%self.self_messagebus.actor_instance_id(), to=%messagebus.actor_instance_id(), "success");
+        messagebus.send_message(Command::ExitWithSuccess).await?;
         Ok(())
     }
 
-    /// Sends a message to an actor's own mailbox.
+    /// Sends a message to an actor's own messagebus.
     ///
     /// Warning: This method is dangerous as it can very easily
     /// cause a deadlock.
@@ -310,8 +310,8 @@ impl<A: Actor> ActorContext<A> {
         A: DeferableReplyHandler<M>,
         M: 'static + Sync + Send + fmt::Debug,
     {
-        debug!(self=%self.self_mailbox.actor_instance_id(), msg=?msg, "self_send");
-        self.self_mailbox.send_message(msg).await
+        debug!(self=%self.self_messagebus.actor_instance_id(), msg=?msg, "self_send");
+        self.self_messagebus.send_message(msg).await
     }
 
     /// Attempts to send a message to itself.
@@ -327,19 +327,19 @@ impl<A: Actor> ActorContext<A> {
         A: DeferableReplyHandler<M>,
         M: 'static + Sync + Send + fmt::Debug,
     {
-        self.self_mailbox.try_send_message(msg)
+        self.self_messagebus.try_send_message(msg)
     }
 
     /// Schedules a message that will be sent to the high-priority
-    /// queue of the actor Mailbox once `after_duration` has elapsed.
+    /// queue of the actor MessageBus once `after_duration` has elapsed.
     pub async fn schedule_self_msg<M>(&self, after_duration: Duration, message: M)
     where
         A: DeferableReplyHandler<M>,
         M: Sync + Send + std::fmt::Debug + 'static,
     {
-        let self_mailbox = self.inner.self_mailbox.clone();
+        let self_messagebus = self.inner.self_messagebus.clone();
         let callback = move || {
-            let _ = self_mailbox.send_message_with_high_priority(message);
+            let _ = self_messagebus.send_message_with_high_priority(message);
         };
         self.inner
             .spawn_ctx

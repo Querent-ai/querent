@@ -6,10 +6,10 @@ use tracing::error;
 
 use crate::actor_state::ActorState;
 use crate::command::Observe;
-use crate::mailbox::Priority;
+use crate::messagebus::Priority;
 use crate::observation::ObservationType;
 use crate::registry::ActorJoinHandle;
-use crate::{Actor, ActorContext, ActorExitStatus, Command, Mailbox, Observation};
+use crate::{Actor, ActorContext, ActorExitStatus, Command, MessageBus, Observation};
 
 /// An Actor Handle serves as an address to communicate with an actor.
 pub struct ActorHandle<A: Actor> {
@@ -150,7 +150,7 @@ impl<A: Actor> ActorHandle<A> {
         if !observation_already_enqueued {
             let _ = self
                 .actor_context
-                .mailbox()
+                .messagebus()
                 .send_message_with_high_priority(Observe);
         }
     }
@@ -159,7 +159,7 @@ impl<A: Actor> ActorHandle<A> {
         if !self.actor_context.state().is_exit() {
             if let Ok(oneshot_rx) = self
                 .actor_context
-                .mailbox()
+                .messagebus()
                 .send_message_with_priority(Observe, priority)
                 .await
             {
@@ -186,7 +186,7 @@ impl<A: Actor> ActorHandle<A> {
     pub fn pause(&self) {
         let _ = self
             .actor_context
-            .mailbox()
+            .messagebus()
             .send_message_with_high_priority(Command::Pause);
     }
 
@@ -194,7 +194,7 @@ impl<A: Actor> ActorHandle<A> {
     pub fn resume(&self) {
         let _ = self
             .actor_context
-            .mailbox()
+            .messagebus()
             .send_message_with_high_priority(Command::Resume);
     }
 
@@ -208,7 +208,7 @@ impl<A: Actor> ActorHandle<A> {
         self.actor_context.kill_switch().kill();
         let _ = self
             .actor_context
-            .mailbox()
+            .messagebus()
             .send_message_with_high_priority(Command::Nudge);
         self.join().await
     }
@@ -223,7 +223,7 @@ impl<A: Actor> ActorHandle<A> {
     pub async fn quit(self) -> (ActorExitStatus, A::ObservableState) {
         let _ = self
             .actor_context
-            .mailbox()
+            .messagebus()
             .send_message_with_high_priority(Command::Quit);
         self.join().await
     }
@@ -268,8 +268,8 @@ impl<A: Actor> ActorHandle<A> {
         }
     }
 
-    pub fn mailbox(&self) -> &Mailbox<A> {
-        self.actor_context.mailbox()
+    pub fn messagebus(&self) -> &MessageBus<A> {
+        self.actor_context.messagebus()
     }
 }
 
@@ -343,8 +343,8 @@ mod tests {
     #[tokio::test]
     async fn test_panic_in_actor() -> anyhow::Result<()> {
         let universe = Universe::with_accelerated_time();
-        let (mailbox, handle) = universe.spawn_builder().spawn(PanickingActor::default());
-        mailbox.send_message(Panic).await?;
+        let (messagebus, handle) = universe.spawn_builder().spawn(PanickingActor::default());
+        messagebus.send_message(Panic).await?;
         let (exit_status, count) = handle.join().await;
         assert!(matches!(exit_status, ActorExitStatus::Panicked));
         assert!(matches!(count, 1)); //< Upon panick we cannot get a post mortem state.
@@ -354,8 +354,8 @@ mod tests {
     #[tokio::test]
     async fn test_exit() -> anyhow::Result<()> {
         let universe = Universe::with_accelerated_time();
-        let (mailbox, handle) = universe.spawn_builder().spawn(ExitActor::default());
-        mailbox.send_message(Exit).await?;
+        let (messagebus, handle) = universe.spawn_builder().spawn(ExitActor::default());
+        messagebus.send_message(Exit).await?;
         let (exit_status, count) = handle.join().await;
         assert!(matches!(exit_status, ActorExitStatus::DownstreamClosed));
         assert!(matches!(count, 1)); //< Upon panick we cannot get a post mortem state.

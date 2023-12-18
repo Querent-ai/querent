@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::Serialize;
 use tracing::{info, warn};
 
-use crate::mailbox::Inbox;
+use crate::messagebus::Inbox;
 use crate::{
     Actor, ActorContext, ActorExitStatus, ActorHandle, ActorState, Handler, Health, Supervisable,
 };
@@ -132,7 +132,7 @@ impl<A: Actor> Supervisor<A> {
         warn!("unhealthy-actor");
         // The actor is failing we need to restart it.
         let actor_handle = self.handle_opt.take().unwrap();
-        let actor_mailbox = actor_handle.mailbox().clone();
+        let actor_messagebus = actor_handle.messagebus().clone();
         let (actor_exit_status, _last_state) = if actor_handle.state() == ActorState::Processing {
             // The actor is probably frozen.
             // Let's kill it.
@@ -164,7 +164,7 @@ impl<A: Actor> Supervisor<A> {
         info!("respawning-actor");
         let (_, actor_handle) = ctx
             .spawn_actor()
-            .set_mailboxes(actor_mailbox, self.inbox.clone())
+            .set_messagebuses(actor_messagebus, self.inbox.clone())
             .set_kill_switch(ctx.kill_switch().child())
             .spawn((*self.actor_factory)());
         self.handle_opt = Some(actor_handle);
@@ -267,18 +267,27 @@ mod tests {
     async fn test_supervisor_restart_on_panic() {
         let universe = Universe::with_accelerated_time();
         let actor = FailingActor::default();
-        let (mailbox, supervisor_handle) = universe.spawn_builder().supervise(actor);
+        let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             2
         );
-        assert!(mailbox.ask(FailingActorMessage::Panic).await.is_err());
+        assert!(messagebus.ask(FailingActorMessage::Panic).await.is_err());
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         assert_eq!(
@@ -299,18 +308,30 @@ mod tests {
     async fn test_supervisor_restart_on_error() {
         let universe = Universe::with_accelerated_time();
         let actor = FailingActor::default();
-        let (mailbox, supervisor_handle) = universe.spawn_builder().supervise(actor);
+        let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             2
         );
-        assert!(mailbox.ask(FailingActorMessage::ReturnError).await.is_err());
+        assert!(messagebus
+            .ask(FailingActorMessage::ReturnError)
+            .await
+            .is_err());
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         assert_eq!(
@@ -331,13 +352,19 @@ mod tests {
     async fn test_supervisor_kills_and_restart_frozen_actor() {
         let universe = Universe::with_accelerated_time();
         let actor = FailingActor::default();
-        let (mailbox, supervisor_handle) = universe.spawn_builder().supervise(actor);
+        let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             2
         );
         assert_eq!(
@@ -348,14 +375,17 @@ mod tests {
                 num_kills: 0
             }
         );
-        mailbox
+        messagebus
             .send_message(FailingActorMessage::Freeze(
                 crate::HEARTBEAT.mul_f32(3.0f32),
             ))
             .await
             .unwrap();
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         assert_eq!(
@@ -376,14 +406,17 @@ mod tests {
     async fn test_supervisor_forwards_quit_commands() {
         let universe = Universe::with_accelerated_time();
         let actor = FailingActor::default();
-        let (mailbox, supervisor_handle) = universe.spawn_builder().supervise(actor);
+        let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         let (exit_status, _state) = supervisor_handle.quit().await;
         assert!(matches!(
-            mailbox
+            messagebus
                 .ask(FailingActorMessage::Increment)
                 .await
                 .unwrap_err(),
@@ -396,15 +429,21 @@ mod tests {
     async fn test_supervisor_forwards_kill_command() {
         let universe = Universe::with_accelerated_time();
         let actor = FailingActor::default();
-        let (mailbox, supervisor_handle) = universe.spawn_builder().supervise(actor);
+        let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
         assert_eq!(
-            mailbox.ask(FailingActorMessage::Increment).await.unwrap(),
+            messagebus
+                .ask(FailingActorMessage::Increment)
+                .await
+                .unwrap(),
             1
         );
         let (exit_status, _state) = supervisor_handle.kill().await;
-        assert!(mailbox.ask(FailingActorMessage::Increment).await.is_err());
+        assert!(messagebus
+            .ask(FailingActorMessage::Increment)
+            .await
+            .is_err());
         assert!(matches!(
-            mailbox
+            messagebus
                 .ask(FailingActorMessage::Increment)
                 .await
                 .unwrap_err(),
@@ -414,7 +453,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_supervisor_exits_successfully_when_supervised_actor_mailbox_is_dropped() {
+    async fn test_supervisor_exits_successfully_when_supervised_actor_messagebus_is_dropped() {
         let universe = Universe::with_accelerated_time();
         let actor = FailingActor::default();
         let (_, supervisor_handle) = universe.spawn_builder().supervise(actor);
@@ -427,11 +466,11 @@ mod tests {
     async fn test_supervisor_state() {
         let universe = Universe::with_accelerated_time();
         let ping_actor = PingReceiverActor::default();
-        let (mailbox, handler) = universe.spawn_builder().supervise(ping_actor);
+        let (messagebus, handler) = universe.spawn_builder().supervise(ping_actor);
         let obs = handler.observe().await;
         assert_eq!(obs.state.state_opt, Some(0));
-        let _ = mailbox.ask(Ping).await;
-        assert_eq!(mailbox.ask(Observe).await.unwrap(), 1);
+        let _ = messagebus.ask(Ping).await;
+        assert_eq!(messagebus.ask(Observe).await.unwrap(), 1);
         universe.sleep(Duration::from_secs(60)).await;
         let obs = handler.observe().await;
         assert_eq!(obs.state.state_opt, Some(1));

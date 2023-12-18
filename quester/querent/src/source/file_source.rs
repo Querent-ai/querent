@@ -1,10 +1,10 @@
-use actors::ActorExitStatus;
+use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use serde::Serialize;
 use std::fmt;
 use std::time::Duration;
 
-use crate::{Source, SourceContext};
+use crate::{EventStreamer, Source, SourceContext};
 
 // Note: This is just an example of a custom source.
 // It is not used in the current implementation.
@@ -30,7 +30,11 @@ impl fmt::Debug for FileSource {
 
 #[async_trait]
 impl Source for FileSource {
-    async fn emit_events(&mut self, _ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
+    async fn emit_events(
+        &mut self,
+        _event_streamer_messagebus: &MessageBus<EventStreamer>,
+        _ctx: &SourceContext,
+    ) -> Result<Duration, ActorExitStatus> {
         self.counters.previous_offset = 1030;
         self.counters.current_offset += 1030;
         self.counters.num_lines_processed += 4;
@@ -55,14 +59,16 @@ mod tests {
     #[tokio::test]
     async fn test_file_source() -> anyhow::Result<()> {
         let universe = Universe::with_accelerated_time();
+        let (event_streamer_messagebus, _indexer_inbox) = universe.create_test_messagebus();
         let file_source = FileSource {
             source_id: "test_file_source".to_string(),
             counters: Default::default(),
         };
         let file_source_actor = SourceActor {
             source: Box::new(file_source),
+            event_streamer_messagebus: event_streamer_messagebus,
         };
-        let (_file_source_mailbox, file_source_handle) =
+        let (_file_source_messagebus, file_source_handle) =
             universe.spawn_builder().spawn(file_source_actor);
         let (actor_termination, counters) = file_source_handle.join().await;
         assert!(actor_termination.is_success());

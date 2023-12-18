@@ -5,12 +5,12 @@ use tokio::sync::watch;
 use tracing::{debug, error, info};
 
 use crate::envelope::Envelope;
-use crate::mailbox::{create_mailbox, Inbox};
+use crate::messagebus::{create_messagebus, Inbox};
 use crate::registry::{ActorJoinHandle, ActorRegistry};
 use crate::scheduler::{NoAdvanceTimeGuard, SchedulerClient};
 use crate::supervisor::Supervisor;
 use crate::{
-    Actor, ActorContext, ActorExitStatus, ActorHandle, KillSwitch, Mailbox, QueueCapacity,
+    Actor, ActorContext, ActorExitStatus, ActorHandle, KillSwitch, MessageBus, QueueCapacity,
 };
 
 #[derive(Clone)]
@@ -33,12 +33,12 @@ impl SpawnContext {
         SpawnBuilder::new(self.child_context())
     }
 
-    pub fn create_mailbox<A: Actor>(
+    pub fn create_messagebus<A: Actor>(
         &self,
         actor_name: impl ToString,
         queue_capacity: QueueCapacity,
-    ) -> (Mailbox<A>, Inbox<A>) {
-        create_mailbox(
+    ) -> (MessageBus<A>, Inbox<A>) {
+        create_messagebus(
             actor_name.to_string(),
             queue_capacity,
             Some(self.scheduler_client.clone()),
@@ -59,7 +59,7 @@ impl SpawnContext {
 pub struct SpawnBuilder<A: Actor> {
     spawn_ctx: SpawnContext,
     #[allow(clippy::type_complexity)]
-    mailboxes: Option<(Mailbox<A>, Inbox<A>)>,
+    messagebuses: Option<(MessageBus<A>, Inbox<A>)>,
     backpressure_micros_counter_opt: Option<IntCounter>,
 }
 
@@ -67,7 +67,7 @@ impl<A: Actor> SpawnBuilder<A> {
     pub(crate) fn new(spawn_ctx: SpawnContext) -> Self {
         SpawnBuilder {
             spawn_ctx,
-            mailboxes: None,
+            messagebuses: None,
             backpressure_micros_counter_opt: None,
         }
     }
@@ -81,15 +81,15 @@ impl<A: Actor> SpawnBuilder<A> {
         self
     }
 
-    /// Sets a specific set of mailbox.
+    /// Sets a specific set of messagebus.
     ///
-    /// By default, a brand new set of mailboxes will be created
+    /// By default, a brand new set of messagebuses will be created
     /// when the actor is spawned.
     ///
     /// This function makes it possible to create non-DAG networks
     /// of actors.
-    pub fn set_mailboxes(mut self, mailbox: Mailbox<A>, inbox: Inbox<A>) -> Self {
-        self.mailboxes = Some((mailbox, inbox));
+    pub fn set_messagebuses(mut self, messagebus: MessageBus<A>, inbox: Inbox<A>) -> Self {
+        self.messagebuses = Some((messagebus, inbox));
         self
     }
 
@@ -97,7 +97,7 @@ impl<A: Actor> SpawnBuilder<A> {
     /// spending in "backpressure".
     ///
     /// When using `.ask` the amount of time counted may be misleading.
-    /// (See `Mailbox::ask_with_backpressure_counter` for more details)
+    /// (See `MessageBus::ask_with_backpressure_counter` for more details)
     pub fn set_backpressure_micros_counter(
         mut self,
         backpressure_micros_counter: IntCounter,
@@ -106,13 +106,13 @@ impl<A: Actor> SpawnBuilder<A> {
         self
     }
 
-    fn take_or_create_mailboxes(&mut self, actor: &A) -> (Mailbox<A>, Inbox<A>) {
-        if let Some((mailbox, inbox)) = self.mailboxes.take() {
-            return (mailbox, inbox);
+    fn take_or_create_messagebuses(&mut self, actor: &A) -> (MessageBus<A>, Inbox<A>) {
+        if let Some((messagebus, inbox)) = self.messagebuses.take() {
+            return (messagebus, inbox);
         }
         let actor_name = actor.name();
         let queue_capacity = actor.queue_capacity();
-        self.spawn_ctx.create_mailbox(actor_name, queue_capacity)
+        self.spawn_ctx.create_messagebus(actor_name, queue_capacity)
     }
 
     fn create_actor_context_and_inbox(
@@ -123,11 +123,11 @@ impl<A: Actor> SpawnBuilder<A> {
         Inbox<A>,
         watch::Receiver<A::ObservableState>,
     ) {
-        let (mailbox, inbox) = self.take_or_create_mailboxes(actor);
+        let (messagebus, inbox) = self.take_or_create_messagebuses(actor);
         let obs_state = actor.observable_state();
         let (state_tx, state_rx) = watch::channel(obs_state);
         let ctx = ActorContext::new(
-            mailbox,
+            messagebus,
             self.spawn_ctx.clone(),
             state_tx,
             self.backpressure_micros_counter_opt,
@@ -136,48 +136,50 @@ impl<A: Actor> SpawnBuilder<A> {
     }
 
     /// Spawns an async actor.
-    pub fn spawn(self, actor: A) -> (Mailbox<A>, ActorHandle<A>) {
+    pub fn spawn(self, actor: A) -> (MessageBus<A>, ActorHandle<A>) {
         // We prevent fast forward of the scheduler during  initialization.
         let no_advance_time_guard = self.spawn_ctx.scheduler_client.no_advance_time_guard();
         let runtime_handle = actor.runtime_handle();
         let (ctx, inbox, state_rx) = self.create_actor_context_and_inbox(&actor);
         debug!(actor_id = %ctx.actor_instance_id(), "spawn-actor");
-        let mailbox = ctx.mailbox().clone();
+        let messagebus = ctx.messagebus().clone();
         let ctx_clone = ctx.clone();
         let loop_async_actor_future =
             async move { actor_loop(actor, inbox, no_advance_time_guard, ctx).await };
         let join_handle = ActorJoinHandle::new(runtime_handle.spawn(loop_async_actor_future));
-        ctx_clone.registry().register(&mailbox, join_handle.clone());
+        ctx_clone
+            .registry()
+            .register(&messagebus, join_handle.clone());
         let actor_handle = ActorHandle::new(state_rx, join_handle, ctx_clone);
-        (mailbox, actor_handle)
+        (messagebus, actor_handle)
     }
 
     pub fn supervise_fn<F: Fn() -> A + Send + 'static>(
         mut self,
         actor_factory: F,
-    ) -> (Mailbox<A>, ActorHandle<Supervisor<A>>) {
+    ) -> (MessageBus<A>, ActorHandle<Supervisor<A>>) {
         let actor = actor_factory();
         let actor_name = actor.name();
-        let (mailbox, inbox) = self.take_or_create_mailboxes(&actor);
-        self.mailboxes = Some((mailbox, inbox.clone()));
+        let (messagebus, inbox) = self.take_or_create_messagebuses(&actor);
+        self.messagebuses = Some((messagebus, inbox.clone()));
         let child_ctx = self.spawn_ctx.child_context();
         let parent_spawn_ctx = std::mem::replace(&mut self.spawn_ctx, child_ctx);
-        let (mailbox, actor_handle) = self.spawn(actor);
+        let (messagebus, actor_handle) = self.spawn(actor);
         let supervisor = Supervisor::new(actor_name, Box::new(actor_factory), inbox, actor_handle);
-        let (_supervisor_mailbox, supervisor_handle) =
+        let (_supervisor_messagebus, supervisor_handle) =
             parent_spawn_ctx.spawn_builder().spawn(supervisor);
-        (mailbox, supervisor_handle)
+        (messagebus, supervisor_handle)
     }
 }
 
 impl<A: Actor + Clone> SpawnBuilder<A> {
-    pub fn supervise(self, actor: A) -> (Mailbox<A>, ActorHandle<Supervisor<A>>) {
+    pub fn supervise(self, actor: A) -> (MessageBus<A>, ActorHandle<Supervisor<A>>) {
         self.supervise_fn(move || actor.clone())
     }
 }
 
 impl<A: Actor + Default> SpawnBuilder<A> {
-    pub fn supervise_default(self) -> (Mailbox<A>, ActorHandle<Supervisor<A>>) {
+    pub fn supervise_default(self) -> (MessageBus<A>, ActorHandle<Supervisor<A>>) {
         self.supervise_fn(Default::default)
     }
 }
@@ -192,7 +194,7 @@ impl<A: Actor + Default> SpawnBuilder<A> {
 async fn recv_envelope<A: Actor>(inbox: &mut Inbox<A>, ctx: &ActorContext<A>) -> Envelope<A> {
     if ctx.state().is_running() {
         ctx.protect_future(inbox.recv()).await.expect(
-            "Disconnection should be impossible because the ActorContext holds a Mailbox too",
+            "Disconnection should be impossible because the ActorContext holds a MessageBus too",
         )
     } else {
         // The actor is paused. We only process command and scheduled message.
@@ -273,7 +275,7 @@ impl<A: Actor> ActorExecutionEnv<A> {
         }
         self.actor.get_mut().on_drained_messages(&self.ctx).await?;
         self.ctx.idle();
-        if self.ctx.mailbox().is_last_mailbox() {
+        if self.ctx.messagebus().is_last_messagebus() {
             // No one will be able to send us more messages.
             // We can exit the actor.
             return Err(ActorExitStatus::Success);
@@ -285,7 +287,7 @@ impl<A: Actor> ActorExecutionEnv<A> {
     async fn finalize(&mut self, exit_status: ActorExitStatus) -> ActorExitStatus {
         let _no_advance_time_guard = self
             .ctx
-            .mailbox()
+            .messagebus()
             .scheduler_client()
             .map(|scheduler_client| scheduler_client.no_advance_time_guard());
         if let Err(finalize_error) = self

@@ -56,12 +56,12 @@ pub enum Command {
     /// Note: Historically, actors used to have a timeout, then
     /// the wake up logic worked using a Kill command.
     /// However, after the introduction of supervision, it became common
-    /// to recycle a mailbox.
+    /// to recycle a messagebus.
     ///
     /// After a panic for instance, the supervisor of an actor might kill
     /// it by activating its killswitch and sending a Kill message.
     ///
-    /// The respawned actor would receive its predecessor mailbox and
+    /// The respawned actor would receive its predecessor messagebus and
     /// possibly end up process a Kill message as its first message.
     Nudge,
 }

@@ -1,4 +1,4 @@
-use actors::ActorExitStatus;
+use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use log;
 use querent_synapse::callbacks::interface::EventHandler;
@@ -15,17 +15,19 @@ use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 use tokio::time::{self};
 
-use crate::{EventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT};
+use crate::{
+    EventLock, EventStreamer, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
+};
 
 #[derive(Debug, Default)]
 pub struct EventsBatch {
     pub qflow_id: String,
-    pub events: Vec<EventState>,
+    pub events: HashMap<EventType, EventState>,
     pub timestamp: u64,
 }
 
 impl EventsBatch {
-    pub fn new(qflow_id: String, events: Vec<EventState>, timestamp: u64) -> Self {
+    pub fn new(qflow_id: String, events: HashMap<EventType, EventState>, timestamp: u64) -> Self {
         Self {
             qflow_id,
             events,
@@ -49,7 +51,7 @@ impl EventsBatch {
         self.qflow_id.clone()
     }
 
-    pub fn events(&self) -> Vec<EventState> {
+    pub fn events(&self) -> HashMap<EventType, EventState> {
         self.events.clone()
     }
 }
@@ -131,7 +133,11 @@ impl Qflow {
 
 #[async_trait]
 impl Source for Qflow {
-    async fn initialize(&mut self, _ctx: &SourceContext) -> Result<(), ActorExitStatus> {
+    async fn initialize(
+        &mut self,
+        _event_streamer_messagebus: &MessageBus<EventStreamer>,
+        _ctx: &SourceContext,
+    ) -> Result<(), ActorExitStatus> {
         let querent = Querent::new().map_err(|e| {
             ActorExitStatus::Failure(
                 anyhow::anyhow!("Failed to initialize querent: {:?}", e).into(),
@@ -189,19 +195,27 @@ impl Source for Qflow {
         Ok(())
     }
 
-    async fn emit_events(&mut self, ctx: &SourceContext) -> Result<Duration, ActorExitStatus> {
+    async fn emit_events(
+        &mut self,
+        event_streamer_messagebus: &MessageBus<EventStreamer>,
+        ctx: &SourceContext,
+    ) -> Result<Duration, ActorExitStatus> {
         let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
         tokio::pin!(deadline);
         let mut events_collected = HashMap::new();
+        let mut is_success = false;
+        let mut is_failure = false;
         loop {
             tokio::select! {
                 event_opt = self.event_receiver.recv() => {
                     if let Some((event_type, event_data)) = event_opt {
                         if event_type == EventType::Success {
-                            return Err(ActorExitStatus::Success)
+                            is_success = true;
+                            continue;
                         }
                         if event_type == EventType::Failure {
-                            return Err(ActorExitStatus::Failure(anyhow::anyhow!(event_data.payload).into()))
+                            is_failure = true;
+                            continue;
                         }
                         self.counters.increment_total();
                         events_collected.insert(event_type, event_data);
@@ -216,6 +230,25 @@ impl Source for Qflow {
                     break;
                 }
             }
+        }
+        if !events_collected.is_empty() {
+            let events_batch = EventsBatch::new(
+                self.id.clone(),
+                events_collected,
+                chrono::Utc::now().timestamp_millis() as u64,
+            );
+            ctx.send_message(event_streamer_messagebus, events_batch)
+                .await?;
+        }
+        if is_success {
+            ctx.send_exit_with_success(event_streamer_messagebus)
+                .await?;
+            return Err(ActorExitStatus::Success);
+        }
+        if is_failure {
+            return Err(ActorExitStatus::Failure(
+                anyhow::anyhow!("Querent Python workflow failed").into(),
+            ));
         }
         Ok(Duration::default())
     }

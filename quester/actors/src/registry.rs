@@ -12,12 +12,12 @@ use serde_json::Value as JsonValue;
 use tokio::task::JoinHandle;
 
 use crate::command::Observe;
-use crate::mailbox::WeakMailbox;
-use crate::{Actor, ActorExitStatus, Command, Mailbox};
+use crate::messagebus::WeakMessagebus;
+use crate::{Actor, ActorExitStatus, Command, MessageBus};
 
 struct TypedJsonObservable<A: Actor> {
     actor_instance_id: String,
-    weak_mailbox: WeakMailbox<A>,
+    weak_messagebus: WeakMessagebus<A>,
     join_handle: ActorJoinHandle,
 }
 
@@ -34,27 +34,27 @@ trait JsonObservable: Sync + Send {
 #[async_trait]
 impl<A: Actor> JsonObservable for TypedJsonObservable<A> {
     fn is_disconnected(&self) -> bool {
-        self.weak_mailbox
+        self.weak_messagebus
             .upgrade()
-            .map(|mailbox| mailbox.is_disconnected())
+            .map(|messagebus| messagebus.is_disconnected())
             .unwrap_or(true)
     }
     fn any(&self) -> &dyn Any {
-        &self.weak_mailbox
+        &self.weak_messagebus
     }
     fn actor_instance_id(&self) -> &str {
         self.actor_instance_id.as_str()
     }
     async fn observe(&self) -> Option<JsonValue> {
-        let mailbox = self.weak_mailbox.upgrade()?;
-        let oneshot_rx = mailbox.send_message_with_high_priority(Observe).ok()?;
+        let messagebus = self.weak_messagebus.upgrade()?;
+        let oneshot_rx = messagebus.send_message_with_high_priority(Observe).ok()?;
         let state: <A as Actor>::ObservableState = oneshot_rx.await.ok()?;
         serde_json::to_value(&state).ok()
     }
 
     async fn quit(&self) -> ActorExitStatus {
-        if let Some(mailbox) = self.weak_mailbox.upgrade() {
-            let _ = mailbox.send_message_with_high_priority(Command::Quit);
+        if let Some(messagebus) = self.weak_messagebus.upgrade() {
+            let _ = messagebus.send_message_with_high_priority(Command::Quit);
         }
         self.join().await
     }
@@ -102,10 +102,10 @@ pub struct ActorObservation {
 }
 
 impl ActorRegistry {
-    pub fn register<A: Actor>(&self, mailbox: &Mailbox<A>, join_handle: ActorJoinHandle) {
+    pub fn register<A: Actor>(&self, messagebus: &MessageBus<A>, join_handle: ActorJoinHandle) {
         let typed_id = TypeId::of::<A>();
-        let actor_instance_id = mailbox.actor_instance_id().to_string();
-        let weak_mailbox = mailbox.downgrade();
+        let actor_instance_id = messagebus.actor_instance_id().to_string();
+        let weak_messagebus = messagebus.downgrade();
         self.actors
             .write()
             .unwrap()
@@ -113,7 +113,7 @@ impl ActorRegistry {
             .or_insert_with(|| ActorRegistryForSpecificType::for_type::<A>())
             .observables
             .push(Arc::new(TypedJsonObservable {
-                weak_mailbox,
+                weak_messagebus,
                 actor_instance_id,
                 join_handle,
             }));
@@ -145,12 +145,12 @@ impl ActorRegistry {
         future::join_all(obs_futures.into_iter()).await
     }
 
-    pub fn get<A: Actor>(&self) -> Vec<Mailbox<A>> {
+    pub fn get<A: Actor>(&self) -> Vec<MessageBus<A>> {
         let mut lock = self.actors.write().unwrap();
         get_iter::<A>(&mut lock).collect()
     }
 
-    pub fn get_one<A: Actor>(&self) -> Option<Mailbox<A>> {
+    pub fn get_one<A: Actor>(&self) -> Option<MessageBus<A>> {
         let mut lock = self.actors.write().unwrap();
         let opt = get_iter::<A>(&mut lock).next();
         opt
@@ -192,7 +192,7 @@ impl ActorRegistry {
 
 fn get_iter<A: Actor>(
     actors: &mut HashMap<TypeId, ActorRegistryForSpecificType>,
-) -> impl Iterator<Item = Mailbox<A>> + '_ {
+) -> impl Iterator<Item = MessageBus<A>> + '_ {
     let typed_id = TypeId::of::<A>();
     actors
         .get(&typed_id)
@@ -201,10 +201,10 @@ fn get_iter<A: Actor>(
             registry_for_type
                 .observables
                 .iter()
-                .flat_map(|box_any| box_any.any().downcast_ref::<WeakMailbox<A>>())
-                .flat_map(|weak_mailbox| weak_mailbox.upgrade())
+                .flat_map(|box_any| box_any.any().downcast_ref::<WeakMessagebus<A>>())
+                .flat_map(|weak_messagebus| weak_messagebus.upgrade())
         })
-        .filter(|mailbox| !mailbox.is_disconnected())
+        .filter(|messagebus| !messagebus.is_disconnected())
 }
 
 /// This structure contains an optional exit handle. The handle is present
@@ -249,8 +249,8 @@ mod tests {
     async fn test_registry() {
         let test_actor = PingReceiverActor::default();
         let universe = Universe::with_accelerated_time();
-        let (_mailbox, _handle) = universe.spawn_builder().spawn(test_actor);
-        let _actor_mailbox = universe.get_one::<PingReceiverActor>().unwrap();
+        let (_messagebus, _handle) = universe.spawn_builder().spawn(test_actor);
+        let _actor_messagebus = universe.get_one::<PingReceiverActor>().unwrap();
         universe.assert_quit().await;
     }
 
@@ -258,17 +258,17 @@ mod tests {
     async fn test_registry_killed_actor() {
         let test_actor = PingReceiverActor::default();
         let universe = Universe::with_accelerated_time();
-        let (_mailbox, handle) = universe.spawn_builder().spawn(test_actor);
+        let (_messagebus, handle) = universe.spawn_builder().spawn(test_actor);
         handle.kill().await;
         assert!(universe.get_one::<PingReceiverActor>().is_none());
     }
 
     #[tokio::test]
-    async fn test_registry_last_mailbox_dropped_actor() {
+    async fn test_registry_last_messagebus_dropped_actor() {
         let test_actor = PingReceiverActor::default();
         let universe = Universe::with_accelerated_time();
-        let (mailbox, handle) = universe.spawn_builder().spawn(test_actor);
-        drop(mailbox);
+        let (messagebus, handle) = universe.spawn_builder().spawn(test_actor);
+        drop(messagebus);
         handle.join().await;
         assert!(universe.get_one::<PingReceiverActor>().is_none());
     }
@@ -277,7 +277,7 @@ mod tests {
     async fn test_get_actor_states() {
         let test_actor = PingReceiverActor::default();
         let universe = Universe::with_accelerated_time();
-        let (_mailbox, _handle) = universe.spawn_builder().spawn(test_actor);
+        let (_messagebus, _handle) = universe.spawn_builder().spawn(test_actor);
         let obs = universe.observe(Duration::from_millis(1000)).await;
         assert_eq!(obs.len(), 1);
         universe.assert_quit().await;

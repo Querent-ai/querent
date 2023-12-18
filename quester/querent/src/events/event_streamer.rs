@@ -1,14 +1,10 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::RuntimeType;
-use querent_synapse::callbacks::{EventState, EventType};
 use serde::Serialize;
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicU64, Ordering},
-        Arc,
-    },
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Arc,
 };
 use tokio::runtime::Handle;
 
@@ -109,7 +105,8 @@ impl Actor for EventStreamer {
             | ActorExitStatus::Failure(_)
             | ActorExitStatus::Panicked => return Ok(()),
             ActorExitStatus::Quit | ActorExitStatus::Success => {
-                //let _ = ctx.send_exit_with_success(&self.indexer_mailbox).await;
+                println!("EventStreamer exiting with success");
+                //let _ = ctx.send_exit_with_success(&self.indexer_messagebus).await;
             }
         }
         Ok(())
@@ -126,23 +123,11 @@ impl Handler<EventsBatch> for EventStreamer {
         ctx: &ActorContext<Self>,
     ) -> Result<(), ActorExitStatus> {
         self.counters.increment_batches_received();
-        let mut events = message.events;
+        let events = message.events;
         self.counters.increment_events_received(events.len() as u64);
         self.timestamp = message.timestamp;
-
-        let mut events_map: HashMap<EventType, Vec<EventState>> = HashMap::new();
-        for event in events.drain(..) {
-            log::debug!("Event: {:?}", event);
-            let event_type = event.event_type.clone();
-            if let Some(event_states) = events_map.get_mut(&event_type) {
-                event_states.push(event);
-            } else {
-                let mut event_vec = Vec::new();
-                event_vec.push(event);
-                events_map.insert(event_type, event_vec);
-            }
-        }
         //self.publish_lock.publish(events_processed).await?;
+        println!("EventStreamer received {} events", events.len());
         ctx.record_progress();
         Ok(())
     }

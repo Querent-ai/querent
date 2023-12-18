@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::thread;
 use std::time::Duration;
 
-use crate::mailbox::create_mailbox;
+use crate::messagebus::create_messagebus;
 use crate::registry::ActorObservation;
 use crate::scheduler::start_scheduler;
 use crate::spawn_builder::{SpawnBuilder, SpawnContext};
-use crate::{Actor, ActorExitStatus, Command, Inbox, Mailbox, QueueCapacity};
+use crate::{Actor, ActorExitStatus, Command, Inbox, MessageBus, QueueCapacity};
 
 /// Universe serves as the top-level context in which Actor can be spawned.
 /// It is *not* a singleton. A typical application will usually have only one universe hosting all
@@ -50,23 +50,27 @@ impl Universe {
         &self.spawn_ctx
     }
 
-    pub fn create_test_mailbox<A: Actor>(&self) -> (Mailbox<A>, Inbox<A>) {
-        create_mailbox("test-mailbox".to_string(), QueueCapacity::Unbounded, None)
+    pub fn create_test_messagebus<A: Actor>(&self) -> (MessageBus<A>, Inbox<A>) {
+        create_messagebus(
+            "test-messagebus".to_string(),
+            QueueCapacity::Unbounded,
+            None,
+        )
     }
 
-    pub fn create_mailbox<A: Actor>(
+    pub fn create_messagebus<A: Actor>(
         &self,
         actor_name: impl ToString,
         queue_capacity: QueueCapacity,
-    ) -> (Mailbox<A>, Inbox<A>) {
-        self.spawn_ctx.create_mailbox(actor_name, queue_capacity)
+    ) -> (MessageBus<A>, Inbox<A>) {
+        self.spawn_ctx.create_messagebus(actor_name, queue_capacity)
     }
 
-    pub fn get<A: Actor>(&self) -> Vec<Mailbox<A>> {
+    pub fn get<A: Actor>(&self) -> Vec<MessageBus<A>> {
         self.spawn_ctx.registry.get::<A>()
     }
 
-    pub fn get_one<A: Actor>(&self) -> Option<Mailbox<A>> {
+    pub fn get_one<A: Actor>(&self) -> Option<MessageBus<A>> {
         self.spawn_ctx.registry.get_one::<A>()
     }
 
@@ -95,9 +99,9 @@ impl Universe {
     /// and exit successfully.
     pub async fn send_exit_with_success<A: Actor>(
         &self,
-        mailbox: &Mailbox<A>,
+        messagebus: &MessageBus<A>,
     ) -> Result<(), crate::SendError> {
-        mailbox.send_message(Command::ExitWithSuccess).await?;
+        messagebus.send_message(Command::ExitWithSuccess).await?;
         Ok(())
     }
 
@@ -198,7 +202,7 @@ mod tests {
     async fn test_schedule_for_actor() {
         let universe = Universe::with_accelerated_time();
         let actor_with_schedule = CountingMinutesActor::default();
-        let (_mailbox, handler) = universe.spawn_builder().spawn(actor_with_schedule);
+        let (_messagebus, handler) = universe.spawn_builder().spawn(actor_with_schedule);
         let count_after_initialization = handler.process_pending_and_observe().await.state;
         assert_eq!(count_after_initialization, 1);
         universe.sleep(Duration::from_secs(200)).await;
@@ -211,7 +215,7 @@ mod tests {
     async fn test_actor_quit_after_universe_quit() {
         let universe = Universe::with_accelerated_time();
         let actor_with_schedule = CountingMinutesActor::default();
-        let (_mailbox, handler) = universe.spawn_builder().spawn(actor_with_schedule);
+        let (_messagebus, handler) = universe.spawn_builder().spawn(actor_with_schedule);
         universe.sleep(Duration::from_secs(200)).await;
         let res = universe.quit().await;
         assert_eq!(res.len(), 1);
@@ -226,7 +230,7 @@ mod tests {
     async fn test_universe_join_after_actor_quit() {
         let universe = Universe::default();
         let actor_with_schedule = CountingMinutesActor::default();
-        let (_mailbox, handler) = universe.spawn_builder().spawn(actor_with_schedule);
+        let (_messagebus, handler) = universe.spawn_builder().spawn(actor_with_schedule);
         assert!(matches!(handler.quit().await, (ActorExitStatus::Quit, 1)));
         assert!(!universe
             .quit()
@@ -240,8 +244,8 @@ mod tests {
         let universe = Universe::default();
         let panicking_actor = ExitPanickingActor::default();
         let actor_with_schedule = CountingMinutesActor::default();
-        let (_mailbox, _handler) = universe.spawn_builder().spawn(panicking_actor);
-        let (_mailbox, _handler) = universe.spawn_builder().spawn(actor_with_schedule);
+        let (_messagebus, _handler) = universe.spawn_builder().spawn(panicking_actor);
+        let (_messagebus, _handler) = universe.spawn_builder().spawn(actor_with_schedule);
         assert!(universe
             .quit()
             .await

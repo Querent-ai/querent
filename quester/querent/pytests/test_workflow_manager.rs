@@ -520,6 +520,7 @@ async fn workflow_manager_python_tests_with_config_events_mpsc_separate_receiver
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config_events_qflow() -> pyo3::PyResult<()> {
     let universe = Universe::with_accelerated_time();
+    let (event_streamer_messagebus, _indexer_inbox) = universe.create_test_messagebus();
     let config = Config {
         version: 1.0,
         querent_id: "event_handler".to_string(),
@@ -555,6 +556,7 @@ async fn workflow_manager_python_tests_with_config_events_qflow() -> pyo3::PyRes
     // Initialize the Qflow
     let qflow_source_actor = SourceActor {
         source: Box::new(qflow_actor),
+        event_streamer_messagebus: event_streamer_messagebus,
     };
 
     let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);

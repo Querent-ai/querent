@@ -21,7 +21,7 @@ mod actor_state;
 pub mod channel_with_priority;
 mod command;
 mod envelope;
-mod mailbox;
+mod messagebus;
 mod observation;
 mod registry;
 pub(crate) mod scheduler;
@@ -47,7 +47,7 @@ pub use universe::Universe;
 pub use self::actor_context::ActorContext;
 pub use self::actor_state::ActorState;
 pub use self::channel_with_priority::{QueueCapacity, RecvError, SendError, TrySendError};
-pub use self::mailbox::{Inbox, Mailbox, WeakMailbox};
+pub use self::messagebus::{Inbox, MessageBus, WeakMessagebus};
 pub use self::registry::ActorObservation;
 pub use self::supervisor::{Supervisor, SupervisorMetrics, SupervisorState};
 

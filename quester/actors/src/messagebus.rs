@@ -17,23 +17,23 @@ use crate::{
     RecvError, SendError,
 };
 
-/// A mailbox is the object that makes it possible to send a message
+/// A messagebus is the object that makes it possible to send a message
 /// to an actor.
 ///
 /// It is lightweight to clone.
 ///
 /// The actor holds its `Inbox` counterpart.
 ///
-/// The mailbox can receive high priority and low priority messages.
+/// The messagebus can receive high priority and low priority messages.
 /// Commands are typically sent as high priority messages, whereas regular
 /// actor messages are sent to the low priority channel.
 ///
 /// Whenever a high priority message is available, it is processed
 /// before low priority messages.
 ///
-/// If all mailboxes are dropped, the actor will process all of the pending messages
+/// If all messagebuses are dropped, the actor will process all of the pending messages
 /// and gracefully exit with [`crate::actor::ActorExitStatus::Success`].
-pub struct Mailbox<A: Actor> {
+pub struct MessageBus<A: Actor> {
     inner: Arc<Inner<A>>,
     // We do not rely on the `Arc:strong_count` here to avoid an intricate
     // race condition. We want to make sure the processing of the `Nudge`
@@ -41,50 +41,50 @@ pub struct Mailbox<A: Actor> {
     ref_count: Arc<AtomicUsize>,
 }
 
-impl<A: Actor> Mailbox<A> {
-    pub fn downgrade(&self) -> WeakMailbox<A> {
-        WeakMailbox {
+impl<A: Actor> MessageBus<A> {
+    pub fn downgrade(&self) -> WeakMessagebus<A> {
+        WeakMessagebus {
             inner: Arc::downgrade(&self.inner),
             ref_count: Arc::downgrade(&self.ref_count),
         }
     }
 }
 
-impl<A: Actor> Drop for Mailbox<A> {
+impl<A: Actor> Drop for MessageBus<A> {
     fn drop(&mut self) {
         let old_val = self.ref_count.fetch_sub(1, Ordering::SeqCst);
         if old_val == 2 {
-            // This was the last mailbox.
-            // `ref_count == 1` means that only the mailbox in the ActorContext
+            // This was the last messagebus.
+            // `ref_count == 1` means that only the messagebus in the ActorContext
             // is remaining.
-            let _ = self.send_message_with_high_priority(LastMailbox);
+            let _ = self.send_message_with_high_priority(LastMessagebus);
         }
     }
 }
 
 #[derive(Debug)]
-struct LastMailbox;
+struct LastMessagebus;
 
 #[async_trait]
-impl<A: Actor> Handler<LastMailbox> for A {
+impl<A: Actor> Handler<LastMessagebus> for A {
     type Reply = ();
 
     async fn handle(
         &mut self,
-        _: LastMailbox,
+        _: LastMessagebus,
         _ctx: &ActorContext<Self>,
     ) -> Result<(), ActorExitStatus> {
-        // Being the last mailbox does not necessarily mean that we
+        // Being the last messagebus does not necessarily mean that we
         // want to stop the processing.
         //
         // There could be pending message in the queue that will
-        // spawn actors which will get a new copy of the mailbox
+        // spawn actors which will get a new copy of the messagebus
         // etc.
         //
         // For that reason, the logic that really detects
-        // the last mailbox happens when all message have been drained.
+        // the last messagebus happens when all message have been drained.
         //
-        // The `LastMailbox` message is just here to make sure the actor
+        // The `LastMessagebus` message is just here to make sure the actor
         // loop does not get stuck waiting for a message that does
         // will never come.
         Ok(())
@@ -97,18 +97,18 @@ pub(crate) enum Priority {
     Low,
 }
 
-impl<A: Actor> Clone for Mailbox<A> {
+impl<A: Actor> Clone for MessageBus<A> {
     fn clone(&self) -> Self {
         self.ref_count.fetch_add(1, Ordering::SeqCst);
-        Mailbox {
+        MessageBus {
             inner: self.inner.clone(),
             ref_count: self.ref_count.clone(),
         }
     }
 }
 
-impl<A: Actor> Mailbox<A> {
-    pub(crate) fn is_last_mailbox(&self) -> bool {
+impl<A: Actor> MessageBus<A> {
+    pub(crate) fn is_last_messagebus(&self) -> bool {
         self.ref_count.load(Ordering::SeqCst) == 1
     }
 
@@ -127,15 +127,15 @@ struct Inner<A: Actor> {
     instance_id: String,
 }
 
-impl<A: Actor> fmt::Debug for Mailbox<A> {
+impl<A: Actor> fmt::Debug for MessageBus<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_tuple("Mailbox")
+        f.debug_tuple("MessageBus")
             .field(&self.actor_instance_id())
             .finish()
     }
 }
 
-impl<A: Actor> Mailbox<A> {
+impl<A: Actor> MessageBus<A> {
     pub fn actor_instance_id(&self) -> &str {
         &self.inner.instance_id
     }
@@ -161,7 +161,7 @@ impl<A: Actor> Mailbox<A> {
             .await
     }
 
-    /// Attempts to queue a message in the low priority channel of the mailbox.
+    /// Attempts to queue a message in the low priority channel of the messagebus.
     ///
     /// If sending the message would block, the method simply returns `TrySendError::Full(message)`.
     pub fn try_send_message<M>(
@@ -372,7 +372,7 @@ impl<A: Actor> Inbox<A> {
     /// in the low priority channel.
     ///
     /// Warning this iterator might never be exhausted if there is a living
-    /// mailbox associated to it.
+    /// messagebus associated to it.
     pub fn drain_for_test(&self) -> Vec<Box<dyn Any>> {
         self.rx
             .drain_low_priority()
@@ -385,7 +385,7 @@ impl<A: Actor> Inbox<A> {
     /// in the low priority channel.
     ///
     /// Warning this iterator might never be exhausted if there is a living
-    /// mailbox associated to it.
+    /// messagebus associated to it.
     pub fn drain_for_test_typed<M: 'static>(&self) -> Vec<M> {
         self.rx
             .drain_low_priority()
@@ -395,14 +395,14 @@ impl<A: Actor> Inbox<A> {
     }
 }
 
-pub(crate) fn create_mailbox<A: Actor>(
+pub(crate) fn create_messagebus<A: Actor>(
     actor_name: String,
     queue_capacity: QueueCapacity,
     scheduler_client_opt: Option<SchedulerClient>,
-) -> (Mailbox<A>, Inbox<A>) {
+) -> (MessageBus<A>, Inbox<A>) {
     let (tx, rx) = crate::channel_with_priority::channel(queue_capacity);
     let ref_count = Arc::new(AtomicUsize::new(1));
-    let mailbox = Mailbox {
+    let messagebus = MessageBus {
         inner: Arc::new(Inner {
             tx,
             instance_id: common::new_quid(&actor_name),
@@ -411,15 +411,15 @@ pub(crate) fn create_mailbox<A: Actor>(
         ref_count,
     };
     let inbox = Inbox { rx: Arc::new(rx) };
-    (mailbox, inbox)
+    (messagebus, inbox)
 }
 
-pub struct WeakMailbox<A: Actor> {
+pub struct WeakMessagebus<A: Actor> {
     inner: Weak<Inner<A>>,
     ref_count: Weak<AtomicUsize>,
 }
 
-impl<A: Actor> Clone for WeakMailbox<A> {
+impl<A: Actor> Clone for WeakMessagebus<A> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -428,11 +428,11 @@ impl<A: Actor> Clone for WeakMailbox<A> {
     }
 }
 
-impl<A: Actor> WeakMailbox<A> {
-    pub fn upgrade(&self) -> Option<Mailbox<A>> {
+impl<A: Actor> WeakMessagebus<A> {
+    pub fn upgrade(&self) -> Option<MessageBus<A>> {
         let inner = self.inner.upgrade()?;
         let ref_count = self.ref_count.upgrade()?;
-        Some(Mailbox { inner, ref_count })
+        Some(MessageBus { inner, ref_count })
     }
 }
 
@@ -446,20 +446,20 @@ mod tests {
     use crate::Universe;
 
     #[tokio::test]
-    async fn test_weak_mailbox_downgrade_upgrade() {
+    async fn test_weak_messagebus_downgrade_upgrade() {
         let universe = Universe::with_accelerated_time();
-        let (mailbox, _inbox) = universe.create_test_mailbox::<PingReceiverActor>();
-        let weak_mailbox = mailbox.downgrade();
-        assert!(weak_mailbox.upgrade().is_some());
+        let (messagebus, _inbox) = universe.create_test_messagebus::<PingReceiverActor>();
+        let weak_messagebus = messagebus.downgrade();
+        assert!(weak_messagebus.upgrade().is_some());
     }
 
     #[tokio::test]
-    async fn test_weak_mailbox_failing_upgrade() {
+    async fn test_weak_messagebus_failing_upgrade() {
         let universe = Universe::with_accelerated_time();
-        let (mailbox, _inbox) = universe.create_test_mailbox::<PingReceiverActor>();
-        let weak_mailbox = mailbox.downgrade();
-        drop(mailbox);
-        assert!(weak_mailbox.upgrade().is_none());
+        let (messagebus, _inbox) = universe.create_test_messagebus::<PingReceiverActor>();
+        let weak_messagebus = messagebus.downgrade();
+        drop(messagebus);
+        assert!(weak_messagebus.upgrade().is_none());
     }
 
     struct BackPressureActor;
@@ -497,13 +497,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_mailbox_send_with_backpressure_counter_low_backpressure() {
+    async fn test_messagebus_send_with_backpressure_counter_low_backpressure() {
         let universe = Universe::with_accelerated_time();
         let back_pressure_actor = BackPressureActor;
-        let (mailbox, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
+        let (messagebus, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
         // We send a first message to make sure the actor has been properly spawned and is listening
         // for new messages.
-        mailbox
+        messagebus
             .ask_with_backpressure_counter(Duration::default(), None)
             .await
             .unwrap();
@@ -511,7 +511,7 @@ mod tests {
         let backpressure_micros_counter =
             IntCounter::new("test_counter", "help for test_counter").unwrap();
         let wait_duration = Duration::from_millis(1);
-        let processed = mailbox
+        let processed = messagebus
             .send_message_with_backpressure_counter(
                 wait_duration,
                 Some(&backpressure_micros_counter),
@@ -525,20 +525,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_mailbox_send_with_backpressure_counter_backpressure() {
+    async fn test_messagebus_send_with_backpressure_counter_backpressure() {
         let universe = Universe::with_accelerated_time();
         let back_pressure_actor = BackPressureActor;
-        let (mailbox, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
+        let (messagebus, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
         // We send a first message to make sure the actor has been properly spawned and is listening
         // for new messages.
-        mailbox
+        messagebus
             .ask_with_backpressure_counter(Duration::default(), None)
             .await
             .unwrap();
         let backpressure_micros_counter =
             IntCounter::new("test_counter", "help for test_counter").unwrap();
         let wait_duration = Duration::from_millis(1);
-        mailbox
+        messagebus
             .send_message_with_backpressure_counter(
                 wait_duration,
                 Some(&backpressure_micros_counter),
@@ -547,7 +547,7 @@ mod tests {
             .unwrap();
         // That second message will present some backpressure, since the capacity is 0 and
         // the first message will take 1000 micros to be processed.
-        mailbox
+        messagebus
             .send_message_with_backpressure_counter(
                 Duration::default(),
                 Some(&backpressure_micros_counter),
@@ -559,18 +559,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_mailbox_waiting_for_processing_does_not_counter_as_backpressure() {
+    async fn test_messagebus_waiting_for_processing_does_not_counter_as_backpressure() {
         let universe = Universe::with_accelerated_time();
         let back_pressure_actor = BackPressureActor;
-        let (mailbox, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
-        mailbox
+        let (messagebus, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
+        messagebus
             .ask_with_backpressure_counter(Duration::default(), None)
             .await
             .unwrap();
         let backpressure_micros_counter =
             IntCounter::new("test_counter", "help for test_counter").unwrap();
         let start = Instant::now();
-        mailbox
+        messagebus
             .ask_with_backpressure_counter(Duration::from_millis(1), None)
             .await
             .unwrap();
@@ -583,11 +583,11 @@ mod tests {
     #[tokio::test]
     async fn test_try_send() {
         let universe = Universe::with_accelerated_time();
-        let (mailbox, _inbox) = universe
-            .create_mailbox::<PingReceiverActor>("hello".to_string(), QueueCapacity::Bounded(1));
-        assert!(mailbox.try_send_message(Ping).is_ok());
+        let (messagebus, _inbox) = universe
+            .create_messagebus::<PingReceiverActor>("hello".to_string(), QueueCapacity::Bounded(1));
+        assert!(messagebus.try_send_message(Ping).is_ok());
         assert!(matches!(
-            mailbox.try_send_message(Ping).unwrap_err(),
+            messagebus.try_send_message(Ping).unwrap_err(),
             TrySendError::Full(Ping)
         ));
     }
@@ -595,12 +595,12 @@ mod tests {
     #[tokio::test]
     async fn test_try_send_disconnect() {
         let universe = Universe::with_accelerated_time();
-        let (mailbox, inbox) = universe
-            .create_mailbox::<PingReceiverActor>("hello".to_string(), QueueCapacity::Bounded(1));
-        assert!(mailbox.try_send_message(Ping).is_ok());
+        let (messagebus, inbox) = universe
+            .create_messagebus::<PingReceiverActor>("hello".to_string(), QueueCapacity::Bounded(1));
+        assert!(messagebus.try_send_message(Ping).is_ok());
         mem::drop(inbox);
         assert!(matches!(
-            mailbox.try_send_message(Ping).unwrap_err(),
+            messagebus.try_send_message(Ping).unwrap_err(),
             TrySendError::Disconnected
         ));
     }

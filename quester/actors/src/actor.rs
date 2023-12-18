@@ -17,7 +17,7 @@ pub enum ActorExitStatus {
     /// The actor successfully exited.
     ///
     /// It happens either because:
-    /// - all of the existing mailboxes were dropped and the actor message queue was exhausted.
+    /// - all of the existing messagebuses were dropped and the actor message queue was exhausted.
     /// No new message could ever arrive to the actor. (This exit is triggered by the framework.)
     /// or
     /// - the actor `process_message` method returned `Err(ExitStatusCode::Success)`.
@@ -80,7 +80,7 @@ impl From<SendError> for ActorExitStatus {
 }
 
 /// An actor has an internal state and processes a stream of messages.
-/// Each actor has a mailbox where the messages are enqueued before being processed.
+/// Each actor has a messagebus where the messages are enqueued before being processed.
 ///
 /// While processing a message, the actor typically
 /// - update its state;
@@ -117,7 +117,7 @@ pub trait Actor: Send + Sized + 'static {
         true
     }
 
-    /// The Actor's incoming mailbox queue capacity. It is set when the actor is spawned.
+    /// The Actor's incoming messagebus queue capacity. It is set when the actor is spawned.
     fn queue_capacity(&self) -> QueueCapacity {
         QueueCapacity::Unbounded
     }
