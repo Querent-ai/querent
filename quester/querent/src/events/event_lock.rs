@@ -68,6 +68,9 @@ impl EventLock {
 #[derive(Debug, PartialEq)]
 pub struct NewEventLock(pub EventLock);
 
+#[derive(Debug)]
+pub struct NewEventsToken(pub String);
+
 #[cfg(test)]
 mod tests {
 

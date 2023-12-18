@@ -6,15 +6,7 @@ use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
 	querent::{Querent, QuerentError, Workflow, WorkflowBuilder},
 };
-use serde::Serialize;
-use std::{
-	collections::HashMap,
-	sync::{
-		atomic::{AtomicU64, Ordering},
-		Arc,
-	},
-	time::Duration,
-};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
 	sync::mpsc,
 	task::JoinHandle,
@@ -22,62 +14,9 @@ use tokio::{
 };
 
 use crate::{
-	EventLock, EventStreamer, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
+	EventLock, EventStreamer, EventsBatch, EventsCounter, Source, SourceContext,
+	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
-
-#[derive(Debug, Default)]
-pub struct EventsBatch {
-	pub qflow_id: String,
-	pub events: HashMap<EventType, EventState>,
-	pub timestamp: u64,
-}
-
-impl EventsBatch {
-	pub fn new(qflow_id: String, events: HashMap<EventType, EventState>, timestamp: u64) -> Self {
-		Self { qflow_id, events, timestamp }
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.events.is_empty()
-	}
-
-	pub fn len(&self) -> usize {
-		self.events.len()
-	}
-
-	pub fn timestamp(&self) -> u64 {
-		self.timestamp
-	}
-
-	pub fn qflow_id(&self) -> String {
-		self.qflow_id.clone()
-	}
-
-	pub fn events(&self) -> HashMap<EventType, EventState> {
-		self.events.clone()
-	}
-}
-
-#[derive(Debug, Serialize)]
-pub struct EventsCounter {
-	pub qflow_id: String,
-	pub total: AtomicU64,
-	pub processed: AtomicU64,
-}
-
-impl EventsCounter {
-	pub fn new(qflow_id: String) -> Self {
-		Self { qflow_id, total: AtomicU64::new(0), processed: AtomicU64::new(0) }
-	}
-
-	pub fn increment_total(&self) {
-		self.total.fetch_add(1, Ordering::SeqCst);
-	}
-
-	pub fn increment_processed(&self, count: u64) {
-		self.processed.fetch_add(count, Ordering::SeqCst);
-	}
-}
 
 pub struct Qflow {
 	pub id: String,

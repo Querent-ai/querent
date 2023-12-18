@@ -8,7 +8,7 @@ use std::sync::{
 };
 use tokio::runtime::Handle;
 
-use crate::{EventLock, EventsBatch};
+use crate::{EventLock, EventsBatch, NewEventLock};
 
 #[derive(Debug, Serialize)]
 pub struct EventStreamerCounters {
@@ -43,7 +43,7 @@ pub struct EventStreamer {
 	//event_mapper: Arc<dyn EventMapper>,
 	timestamp: u64,
 	counters: Arc<EventStreamerCounters>,
-	publish_lock: EventLock,
+	publish_event_lock: EventLock,
 }
 
 impl EventStreamer {
@@ -52,7 +52,7 @@ impl EventStreamer {
 			//event_mapper,
 			timestamp: 0,
 			counters: Arc::new(EventStreamerCounters::new()),
-			publish_lock: EventLock::default(),
+			publish_event_lock: EventLock::default(),
 		}
 	}
 
@@ -68,8 +68,8 @@ impl EventStreamer {
 		self.timestamp = timestamp;
 	}
 
-	pub fn get_publish_lock(&self) -> EventLock {
-		self.publish_lock.clone()
+	pub fn get_publish_event_lock(&self) -> EventLock {
+		self.publish_event_lock.clone()
 	}
 }
 
@@ -126,9 +126,25 @@ impl Handler<EventsBatch> for EventStreamer {
 		let events = message.events;
 		self.counters.increment_events_received(events.len() as u64);
 		self.timestamp = message.timestamp;
-		//self.publish_lock.publish(events_processed).await?;
+		//self.publish_event_lock.publish(events_processed).await?;
 		println!("EventStreamer received {} events", events.len());
 		ctx.record_progress();
+		Ok(())
+	}
+}
+
+#[async_trait]
+impl Handler<NewEventLock> for EventStreamer {
+	type Reply = ();
+
+	async fn handle(
+		&mut self,
+		message: NewEventLock,
+		_ctx: &ActorContext<Self>,
+	) -> Result<(), ActorExitStatus> {
+		let NewEventLock(publish_event_lock) = &message;
+		self.publish_event_lock = publish_event_lock.clone();
+		//ctx.send_message(&self.indexer_messagebus, message).await?;
 		Ok(())
 	}
 }
