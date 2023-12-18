@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::atomic::Ordering};
 
 use actors::Universe;
-use querent::{Qflow, SourceActor};
+use querent::{EventStreamer, Qflow, SourceActor};
 use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
 	cross::{CLRepr, StringType},
@@ -84,7 +84,6 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 #[pyo3_asyncio::tokio::test]
 async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	let universe = Universe::with_accelerated_time();
-	let (event_streamer_messagebus, indexer_inbox) = universe.create_test_messagebus();
 	let config = Config {
 		version: 1.0,
 		querent_id: "event_handler".to_string(),
@@ -117,6 +116,12 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	// Create a sample Qflow
 	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
 
+	// Create a EventStreamer
+	let event_streamer_actor = EventStreamer::new();
+
+	let (event_streamer_messagebus, event_handle) =
+		universe.spawn_builder().spawn(event_streamer_actor);
+
 	// Initialize the Qflow
 	let qflow_source_actor =
 		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
@@ -125,10 +130,10 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	let (actor_termination, _) = qflow_source_handle.join().await;
 	assert!(actor_termination.is_success());
 
-	let drained_messages = indexer_inbox.drain_for_test();
+	let observed_state = event_handle.process_pending_and_observe().await.state;
 
 	// Verify that the event handler sent the expected event
-	assert_eq!(drained_messages.len(), 2);
+	assert_eq!(observed_state.events_received.load(Ordering::Relaxed), 1);
 
 	Ok(())
 }
