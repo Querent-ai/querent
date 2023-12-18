@@ -256,7 +256,7 @@ mod tests {
 	use async_trait::async_trait;
 
 	use super::*;
-	use crate::{Handler, Universe};
+	use crate::{Handler, Quester};
 
 	#[derive(Default)]
 	struct PanickingActor {
@@ -317,8 +317,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_panic_in_actor() -> anyhow::Result<()> {
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, handle) = universe.spawn_builder().spawn(PanickingActor::default());
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, handle) = quester.spawn_builder().spawn(PanickingActor::default());
 		messagebus.send_message(Panic).await?;
 		let (exit_status, count) = handle.join().await;
 		assert!(matches!(exit_status, ActorExitStatus::Panicked));
@@ -328,8 +328,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_exit() -> anyhow::Result<()> {
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, handle) = universe.spawn_builder().spawn(ExitActor::default());
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, handle) = quester.spawn_builder().spawn(ExitActor::default());
 		messagebus.send_message(Exit).await?;
 		let (exit_status, count) = handle.join().await;
 		assert!(matches!(exit_status, ActorExitStatus::DownstreamClosed));
@@ -375,15 +375,15 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_observation_debounce() {
-		// TODO investigate why Universe::with_accelerated_time() does not work here.
-		let universe = Universe::new();
-		let (_, actor_handle) = universe.spawn_builder().spawn(ObserveActor::default());
+		// TODO investigate why Quester::with_accelerated_time() does not work here.
+		let quester = Quester::new();
+		let (_, actor_handle) = quester.spawn_builder().spawn(ObserveActor::default());
 		for _ in 0..10 {
 			actor_handle.refresh_observe();
-			universe.sleep(Duration::from_millis(10)).await;
+			quester.sleep(Duration::from_millis(10)).await;
 		}
 		let (_last_obs, num_obs) = actor_handle.quit().await;
 		assert!(num_obs < 8);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 }

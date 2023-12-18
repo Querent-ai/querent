@@ -15,7 +15,7 @@ use tokio::sync::{oneshot, watch};
 use tracing::{debug, error};
 
 #[cfg(any(test, feature = "testsuite"))]
-use crate::Universe;
+use crate::Quester;
 use crate::{
 	actor_state::AtomicState,
 	registry::ActorRegistry,
@@ -81,8 +81,8 @@ impl<A: Actor> ActorContext<A> {
 
 	/// Sleeps for a given amount of time.
 	///
-	/// That sleep is measured by the universe scheduler, which means that it can be
-	/// shortened if `Universe::simulate_sleep(..)` is used.
+	/// That sleep is measured by the quester scheduler, which means that it can be
+	/// shortened if `Quester::simulate_sleep(..)` is used.
 	///
 	/// While sleeping, an actor is NOT protected from its supervisor.
 	/// It is up to the user to call `ActorContext::protect_future(..)`.
@@ -95,11 +95,11 @@ impl<A: Actor> ActorContext<A> {
 
 	#[cfg(any(test, feature = "testsuite"))]
 	pub fn for_test(
-		universe: &Universe,
+		quester: &Quester,
 		actor_messagebus: MessageBus<A>,
 		observable_state_tx: watch::Sender<A::ObservableState>,
 	) -> Self {
-		Self::new(actor_messagebus, universe.spawn_ctx.clone(), observable_state_tx, None)
+		Self::new(actor_messagebus, quester.spawn_ctx.clone(), observable_state_tx, None)
 	}
 
 	pub fn messagebus(&self) -> &MessageBus<A> {

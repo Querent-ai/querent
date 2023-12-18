@@ -51,20 +51,20 @@ impl Source for FileSource {
 
 #[cfg(test)]
 mod tests {
-	use actors::Universe;
+	use actors::Quester;
 
 	use crate::{file_source::FileSource, source::SourceActor};
 
 	#[tokio::test]
 	async fn test_file_source() -> anyhow::Result<()> {
-		let universe = Universe::with_accelerated_time();
-		let (event_streamer_messagebus, _indexer_inbox) = universe.create_test_messagebus();
+		let quester = Quester::with_accelerated_time();
+		let (event_streamer_messagebus, _indexer_inbox) = quester.create_test_messagebus();
 		let file_source =
 			FileSource { source_id: "test_file_source".to_string(), counters: Default::default() };
 		let file_source_actor =
 			SourceActor { source: Box::new(file_source), event_streamer_messagebus };
 		let (_file_source_messagebus, file_source_handle) =
-			universe.spawn_builder().spawn(file_source_actor);
+			quester.spawn_builder().spawn(file_source_actor);
 		let (actor_termination, counters) = file_source_handle.join().await;
 		assert!(actor_termination.is_success());
 		assert_eq!(

@@ -183,7 +183,7 @@ mod tests {
 	use crate::{
 		supervisor::SupervisorMetrics,
 		tests::{Ping, PingReceiverActor},
-		Actor, ActorContext, ActorExitStatus, AskError, Handler, Observe, Universe,
+		Actor, ActorContext, ActorExitStatus, AskError, Handler, Observe, Quester,
 	};
 
 	#[derive(Copy, Clone, Debug)]
@@ -250,9 +250,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_supervisor_restart_on_panic() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor = FailingActor::default();
-		let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
+		let (messagebus, supervisor_handle) = quester.spawn_builder().supervise(actor);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 1);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 2);
 		assert!(messagebus.ask(FailingActorMessage::Panic).await.is_err());
@@ -266,9 +266,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_supervisor_restart_on_error() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor = FailingActor::default();
-		let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
+		let (messagebus, supervisor_handle) = quester.spawn_builder().supervise(actor);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 1);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 2);
 		assert!(messagebus.ask(FailingActorMessage::ReturnError).await.is_err());
@@ -282,9 +282,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_supervisor_kills_and_restart_frozen_actor() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor = FailingActor::default();
-		let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
+		let (messagebus, supervisor_handle) = quester.spawn_builder().supervise(actor);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 1);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 2);
 		assert_eq!(
@@ -305,9 +305,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_supervisor_forwards_quit_commands() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor = FailingActor::default();
-		let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
+		let (messagebus, supervisor_handle) = quester.spawn_builder().supervise(actor);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 1);
 		let (exit_status, _state) = supervisor_handle.quit().await;
 		assert!(matches!(
@@ -319,9 +319,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_supervisor_forwards_kill_command() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor = FailingActor::default();
-		let (messagebus, supervisor_handle) = universe.spawn_builder().supervise(actor);
+		let (messagebus, supervisor_handle) = quester.spawn_builder().supervise(actor);
 		assert_eq!(messagebus.ask(FailingActorMessage::Increment).await.unwrap(), 1);
 		let (exit_status, _state) = supervisor_handle.kill().await;
 		assert!(messagebus.ask(FailingActorMessage::Increment).await.is_err());
@@ -334,27 +334,27 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_supervisor_exits_successfully_when_supervised_actor_messagebus_is_dropped() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor = FailingActor::default();
-		let (_, supervisor_handle) = universe.spawn_builder().supervise(actor);
+		let (_, supervisor_handle) = quester.spawn_builder().supervise(actor);
 		let (exit_status, _state) = supervisor_handle.join().await;
 		assert!(matches!(exit_status, ActorExitStatus::Success));
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
 	async fn test_supervisor_state() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let ping_actor = PingReceiverActor::default();
-		let (messagebus, handler) = universe.spawn_builder().supervise(ping_actor);
+		let (messagebus, handler) = quester.spawn_builder().supervise(ping_actor);
 		let obs = handler.observe().await;
 		assert_eq!(obs.state.state_opt, Some(0));
 		let _ = messagebus.ask(Ping).await;
 		assert_eq!(messagebus.ask(Observe).await.unwrap(), 1);
-		universe.sleep(Duration::from_secs(60)).await;
+		quester.sleep(Duration::from_secs(60)).await;
 		let obs = handler.observe().await;
 		assert_eq!(obs.state.state_opt, Some(1));
 		handler.quit().await;
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 }

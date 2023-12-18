@@ -290,7 +290,7 @@ impl Scheduler {
 	///
 	/// We advance time if:
 	/// - someone is actually requesting for a simulated fast forward in time.
-	/// (if Universe::simulate_time_shift(..) has been called).
+	/// (if Quester::simulate_time_shift(..) has been called).
 	/// - no message is queued for processing, no initialize or no finalize
 	/// is being processed.
 	fn advance_time_if_necessary(&mut self) {
@@ -339,7 +339,7 @@ mod tests {
 
 	use async_trait::async_trait;
 
-	use crate::{Actor, ActorContext, ActorExitStatus, Handler, Universe};
+	use crate::{Actor, ActorContext, ActorExitStatus, Handler, Quester};
 
 	struct ClockActor {
 		count: Arc<AtomicUsize>,
@@ -377,12 +377,12 @@ mod tests {
 	async fn test_scheduler_advance_time_fast_forward_initialize() {
 		let count: Arc<AtomicUsize> = Default::default();
 		let simple_actor = ClockActor { count: count.clone() };
-		let universe = Universe::with_accelerated_time();
-		universe.spawn_builder().spawn(simple_actor);
+		let quester = Quester::with_accelerated_time();
+		quester.spawn_builder().spawn(simple_actor);
 		assert_eq!(count.load(Ordering::SeqCst), 0);
-		universe.sleep(Duration::from_millis(15)).await;
+		quester.sleep(Duration::from_millis(15)).await;
 		assert_eq!(count.load(Ordering::SeqCst), 1);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
@@ -390,14 +390,14 @@ mod tests {
 		let start = Instant::now();
 		let count: Arc<AtomicUsize> = Default::default();
 		let simple_actor = ClockActor { count: count.clone() };
-		let universe = Universe::with_accelerated_time();
-		universe.spawn_builder().spawn(simple_actor);
+		let quester = Quester::with_accelerated_time();
+		quester.spawn_builder().spawn(simple_actor);
 		assert_eq!(count.load(Ordering::SeqCst), 0);
-		universe.sleep(Duration::from_secs(10)).await;
+		quester.sleep(Duration::from_secs(10)).await;
 		assert_eq!(count.load(Ordering::SeqCst), 10);
 		let elapsed = start.elapsed();
 		// The whole point is to accelerate time.
 		assert!(elapsed.as_millis() < 50);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 }

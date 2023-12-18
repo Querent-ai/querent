@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::atomic::Ordering};
 
-use actors::Universe;
+use actors::Quester;
 use querent::{EventStreamer, Qflow, SourceActor};
 use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
@@ -31,8 +31,8 @@ async def print_querent(config, text: str):
 
 #[pyo3_asyncio::tokio::test]
 async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
-	let universe = Universe::with_accelerated_time();
-	let (event_streamer_messagebus, indexer_inbox) = universe.create_test_messagebus();
+	let quester = Quester::with_accelerated_time();
+	let (event_streamer_messagebus, indexer_inbox) = quester.create_test_messagebus();
 	let config = Config {
 		version: 1.0,
 		querent_id: "event_handler".to_string(),
@@ -69,7 +69,7 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 	let qflow_source_actor =
 		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
 
-	let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);
+	let (_, qflow_source_handle) = quester.spawn_builder().spawn(qflow_source_actor);
 	let (actor_termination, _) = qflow_source_handle.join().await;
 	assert!(actor_termination.is_success());
 
@@ -83,7 +83,7 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 
 #[pyo3_asyncio::tokio::test]
 async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let config = Config {
 		version: 1.0,
 		querent_id: "event_handler".to_string(),
@@ -120,13 +120,13 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	let event_streamer_actor = EventStreamer::new();
 
 	let (event_streamer_messagebus, event_handle) =
-		universe.spawn_builder().spawn(event_streamer_actor);
+		quester.spawn_builder().spawn(event_streamer_actor);
 
 	// Initialize the Qflow
 	let qflow_source_actor =
 		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
 
-	let (_, qflow_source_handle) = universe.spawn_builder().spawn(qflow_source_actor);
+	let (_, qflow_source_handle) = quester.spawn_builder().spawn(qflow_source_actor);
 	let (actor_termination, _) = qflow_source_handle.join().await;
 	assert!(actor_termination.is_success());
 

@@ -232,43 +232,43 @@ impl ActorJoinHandle {
 mod tests {
 	use std::time::Duration;
 
-	use crate::{tests::PingReceiverActor, Universe};
+	use crate::{tests::PingReceiverActor, Quester};
 
 	#[tokio::test]
 	async fn test_registry() {
 		let test_actor = PingReceiverActor::default();
-		let universe = Universe::with_accelerated_time();
-		let (_messagebus, _handle) = universe.spawn_builder().spawn(test_actor);
-		let _actor_messagebus = universe.get_one::<PingReceiverActor>().unwrap();
-		universe.assert_quit().await;
+		let quester = Quester::with_accelerated_time();
+		let (_messagebus, _handle) = quester.spawn_builder().spawn(test_actor);
+		let _actor_messagebus = quester.get_one::<PingReceiverActor>().unwrap();
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
 	async fn test_registry_killed_actor() {
 		let test_actor = PingReceiverActor::default();
-		let universe = Universe::with_accelerated_time();
-		let (_messagebus, handle) = universe.spawn_builder().spawn(test_actor);
+		let quester = Quester::with_accelerated_time();
+		let (_messagebus, handle) = quester.spawn_builder().spawn(test_actor);
 		handle.kill().await;
-		assert!(universe.get_one::<PingReceiverActor>().is_none());
+		assert!(quester.get_one::<PingReceiverActor>().is_none());
 	}
 
 	#[tokio::test]
 	async fn test_registry_last_messagebus_dropped_actor() {
 		let test_actor = PingReceiverActor::default();
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, handle) = universe.spawn_builder().spawn(test_actor);
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, handle) = quester.spawn_builder().spawn(test_actor);
 		drop(messagebus);
 		handle.join().await;
-		assert!(universe.get_one::<PingReceiverActor>().is_none());
+		assert!(quester.get_one::<PingReceiverActor>().is_none());
 	}
 
 	#[tokio::test]
 	async fn test_get_actor_states() {
 		let test_actor = PingReceiverActor::default();
-		let universe = Universe::with_accelerated_time();
-		let (_messagebus, _handle) = universe.spawn_builder().spawn(test_actor);
-		let obs = universe.observe(Duration::from_millis(1000)).await;
+		let quester = Quester::with_accelerated_time();
+		let (_messagebus, _handle) = quester.spawn_builder().spawn(test_actor);
+		let obs = quester.observe(Duration::from_millis(1000)).await;
 		assert_eq!(obs.len(), 1);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 }

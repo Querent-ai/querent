@@ -8,29 +8,29 @@ use crate::{
 	Actor, ActorExitStatus, Command, Inbox, MessageBus, QueueCapacity,
 };
 
-/// Universe serves as the top-level context in which Actor can be spawned.
-/// It is *not* a singleton. A typical application will usually have only one universe hosting all
+/// Quester serves as the top-level context in which Actor can be spawned.
+/// It is *not* a singleton. A typical application will usually have only one quester hosting all
 /// of the actors but it is not a requirement.
 ///
-/// In particular, unit test all have their own universe and hence can be executed in parallel.
-pub struct Universe {
+/// In particular, unit test all have their own quester and hence can be executed in parallel.
+pub struct Quester {
 	pub(crate) spawn_ctx: SpawnContext,
 }
 
-impl Default for Universe {
-	fn default() -> Universe {
-		Universe::new()
+impl Default for Quester {
+	fn default() -> Quester {
+		Quester::new()
 	}
 }
 
-impl Universe {
-	/// Creates a new universe.
-	pub fn new() -> Universe {
+impl Quester {
+	/// Creates a new quester.
+	pub fn new() -> Quester {
 		let scheduler_client = start_scheduler();
-		Universe { spawn_ctx: SpawnContext::new(scheduler_client) }
+		Quester { spawn_ctx: SpawnContext::new(scheduler_client) }
 	}
 
-	/// Creates a universe were time is accelerated.
+	/// Creates a quester were time is accelerated.
 	///
 	/// Time is accelerated in a way to exhibit a behavior as close as possible
 	/// to what would have happened with normal time but faster.
@@ -38,10 +38,10 @@ impl Universe {
 	/// The time "jumps" only happen when no actor is processing any message,
 	/// running initialization or finalize.
 	#[cfg(any(test, feature = "testsuite"))]
-	pub fn with_accelerated_time() -> Universe {
-		let universe = Universe::new();
-		universe.spawn_ctx().scheduler_client.accelerate_time();
-		universe
+	pub fn with_accelerated_time() -> Quester {
+		let quester = Quester::new();
+		quester.spawn_ctx().scheduler_client.accelerate_time();
+		quester
 	}
 
 	pub fn spawn_ctx(&self) -> &SpawnContext {
@@ -80,7 +80,7 @@ impl Universe {
 	/// `tokio::time::sleep`.
 	///
 	/// It can however be accelerated when using a time-accelerated
-	/// universe.
+	/// quester.
 	pub async fn sleep(&self, duration: Duration) {
 		self.spawn_ctx.scheduler_client.sleep(duration).await;
 	}
@@ -117,7 +117,7 @@ impl Universe {
 	}
 }
 
-impl Drop for Universe {
+impl Drop for Quester {
 	fn drop(&mut self) {
 		if cfg!(any(test, feature = "testsuite")) &&
 			!self.spawn_ctx.registry.is_empty() &&
@@ -125,7 +125,7 @@ impl Drop for Universe {
 		{
 			panic!(
 				"There are still running actors at the end of the test. Did you call \
-                 universe.assert_quit()?"
+                 quester.assert_quit()?"
 			);
 		}
 		self.spawn_ctx.kill_switch.kill();
@@ -139,7 +139,7 @@ mod tests {
 
 	use async_trait::async_trait;
 
-	use crate::{Actor, ActorContext, ActorExitStatus, Handler, Universe};
+	use crate::{Actor, ActorContext, ActorExitStatus, Handler, Quester};
 
 	#[derive(Default)]
 	pub struct CountingMinutesActor {
@@ -194,24 +194,24 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_schedule_for_actor() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor_with_schedule = CountingMinutesActor::default();
-		let (_messagebus, handler) = universe.spawn_builder().spawn(actor_with_schedule);
+		let (_messagebus, handler) = quester.spawn_builder().spawn(actor_with_schedule);
 		let count_after_initialization = handler.process_pending_and_observe().await.state;
 		assert_eq!(count_after_initialization, 1);
-		universe.sleep(Duration::from_secs(200)).await;
+		quester.sleep(Duration::from_secs(200)).await;
 		let count_after_advance_time = handler.process_pending_and_observe().await.state;
 		assert_eq!(count_after_advance_time, 4);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
 	async fn test_actor_quit_after_universe_quit() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor_with_schedule = CountingMinutesActor::default();
-		let (_messagebus, handler) = universe.spawn_builder().spawn(actor_with_schedule);
-		universe.sleep(Duration::from_secs(200)).await;
-		let res = universe.quit().await;
+		let (_messagebus, handler) = quester.spawn_builder().spawn(actor_with_schedule);
+		quester.sleep(Duration::from_secs(200)).await;
+		let res = quester.quit().await;
 		assert_eq!(res.len(), 1);
 		assert!(matches!(res.values().next().unwrap(), ActorExitStatus::Quit));
 		assert!(matches!(handler.quit().await, (ActorExitStatus::Quit, 4)));
@@ -219,11 +219,11 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_universe_join_after_actor_quit() {
-		let universe = Universe::default();
+		let quester = Quester::default();
 		let actor_with_schedule = CountingMinutesActor::default();
-		let (_messagebus, handler) = universe.spawn_builder().spawn(actor_with_schedule);
+		let (_messagebus, handler) = quester.spawn_builder().spawn(actor_with_schedule);
 		assert!(matches!(handler.quit().await, (ActorExitStatus::Quit, 1)));
-		assert!(!universe
+		assert!(!quester
 			.quit()
 			.await
 			.values()
@@ -232,12 +232,12 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_universe_quit_with_panicking_actor() {
-		let universe = Universe::default();
+		let quester = Quester::default();
 		let panicking_actor = ExitPanickingActor::default();
 		let actor_with_schedule = CountingMinutesActor::default();
-		let (_messagebus, _handler) = universe.spawn_builder().spawn(panicking_actor);
-		let (_messagebus, _handler) = universe.spawn_builder().spawn(actor_with_schedule);
-		assert!(universe
+		let (_messagebus, _handler) = quester.spawn_builder().spawn(panicking_actor);
+		let (_messagebus, _handler) = quester.spawn_builder().spawn(actor_with_schedule);
+		assert!(quester
 			.quit()
 			.await
 			.values()
@@ -247,11 +247,11 @@ mod tests {
 	#[tokio::test]
 	#[should_panic(
 		expected = "There are still running actors at the end of the test. Did you call \
-                    universe.assert_quit()?"
+                    quester.assert_quit()?"
 	)]
 	async fn test_enforce_universe_assert_quit_calls() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let actor_with_schedule = CountingMinutesActor::default();
-		let _ = universe.spawn_builder().spawn(actor_with_schedule);
+		let _ = quester.spawn_builder().spawn(actor_with_schedule);
 	}
 }

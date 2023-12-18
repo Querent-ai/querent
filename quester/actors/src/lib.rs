@@ -29,19 +29,19 @@ mod supervisor;
 
 pub use scheduler::{start_scheduler, SchedulerClient};
 
+mod quester;
 #[cfg(test)]
 pub(crate) mod tests;
-mod universe;
 
 pub use actor::{Actor, ActorExitStatus, DeferableReplyHandler, Handler};
 pub use actor_handle::{ActorHandle, Health, Healthz, Supervisable};
 pub use command::{Command, Observe};
 use common::KillSwitch;
 pub use observation::{Observation, ObservationType};
+pub use quester::Quester;
 pub use spawn_builder::SpawnContext;
 use thiserror::Error;
 use tracing::{info, warn};
-pub use universe::Universe;
 
 pub use self::{
 	actor_context::ActorContext,
@@ -99,7 +99,7 @@ fn heartbeat_from_env_or_default() -> Duration {
 /// Once this time is elapsed, we just return the last observation.
 const OBSERVE_TIMEOUT: Duration = Duration::from_secs(3);
 
-/// Error that occurred while calling `ActorContext::ask(..)` or `Universe::ask`
+/// Error that occurred while calling `ActorContext::ask(..)` or `Quester::ask`
 #[derive(Error, Debug)]
 pub enum AskError<E: fmt::Debug> {
 	#[error("message could not be delivered")]

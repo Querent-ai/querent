@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::{
 	observation::ObservationType, Actor, ActorContext, ActorExitStatus, ActorHandle, ActorState,
-	Command, Handler, Health, MessageBus, Observation, Supervisable, Universe,
+	Command, Handler, Health, MessageBus, Observation, Quester, Supervisable,
 };
 
 // An actor that receives ping messages.
@@ -106,9 +106,9 @@ impl Handler<AddPeer> for PingerSenderActor {
 
 #[tokio::test]
 async fn test_actor_stops_when_last_messagebus_is_dropped() {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let (ping_recv_messagebus, ping_recv_handle) =
-		universe.spawn_builder().spawn(PingReceiverActor::default());
+		quester.spawn_builder().spawn(PingReceiverActor::default());
 	drop(ping_recv_messagebus);
 	let (exit_status, _) = ping_recv_handle.join().await;
 	assert!(exit_status.is_success());
@@ -116,11 +116,11 @@ async fn test_actor_stops_when_last_messagebus_is_dropped() {
 
 #[tokio::test]
 async fn test_ping_actor() {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let (ping_recv_messagebus, ping_recv_handle) =
-		universe.spawn_builder().spawn(PingReceiverActor::default());
+		quester.spawn_builder().spawn(PingReceiverActor::default());
 	let (ping_sender_messagebus, ping_sender_handle) =
-		universe.spawn_builder().spawn(PingerSenderActor::default());
+		quester.spawn_builder().spawn(PingerSenderActor::default());
 	assert_eq!(
 		ping_recv_handle.observe().await,
 		Observation { obs_type: ObservationType::Alive, state: 0 }
@@ -152,7 +152,7 @@ async fn test_ping_actor() {
 		ping_recv_handle.process_pending_and_observe().await,
 		Observation { obs_type: ObservationType::Alive, state: 2 }
 	);
-	universe.kill();
+	quester.kill();
 	assert_eq!(
 		ping_recv_handle.process_pending_and_observe().await,
 		Observation { obs_type: ObservationType::PostMortem, state: 2 }
@@ -217,8 +217,8 @@ impl Handler<Block> for BuggyActor {
 
 #[tokio::test]
 async fn test_timeouting_actor() {
-	let universe = Universe::with_accelerated_time();
-	let (buggy_messagebus, buggy_handle) = universe.spawn_builder().spawn(BuggyActor);
+	let quester = Quester::with_accelerated_time();
+	let (buggy_messagebus, buggy_handle) = quester.spawn_builder().spawn(BuggyActor);
 	let buggy_messagebus = buggy_messagebus;
 	assert_eq!(buggy_handle.observe().await.obs_type, ObservationType::Alive);
 	assert!(buggy_messagebus.send_message(DoNothing).await.is_ok());
@@ -228,16 +228,16 @@ async fn test_timeouting_actor() {
 	assert_eq!(buggy_handle.check_health(true), Health::Healthy);
 	assert_eq!(buggy_handle.process_pending_and_observe().await.obs_type, ObservationType::Timeout);
 	assert_eq!(buggy_handle.check_health(true), Health::Healthy);
-	universe.sleep(crate::HEARTBEAT.mul(2)).await;
+	quester.sleep(crate::HEARTBEAT.mul(2)).await;
 	assert_eq!(buggy_handle.check_health(true), Health::FailureOrUnhealthy);
 	buggy_handle.kill().await;
 }
 
 #[tokio::test]
 async fn test_pause_actor() {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let (ping_messagebus, ping_handle) =
-		universe.spawn_builder().spawn(PingReceiverActor::default());
+		quester.spawn_builder().spawn(PingReceiverActor::default());
 	for _ in 0u32..1000u32 {
 		assert!(ping_messagebus.send_message(Ping).await.is_ok());
 	}
@@ -249,23 +249,23 @@ async fn test_pause_actor() {
 	assert!(ping_messagebus.send_message_with_high_priority(Command::Resume).is_ok());
 	let end_state = ping_handle.process_pending_and_observe().await.state;
 	assert_eq!(end_state, 1000);
-	universe.assert_quit().await;
+	quester.assert_quit().await;
 }
 
 #[tokio::test]
 async fn test_actor_running_states() {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let (ping_messagebus, ping_handle) =
-		universe.spawn_builder().spawn(PingReceiverActor::default());
+		quester.spawn_builder().spawn(PingReceiverActor::default());
 	assert!(ping_handle.state() == ActorState::Processing);
 	for _ in 0u32..10u32 {
 		assert!(ping_messagebus.send_message(Ping).await.is_ok());
 	}
 	let obs = ping_handle.process_pending_and_observe().await;
 	assert_eq!(*obs, 10);
-	universe.sleep(Duration::from_millis(1)).await;
+	quester.sleep(Duration::from_millis(1)).await;
 	assert!(ping_handle.state() == ActorState::Idle);
-	universe.assert_quit().await;
+	quester.assert_quit().await;
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
@@ -327,10 +327,10 @@ impl Handler<SingleShot> for LoopingActor {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_looping() -> anyhow::Result<()> {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let looping_actor = LoopingActor::default();
 	let (looping_actor_messagebus, looping_actor_handle) =
-		universe.spawn_builder().spawn(looping_actor);
+		quester.spawn_builder().spawn(looping_actor);
 	assert!(looping_actor_messagebus.send_message(SingleShot).await.is_ok());
 	looping_actor_handle.process_pending_and_observe().await;
 	let (exit_status, state) = looping_actor_handle.quit().await;
@@ -409,8 +409,8 @@ impl Handler<u64> for SpawningActor {
 
 #[tokio::test]
 async fn test_actor_spawning_actor() -> anyhow::Result<()> {
-	let universe = Universe::with_accelerated_time();
-	let (messagebus, handle) = universe.spawn_builder().spawn(SpawningActor::default());
+	let quester = Quester::with_accelerated_time();
+	let (messagebus, handle) = quester.spawn_builder().spawn(SpawningActor::default());
 	messagebus.send_message(1).await?;
 	messagebus.send_message(2).await?;
 	messagebus.send_message(3).await?;
@@ -444,8 +444,8 @@ impl Actor for BuggyFinalizeActor {
 
 #[tokio::test]
 async fn test_actor_finalize_error_set_exit_status_to_panicked() -> anyhow::Result<()> {
-	let universe = Universe::with_accelerated_time();
-	let (messagebus, handle) = universe.spawn_builder().spawn(BuggyFinalizeActor);
+	let quester = Quester::with_accelerated_time();
+	let (messagebus, handle) = quester.spawn_builder().spawn(BuggyFinalizeActor);
 	assert!(matches!(handle.state(), ActorState::Processing));
 	drop(messagebus);
 	let (exit, _) = handle.join().await;
@@ -490,14 +490,14 @@ struct Sleep(Duration);
 
 #[tokio::test]
 async fn test_actor_return_response() -> anyhow::Result<()> {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let adder = Adder::default();
-	let (messagebus, _handle) = universe.spawn_builder().spawn(adder);
+	let (messagebus, _handle) = quester.spawn_builder().spawn(adder);
 	let plus_two = messagebus.send_message(AddOperand(2)).await?;
 	let plus_two_plus_four = messagebus.send_message(AddOperand(4)).await?;
 	assert_eq!(plus_two.await.unwrap(), 2);
 	assert_eq!(plus_two_plus_four.await.unwrap(), 6);
-	universe.assert_quit().await;
+	quester.assert_quit().await;
 	Ok(())
 }
 
@@ -545,9 +545,9 @@ impl Handler<()> for TestActorWithDrain {
 
 #[tokio::test]
 async fn test_drain_is_called() {
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let test_actor_with_drain = TestActorWithDrain::default();
-	let (messagebus, handle) = universe.spawn_builder().spawn(test_actor_with_drain);
+	let (messagebus, handle) = quester.spawn_builder().spawn(test_actor_with_drain);
 	assert_eq!(
 		*handle.process_pending_and_observe().await,
 		ProcessAndDrainCounts { process_calls_count: 0, drain_calls_count: 0 }
@@ -557,18 +557,18 @@ async fn test_drain_is_called() {
 	messagebus.send_message(()).await.unwrap();
 	messagebus.send_message(()).await.unwrap();
 	handle.resume();
-	universe.sleep(Duration::from_millis(1)).await;
+	quester.sleep(Duration::from_millis(1)).await;
 	assert_eq!(
 		*handle.process_pending_and_observe().await,
 		ProcessAndDrainCounts { process_calls_count: 3, drain_calls_count: 1 }
 	);
 	messagebus.send_message(()).await.unwrap();
-	universe.sleep(Duration::from_millis(1)).await;
+	quester.sleep(Duration::from_millis(1)).await;
 	assert_eq!(
 		*handle.process_pending_and_observe().await,
 		ProcessAndDrainCounts { process_calls_count: 4, drain_calls_count: 2 }
 	);
-	universe.assert_quit().await;
+	quester.assert_quit().await;
 }
 
 #[tokio::test]
@@ -597,14 +597,14 @@ async fn test_unsync_actor() {
 			Ok(self.0.get())
 		}
 	}
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let unsync_message_actor = UnsyncActor::default();
-	let (messagebus, _handle) = universe.spawn_builder().spawn(unsync_message_actor);
+	let (messagebus, _handle) = quester.spawn_builder().spawn(unsync_message_actor);
 
 	let response = messagebus.ask(1).await.unwrap();
 	assert_eq!(response, 1);
 
-	universe.assert_quit().await;
+	quester.assert_quit().await;
 }
 
 #[tokio::test]
@@ -633,9 +633,9 @@ async fn test_unsync_actor_message() {
 			Ok(Ok(self.0))
 		}
 	}
-	let universe = Universe::with_accelerated_time();
+	let quester = Quester::with_accelerated_time();
 	let unsync_message_actor = UnsyncMessageActor::default();
-	let (messagebus, _handle) = universe.spawn_builder().spawn(unsync_message_actor);
+	let (messagebus, _handle) = quester.spawn_builder().spawn(unsync_message_actor);
 
 	let response_rx = messagebus.send_message(Cell::new(1)).await.unwrap();
 	assert_eq!(response_rx.await.unwrap().unwrap(), 1);
@@ -652,5 +652,5 @@ async fn test_unsync_actor_message() {
 	let response_rx = messagebus.try_send_message(Cell::new(1)).unwrap();
 	assert_eq!(response_rx.await.unwrap().unwrap(), 5);
 
-	universe.assert_quit().await;
+	quester.assert_quit().await;
 }

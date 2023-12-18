@@ -433,21 +433,21 @@ mod tests {
 	use super::*;
 	use crate::{
 		tests::{Ping, PingReceiverActor},
-		Universe,
+		Quester,
 	};
 
 	#[tokio::test]
 	async fn test_weak_messagebus_downgrade_upgrade() {
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, _inbox) = universe.create_test_messagebus::<PingReceiverActor>();
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, _inbox) = quester.create_test_messagebus::<PingReceiverActor>();
 		let weak_messagebus = messagebus.downgrade();
 		assert!(weak_messagebus.upgrade().is_some());
 	}
 
 	#[tokio::test]
 	async fn test_weak_messagebus_failing_upgrade() {
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, _inbox) = universe.create_test_messagebus::<PingReceiverActor>();
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, _inbox) = quester.create_test_messagebus::<PingReceiverActor>();
 		let weak_messagebus = messagebus.downgrade();
 		drop(messagebus);
 		assert!(weak_messagebus.upgrade().is_none());
@@ -489,9 +489,9 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_messagebus_send_with_backpressure_counter_low_backpressure() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let back_pressure_actor = BackPressureActor;
-		let (messagebus, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
+		let (messagebus, _handle) = quester.spawn_builder().spawn(back_pressure_actor);
 		// We send a first message to make sure the actor has been properly spawned and is listening
 		// for new messages.
 		messagebus
@@ -512,14 +512,14 @@ mod tests {
 		assert!(backpressure_micros_counter.get() < 500);
 		processed.await.unwrap();
 		assert!(backpressure_micros_counter.get() < 500);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
 	async fn test_messagebus_send_with_backpressure_counter_backpressure() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let back_pressure_actor = BackPressureActor;
-		let (messagebus, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
+		let (messagebus, _handle) = quester.spawn_builder().spawn(back_pressure_actor);
 		// We send a first message to make sure the actor has been properly spawned and is listening
 		// for new messages.
 		messagebus
@@ -546,14 +546,14 @@ mod tests {
 			.await
 			.unwrap();
 		assert!(backpressure_micros_counter.get() > 1_000u64);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
 	async fn test_messagebus_waiting_for_processing_does_not_counter_as_backpressure() {
-		let universe = Universe::with_accelerated_time();
+		let quester = Quester::with_accelerated_time();
 		let back_pressure_actor = BackPressureActor;
-		let (messagebus, _handle) = universe.spawn_builder().spawn(back_pressure_actor);
+		let (messagebus, _handle) = quester.spawn_builder().spawn(back_pressure_actor);
 		messagebus
 			.ask_with_backpressure_counter(Duration::default(), None)
 			.await
@@ -568,13 +568,13 @@ mod tests {
 		let elapsed = start.elapsed();
 		assert!(elapsed.as_micros() > 1000);
 		assert_eq!(backpressure_micros_counter.get(), 0);
-		universe.assert_quit().await;
+		quester.assert_quit().await;
 	}
 
 	#[tokio::test]
 	async fn test_try_send() {
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, _inbox) = universe
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, _inbox) = quester
 			.create_messagebus::<PingReceiverActor>("hello".to_string(), QueueCapacity::Bounded(1));
 		assert!(messagebus.try_send_message(Ping).is_ok());
 		assert!(matches!(messagebus.try_send_message(Ping).unwrap_err(), TrySendError::Full(Ping)));
@@ -582,8 +582,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_try_send_disconnect() {
-		let universe = Universe::with_accelerated_time();
-		let (messagebus, inbox) = universe
+		let quester = Quester::with_accelerated_time();
+		let (messagebus, inbox) = quester
 			.create_messagebus::<PingReceiverActor>("hello".to_string(), QueueCapacity::Bounded(1));
 		assert!(messagebus.try_send_message(Ping).is_ok());
 		mem::drop(inbox);
