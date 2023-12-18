@@ -206,7 +206,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_actor_quit_after_universe_quit() {
+	async fn test_actor_quit_after_quester_quit() {
 		let quester = Quester::with_accelerated_time();
 		let actor_with_schedule = CountingMinutesActor::default();
 		let (_messagebus, handler) = quester.spawn_builder().spawn(actor_with_schedule);
@@ -218,7 +218,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_universe_join_after_actor_quit() {
+	async fn test_quester_join_after_actor_quit() {
 		let quester = Quester::default();
 		let actor_with_schedule = CountingMinutesActor::default();
 		let (_messagebus, handler) = quester.spawn_builder().spawn(actor_with_schedule);
@@ -231,7 +231,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_universe_quit_with_panicking_actor() {
+	async fn test_quester_quit_with_panicking_actor() {
 		let quester = Quester::default();
 		let panicking_actor = ExitPanickingActor::default();
 		let actor_with_schedule = CountingMinutesActor::default();
@@ -249,7 +249,7 @@ mod tests {
 		expected = "There are still running actors at the end of the test. Did you call \
                     quester.assert_quit()?"
 	)]
-	async fn test_enforce_universe_assert_quit_calls() {
+	async fn test_enforce_quester_assert_quit_calls() {
 		let quester = Quester::with_accelerated_time();
 		let actor_with_schedule = CountingMinutesActor::default();
 		let _ = quester.spawn_builder().spawn(actor_with_schedule);
