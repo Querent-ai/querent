@@ -24,7 +24,8 @@ async def print_querent(config, text: str):
         event_data = {
             "event_type": event_type,
             "timestamp": 123.45,  # Replace with the actual timestamp
-            "payload": "🚀🚀"  # Replace with the actual payload data
+            "payload": "🚀🚀",  # Replace with the actual payload data
+			"file": "file_name"  # Replace with the actual file name
         }
         config['workflow']['event_handler'].handle_event(event_type, event_data)
 "#;

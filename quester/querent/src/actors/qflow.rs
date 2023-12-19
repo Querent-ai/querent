@@ -101,6 +101,7 @@ impl Source for Qflow {
 								event_type: EventType::Success,
 								timestamp: chrono::Utc::now().timestamp_millis() as f64,
 								payload: "".to_string(),
+								file: "".to_string(),
 							},
 						))
 						.await
@@ -120,6 +121,7 @@ impl Source for Qflow {
 									"workflow with id: {:?} failed with error: {:?}",
 									workflow_id, err
 								),
+								file: "".to_string(),
 							},
 						))
 						.await
