@@ -104,6 +104,7 @@ impl Handler<EventsBatch> for EventStreamer {
 		self.counters.increment_events_received(events.len() as u64);
 		self.timestamp = message.timestamp;
 		println!("EventStreamer received {} events", events.len());
+		//self.message_storage_mapper(events, ctx).await?;
 		ctx.record_progress();
 		Ok(())
 	}
