@@ -116,8 +116,11 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	// Create a sample Qflow
 	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
 
+	// Create storage mapper message bus
+	let (storage_mapper_messagebus, _) = quester.create_test_messagebus();
 	// Create a EventStreamer
-	let event_streamer_actor = EventStreamer::new();
+	let event_streamer_actor =
+		EventStreamer::new("qflow_id".to_string(), storage_mapper_messagebus, 0);
 
 	let (event_streamer_messagebus, event_handle) =
 		quester.spawn_builder().spawn(event_streamer_actor);
@@ -137,3 +140,4 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 
 	Ok(())
 }
+

@@ -1,23 +1,29 @@
-use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
+use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
 use common::RuntimeType;
 use std::sync::Arc;
 use tokio::runtime::Handle;
 
-use crate::{EventLock, EventStreamerCounters, EventsBatch, NewEventLock};
+use crate::{storage::StorageMapper, EventLock, EventStreamerCounters, EventsBatch, NewEventLock};
 
 pub struct EventStreamer {
-	//event_mapper: Arc<dyn EventMapper>,
+	qflow_id: String,
+	storage_mapper_messagebus: MessageBus<StorageMapper>,
 	timestamp: u64,
 	counters: Arc<EventStreamerCounters>,
 	publish_event_lock: EventLock,
 }
 
 impl EventStreamer {
-	pub fn new() -> Self {
+	pub fn new(
+		qflow_id: String,
+		storage_mapper_messagebus: MessageBus<StorageMapper>,
+		timestamp: u64,
+	) -> Self {
 		Self {
-			//event_mapper,
-			timestamp: 0,
+			qflow_id,
+			storage_mapper_messagebus,
+			timestamp,
 			counters: Arc::new(EventStreamerCounters::new()),
 			publish_event_lock: EventLock::default(),
 		}
@@ -37,6 +43,10 @@ impl EventStreamer {
 
 	pub fn get_publish_event_lock(&self) -> EventLock {
 		self.publish_event_lock.clone()
+	}
+
+	pub fn get_qflow_id(&self) -> String {
+		self.qflow_id.clone()
 	}
 }
 
@@ -64,7 +74,7 @@ impl Actor for EventStreamer {
 	async fn finalize(
 		&mut self,
 		exit_status: &ActorExitStatus,
-		_ctx: &ActorContext<Self>,
+		ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
 			ActorExitStatus::DownstreamClosed |
@@ -72,8 +82,8 @@ impl Actor for EventStreamer {
 			ActorExitStatus::Failure(_) |
 			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
-				println!("EventStreamer exiting with success");
-				//let _ = ctx.send_exit_with_success(&self.indexer_messagebus).await;
+				log::info!("EventStreamer exiting with success");
+				let _ = ctx.send_exit_with_success(&self.storage_mapper_messagebus).await;
 			},
 		}
 		Ok(())
@@ -93,7 +103,6 @@ impl Handler<EventsBatch> for EventStreamer {
 		let events = message.events;
 		self.counters.increment_events_received(events.len() as u64);
 		self.timestamp = message.timestamp;
-		//self.publish_event_lock.publish(events_processed).await?;
 		println!("EventStreamer received {} events", events.len());
 		ctx.record_progress();
 		Ok(())
@@ -107,11 +116,11 @@ impl Handler<NewEventLock> for EventStreamer {
 	async fn handle(
 		&mut self,
 		message: NewEventLock,
-		_ctx: &ActorContext<Self>,
+		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		let NewEventLock(publish_event_lock) = &message;
 		self.publish_event_lock = publish_event_lock.clone();
-		//ctx.send_message(&self.indexer_messagebus, message).await?;
+		ctx.send_message(&self.storage_mapper_messagebus, message).await?;
 		Ok(())
 	}
 }
