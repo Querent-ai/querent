@@ -1,0 +1,16 @@
+[package]
+name = "storage"
+version = "0.0.1"
+authors = ["Querent AI LLC <contact@querent.xyz>"]
+edition = "2021"
+license = "BSL-1.0"
+description = "Storage for Querent AI"
+repository = "https://github.com/querent-ai/querent"
+homepage = "https://querent.xyz/"
+documentation = "https:/querent.xyz/docs/"
+
+[dependencies]
+querent-synapse = { workspace = true }
+common = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
