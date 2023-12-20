@@ -3,21 +3,21 @@ use querent_synapse::callbacks::{EventState, EventType};
 pub struct ContextualTriples {
 	event_type: EventType,
 	pub qflow_id: String,
-	pub triples: Vec<EventState>,
+	pub triple_states: Vec<EventState>,
 	pub timestamp: u64,
 }
 
 impl ContextualTriples {
-	pub fn new(qflow_id: String, triples: Vec<EventState>, timestamp: u64) -> Self {
-		Self { event_type: EventType::ContextualTriples, qflow_id, triples, timestamp }
+	pub fn new(qflow_id: String, triple_states: Vec<EventState>, timestamp: u64) -> Self {
+		Self { event_type: EventType::Graph, qflow_id, triple_states, timestamp }
 	}
 
 	pub fn is_empty(&self) -> bool {
-		self.triples.is_empty()
+		self.triple_states.is_empty()
 	}
 
 	pub fn len(&self) -> usize {
-		self.triples.len()
+		self.triple_states.len()
 	}
 
 	pub fn timestamp(&self) -> u64 {
@@ -29,81 +29,7 @@ impl ContextualTriples {
 	}
 
 	pub fn triples(&self) -> Vec<EventState> {
-		self.triples.clone()
-	}
-
-	pub fn event_type(&self) -> EventType {
-		self.event_type.clone()
-	}
-}
-
-pub struct RdfContextualTriples {
-	event_type: EventType,
-	pub qflow_id: String,
-	pub triples: Vec<EventState>,
-	pub timestamp: u64,
-}
-
-impl RdfContextualTriples {
-	pub fn new(qflow_id: String, triples: Vec<EventState>, timestamp: u64) -> Self {
-		Self { event_type: EventType::RdfContextualTriples, qflow_id, triples, timestamp }
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.triples.is_empty()
-	}
-
-	pub fn len(&self) -> usize {
-		self.triples.len()
-	}
-
-	pub fn timestamp(&self) -> u64 {
-		self.timestamp
-	}
-
-	pub fn qflow_id(&self) -> String {
-		self.qflow_id.clone()
-	}
-
-	pub fn triples(&self) -> Vec<EventState> {
-		self.triples.clone()
-	}
-
-	pub fn event_type(&self) -> EventType {
-		self.event_type.clone()
-	}
-}
-
-pub struct RdfSemanticTriples {
-	event_type: EventType,
-	pub qflow_id: String,
-	pub triples: Vec<EventState>,
-	pub timestamp: u64,
-}
-
-impl RdfSemanticTriples {
-	pub fn new(qflow_id: String, triples: Vec<EventState>, timestamp: u64) -> Self {
-		Self { event_type: EventType::RdfSemanticTriples, qflow_id, triples, timestamp }
-	}
-
-	pub fn is_empty(&self) -> bool {
-		self.triples.is_empty()
-	}
-
-	pub fn len(&self) -> usize {
-		self.triples.len()
-	}
-
-	pub fn timestamp(&self) -> u64 {
-		self.timestamp
-	}
-
-	pub fn qflow_id(&self) -> String {
-		self.qflow_id.clone()
-	}
-
-	pub fn triples(&self) -> Vec<EventState> {
-		self.triples.clone()
+		self.triple_states.clone()
 	}
 
 	pub fn event_type(&self) -> EventType {
@@ -114,21 +40,21 @@ impl RdfSemanticTriples {
 pub struct ContextualEmbeddings {
 	event_type: EventType,
 	pub qflow_id: String,
-	pub triples: Vec<EventState>,
+	pub vector_states: Vec<EventState>,
 	pub timestamp: u64,
 }
 
 impl ContextualEmbeddings {
-	pub fn new(qflow_id: String, triples: Vec<EventState>, timestamp: u64) -> Self {
-		Self { event_type: EventType::ContextualEmbeddings, qflow_id, triples, timestamp }
+	pub fn new(qflow_id: String, vector_states: Vec<EventState>, timestamp: u64) -> Self {
+		Self { event_type: EventType::Vector, qflow_id, vector_states, timestamp }
 	}
 
 	pub fn is_empty(&self) -> bool {
-		self.triples.is_empty()
+		self.vector_states.is_empty()
 	}
 
 	pub fn len(&self) -> usize {
-		self.triples.len()
+		self.vector_states.len()
 	}
 
 	pub fn timestamp(&self) -> u64 {
@@ -140,7 +66,7 @@ impl ContextualEmbeddings {
 	}
 
 	pub fn triples(&self) -> Vec<EventState> {
-		self.triples.clone()
+		self.vector_states.clone()
 	}
 
 	pub fn event_type(&self) -> EventType {

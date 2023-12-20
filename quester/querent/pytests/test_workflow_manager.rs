@@ -337,7 +337,7 @@ async def print_querent(config, text: str):
     """Prints the provided text and sends supported event_type and event_data"""
     print(text)
     if config['workflow'] is not None:
-        event_type = "ContextualTriples"  # Replace with the desired event type
+        event_type = "Graph"  # Replace with the desired event type
         event_data = {
             "event_type": event_type,
             "timestamp": 123.45,  # Replace with the actual timestamp
@@ -443,7 +443,7 @@ async fn workflow_manager_python_tests_with_config_events_mpsc() -> pyo3::PyResu
 	println!("event is now: {:?}", event);
 	assert!(event.is_some());
 	let event = event.unwrap();
-	assert_eq!(event.0, EventType::ContextualTriples);
+	assert_eq!(event.0, EventType::Graph);
 	assert_eq!(event.1.timestamp, 123.45);
 	assert_eq!(event.1.payload, "🚀🚀");
 
@@ -504,7 +504,7 @@ async fn workflow_manager_python_tests_with_config_events_mpsc_separate_receiver
 		println!("event is now in async: {:?}", event);
 		assert!(event.is_some());
 		let event = event.unwrap();
-		assert_eq!(event.0, EventType::ContextualTriples);
+		assert_eq!(event.0, EventType::Graph);
 		assert_eq!(event.1.timestamp, 123.45);
 		assert_eq!(event.1.payload, "🚀🚀");
 	});

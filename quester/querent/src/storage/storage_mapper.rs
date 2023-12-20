@@ -1,3 +1,4 @@
+use super::{ContextualEmbeddings, ContextualTriples};
 use crate::{EventLock, NewEventLock};
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
@@ -8,9 +9,8 @@ use std::{
 	collections::HashMap,
 	sync::{atomic::AtomicU64, Arc},
 };
+use storage::Storage;
 use tokio::runtime::Handle;
-
-use super::{ContextualEmbeddings, ContextualTriples, RdfContextualTriples, RdfSemanticTriples};
 
 #[derive(Debug, Serialize)]
 pub struct StorageMapperCounters {
@@ -22,10 +22,8 @@ pub struct StorageMapperCounters {
 impl StorageMapperCounters {
 	pub fn new() -> Self {
 		let mut current_event_hashmap = HashMap::new();
-		current_event_hashmap.insert(EventType::ContextualTriples, AtomicU64::new(0));
-		current_event_hashmap.insert(EventType::RdfContextualTriples, AtomicU64::new(0));
-		current_event_hashmap.insert(EventType::RdfSemanticTriples, AtomicU64::new(0));
-		current_event_hashmap.insert(EventType::ContextualEmbeddings, AtomicU64::new(0));
+		current_event_hashmap.insert(EventType::Graph, AtomicU64::new(0));
+		current_event_hashmap.insert(EventType::Vector, AtomicU64::new(0));
 		Self {
 			total: AtomicU64::new(0),
 			event_count_map: current_event_hashmap,
@@ -57,15 +55,21 @@ pub struct StorageMapper {
 	timestamp: u64,
 	counters: Arc<StorageMapperCounters>,
 	publish_event_lock: EventLock,
+	_event_storages: HashMap<EventType, Arc<dyn Storage>>,
 }
 
 impl StorageMapper {
-	pub fn new(qflow_id: String, timestamp: u64) -> Self {
+	pub fn new(
+		qflow_id: String,
+		timestamp: u64,
+		_event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	) -> Self {
 		Self {
 			qflow_id,
 			timestamp,
 			counters: Arc::new(StorageMapperCounters::new()),
 			publish_event_lock: EventLock::default(),
+			_event_storages,
 		}
 	}
 
@@ -137,36 +141,6 @@ impl Handler<ContextualTriples> for StorageMapper {
 	async fn handle(
 		&mut self,
 		message: ContextualTriples,
-		_ctx: &ActorContext<Self>,
-	) -> Result<(), ActorExitStatus> {
-		self.counters.increment_total(message.len() as u64);
-		self.counters.increment_event_count(message.event_type(), message.len() as u64);
-		Ok(())
-	}
-}
-
-#[async_trait]
-impl Handler<RdfContextualTriples> for StorageMapper {
-	type Reply = ();
-
-	async fn handle(
-		&mut self,
-		message: RdfContextualTriples,
-		_ctx: &ActorContext<Self>,
-	) -> Result<(), ActorExitStatus> {
-		self.counters.increment_total(message.len() as u64);
-		self.counters.increment_event_count(message.event_type(), message.len() as u64);
-		Ok(())
-	}
-}
-
-#[async_trait]
-impl Handler<RdfSemanticTriples> for StorageMapper {
-	type Reply = ();
-
-	async fn handle(
-		&mut self,
-		message: RdfSemanticTriples,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		self.counters.increment_total(message.len() as u64);

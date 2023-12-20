@@ -14,6 +14,7 @@ documentation = "https://querent.xyz/docs/"
 querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
+storage = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace =true }
 anyhow = { workspace = true }
