@@ -134,9 +134,7 @@ impl Handler<EventsBatch> for EventStreamer {
 				_ => {},
 			}
 		}
-
 		ctx.record_progress();
-		println!("EventStreamer Done!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 		Ok(())
 	}
 }

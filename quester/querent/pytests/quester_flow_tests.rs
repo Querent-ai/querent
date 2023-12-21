@@ -33,7 +33,7 @@ async def print_querent(config, text: str):
 #[pyo3_asyncio::tokio::test]
 async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 	let quester = Quester::with_accelerated_time();
-	let (event_streamer_messagebus, _indexer_inbox) = quester.create_test_messagebus();
+	let (event_streamer_messagebus, indexer_inbox) = quester.create_test_messagebus();
 	let config = Config {
 		version: 1.0,
 		querent_id: "event_handler".to_string(),
@@ -74,7 +74,10 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 	let (actor_termination, _) = qflow_source_handle.join().await;
 	assert!(actor_termination.is_success());
 
-	quester.assert_quit().await;
+	let drained_messages = indexer_inbox.drain_for_test();
+
+	// Verify that the event handler sent the expected event
+	assert_eq!(drained_messages.len(), 2);
 
 	Ok(())
 }
@@ -115,7 +118,7 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
 
 	// Create storage mapper message bus
-	let (storage_mapper_messagebus, _) = quester.create_test_messagebus();
+	let (storage_mapper_messagebus, storage_handle) = quester.create_test_messagebus();
 	// Create a EventStreamer
 	let event_streamer_actor =
 		EventStreamer::new("qflow_id".to_string(), storage_mapper_messagebus, 0);
@@ -136,7 +139,8 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	// Verify that the event handler sent the expected event
 	assert_eq!(observed_state.events_received.load(Ordering::Relaxed), 1);
 
-	quester.assert_quit().await;
+	let storage_messages = storage_handle.drain_for_test();
+	assert!(storage_messages.len() == 2);
 
 	Ok(())
 }

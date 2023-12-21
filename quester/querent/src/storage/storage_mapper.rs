@@ -143,6 +143,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 		message: ContextualTriples,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
+		println!("StorageMapper received ContextualTriples");
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		Err(ActorExitStatus::Success)
@@ -158,6 +159,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		message: ContextualEmbeddings,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
+		println!("StorageMapper received ContextualEmbeddings");
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		Err(ActorExitStatus::Success)
