@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::atomic::Ordering};
 
 use actors::Quester;
-use querent::{EventStreamer, Qflow, SourceActor};
+use querent::{storage::StorageMapper, EventStreamer, Qflow, SourceActor};
 use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
 	cross::{CLRepr, StringType},
@@ -78,6 +78,73 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 
 	// Verify that the event handler sent the expected event
 	assert_eq!(drained_messages.len(), 2);
+
+	Ok(())
+}
+
+#[pyo3_asyncio::tokio::test]
+async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> {
+	let quester = Quester::with_accelerated_time();
+	let config = Config {
+		version: 1.0,
+		querent_id: "event_handler".to_string(),
+		querent_name: "Test Querent event_handler".to_string(),
+		workflow: WorkflowConfig {
+			name: "test_workflow".to_string(),
+			id: "workflow_id".to_string(),
+			config: HashMap::new(),
+			channel: None,
+			inner_channel: None,
+			inner_event_handler: None,
+			event_handler: None,
+		},
+		collectors: vec![],
+		engines: vec![],
+		resource: None,
+	};
+
+	// Create a sample Workflow
+	let workflow = Workflow {
+		name: "test_workflow".to_string(),
+		id: "workflow_id".to_string(),
+		import: "".to_string(),
+		attr: "print_querent".to_string(),
+		code: Some(CODE_CONFIG_EVENT_HANDLER.to_string()),
+		arguments: vec![CLRepr::String("Querent".to_string(), StringType::Normal)],
+		config: Some(config),
+	};
+
+	// Create a sample Qflow
+	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+
+	// Create storage mapper message bus
+	let storage_mapper = StorageMapper::new("qflow_id".to_string(), 0, HashMap::new());
+
+	let (storage_mapper_messagebus, storage_mapper) = quester.spawn_builder().spawn(storage_mapper);
+
+	// Create a EventStreamer
+	let event_streamer_actor =
+		EventStreamer::new("qflow_id".to_string(), storage_mapper_messagebus, 0);
+
+	let (event_streamer_messagebus, event_handle) =
+		quester.spawn_builder().spawn(event_streamer_actor);
+
+	// Initialize the Qflow
+	let qflow_source_actor =
+		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
+
+	let (_, qflow_source_handle) = quester.spawn_builder().spawn(qflow_source_actor);
+	let (actor_termination, _) = qflow_source_handle.join().await;
+	assert!(actor_termination.is_success());
+
+	let observed_state = event_handle.process_pending_and_observe().await.state;
+
+	// Verify that the event handler sent the expected event
+	assert_eq!(observed_state.events_received.load(Ordering::Relaxed), 1);
+
+	let storage_messages: std::sync::Arc<querent::storage::StorageMapperCounters> =
+		storage_mapper.process_pending_and_observe().await.state;
+	assert!(storage_messages.total.load(Ordering::Relaxed) == 1);
 
 	Ok(())
 }

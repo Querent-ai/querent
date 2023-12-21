@@ -126,7 +126,6 @@ impl Actor for StorageMapper {
 			ActorExitStatus::Failure(_) |
 			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
-				println!("StorageMapper exiting with success");
 				//let _ = ctx.send_exit_with_success(&self.indexer_messagebus).await;
 			},
 		}
@@ -143,7 +142,6 @@ impl Handler<ContextualTriples> for StorageMapper {
 		message: ContextualTriples,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		println!("StorageMapper received ContextualTriples");
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		Err(ActorExitStatus::Success)
@@ -159,7 +157,6 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		message: ContextualEmbeddings,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		println!("StorageMapper received ContextualEmbeddings");
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		Err(ActorExitStatus::Success)
