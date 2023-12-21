@@ -1,7 +1,6 @@
+use common::{SemanticKnowledgePayload, VectorPayload};
 use querent_synapse::callbacks::{EventState, EventType};
 use serde::Serialize;
-
-use super::{SemanticKnowledgePayload, VectorPayload};
 
 #[derive(Debug, Serialize)]
 pub struct ContextualTriples {
