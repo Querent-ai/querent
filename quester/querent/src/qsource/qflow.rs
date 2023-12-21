@@ -151,11 +151,11 @@ impl Source for Qflow {
 					if let Some((event_type, event_data)) = event_opt {
 						if event_type == EventType::Success {
 							is_success = true;
-							continue;
+							break;
 						}
 						if event_type == EventType::Failure {
 							is_failure = true;
-							continue;
+							break;
 						}
 						self.counters.increment_total();
 						events_collected.insert(event_type, event_data);

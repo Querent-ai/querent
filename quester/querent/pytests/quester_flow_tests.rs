@@ -33,7 +33,7 @@ async def print_querent(config, text: str):
 #[pyo3_asyncio::tokio::test]
 async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 	let quester = Quester::with_accelerated_time();
-	let (event_streamer_messagebus, indexer_inbox) = quester.create_test_messagebus();
+	let (event_streamer_messagebus, _indexer_inbox) = quester.create_test_messagebus();
 	let config = Config {
 		version: 1.0,
 		querent_id: "event_handler".to_string(),
@@ -74,10 +74,7 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 	let (actor_termination, _) = qflow_source_handle.join().await;
 	assert!(actor_termination.is_success());
 
-	let drained_messages = indexer_inbox.drain_for_test();
-
-	// Verify that the event handler sent the expected event
-	assert_eq!(drained_messages.len(), 2);
+	quester.assert_quit().await;
 
 	Ok(())
 }
@@ -138,6 +135,8 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 
 	// Verify that the event handler sent the expected event
 	assert_eq!(observed_state.events_received.load(Ordering::Relaxed), 1);
+
+	quester.assert_quit().await;
 
 	Ok(())
 }

@@ -1,7 +1,9 @@
 use querent_synapse::callbacks::{EventState, EventType};
+use serde::Serialize;
 
 use super::{SemanticKnowledgePayload, VectorPayload};
 
+#[derive(Debug, Serialize)]
 pub struct ContextualTriples {
 	event_type: EventType,
 	pub qflow_id: String,
@@ -30,8 +32,8 @@ impl ContextualTriples {
 		self.qflow_id.clone()
 	}
 
-	pub fn triples(&self) -> Vec<EventState> {
-		self.triple_states.clone()
+	pub fn triples(&self) -> &Vec<EventState> {
+		&self.triple_states
 	}
 
 	pub fn event_type(&self) -> EventType {
@@ -46,6 +48,7 @@ impl ContextualTriples {
 	}
 }
 
+#[derive(Debug, Serialize)]
 pub struct ContextualEmbeddings {
 	event_type: EventType,
 	pub qflow_id: String,
@@ -74,8 +77,8 @@ impl ContextualEmbeddings {
 		self.qflow_id.clone()
 	}
 
-	pub fn triples(&self) -> Vec<EventState> {
-		self.vector_states.clone()
+	pub fn triples(&self) -> &Vec<EventState> {
+		&self.vector_states
 	}
 
 	pub fn event_type(&self) -> EventType {

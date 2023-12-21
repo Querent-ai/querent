@@ -1,10 +1,14 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
 use common::RuntimeType;
-use std::sync::Arc;
+use querent_synapse::callbacks::{EventState, EventType};
+use std::{collections::HashMap, sync::Arc};
 use tokio::runtime::Handle;
 
-use crate::{storage::StorageMapper, EventLock, EventStreamerCounters, EventsBatch, NewEventLock};
+use crate::{
+	storage::{ContextualEmbeddings, ContextualTriples, StorageMapper},
+	EventLock, EventStreamerCounters, EventsBatch, NewEventLock,
+};
 
 pub struct EventStreamer {
 	qflow_id: String,
@@ -103,9 +107,36 @@ impl Handler<EventsBatch> for EventStreamer {
 		let events = message.events;
 		self.counters.increment_events_received(events.len() as u64);
 		self.timestamp = message.timestamp;
-		println!("EventStreamer received {} events", events.len());
-		//self.message_storage_mapper(events, ctx).await?;
+
+		// Group events by type
+		let mut grouped_events: HashMap<EventType, Vec<EventState>> = HashMap::new();
+		for (event_type, event_state) in events {
+			let entry = grouped_events.entry(event_type).or_insert_with(Vec::new);
+			entry.push(event_state);
+		}
+		// Send grouped events to StorageMapper
+		for (event_type, event_states) in grouped_events {
+			match event_type {
+				EventType::Graph => {
+					let contextual_triples =
+						ContextualTriples::new(self.qflow_id.clone(), event_states, self.timestamp);
+					ctx.send_message(&self.storage_mapper_messagebus, contextual_triples).await?;
+				},
+				EventType::Vector => {
+					let contextual_embeddings = ContextualEmbeddings::new(
+						self.qflow_id.clone(),
+						event_states,
+						self.timestamp,
+					);
+					ctx.send_message(&self.storage_mapper_messagebus, contextual_embeddings)
+						.await?;
+				},
+				_ => {},
+			}
+		}
+
 		ctx.record_progress();
+		println!("EventStreamer Done!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 		Ok(())
 	}
 }

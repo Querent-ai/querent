@@ -145,7 +145,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 	) -> Result<(), ActorExitStatus> {
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
-		Ok(())
+		Err(ActorExitStatus::Success)
 	}
 }
 
@@ -160,7 +160,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 	) -> Result<(), ActorExitStatus> {
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
-		Ok(())
+		Err(ActorExitStatus::Success)
 	}
 }
 
