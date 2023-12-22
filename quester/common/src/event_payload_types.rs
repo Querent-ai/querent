@@ -2,10 +2,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct VectorPayload {
-	id: String,
-	embeddings: Vec<f64>,
-	size: u64,
-	namespace: String,
+	pub id: String,
+	pub embeddings: Vec<f32>,
+	pub size: u64,
+	pub namespace: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
