@@ -16,9 +16,19 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  install-protoc:
+    name: Install protoc
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install protoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
   verify:
     name: Check PR Commit
     runs-on: ubuntu-latest
+    needs: install-protoc
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -32,6 +42,11 @@ jobs:
           default: true
           profile: minimal
           target: wasm32-unknown-unknown
+
+      - name: Install protoc
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Cargo check
         run: cd quester && make check
