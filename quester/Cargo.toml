@@ -194,6 +194,7 @@ storage = { version = "0.0.1", path = "./storage" }
 pyo3-asyncio = { version = "0.20.0", features = ["attributes", "tokio-runtime", "testing"] }
 pyo3 = { version = "0.20.0", features = ["auto-initialize"] }
 milvus-sdk-rust = "0.1.0"
+neo4rs = "0.7.0"
 
 [profile.release]
 panic = "unwind"

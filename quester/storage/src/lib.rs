@@ -3,3 +3,4 @@ pub use storage::*;
 pub mod vector;
 pub use vector::*;
 pub mod graph;
+pub use graph::*;

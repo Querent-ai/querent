@@ -164,12 +164,16 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		let storage_items = message.event_payload();
 		if let Some(storage) = storage {
 			let upsert_result = storage.insert_vector(storage_items).await;
-			if let Err(e) = upsert_result {
-				log::error!("Error while inserting vector: {:?}", e);
-				return Err(ActorExitStatus::Failure(e.source));
+			match upsert_result {
+				Ok(()) => {
+					self.counters
+						.increment_event_to_storage(message.event_type(), message.len() as u64);
+				},
+				Err(e) => {
+					log::error!("Error while inserting vector: {:?}", e);
+					return Err(ActorExitStatus::Failure(e.source));
+				},
 			}
-			self.counters
-				.increment_event_to_storage(message.event_type(), message.len() as u64);
 		}
 
 		Err(ActorExitStatus::Success)
