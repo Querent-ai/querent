@@ -125,12 +125,17 @@ impl MilvusStorage {
 		let description = format!("Semantic collection adhering to s->p->o ={:?}", payload.id);
 		let new_coll = CollectionSchemaBuilder::new(collection_name, description.as_str())
 			.add_field(FieldSchema::new_primary_int64("id", "auto id for each vector", true))
-			.add_field(FieldSchema::new_string("knowledge", "subject, predicate, object"))
-			.add_field(FieldSchema::new_string(
+			.add_field(FieldSchema::new_varchar("knowledge", "subject, predicate, object", 21))
+			.add_field(FieldSchema::new_varchar(
 				"relationship",
 				"predicate associated with embedding",
+				21,
 			))
-			.add_field(FieldSchema::new_string("document", "document associated with embedding"))
+			.add_field(FieldSchema::new_varchar(
+				"document",
+				"document associated with embedding",
+				21,
+			))
 			.add_field(FieldSchema::new_float_vector(
 				"embeddings",
 				"semantic vector embeddings",
@@ -163,5 +168,32 @@ impl MilvusStorage {
 				})
 			},
 		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[tokio::test]
+	async fn test_insert_vector() {
+		// Create a MilvusStorage instance for testing with a local URL
+		const URL: &str = "http://localhost:19530";
+		let storage = MilvusStorage::new(URL.to_string()).await;
+
+		// Prepare test data
+		let payload = VectorPayload {
+			id: "test_id".to_string(),
+			namespace: "test_namespace".to_string(),
+			size: 10,
+			embeddings: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+		};
+
+		// Call the insert_vector function with the test data
+		let _result = storage.insert_vector(vec![("test_id".to_string(), payload)]).await;
+
+		// Assert that the result is Ok indicating successful insertion
+		// Uncomment to test when local Milvus is running
+		//assert!(result.is_ok(), "Insertion failed: {:?}", result);
 	}
 }

@@ -18,3 +18,4 @@ milvus-sdk-rust= { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
+tokio = { workspace = true }
