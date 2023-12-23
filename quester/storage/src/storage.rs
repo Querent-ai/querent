@@ -14,6 +14,8 @@ pub enum StorageErrorKind {
 	CollectionBuilding,
 	/// Insertion error.
 	Insertion,
+	/// Database error.
+	Database,
 	/// The target index does not exist.
 	NotFound,
 	/// The request credentials do not allow for this operation.

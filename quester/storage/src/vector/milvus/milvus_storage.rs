@@ -17,13 +17,16 @@ pub struct MilvusStorage {
 }
 
 impl MilvusStorage {
-	pub async fn new(url: String) -> Self {
+	pub async fn new(url: String) -> StorageResult<Self> {
 		let client_res = MilvusClient::new(url.clone()).await;
 		match client_res {
-			Ok(client) => MilvusStorage { client: Arc::new(client), url },
+			Ok(client) => Ok(MilvusStorage { client: Arc::new(client), url }),
 			Err(err) => {
 				log::error!("Milvus client creation failed: {:?}", err);
-				panic!("Milvus client creation failed: {:?}", err);
+				Err(StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(err)),
+				})
 			},
 		}
 	}
@@ -69,8 +72,8 @@ impl MilvusStorage {
 				log::debug!("Collection found: {:?}", collection);
 				self.insert_into_collection(&collection, id, payload).await
 			},
-			Err(_) => {
-				log::debug!("Collection not found, creating: {:?}", collection_name);
+			Err(_err) => {
+				log::error!("Error in milvus client: {:?}", _err);
 				self.create_and_insert_collection(collection_name, id, payload).await
 			},
 		}
@@ -180,7 +183,10 @@ mod tests {
 		// Create a MilvusStorage instance for testing with a local URL
 		const URL: &str = "http://localhost:19530";
 		let storage = MilvusStorage::new(URL.to_string()).await;
-
+		if let Err(err) = storage {
+			log::error!("MilvusStorage creation failed: {:?}", err);
+			return;
+		}
 		// Prepare test data
 		let payload = VectorPayload {
 			id: "test_id".to_string(),
@@ -190,10 +196,10 @@ mod tests {
 		};
 
 		// Call the insert_vector function with the test data
-		let _result = storage.insert_vector(vec![("test_id".to_string(), payload)]).await;
+		let _result = storage.unwrap().insert_vector(vec![("test_id".to_string(), payload)]).await;
 
 		// Assert that the result is Ok indicating successful insertion
 		// Uncomment to test when local Milvus is running
-		//assert!(result.is_ok(), "Insertion failed: {:?}", result);
+		//assert!(_result.is_ok(), "Insertion failed: {:?}", _result);
 	}
 }
