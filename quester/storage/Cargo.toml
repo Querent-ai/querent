@@ -16,3 +16,5 @@ async-trait = { workspace = true }
 anyhow = { workspace = true }
 milvus-sdk-rust= { workspace = true }
 log = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
