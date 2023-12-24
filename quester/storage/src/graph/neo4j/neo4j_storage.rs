@@ -76,16 +76,18 @@ impl Storage for Neo4jStorage {
 		for (_id, data) in payload {
 			let cypher_query = data.to_cypher_query();
 			let params = vec![
-				("subject_type", data.subject_type),
-				("predicate_type", data.predicate_type),
-				("object_type", data.object_type),
-				("subject", data.subject),
-				("predicate", data.predicate),
-				("object", data.object),
-				("sentence", data.sentence),
+				("entity_type1", data.subject_type.clone()),
+				("predicate_type", data.predicate_type.clone()),
+				("entity1", data.subject.clone()),
+				("predicate", data.predicate.clone()),
+				("entity_type2", data.object_type.clone()),
+				("entity2", data.object.clone()),
+				("sentence", data.sentence.clone()),
+				("document_id", _id),
 			];
 
-			let tx_res = txn.execute(Query::new(cypher_query).params(params)).await;
+			let parameterized_query = Query::new(cypher_query).params(params);
+			let tx_res = txn.execute(parameterized_query).await;
 			match tx_res {
 				Ok(_) => {
 					log::debug!("Inserted graph data:");
@@ -113,5 +115,60 @@ impl Storage for Neo4jStorage {
 			},
 		}
 		Ok(())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[tokio::test]
+	async fn test_insert_graph() {
+		// Provide your Neo4j connection details here
+		let uri = "neo4j://localhost:7687";
+		let user = "neo4j";
+		let pass = "password_neo";
+		let db = "neo4j";
+		let max_connections = 5;
+		let fetch_size = 100;
+
+		// Create a Neo4jStorage instance for testing
+		let storage = Neo4jStorage::new(
+			uri.to_string(),
+			user.to_string(),
+			pass.to_string(),
+			db.to_string(),
+			max_connections,
+			fetch_size,
+		)
+		.await;
+		if let Err(err) = storage {
+			log::error!("Neo4jStorage creation failed: {:?}", err);
+			return;
+		}
+		// Uncomment the following lines if neo4j is running in a docker container
+		//assert!(storage.is_ok(), "Neo4jStorage creation failed");
+
+		//// Prepare test data
+		//let payload = vec![
+		//	(
+		//		"1".to_string(),
+		//		SemanticKnowledgePayload {
+		//			subject_type: "person".to_string(),
+		//			subject: "alice".to_string(),
+		//			predicate_type: "knows".to_string(),
+		//			predicate: "likes".to_string(),
+		//			object_type: "person".to_string(),
+		//			object: "bob".to_string(),
+		//			sentence: "alice likes bob".to_string(),
+		//		},
+		//	),
+		//	// Add more test data as needed
+		//];
+		//// Call the insert_graph function with the test data
+		//let _result = storage.unwrap().insert_graph(payload).await;
+
+		// Assert that the result is Ok indicating successful insertion
+		//assert!(_result.is_ok(), "Graph insertion failed: {:?}", _result);
 	}
 }
