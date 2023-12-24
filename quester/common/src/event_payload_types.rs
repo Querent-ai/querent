@@ -18,3 +18,14 @@ pub struct SemanticKnowledgePayload {
 	pub predicate_type: String,
 	pub sentence: String,
 }
+
+impl SemanticKnowledgePayload {
+	pub fn to_cypher_query(&self) -> String {
+		format!(
+            "CREATE (:{subject_type} {{subject: $subject}})-[:{predicate_type} {{predicate: $predicate}}]->(:{object_type} {{object: $object}}) SET sentence = $sentence",
+            subject_type = &self.subject_type,
+            predicate_type = &self.predicate_type,
+            object_type = &self.object_type,
+        )
+	}
+}

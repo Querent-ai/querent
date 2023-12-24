@@ -74,14 +74,21 @@ impl Storage for Neo4jStorage {
 			}
 		})?;
 		for (_id, data) in payload {
-			let cypher_query = format!(
-				"CREATE (s:{} {{id: '{}'}})-[:{}]->(o:{} {{id: '{}'}})",
-				data.subject_type, data.subject, data.predicate, data.object_type, data.object
-			);
-			let tx_res = txn.execute(Query::new(cypher_query)).await;
+			let cypher_query = data.to_cypher_query();
+			let params = vec![
+				("subject_type", data.subject_type),
+				("predicate_type", data.predicate_type),
+				("object_type", data.object_type),
+				("subject", data.subject),
+				("predicate", data.predicate),
+				("object", data.object),
+				("sentence", data.sentence),
+			];
+
+			let tx_res = txn.execute(Query::new(cypher_query).params(params)).await;
 			match tx_res {
 				Ok(_) => {
-					log::debug!("Inserted graph data: {:?}", data);
+					log::debug!("Inserted graph data:");
 				},
 				Err(err) => {
 					log::error!("Graph insertion failed: {:?}", err);
