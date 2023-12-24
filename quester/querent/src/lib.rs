@@ -5,3 +5,5 @@ pub use events::*;
 pub mod source;
 pub use source::*;
 pub mod storage;
+pub use storage::*;
+pub mod indexer;
