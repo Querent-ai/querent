@@ -22,7 +22,9 @@ pub struct SemanticKnowledgePayload {
 impl SemanticKnowledgePayload {
 	pub fn to_cypher_query(&self) -> String {
 		format!(
-            "MERGE (:{entity_type1} {{name: $entity1 }})-[:{predicate_type} {{sentence: $sentence, document_id: $document_id}}]->(:{entity_type2} {{name: $entity2}})",
+            "MERGE (n1:{entity_type1} {{name: $entity1}}) \
+             MERGE (n2:{entity_type2} {{name: $entity2}}) \
+             MERGE (n1)-[:{predicate_type} {{sentence: $sentence, document_id: $document_id}}]->(n2)",
             entity_type1 = &self.subject_type,
             predicate_type = &self.predicate_type,
             entity_type2 = &self.object_type,

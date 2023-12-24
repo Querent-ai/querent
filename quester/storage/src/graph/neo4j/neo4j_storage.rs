@@ -146,29 +146,29 @@ mod tests {
 			log::error!("Neo4jStorage creation failed: {:?}", err);
 			return;
 		}
-		// Uncomment the following lines if neo4j is running in a docker container
-		//assert!(storage.is_ok(), "Neo4jStorage creation failed");
+		//Uncomment the following lines if neo4j is running in a docker container
+		// assert!(storage.is_ok(), "Neo4jStorage creation failed");
 
-		//// Prepare test data
-		//let payload = vec![
-		//	(
-		//		"1".to_string(),
-		//		SemanticKnowledgePayload {
-		//			subject_type: "person".to_string(),
-		//			subject: "alice".to_string(),
-		//			predicate_type: "knows".to_string(),
-		//			predicate: "likes".to_string(),
-		//			object_type: "person".to_string(),
-		//			object: "bob".to_string(),
-		//			sentence: "alice likes bob".to_string(),
-		//		},
-		//	),
-		//	// Add more test data as needed
-		//];
-		//// Call the insert_graph function with the test data
-		//let _result = storage.unwrap().insert_graph(payload).await;
+		// // Prepare test data
+		// let payload = vec![
+		// 	(
+		// 		"1".to_string(),
+		// 		SemanticKnowledgePayload {
+		// 			subject_type: "person".to_string(),
+		// 			subject: "alice".to_string(),
+		// 			predicate_type: "knows".to_string(),
+		// 			predicate: "likes".to_string(),
+		// 			object_type: "person".to_string(),
+		// 			object: "bob".to_string(),
+		// 			sentence: "alice likes that bob".to_string(),
+		// 		},
+		// 	),
+		// 	// Add more test data as needed
+		// ];
+		// // Call the insert_graph function with the test data
+		// let _result = storage.unwrap().insert_graph(payload).await;
 
-		// Assert that the result is Ok indicating successful insertion
-		//assert!(_result.is_ok(), "Graph insertion failed: {:?}", _result);
+		// //Assert that the result is Ok indicating successful insertion
+		// assert!(_result.is_ok(), "Graph insertion failed: {:?}", _result);
 	}
 }
