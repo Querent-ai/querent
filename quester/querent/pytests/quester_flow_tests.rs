@@ -77,7 +77,7 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 	let drained_messages = indexer_inbox.drain_for_test();
 
 	// Verify that the event handler sent the expected event
-	assert_eq!(drained_messages.len(), 2);
+	assert_eq!(drained_messages.len(), 3);
 
 	Ok(())
 }
@@ -207,7 +207,7 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	assert_eq!(observed_state.events_received.load(Ordering::Relaxed), 1);
 
 	let storage_messages = storage_handle.drain_for_test();
-	assert!(storage_messages.len() == 2);
+	assert!(storage_messages.len() == 3);
 
 	Ok(())
 }

@@ -14,14 +14,14 @@ use tokio::{
 };
 
 use crate::{
-	EventLock, EventStreamer, EventsBatch, EventsCounter, Source, SourceContext,
+	EventLock, EventStreamer, EventsBatch, EventsCounter, NewEventLock, Source, SourceContext,
 	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
 
 pub struct Qflow {
 	pub id: String,
 	pub workflow: Workflow,
-	pub publish_lock: EventLock,
+	pub event_lock: EventLock,
 	pub counters: Arc<EventsCounter>,
 	event_sender: mpsc::Sender<(EventType, EventState)>,
 	event_receiver: mpsc::Receiver<(EventType, EventState)>,
@@ -55,7 +55,7 @@ impl Qflow {
 		Self {
 			id: id.clone(),
 			workflow,
-			publish_lock: EventLock::default(),
+			event_lock: EventLock::default(),
 			counters: Arc::new(EventsCounter::new(id.clone())),
 			event_sender,
 			event_receiver,
@@ -72,8 +72,8 @@ impl Qflow {
 impl Source for Qflow {
 	async fn initialize(
 		&mut self,
-		_event_streamer_messagebus: &MessageBus<EventStreamer>,
-		_ctx: &SourceContext,
+		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(
@@ -130,7 +130,8 @@ impl Source for Qflow {
 				},
 			}
 		}));
-
+		let event_lock = self.event_lock.clone();
+		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
 		Ok(())
 	}
 
@@ -181,10 +182,12 @@ impl Source for Qflow {
 			ctx.send_message(event_streamer_messagebus, events_batch).await?;
 		}
 		if is_success {
+			ctx.protect_future(self.event_lock.kill()).await;
 			ctx.send_exit_with_success(event_streamer_messagebus).await?;
 			return Err(ActorExitStatus::Success);
 		}
 		if is_failure {
+			ctx.protect_future(self.event_lock.kill()).await;
 			return Err(ActorExitStatus::Failure(
 				anyhow::anyhow!("Querent Python workflow failed").into(),
 			));
