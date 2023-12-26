@@ -7,7 +7,7 @@ use serde::Serialize;
 use storage::Storage;
 use tokio::runtime::Handle;
 
-use crate::{ContextualTriples, EventLock, NewEventLock};
+use crate::{ContextualTriples, EventLock, IndexerKnowledge, NewEventLock};
 
 #[derive(Debug, Serialize)]
 pub struct StorageMapperCounters {
@@ -169,5 +169,18 @@ impl Handler<ContextualTriples> for Indexer {
 		// items are document file vs triples
 		// we would want to index the triples and send to various storages
 		Err(ActorExitStatus::Success)
+	}
+}
+
+#[async_trait]
+impl Handler<IndexerKnowledge> for Indexer {
+	type Reply = ();
+
+	async fn handle(
+		&mut self,
+		_message: IndexerKnowledge,
+		_ctx: &ActorContext<Self>,
+	) -> Result<(), ActorExitStatus> {
+		Ok(())
 	}
 }

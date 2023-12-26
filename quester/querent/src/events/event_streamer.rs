@@ -6,13 +6,15 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::runtime::Handle;
 
 use crate::{
+	indexer::Indexer,
 	storage::{ContextualEmbeddings, ContextualTriples, StorageMapper},
-	EventLock, EventStreamerCounters, EventsBatch, NewEventLock,
+	EventLock, EventStreamerCounters, EventsBatch, IndexerKnowledge, NewEventLock,
 };
 
 pub struct EventStreamer {
 	qflow_id: String,
 	storage_mapper_messagebus: MessageBus<StorageMapper>,
+	indexer_messagebus: MessageBus<Indexer>,
 	timestamp: u64,
 	counters: Arc<EventStreamerCounters>,
 	publish_event_lock: EventLock,
@@ -22,11 +24,13 @@ impl EventStreamer {
 	pub fn new(
 		qflow_id: String,
 		storage_mapper_messagebus: MessageBus<StorageMapper>,
+		indexer_messagebus: MessageBus<Indexer>,
 		timestamp: u64,
 	) -> Self {
 		Self {
 			qflow_id,
 			storage_mapper_messagebus,
+			indexer_messagebus,
 			timestamp,
 			counters: Arc::new(EventStreamerCounters::new()),
 			publish_event_lock: EventLock::default(),
@@ -120,7 +124,13 @@ impl Handler<EventsBatch> for EventStreamer {
 				EventType::Graph => {
 					let contextual_triples =
 						ContextualTriples::new(self.qflow_id.clone(), event_states, self.timestamp);
+					let indexer_knowledge = IndexerKnowledge::new(
+						self.qflow_id.clone(),
+						self.timestamp,
+						contextual_triples.event_payload(),
+					);
 					ctx.send_message(&self.storage_mapper_messagebus, contextual_triples).await?;
+					ctx.send_message(&self.indexer_messagebus, indexer_knowledge).await?;
 				},
 				EventType::Vector => {
 					let contextual_embeddings = ContextualEmbeddings::new(

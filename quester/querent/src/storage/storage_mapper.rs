@@ -1,6 +1,6 @@
 use super::{ContextualEmbeddings, ContextualTriples};
-use crate::{indexer::Indexer, EventLock, NewEventLock};
-use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
+use crate::{EventLock, NewEventLock};
+use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::RuntimeType;
 use querent_synapse::callbacks::EventType;
@@ -56,7 +56,6 @@ pub struct StorageMapper {
 	counters: Arc<StorageMapperCounters>,
 	publish_event_lock: EventLock,
 	event_storages: HashMap<EventType, Arc<dyn Storage>>,
-	indexer_messagebus: MessageBus<Indexer>,
 }
 
 impl StorageMapper {
@@ -64,7 +63,6 @@ impl StorageMapper {
 		qflow_id: String,
 		timestamp: u64,
 		event_storages: HashMap<EventType, Arc<dyn Storage>>,
-		indexer_messagebus: MessageBus<Indexer>,
 	) -> Self {
 		Self {
 			qflow_id,
@@ -72,7 +70,6 @@ impl StorageMapper {
 			counters: Arc::new(StorageMapperCounters::new()),
 			publish_event_lock: EventLock::default(),
 			event_storages,
-			indexer_messagebus,
 		}
 	}
 
@@ -121,7 +118,7 @@ impl Actor for StorageMapper {
 	async fn finalize(
 		&mut self,
 		exit_status: &ActorExitStatus,
-		ctx: &ActorContext<Self>,
+		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
 			ActorExitStatus::DownstreamClosed |
@@ -129,7 +126,7 @@ impl Actor for StorageMapper {
 			ActorExitStatus::Failure(_) |
 			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
-				let _ = ctx.send_exit_with_success(&self.indexer_messagebus).await;
+				log::info!("StorageMapper exiting with success");
 			},
 		}
 		Ok(())
@@ -143,7 +140,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 	async fn handle(
 		&mut self,
 		message: ContextualTriples,
-		ctx: &ActorContext<Self>,
+		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
@@ -163,7 +160,6 @@ impl Handler<ContextualTriples> for StorageMapper {
 				},
 			}
 		}
-		ctx.send_message(&self.indexer_messagebus, message).await?;
 		Err(ActorExitStatus::Success)
 	}
 }

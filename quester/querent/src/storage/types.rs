@@ -91,3 +91,20 @@ impl ContextualEmbeddings {
 			.collect()
 	}
 }
+
+#[derive(Debug, Serialize)]
+pub struct IndexerKnowledge {
+	pub qflow_id: String,
+	pub timestamp: u64,
+	pub triples: Vec<(String, SemanticKnowledgePayload)>,
+}
+
+impl IndexerKnowledge {
+	pub fn new(
+		qflow_id: String,
+		timestamp: u64,
+		triples: Vec<(String, SemanticKnowledgePayload)>,
+	) -> Self {
+		Self { qflow_id, timestamp, triples }
+	}
+}
