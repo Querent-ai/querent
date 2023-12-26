@@ -62,6 +62,14 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
+	/// Index triples for search
+	async fn index_triples(
+		&self,
+		_payload: Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
 	async fn insert_graph(
 		&self,
 		payload: Vec<(String, SemanticKnowledgePayload)>,

@@ -76,4 +76,10 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		payload: Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
+
+	/// Index triples for search
+	async fn index_triples(
+		&self,
+		payload: Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()>;
 }

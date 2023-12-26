@@ -57,6 +57,14 @@ impl Storage for MilvusStorage {
 		// Your insert_graph implementation here
 		Ok(())
 	}
+
+	async fn index_triples(
+		&self,
+		_payload: Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
+		// Your index_triples implementation here
+		Ok(())
+	}
 }
 
 impl MilvusStorage {
