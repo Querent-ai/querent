@@ -117,8 +117,10 @@ async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> 
 	// Create a sample Qflow
 	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
 
+	let (indexer_messagebus, indexer_inbox) = quester.create_test_messagebus();
 	// Create storage mapper message bus
-	let storage_mapper = StorageMapper::new("qflow_id".to_string(), 0, HashMap::new());
+	let storage_mapper =
+		StorageMapper::new("qflow_id".to_string(), 0, HashMap::new(), indexer_messagebus);
 
 	let (storage_mapper_messagebus, storage_mapper) = quester.spawn_builder().spawn(storage_mapper);
 
@@ -146,6 +148,8 @@ async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> 
 		storage_mapper.process_pending_and_observe().await.state;
 	assert!(storage_messages.total.load(Ordering::Relaxed) == 1);
 
+	let messages_indexer = indexer_inbox.drain_for_test();
+	assert!(messages_indexer.len() == 1);
 	Ok(())
 }
 
