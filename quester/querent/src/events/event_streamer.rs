@@ -92,6 +92,7 @@ impl Actor for EventStreamer {
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("EventStreamer exiting with success");
 				let _ = ctx.send_exit_with_success(&self.storage_mapper_messagebus).await;
+				let _ = ctx.send_exit_with_success(&self.indexer_messagebus).await;
 			},
 		}
 		Ok(())
