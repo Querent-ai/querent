@@ -62,8 +62,8 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
-	/// Index triples for search
-	async fn index_triples(
+	/// Index knowledge for search
+	async fn index_knowledge(
 		&self,
 		_payload: Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {

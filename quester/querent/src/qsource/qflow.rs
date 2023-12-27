@@ -30,7 +30,7 @@ pub struct Qflow {
 
 impl Qflow {
 	pub fn new(id: String, workflow: Workflow) -> Self {
-		let (event_sender, event_receiver) = mpsc::channel(10000);
+		let (event_sender, event_receiver) = mpsc::channel(1000);
 		let workflow_event_handler = EventHandler::new(Some(event_sender.clone()));
 		let mut config_copy = workflow.config.unwrap_or(Config::default());
 		let workflow_config = WorkflowConfig {

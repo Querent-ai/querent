@@ -16,7 +16,18 @@ async-trait = { workspace = true }
 anyhow = { workspace = true }
 milvus-sdk-rust= { workspace = true }
 neo4rs = { workspace = true }
+tokio-postgres = { workspace = true }
+tokio-postgres-rustls = { workspace = true }
+diesel-async = { workspace = true, features = [
+  "postgres",
+  "deadpool",
+]}
+diesel  = { workspace = true }
+deadpool = { workspace = true }
+rustls = { workspace = true }
+tracing = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
 tokio = { workspace = true }
+futures-util = { workspace = true }

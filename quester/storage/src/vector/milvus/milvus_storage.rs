@@ -58,7 +58,7 @@ impl Storage for MilvusStorage {
 		Ok(())
 	}
 
-	async fn index_triples(
+	async fn index_knowledge(
 		&self,
 		_payload: Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {

@@ -151,7 +151,7 @@ async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> 
 	assert!(storage_messages.total.load(Ordering::Relaxed) == 1);
 
 	let drained_messages = indexer_inbox.drain_for_test();
-	assert!(drained_messages.len() == 1);
+	assert!(drained_messages.len() == 2);
 
 	Ok(())
 }
