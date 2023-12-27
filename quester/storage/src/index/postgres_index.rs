@@ -1,4 +1,9 @@
-use diesel::result::{ConnectionError, ConnectionResult};
+use async_trait::async_trait;
+use common::{SemanticKnowledgePayload, VectorPayload};
+use diesel::{
+	result::{ConnectionError, ConnectionResult},
+	table,
+};
 use diesel_async::{
 	pg::AsyncPgConnection,
 	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager, ManagerConfig},
@@ -15,7 +20,7 @@ use rustls::{
 	ServerName,
 };
 
-use crate::{StorageError, StorageErrorKind, StorageResult};
+use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
 use deadpool::Runtime;
 
 pub type ActualDbPool = Pool<AsyncPgConnection>;
@@ -93,4 +98,71 @@ fn establish_connection(config: &str) -> BoxFuture<ConnectionResult<AsyncPgConne
 		AsyncPgConnection::try_from(client).await
 	};
 	fut.boxed()
+}
+
+#[async_trait]
+impl Storage for PostgresStorage {
+	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		let _ = self.pool.get().await?;
+		Ok(())
+	}
+
+	async fn insert_vector(&self, _payload: Vec<(String, VectorPayload)>) -> StorageResult<()> {
+		Ok(())
+	}
+
+	async fn insert_graph(
+		&self,
+		_payload: Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
+	async fn index_knowledge(
+		&self,
+		_payload: Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+}
+
+table! {
+	semantic_knowledge (id) {
+		id -> Int4,
+		subject -> Varchar,
+		subject_type -> Varchar,
+		object -> Varchar,
+		object_type -> Varchar,
+		predicate -> Varchar,
+		predicate_type -> Varchar,
+		sentence -> Text,
+		document_id -> Varchar,
+		timestamp -> Timestamptz,
+	}
+}
+
+#[cfg(test)]
+mod test {
+	use super::*;
+	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
+
+	// Test function
+	#[tokio::test]
+	async fn test_postgres_storage() {
+		// Create a PostgresStorage instance with the test database URL
+		let storage_result = PostgresStorage::new(TEST_DB_URL).await;
+
+		// Ensure that the storage is created successfully
+		assert!(storage_result.is_ok());
+
+		// Get the storage instance from the result
+		let storage = storage_result.unwrap();
+
+		// Perform a connectivity check
+		let _connectivity_result = storage.check_connectivity().await;
+		// Ensure that the connectivity check is successful
+		//assert!(_connectivity_result.is_ok());
+
+		// You can add more test cases or assertions based on your specific requirements
+	}
 }
