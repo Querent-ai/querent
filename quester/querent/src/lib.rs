@@ -7,3 +7,5 @@ pub use source::*;
 pub mod storage;
 pub use storage::*;
 pub mod indexer;
+pub mod pipeline;
+pub use pipeline::*;
