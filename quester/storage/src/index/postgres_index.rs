@@ -185,20 +185,20 @@ impl Storage for PostgresStorage {
 		Ok(())
 	}
 
-	async fn insert_vector(&self, _payload: Vec<(String, VectorPayload)>) -> StorageResult<()> {
+	async fn insert_vector(&self, _payload: &Vec<(String, VectorPayload)>) -> StorageResult<()> {
 		Ok(())
 	}
 
 	async fn insert_graph(
 		&self,
-		_payload: Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	async fn index_knowledge(
 		&self,
-		_payload: Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -206,15 +206,15 @@ impl Storage for PostgresStorage {
 		})?;
 		conn.transaction::<_, diesel::result::Error, _>(|conn| {
 			async move {
-				for (document_id, item) in _payload {
+				for (document_id, item) in payload {
 					let form = SemanticKnowledge {
-						subject: item.subject,
-						subject_type: item.subject_type,
-						object: item.object,
-						object_type: item.object_type,
-						predicate: item.predicate,
-						predicate_type: item.predicate_type,
-						sentence: item.sentence,
+						subject: item.subject.clone(),
+						subject_type: item.subject_type.clone(),
+						object: item.object.clone(),
+						object_type: item.object_type.clone(),
+						predicate: item.predicate.clone(),
+						predicate_type: item.predicate_type.clone(),
+						sentence: item.sentence.clone(),
 						document_id: document_id.clone(),
 					};
 					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)

@@ -148,7 +148,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 		let storage = self.event_storages.get(&event_type);
 		let storage_items = message.event_payload();
 		if let Some(storage) = storage {
-			let upsert_result = storage.insert_graph(storage_items).await;
+			let upsert_result = storage.insert_graph(&storage_items).await;
 			match upsert_result {
 				Ok(()) => {
 					self.counters
@@ -179,7 +179,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		let storage = self.event_storages.get(&event_type);
 		let storage_items = message.event_payload();
 		if let Some(storage) = storage {
-			let upsert_result = storage.insert_vector(storage_items).await;
+			let upsert_result = storage.insert_vector(&storage_items).await;
 			match upsert_result {
 				Ok(()) => {
 					self.counters

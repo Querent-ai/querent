@@ -57,7 +57,7 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
-	async fn insert_vector(&self, _payload: Vec<(String, VectorPayload)>) -> StorageResult<()> {
+	async fn insert_vector(&self, _payload: &Vec<(String, VectorPayload)>) -> StorageResult<()> {
 		// Implement Neo4j vector insertion logic (if needed)
 		Ok(())
 	}
@@ -65,14 +65,14 @@ impl Storage for Neo4jStorage {
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
-		_payload: Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	async fn insert_graph(
 		&self,
-		payload: Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let mut txn = self.graph.start_txn().await.map_err(|err| {
 			log::error!("Neo4j transaction creation failed: {:?}", err);
@@ -91,7 +91,7 @@ impl Storage for Neo4jStorage {
 				("entity_type2", data.object_type.clone()),
 				("entity2", data.object.clone()),
 				("sentence", data.sentence.clone()),
-				("document_id", _id),
+				("document_id", _id.clone()),
 			];
 
 			let parameterized_query = Query::new(cypher_query).params(params);

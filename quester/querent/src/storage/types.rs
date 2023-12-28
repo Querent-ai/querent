@@ -107,4 +107,24 @@ impl IndexerKnowledge {
 	) -> Self {
 		Self { qflow_id, timestamp, triples }
 	}
+
+	pub fn is_empty(&self) -> bool {
+		self.triples.is_empty()
+	}
+
+	pub fn len(&self) -> usize {
+		self.triples.len()
+	}
+
+	pub fn timestamp(&self) -> u64 {
+		self.timestamp
+	}
+
+	pub fn qflow_id(&self) -> String {
+		self.qflow_id.clone()
+	}
+
+	pub fn triples(&self) -> &Vec<(String, SemanticKnowledgePayload)> {
+		&self.triples
+	}
 }

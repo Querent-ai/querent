@@ -39,7 +39,7 @@ impl Storage for MilvusStorage {
 		Ok(())
 	}
 
-	async fn insert_vector(&self, _payload: Vec<(String, VectorPayload)>) -> StorageResult<()> {
+	async fn insert_vector(&self, _payload: &Vec<(String, VectorPayload)>) -> StorageResult<()> {
 		for (id, payload) in _payload {
 			let result = self.insert_or_create_collection(&payload.namespace, &id, &payload).await;
 			if let Err(err) = result {
@@ -52,7 +52,7 @@ impl Storage for MilvusStorage {
 
 	async fn insert_graph(
 		&self,
-		_payload: Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your insert_graph implementation here
 		Ok(())
@@ -60,7 +60,7 @@ impl Storage for MilvusStorage {
 
 	async fn index_knowledge(
 		&self,
-		_payload: Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your index_triples implementation here
 		Ok(())
@@ -204,7 +204,7 @@ mod tests {
 		};
 
 		// Call the insert_vector function with the test data
-		let _result = storage.unwrap().insert_vector(vec![("test_id".to_string(), payload)]).await;
+		let _result = storage.unwrap().insert_vector(&vec![("test_id".to_string(), payload)]).await;
 
 		// Assert that the result is Ok indicating successful insertion
 		// Uncomment to test when local Milvus is running

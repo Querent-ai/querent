@@ -69,17 +69,17 @@ pub trait Storage: Send + Sync + 'static {
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
 
 	/// Insert VectorPayload into storage
-	async fn insert_vector(&self, payload: Vec<(String, VectorPayload)>) -> StorageResult<()>;
+	async fn insert_vector(&self, payload: &Vec<(String, VectorPayload)>) -> StorageResult<()>;
 
 	/// Insert SemanticKnowledgePayload into storage
 	async fn insert_graph(
 		&self,
-		payload: Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
-		payload: Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 }
