@@ -1,33 +1,111 @@
 use async_trait::async_trait;
 use common::{SemanticKnowledgePayload, VectorPayload};
 use diesel::{
-	result::{ConnectionError, ConnectionResult},
-	table,
+	result::{ConnectionError, ConnectionResult, Error as DieselError, Error::QueryBuilderError},
+	table, Insertable, Queryable, Selectable,
 };
+
 use diesel_async::{
 	pg::AsyncPgConnection,
-	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager, ManagerConfig},
+	pooled_connection::{
+		deadpool::{Object as PooledConnection, Pool},
+		AsyncDieselConnectionManager, ManagerConfig,
+	},
+	scoped_futures::ScopedFutureExt,
+	RunQueryDsl,
 };
 use futures_util::{future::BoxFuture, FutureExt};
 use std::{
+	ops::{Deref, DerefMut},
 	sync::Arc,
 	time::{Duration, SystemTime},
 };
 use tracing::error;
 
+use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+use deadpool::Runtime;
+use diesel_async::AsyncConnection;
 use rustls::{
 	client::{ServerCertVerified, ServerCertVerifier},
 	ServerName,
 };
-
-use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
-use deadpool::Runtime;
+use serde::Serialize;
 
 pub type ActualDbPool = Pool<AsyncPgConnection>;
+pub enum DbPool<'a> {
+	Pool(&'a ActualDbPool),
+	Conn(&'a mut AsyncPgConnection),
+}
+
+pub enum DbConn<'a> {
+	Pool(PooledConnection<AsyncPgConnection>),
+	Conn(&'a mut AsyncPgConnection),
+}
+
+pub async fn get_conn<'a, 'b: 'a>(pool: &'a mut DbPool<'b>) -> Result<DbConn<'a>, DieselError> {
+	Ok(match pool {
+		DbPool::Pool(pool) =>
+			DbConn::Pool(pool.get().await.map_err(|e| QueryBuilderError(e.into()))?),
+		DbPool::Conn(conn) => DbConn::Conn(conn),
+	})
+}
+
+impl<'a> Deref for DbConn<'a> {
+	type Target = AsyncPgConnection;
+
+	fn deref(&self) -> &Self::Target {
+		match self {
+			DbConn::Pool(conn) => conn.deref(),
+			DbConn::Conn(conn) => conn.deref(),
+		}
+	}
+}
+
+impl<'a> DerefMut for DbConn<'a> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		match self {
+			DbConn::Pool(conn) => conn.deref_mut(),
+			DbConn::Conn(conn) => conn.deref_mut(),
+		}
+	}
+}
+
+// Allows functions that take `DbPool<'_>` to be called in a transaction by passing `&mut conn.into()`
+impl<'a> From<&'a mut AsyncPgConnection> for DbPool<'a> {
+	fn from(value: &'a mut AsyncPgConnection) -> Self {
+		DbPool::Conn(value)
+	}
+}
+
+impl<'a, 'b: 'a> From<&'a mut DbConn<'b>> for DbPool<'a> {
+	fn from(value: &'a mut DbConn<'b>) -> Self {
+		DbPool::Conn(value.deref_mut())
+	}
+}
+
+impl<'a> From<&'a ActualDbPool> for DbPool<'a> {
+	fn from(value: &'a ActualDbPool) -> Self {
+		DbPool::Pool(value)
+	}
+}
+
 pub const FETCH_LIMIT_MAX: i64 = 50;
 pub const SITEMAP_LIMIT: i64 = 50000;
 pub const SITEMAP_DAYS: i64 = 31;
 const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(5));
+
+#[derive(Serialize, Queryable, Insertable, Selectable, Debug, Clone)]
+#[diesel(table_name = semantic_knowledge)]
+pub struct SemanticKnowledge {
+	pub subject: String,
+	pub subject_type: String,
+	pub object: String,
+	pub object_type: String,
+	pub predicate: String,
+	pub predicate_type: String,
+	pub sentence: String,
+	pub document_id: String,
+}
 
 pub struct PostgresStorage {
 	pub pool: ActualDbPool,
@@ -122,6 +200,37 @@ impl Storage for PostgresStorage {
 		&self,
 		_payload: Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		conn.transaction::<_, diesel::result::Error, _>(|conn| {
+			async move {
+				for (document_id, item) in _payload {
+					let form = SemanticKnowledge {
+						subject: item.subject,
+						subject_type: item.subject_type,
+						object: item.object,
+						object_type: item.object_type,
+						predicate: item.predicate,
+						predicate_type: item.predicate_type,
+						sentence: item.sentence,
+						document_id: document_id.clone(),
+					};
+					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
+						.values(form)
+						.execute(conn)
+						.await?;
+				}
+				Ok(())
+			}
+			.scope_boxed()
+		})
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 		Ok(())
 	}
 }
@@ -137,7 +246,6 @@ table! {
 		predicate_type -> Varchar,
 		sentence -> Text,
 		document_id -> Varchar,
-		timestamp -> Timestamptz,
 	}
 }
 
@@ -161,6 +269,7 @@ mod test {
 		// Perform a connectivity check
 		let _connectivity_result = storage.check_connectivity().await;
 		// Ensure that the connectivity check is successful
+		// Works when there is a database running on the test database URL
 		//assert!(_connectivity_result.is_ok());
 
 		// You can add more test cases or assertions based on your specific requirements

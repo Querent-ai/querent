@@ -8,5 +8,4 @@ CREATE TABLE semantic_knowledge (
     predicate_type VARCHAR,
     sentence TEXT,
     document_id VARCHAR,
-    timestamp TIMESTAMPTZ
 );
