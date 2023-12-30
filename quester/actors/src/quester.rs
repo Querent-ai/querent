@@ -73,7 +73,7 @@ impl Quester {
 	}
 
 	pub fn kill(&self) {
-		self.spawn_ctx.kill_switch.kill();
+		self.spawn_ctx.terminate_sig.kill();
 	}
 
 	/// This function acts as a drop-in replacement of
@@ -128,7 +128,7 @@ impl Drop for Quester {
                  quester.assert_quit()?"
 			);
 		}
-		self.spawn_ctx.kill_switch.kill();
+		self.spawn_ctx.terminate_sig.kill();
 	}
 }
 

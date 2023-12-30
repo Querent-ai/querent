@@ -10,7 +10,7 @@ use std::{
 	time::Duration,
 };
 
-use common::{metrics::IntCounter, KillSwitch, Progress, ProtectedZoneGuard};
+use common::{metrics::IntCounter, Progress, ProtectedZoneGuard, TerimateSignal};
 use tokio::sync::{oneshot, watch};
 use tracing::{debug, error};
 
@@ -144,8 +144,8 @@ impl<A: Actor> ActorContext<A> {
 	///
 	/// For instance, when quitting from the process_message function, prefer simply
 	/// returning `Error(ActorExitStatus::Failure(..))`
-	pub fn kill_switch(&self) -> &KillSwitch {
-		&self.spawn_ctx.kill_switch
+	pub fn terminate_sig(&self) -> &TerimateSignal {
+		&self.spawn_ctx.terminate_sig
 	}
 
 	#[must_use]
@@ -203,9 +203,9 @@ impl<A: Actor> ActorContext<A> {
 
 	pub(crate) fn exit(&self, exit_status: &ActorExitStatus) {
 		self.actor_state.exit(exit_status.is_success());
-		if should_activate_kill_switch(exit_status) {
+		if should_activate_terminate_sig(exit_status) {
 			error!(actor=%self.actor_instance_id(), exit_status=?exit_status, "exit activating-kill-switch");
-			self.kill_switch().kill();
+			self.terminate_sig().kill();
 		}
 	}
 
@@ -344,7 +344,7 @@ impl<A: Actor> ActorContext<A> {
 /// If an actor exits in an unexpected manner, its kill
 /// switch will be activated, and all other actors under the same
 /// kill switch will be killed.
-fn should_activate_kill_switch(exit_status: &ActorExitStatus) -> bool {
+fn should_activate_terminate_sig(exit_status: &ActorExitStatus) -> bool {
 	match exit_status {
 		ActorExitStatus::DownstreamClosed => true,
 		ActorExitStatus::Failure(_) => true,

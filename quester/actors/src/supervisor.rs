@@ -151,7 +151,7 @@ impl<A: Actor> Supervisor<A> {
 		let (_, actor_handle) = ctx
 			.spawn_actor()
 			.set_messagebuses(actor_messagebus, self.inbox.clone())
-			.set_kill_switch(ctx.kill_switch().child())
+			.set_terminate_sig(ctx.terminate_sig().child())
 			.spawn((*self.actor_factory)());
 		self.handle_opt = Some(actor_handle);
 		Ok(())

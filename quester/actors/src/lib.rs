@@ -36,7 +36,7 @@ pub(crate) mod tests;
 pub use actor::{Actor, ActorExitStatus, DeferableReplyHandler, Handler};
 pub use actor_handle::{ActorHandle, Health, Healthz, Supervisable};
 pub use command::{Command, Observe};
-use common::KillSwitch;
+use common::TerimateSignal;
 pub use observation::{Observation, ObservationType};
 pub use quester::Quester;
 pub use spawn_builder::SpawnContext;
@@ -56,7 +56,7 @@ pub use self::{
 ///
 /// If an actor does not advertise a progress within an interval of duration `HEARTBEAT`,
 /// its supervisor will consider it as blocked and will proceed to kill it, as well
-/// as all of the actors all the actors that share the killswitch.
+/// as all of the actors all the actors that share the terimatesignal.
 pub static HEARTBEAT: Lazy<Duration> = Lazy::new(heartbeat_from_env_or_default);
 
 /// Returns the actor's heartbeat duration:

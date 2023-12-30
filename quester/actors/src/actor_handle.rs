@@ -184,7 +184,7 @@ impl<A: Actor> ActorHandle<A> {
 	/// The other difference with quit is the exit status. It is important,
 	/// as the finalize logic may behave differently depending on the exit status.
 	pub async fn kill(self) -> (ActorExitStatus, A::ObservableState) {
-		self.actor_context.kill_switch().kill();
+		self.actor_context.terminate_sig().kill();
 		let _ = self.actor_context.messagebus().send_message_with_high_priority(Command::Nudge);
 		self.join().await
 	}

@@ -50,7 +50,7 @@ pub enum Command {
 	///
 	/// This is useful to kill actors properly or for tests.
 	/// Actors stuck waiting for a message do not have any timeout to
-	/// check for their killswitch signal.
+	/// check for their terimatesignal signal.
 	///
 	///
 	/// Note: Historically, actors used to have a timeout, then
@@ -59,7 +59,7 @@ pub enum Command {
 	/// to recycle a messagebus.
 	///
 	/// After a panic for instance, the supervisor of an actor might kill
-	/// it by activating its killswitch and sending a Kill message.
+	/// it by activating its terimatesignal and sending a Kill message.
 	///
 	/// The respawned actor would receive its predecessor messagebus and
 	/// possibly end up process a Kill message as its first message.

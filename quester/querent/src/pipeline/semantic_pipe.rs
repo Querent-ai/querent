@@ -1,8 +1,11 @@
-use actors::{Actor, ActorContext, ActorExitStatus, Handler};
-use async_trait::async_trait;
-use common::KillSwitch;
+use std::{collections::HashMap, sync::Arc};
 
 use crate::IndexingStatistics;
+use actors::{Actor, ActorContext, ActorExitStatus, Handler};
+use async_trait::async_trait;
+use common::TerimateSignal;
+use querent_synapse::{callbacks::EventType, config::Config};
+use storage::Storage;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Trigger {
@@ -12,16 +15,25 @@ pub struct Trigger {
 #[derive(Debug)]
 struct ControlLoop;
 
+pub struct PipelineSettings {
+	pub qflow_id: String,
+	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	pub index_storages: Vec<Arc<dyn Storage>>,
+	pub qflow_config: Config,
+}
+
 pub struct SemanticPipeline {
-	// Killswitch to kill actors in the pipeline.
-	pub kill_switch: KillSwitch,
+	// Pipeline settings
+	//pub setting: PipelineSettings,
+	// terimatesignal to kill actors in the pipeline.
+	pub terminate_sig: TerimateSignal,
 	// Statistics about the event processing system.
 	pub statistics: IndexingStatistics,
 }
 
 impl SemanticPipeline {
 	pub fn new() -> Self {
-		Self { kill_switch: KillSwitch::default(), statistics: IndexingStatistics::default() }
+		Self { terminate_sig: TerimateSignal::default(), statistics: IndexingStatistics::default() }
 	}
 }
 
@@ -34,7 +46,7 @@ impl Actor for SemanticPipeline {
 	}
 
 	fn name(&self) -> String {
-		"IndexingPipeline".to_string()
+		"SemanticKnowledgePipeline".to_string()
 	}
 
 	async fn initialize(&mut self, ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {

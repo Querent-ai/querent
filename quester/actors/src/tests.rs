@@ -208,7 +208,7 @@ impl Handler<Block> for BuggyActor {
 		_message: Block,
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		while ctx.kill_switch().is_alive() {
+		while ctx.terminate_sig().is_alive() {
 			tokio::task::yield_now().await;
 		}
 		Ok(())

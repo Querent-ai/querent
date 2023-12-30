@@ -10,13 +10,13 @@ use crate::{
 	registry::{ActorJoinHandle, ActorRegistry},
 	scheduler::{NoAdvanceTimeGuard, SchedulerClient},
 	supervisor::Supervisor,
-	Actor, ActorContext, ActorExitStatus, ActorHandle, KillSwitch, MessageBus, QueueCapacity,
+	Actor, ActorContext, ActorExitStatus, ActorHandle, MessageBus, QueueCapacity, TerimateSignal,
 };
 
 #[derive(Clone)]
 pub struct SpawnContext {
 	pub(crate) scheduler_client: SchedulerClient,
-	pub(crate) kill_switch: KillSwitch,
+	pub(crate) terminate_sig: TerimateSignal,
 	pub(crate) registry: ActorRegistry,
 }
 
@@ -24,7 +24,7 @@ impl SpawnContext {
 	pub fn new(scheduler_client: SchedulerClient) -> Self {
 		SpawnContext {
 			scheduler_client,
-			kill_switch: Default::default(),
+			terminate_sig: Default::default(),
 			registry: ActorRegistry::default(),
 		}
 	}
@@ -48,7 +48,7 @@ impl SpawnContext {
 	pub fn child_context(&self) -> SpawnContext {
 		SpawnContext {
 			scheduler_client: self.scheduler_client.clone(),
-			kill_switch: self.kill_switch.child(),
+			terminate_sig: self.terminate_sig.child(),
 			registry: self.registry.clone(),
 		}
 	}
@@ -72,8 +72,8 @@ impl<A: Actor> SpawnBuilder<A> {
 	///
 	/// By default, the kill switch is inherited from the context that was used to
 	/// spawn the actor.
-	pub fn set_kill_switch(mut self, kill_switch: KillSwitch) -> Self {
-		self.spawn_ctx.kill_switch = kill_switch;
+	pub fn set_terminate_sig(mut self, terminate_sig: TerimateSignal) -> Self {
+		self.spawn_ctx.terminate_sig = terminate_sig;
 		self
 	}
 
@@ -231,12 +231,12 @@ impl<A: Actor> ActorExecutionEnv<A> {
 	}
 
 	async fn yield_and_check_if_killed(&mut self) -> Result<(), ActorExitStatus> {
-		if self.ctx.kill_switch().is_dead() {
+		if self.ctx.terminate_sig().is_dead() {
 			return Err(ActorExitStatus::Killed);
 		}
 		if self.actor.get_mut().yield_after_each_message() {
 			self.ctx.yield_now().await;
-			if self.ctx.kill_switch().is_dead() {
+			if self.ctx.terminate_sig().is_dead() {
 				return Err(ActorExitStatus::Killed);
 			}
 		} else {
