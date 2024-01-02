@@ -18,6 +18,40 @@ Quester is an enterprise-grade Rust engine built on top of Querent, designed to 
 
 - **Resource Utilization Monitoring:** The engine monitors resource utilization during both indexing and querying, helping users optimize performance and allocate resources effectively.
 
+## Sequence Diagram
+
+```mermaid
+    sequenceDiagram
+        participant Qflow as Q
+        participant SourceActor as SA
+        participant StorageMapper as SM
+        participant Indexer as I
+        participant EventStreamer as ES
+
+        Q ->> SA: Initialization
+        SA ->> SM: Initialization
+        SM ->> I: Initialization
+        SM ->> ES: Initialization
+
+        loop Health Check
+            Q ->> SA: Check Health
+            SA ->> SM: Check Health
+            SM ->> I: Check Health
+            SM ->> ES: Check Health
+        end
+
+        alt Pipeline Healthy
+            SA ->> SM: Start Processing
+            SM ->> I: Start Processing
+            SM ->> ES: Start Processing
+        else Pipeline Unhealthy
+            SA ->> SM: Terminate
+            SM ->> I: Terminate
+            SM ->> ES: Terminate
+            SA ->> Q: Retry Initialization
+        end
+```
+
 ## Architecture
 
 ![Architecure](docs/archv1.png?raw=true "Quester Architecture")
