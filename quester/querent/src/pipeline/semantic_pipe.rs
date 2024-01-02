@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use crate::IndexingStatistics;
 use actors::{Actor, ActorContext, ActorExitStatus, Handler};
 use async_trait::async_trait;
-use common::TerimateSignal;
+use common::{PubSubBroker, TerimateSignal};
 use querent_synapse::{callbacks::EventType, config::Config};
 use storage::Storage;
 
@@ -20,6 +20,8 @@ pub struct PipelineSettings {
 	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub qflow_config: Config,
+
+	pub pub_sub_handler: PubSubBroker,
 }
 
 pub struct SemanticPipeline {
