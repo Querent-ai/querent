@@ -1,5 +1,5 @@
 use querent_synapse::callbacks::{EventState, EventType};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
 	sync::atomic::{AtomicU64, Ordering},
@@ -38,7 +38,7 @@ impl EventsBatch {
 	}
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default, Deserialize)]
 pub struct EventsCounter {
 	pub qflow_id: String,
 	pub total: AtomicU64,

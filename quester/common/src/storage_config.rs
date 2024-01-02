@@ -163,7 +163,7 @@ mod tests {
 	fn test_deserialize_storage_config() {
 		let json = r#"
             {
-                "Postgres": {
+                "postgres": {
                     "url": "postgresql://user:password@host:5432/database"
                 }
             }

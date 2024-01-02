@@ -24,6 +24,7 @@ pyo3-asyncio = { workspace = true }
 pyo3 = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
+tracing = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }

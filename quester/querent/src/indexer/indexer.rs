@@ -1,8 +1,11 @@
-use std::sync::{atomic::AtomicU64, Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::{atomic::AtomicU64, Arc},
+};
 
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
-use common::RuntimeType;
+use common::{RuntimeType, SemanticKnowledgePayload};
 use serde::Serialize;
 use storage::Storage;
 use tokio::runtime::Handle;
@@ -10,16 +13,16 @@ use tokio::runtime::Handle;
 use crate::{ContextualTriples, EventLock, IndexerKnowledge, NewEventLock};
 
 #[derive(Debug, Serialize)]
-pub struct StorageMapperCounters {
-	total: AtomicU64,
-	total_documents_indexed: AtomicU64,
-	total_sentences_indexed: AtomicU64,
-	total_subjects_indexed: AtomicU64,
-	total_predicates_indexed: AtomicU64,
-	total_objects_indexed: AtomicU64,
+pub struct IndexerCounters {
+	pub total: AtomicU64,
+	pub total_documents_indexed: AtomicU64,
+	pub total_sentences_indexed: AtomicU64,
+	pub total_subjects_indexed: AtomicU64,
+	pub total_predicates_indexed: AtomicU64,
+	pub total_objects_indexed: AtomicU64,
 }
 
-impl StorageMapperCounters {
+impl IndexerCounters {
 	pub fn new() -> Self {
 		Self {
 			total: AtomicU64::new(0),
@@ -63,7 +66,7 @@ impl StorageMapperCounters {
 pub struct Indexer {
 	pub qflow_id: String,
 	pub timestamp: u64,
-	pub counters: Arc<StorageMapperCounters>,
+	pub counters: Arc<IndexerCounters>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub event_lock: EventLock,
 }
@@ -73,13 +76,13 @@ impl Indexer {
 		Self {
 			qflow_id,
 			timestamp,
-			counters: Arc::new(StorageMapperCounters::new()),
+			counters: Arc::new(IndexerCounters::new()),
 			event_lock: EventLock::default(),
 			index_storages,
 		}
 	}
 
-	pub fn get_counters(&self) -> Arc<StorageMapperCounters> {
+	pub fn get_counters(&self) -> Arc<IndexerCounters> {
 		self.counters.clone()
 	}
 
@@ -102,7 +105,7 @@ impl Indexer {
 
 #[async_trait]
 impl Actor for Indexer {
-	type ObservableState = Arc<StorageMapperCounters>;
+	type ObservableState = Arc<IndexerCounters>;
 
 	fn observable_state(&self) -> Self::ObservableState {
 		self.counters.clone()
@@ -188,6 +191,36 @@ impl Handler<IndexerKnowledge> for Indexer {
 				ActorExitStatus::Failure(anyhow::anyhow!("Failed to index: {:?}", e).into())
 			})?;
 		}
+		// collect statistics
+		let doc_map: HashMap<String, Vec<SemanticKnowledgePayload>> =
+			knowledge.into_iter().fold(HashMap::new(), |mut acc, (doc, payload)| {
+				acc.entry(doc.clone()).or_insert_with(Vec::new).push(payload);
+				acc
+			});
+
+		let unique_docs: HashSet<String> = doc_map.keys().cloned().collect();
+		let total_unique_docs = unique_docs.len();
+
+		self.counters
+			.increment_total_documents_indexed(total_unique_docs.try_into().unwrap_or_default());
+		let sentence_count: usize =
+			doc_map.iter().fold(0, |acc, (_doc, triples)| acc + triples.len());
+		self.counters.increment_total_sentences_indexed(sentence_count as u64);
+		doc_map.iter().for_each(|(_doc, triples)| {
+			self.counters.increment_total_sentences_indexed(triples.len() as u64);
+
+			let (s, p, o) = triples.iter().fold((0, 0, 0), |(s_acc, p_acc, o_acc), payload| {
+				let s = if !payload.subject.is_empty() { s_acc + 1 } else { s_acc };
+				let p = if !payload.predicate.is_empty() { p_acc + 1 } else { p_acc };
+				let o = if !payload.object.is_empty() { o_acc + 1 } else { o_acc };
+
+				(s, p, o)
+			});
+
+			self.counters.increment_total_subjects_indexed(s as u64);
+			self.counters.increment_total_predicates_indexed(p as u64);
+			self.counters.increment_total_objects_indexed(o as u64);
+		});
 		Ok(())
 	}
 }
