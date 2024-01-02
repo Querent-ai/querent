@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{MilvusConfig, SemanticKnowledgePayload, VectorPayload};
 use milvus::{
 	client::Client as MilvusClient,
 	data::FieldColumn,
@@ -13,14 +13,20 @@ use async_trait::async_trait;
 
 pub struct MilvusStorage {
 	pub client: Arc<MilvusClient>,
-	pub url: String,
+	pub config: MilvusConfig,
 }
 
 impl MilvusStorage {
-	pub async fn new(url: String) -> StorageResult<Self> {
-		let client_res = MilvusClient::new(url.clone()).await;
+	pub async fn new(config: MilvusConfig) -> StorageResult<Self> {
+		let client_res = MilvusClient::with_timeout(
+			config.url.clone(),
+			Duration::from_secs(5),
+			Some(config.username.clone()),
+			Some(config.password.clone()),
+		)
+		.await;
 		match client_res {
-			Ok(client) => Ok(MilvusStorage { client: Arc::new(client), url }),
+			Ok(client) => Ok(MilvusStorage { client: Arc::new(client), config }),
 			Err(err) => {
 				log::error!("Milvus client creation failed: {:?}", err);
 				Err(StorageError {
@@ -190,7 +196,12 @@ mod tests {
 	async fn test_insert_vector() {
 		// Create a MilvusStorage instance for testing with a local URL
 		const URL: &str = "http://localhost:19530";
-		let storage = MilvusStorage::new(URL.to_string()).await;
+		let storage_config = MilvusConfig {
+			url: URL.to_string(),
+			username: "".to_string(),
+			password: "".to_string(),
+		};
+		let storage = MilvusStorage::new(storage_config).await;
 		if let Err(err) = storage {
 			log::error!("MilvusStorage creation failed: {:?}", err);
 			return;

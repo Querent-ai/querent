@@ -39,6 +39,7 @@ tonic = { workspace = true }
 tower = { workspace = true }
 tracing = { workspace = true }
 pyo3 = { workspace = true }
+querent-synapse = { workspace = true }
 
 [features]
 testsuite = []

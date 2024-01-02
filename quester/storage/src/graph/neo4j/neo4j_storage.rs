@@ -1,6 +1,6 @@
 use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{Neo4jConfig, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
 use std::sync::Arc;
 
@@ -10,21 +10,14 @@ pub struct Neo4jStorage {
 }
 
 impl Neo4jStorage {
-	pub async fn new(
-		uri: String,
-		user: String,
-		pass: String,
-		db: String,
-		max_connections: usize,
-		fetch_size: usize,
-	) -> StorageResult<Self> {
+	pub async fn new(config: Neo4jConfig) -> StorageResult<Self> {
 		let config = ConfigBuilder::default()
-			.uri(uri.clone())
-			.user(user.clone())
-			.password(pass.clone())
-			.db(db.clone())
-			.fetch_size(fetch_size)
-			.max_connections(max_connections)
+			.uri(config.url.clone())
+			.user(config.username.clone())
+			.password(config.password.clone())
+			.db(config.db_name.clone())
+			.fetch_size(config.fetch_size)
+			.max_connections(config.max_connections)
 			.build()
 			.map_err(|err| {
 				log::error!("Neo4j client creation failed: {:?}", err);
@@ -140,16 +133,17 @@ mod tests {
 		let max_connections = 5;
 		let fetch_size = 100;
 
-		// Create a Neo4jStorage instance for testing
-		let storage = Neo4jStorage::new(
-			uri.to_string(),
-			user.to_string(),
-			pass.to_string(),
-			db.to_string(),
+		// Create config for testing
+		let config = Neo4jConfig {
+			url: uri.to_string(),
+			username: user.to_string(),
+			password: pass.to_string(),
+			db_name: db.to_string(),
 			max_connections,
 			fetch_size,
-		)
-		.await;
+		};
+		// Create a Neo4jStorage instance for testing
+		let storage = Neo4jStorage::new(config).await;
 		if let Err(err) = storage {
 			log::error!("Neo4jStorage creation failed: {:?}", err);
 			return;

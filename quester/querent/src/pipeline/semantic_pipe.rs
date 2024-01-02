@@ -24,7 +24,7 @@ pub struct PipelineSettings {
 
 pub struct SemanticPipeline {
 	// Pipeline settings
-	//pub setting: PipelineSettings,
+	pub settings: PipelineSettings,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 	// Statistics about the event processing system.
@@ -32,8 +32,12 @@ pub struct SemanticPipeline {
 }
 
 impl SemanticPipeline {
-	pub fn new() -> Self {
-		Self { terminate_sig: TerimateSignal::default(), statistics: IndexingStatistics::default() }
+	pub fn new(settings: PipelineSettings) -> Self {
+		Self {
+			settings,
+			terminate_sig: TerimateSignal::default(),
+			statistics: IndexingStatistics::default(),
+		}
 	}
 }
 

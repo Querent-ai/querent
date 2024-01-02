@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{PostgresConfig, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult, Error as DieselError, Error::QueryBuilderError},
 	table, Insertable, Queryable, Selectable,
@@ -109,7 +109,7 @@ pub struct SemanticKnowledge {
 
 pub struct PostgresStorage {
 	pub pool: ActualDbPool,
-	pub db_url: String,
+	pub config: PostgresConfig,
 }
 
 struct NoCertVerifier {}
@@ -130,16 +130,19 @@ impl ServerCertVerifier for NoCertVerifier {
 }
 
 impl PostgresStorage {
-	pub async fn new(db_url: &str) -> StorageResult<Self> {
-		let tls_enabled = db_url.contains("sslmode=require");
+	pub async fn new(config: PostgresConfig) -> StorageResult<Self> {
+		let mut d_config = ManagerConfig::default();
+		let tls_enabled = config.url.contains("sslmode=require");
 		let manager = if tls_enabled {
 			// diesel-async does not support any TLS connections out of the box, so we need to manually
 			// provide a setup function which handles creating the connection
-			let mut config = ManagerConfig::default();
-			config.custom_setup = Box::new(establish_connection);
-			AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(db_url, config)
+			d_config.custom_setup = Box::new(establish_connection);
+			AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(
+				config.url.clone(),
+				d_config,
+			)
 		} else {
-			AsyncDieselConnectionManager::<AsyncPgConnection>::new(db_url)
+			AsyncDieselConnectionManager::<AsyncPgConnection>::new(config.url.clone())
 		};
 		let pool = Pool::builder(manager)
 			.max_size(10)
@@ -153,7 +156,7 @@ impl PostgresStorage {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		Ok(PostgresStorage { pool, db_url: db_url.to_string() })
+		Ok(PostgresStorage { pool, config })
 	}
 }
 
@@ -257,8 +260,11 @@ mod test {
 	// Test function
 	#[tokio::test]
 	async fn test_postgres_storage() {
+		// Create a postgres config
+		let config = PostgresConfig { url: TEST_DB_URL.to_string() };
+
 		// Create a PostgresStorage instance with the test database URL
-		let storage_result = PostgresStorage::new(TEST_DB_URL).await;
+		let storage_result = PostgresStorage::new(config).await;
 
 		// Ensure that the storage is created successfully
 		assert!(storage_result.is_ok());
