@@ -1,0 +1,59 @@
+[package]
+name = "node"
+version = "0.0.1"
+authors = ["Querent AI LLC <contact@querent.xyz>"]
+edition = "2021"
+license = "BSL-1.1"
+description = "Querent Node: A node for the Querent network with CLI and REST API"
+repository = "https://github.com/querent-ai/quester"
+homepage = "https://querent.xyz/"
+documentation = "https://querent.xyz/docs/"
+default-run = "querent"
+
+[[bin]]
+name = "querent"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+bytes = { workspace = true }
+bytesize = { workspace = true }
+chrono = { workspace = true }
+clap = { workspace = true }
+colored = { workspace = true }
+console-subscriber = { workspace = true, optional = true }
+dialoguer = { workspace = true }
+futures = { workspace = true }
+humantime = { workspace = true }
+indicatif = { workspace = true }
+itertools = { workspace = true }
+numfmt = { workspace = true }
+once_cell = { workspace = true }
+openssl-probe = { workspace = true, optional = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+regex = { workspace = true }
+reqwest = { workspace = true }
+serde_json = { workspace = true }
+tabled = { workspace = true }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
+thousands = { workspace = true }
+tikv-jemalloc-ctl = { workspace = true, optional = true }
+tikv-jemallocator = { workspace = true, optional = true }
+time = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+toml = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+pyo3-asyncio = { workspace = true }
+pyo3 = { workspace = true }
+querent-synapse = { workspace = true }
+actors = { workspace = true }
+common = { workspace = true }
+querent = { workspace = true }
