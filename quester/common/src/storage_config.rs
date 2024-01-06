@@ -31,6 +31,8 @@ pub enum StorageConfig {
 	Milvus(MilvusConfig),
 	/// Neo4j storage
 	Neo4j(Neo4jConfig),
+	//  TODO Next will be cache
+	// NamedCache(NamedCacheConfig),
 }
 
 impl StorageConfig {

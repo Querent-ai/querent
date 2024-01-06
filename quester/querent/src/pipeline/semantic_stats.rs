@@ -1,11 +1,20 @@
-use std::sync::atomic::Ordering;
+use std::{collections::HashMap, sync::atomic::Ordering};
 
-use querent_synapse::callbacks::EventType;
+use querent_synapse::{
+	callbacks::EventType,
+	comm::{MessageState, MessageType},
+};
 use serde::Serialize;
 
 use crate::{
 	indexer::IndexerCounters, EventStreamerCounters, EventsCounter, StorageMapperCounters,
 };
+
+#[derive(Clone, Debug)]
+pub struct MessageStateBatches {
+	pub pipeline_id: String,
+	pub message_state_batches: HashMap<MessageType, Vec<MessageState>>,
+}
 
 /// A Struct that holds all statistical data about indexing
 #[derive(Clone, Debug, Default, Serialize)]

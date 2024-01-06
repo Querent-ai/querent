@@ -1,81 +1,15 @@
-/// This is the main entry point for the node binary.
-use pyo3::PyErr;
+use colored::Colorize;
+use common::RED_COLOR;
+use node::{
+	cli::{build_cli, setup_logging_and_tracing, CliCommand},
+	serve::build_info::BuildInfo,
+};
+use opentelemetry::global;
 use querent_synapse::{
 	querent::{py_runtime_init, QuerentError},
 	tokio_runtime,
 };
-
-pub mod busy_detector {
-	use std::{
-		sync::atomic::{AtomicBool, AtomicU64, Ordering},
-		time::Instant,
-	};
-
-	use once_cell::sync::Lazy;
-	use tracing::debug;
-	static TIME_REF: Lazy<Instant> = Lazy::new(Instant::now);
-	static ENABLED: AtomicBool = AtomicBool::new(false);
-
-	const ALLOWED_DELAY_MICROS: u64 = 5000;
-	const DEBUG_SUPPRESSION_MICROS: u64 = 30_000_000;
-
-	thread_local!(static LAST_UNPARK_TIMESTAMP: AtomicU64 = AtomicU64::new(0));
-	static NEXT_DEBUG_TIMESTAMP: AtomicU64 = AtomicU64::new(0);
-	static SUPPRESSED_DEBUG_COUNT: AtomicU64 = AtomicU64::new(0);
-
-	pub fn set_enabled(enabled: bool) {
-		ENABLED.store(enabled, Ordering::Relaxed);
-	}
-
-	pub fn thread_unpark() {
-		LAST_UNPARK_TIMESTAMP.with(|time| {
-			let now = Instant::now().checked_duration_since(*TIME_REF).unwrap_or_default();
-			time.store(now.as_micros() as u64, Ordering::Relaxed);
-		})
-	}
-
-	pub fn thread_park() {
-		if !ENABLED.load(Ordering::Relaxed) {
-			return;
-		}
-
-		LAST_UNPARK_TIMESTAMP.with(|time| {
-			let now = Instant::now().checked_duration_since(*TIME_REF).unwrap_or_default();
-			let now = now.as_micros() as u64;
-			let delta = now - time.load(Ordering::Relaxed);
-			if delta > ALLOWED_DELAY_MICROS {
-				emit_debug(delta, now);
-			}
-		})
-	}
-
-	fn emit_debug(delta: u64, now: u64) {
-		if NEXT_DEBUG_TIMESTAMP
-			.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |next_debug| {
-				if next_debug < now {
-					Some(now + DEBUG_SUPPRESSION_MICROS)
-				} else {
-					None
-				}
-			})
-			.is_err()
-		{
-			// a debug was emited recently, don't emit log for this one
-			SUPPRESSED_DEBUG_COUNT.fetch_add(1, Ordering::Relaxed);
-			return;
-		}
-
-		let suppressed = SUPPRESSED_DEBUG_COUNT.swap(0, Ordering::Relaxed);
-		if suppressed == 0 {
-			debug!("thread wasn't parked for {delta}µs, is the runtime too busy?");
-		} else {
-			debug!(
-				"thread wasn't parked for {delta}µs, is the runtime too busy? ({suppressed} \
-                 similar messages suppressed)"
-			);
-		}
-	}
-}
+use tracing::{error, info, trace};
 
 fn main() -> Result<(), QuerentError> {
 	let runtime = tokio_runtime();
@@ -85,23 +19,64 @@ fn main() -> Result<(), QuerentError> {
 			let python_runtime_res = py_runtime_init();
 			match python_runtime_res {
 				Ok(_) => {
-					println!("Python runtime initialized.");
+					info!("Python runtime initialized.");
+					trace!("Starting main loop");
 					let _ = runtime
 						.block_on(main_impl())
 						.map_err(|e| QuerentError::internal(e.to_string()));
 				},
-				Err(e) =>
+				Err(e) => {
+					error!("Failed to initialize Python runtime: {}", e);
 					return Err(QuerentError::internal(format!(
 						"Failed to initialize Python runtime: {}",
 						e
-					))),
+					)))
+				},
 			}
 			Ok(())
 		},
-		Err(err) => Err(QuerentError::internal(err.to_string())),
+		Err(err) => Err(err),
 	}
 }
 
-async fn main_impl() -> Result<(), PyErr> {
-	Ok(())
+async fn main_impl() -> Result<(), QuerentError> {
+	#[cfg(feature = "openssl-support")]
+	openssl_probe::init_ssl_cert_env_vars();
+
+	let about_text = about_text();
+	let build_info = BuildInfo::get();
+	let version = format!(
+		"{} ({} {})",
+		build_info.version, build_info.commit_short_hash, build_info.build_date
+	);
+	let app = build_cli().about(about_text).version(version);
+	let matches = app.get_matches();
+	let command = match CliCommand::parse_cli_args(matches) {
+		Ok(command) => command,
+		Err(err) => {
+			eprintln!("Failed to parse command arguments: {err:?}");
+			std::process::exit(1);
+		},
+	};
+	setup_logging_and_tracing(command.default_log_level(), true, build_info).map_err(|e| {
+		QuerentError::internal(format!("Failed to set up logging and tracing: {}", e))
+	})?;
+
+	let return_code: i32 = if let Err(err) = command.execute().await {
+		eprintln!("{} Command failed: {:?}\n", "✘".color(RED_COLOR), err);
+		1
+	} else {
+		0
+	};
+
+	global::shutdown_tracer_provider();
+	std::process::exit(return_code)
+}
+
+/// Return the about text with telemetry info.
+fn about_text() -> String {
+	let about_text = String::from(
+        "Querent: Asynchronous data dynamo for multi-model deep neural networks workflows.\n  Find more information at https://querent.xyz/docs\n\n",
+    );
+	about_text
 }

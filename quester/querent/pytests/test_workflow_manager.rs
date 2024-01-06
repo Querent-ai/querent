@@ -180,6 +180,8 @@ async def print_querent(config, text):
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config() -> pyo3::PyResult<()> {
 	// Create a sample Config object
+	let (_py_message_sender, py_message_receiver) = crossbeam_channel::unbounded();
+	let (message_sender, _message_receiver) = crossbeam_channel::unbounded();
 	let config = Config {
 		version: 1.0,
 		querent_id: "test_querent".to_string(),
@@ -189,9 +191,15 @@ async fn workflow_manager_python_tests_with_config() -> pyo3::PyResult<()> {
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
+			inner_channel: Some(ChannelHandler::new(
+				None,
+				Some(py_message_receiver),
+				Some(message_sender),
+			)),
 			inner_event_handler: Some(EventHandler::new(None)),
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -234,18 +242,26 @@ async def print_querent(config, text):
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config2() -> pyo3::PyResult<()> {
 	// Create a sample Config object
+	let (_py_message_sender, py_message_receiver) = crossbeam_channel::unbounded();
+	let (message_sender, _message_receiver) = crossbeam_channel::unbounded();
 	let config = Config {
 		version: 1.0,
-		querent_id: "event_handler".to_string(),
-		querent_name: "Test Querent event_handler".to_string(),
+		querent_id: "test_querent".to_string(),
+		querent_name: "Test Querent Callback".to_string(),
 		workflow: WorkflowConfig {
 			name: "test_workflow".to_string(),
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
+			inner_channel: Some(ChannelHandler::new(
+				None,
+				Some(py_message_receiver),
+				Some(message_sender),
+			)),
 			inner_event_handler: Some(EventHandler::new(None)),
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -288,18 +304,26 @@ async def print_querent(config, text):
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config_channel() -> pyo3::PyResult<()> {
 	// Create a sample Config object
+	let (_py_message_sender, py_message_receiver) = crossbeam_channel::unbounded();
+	let (message_sender, _message_receiver) = crossbeam_channel::unbounded();
 	let config = Config {
 		version: 1.0,
-		querent_id: "event_handler".to_string(),
-		querent_name: "Test Querent event_handler".to_string(),
+		querent_id: "test_querent".to_string(),
+		querent_name: "Test Querent Callback".to_string(),
 		workflow: WorkflowConfig {
 			name: "test_workflow".to_string(),
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
+			inner_channel: Some(ChannelHandler::new(
+				None,
+				Some(py_message_receiver),
+				Some(message_sender),
+			)),
 			inner_event_handler: Some(EventHandler::new(None)),
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -350,18 +374,26 @@ async def print_querent(config, text: str):
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config_events() -> pyo3::PyResult<()> {
 	// Create a sample Config object
+	let (_py_message_sender, py_message_receiver) = crossbeam_channel::unbounded();
+	let (message_sender, _message_receiver) = crossbeam_channel::unbounded();
 	let config = Config {
 		version: 1.0,
-		querent_id: "event_handler".to_string(),
-		querent_name: "Test Querent event_handler".to_string(),
+		querent_id: "test_querent".to_string(),
+		querent_name: "Test Querent Callback".to_string(),
 		workflow: WorkflowConfig {
 			name: "test_workflow".to_string(),
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
+			inner_channel: Some(ChannelHandler::new(
+				None,
+				Some(py_message_receiver),
+				Some(message_sender),
+			)),
 			inner_event_handler: Some(EventHandler::new(None)),
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -394,22 +426,28 @@ async fn workflow_manager_python_tests_with_config_events() -> pyo3::PyResult<()
 
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config_events_mpsc() -> pyo3::PyResult<()> {
-	// create mpsc channel
-	let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-
 	// Create a sample Config object
+	let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+	let (_py_message_sender, py_message_receiver) = crossbeam_channel::unbounded();
+	let (message_sender, _message_receiver) = crossbeam_channel::unbounded();
 	let config = Config {
 		version: 1.0,
-		querent_id: "event_handler".to_string(),
-		querent_name: "Test Querent event_handler".to_string(),
+		querent_id: "test_querent".to_string(),
+		querent_name: "Test Querent Callback".to_string(),
 		workflow: WorkflowConfig {
 			name: "test_workflow".to_string(),
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
+			inner_channel: Some(ChannelHandler::new(
+				None,
+				Some(py_message_receiver),
+				Some(message_sender),
+			)),
 			inner_event_handler: Some(EventHandler::new(Some(tx))),
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -453,22 +491,27 @@ async fn workflow_manager_python_tests_with_config_events_mpsc() -> pyo3::PyResu
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config_events_mpsc_separate_receiver(
 ) -> pyo3::PyResult<()> {
-	// create mpsc channel
 	let (tx, mut rx) = tokio::sync::mpsc::channel(100);
-
-	// Create a sample Config object
+	let (_py_message_sender, py_message_receiver) = crossbeam_channel::unbounded();
+	let (message_sender, _message_receiver) = crossbeam_channel::unbounded();
 	let config = Config {
 		version: 1.0,
-		querent_id: "event_handler".to_string(),
-		querent_name: "Test Querent event_handler".to_string(),
+		querent_id: "test_querent".to_string(),
+		querent_name: "Test Querent Callback".to_string(),
 		workflow: WorkflowConfig {
 			name: "test_workflow".to_string(),
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
+			inner_channel: Some(ChannelHandler::new(
+				None,
+				Some(py_message_receiver),
+				Some(message_sender),
+			)),
 			inner_event_handler: Some(EventHandler::new(Some(tx))),
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -534,6 +577,8 @@ async fn workflow_manager_python_tests_with_config_events_qflow() -> pyo3::PyRes
 			inner_channel: None,
 			inner_event_handler: None,
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],
@@ -591,9 +636,11 @@ async fn workflow_manager_python_tests_with_config_channel_break() -> pyo3::PyRe
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: Some(ChannelHandler::new()),
-			inner_event_handler: Some(EventHandler::new(None)),
+			inner_channel: None,
+			inner_event_handler: None,
 			event_handler: None,
+			inner_tokens_feader: None,
+			tokens_feader: None,
 		},
 		collectors: vec![],
 		engines: vec![],

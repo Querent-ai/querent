@@ -31,16 +31,18 @@ pub struct Qflow {
 impl Qflow {
 	pub fn new(id: String, workflow: Workflow) -> Self {
 		let (event_sender, event_receiver) = mpsc::channel(1000);
-		let workflow_event_handler = EventHandler::new(Some(event_sender.clone()));
+		let workflow_event_handler: EventHandler = EventHandler::new(Some(event_sender.clone()));
 		let mut config_copy = workflow.config.unwrap_or(Config::default());
 		let workflow_config = WorkflowConfig {
 			name: config_copy.workflow.name,
 			id: config_copy.workflow.id,
 			config: config_copy.workflow.config,
-			inner_channel: None,
+			inner_channel: config_copy.workflow.inner_channel,
 			channel: None,
 			inner_event_handler: Some(workflow_event_handler),
 			event_handler: None,
+			inner_tokens_feader: config_copy.workflow.inner_tokens_feader,
+			tokens_feader: None,
 		};
 		config_copy.workflow = workflow_config;
 
@@ -75,6 +77,9 @@ impl Source for Qflow {
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
+		if self.workflow_handle.is_some() {
+			return Ok(());
+		}
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(
 				anyhow::anyhow!("Failed to initialize querent: {:?}", e).into(),
@@ -130,6 +135,11 @@ impl Source for Qflow {
 				},
 			}
 		}));
+		if self.workflow_handle.is_none() {
+			return Err(ActorExitStatus::Failure(
+				anyhow::anyhow!("Failed to start workflow").into(),
+			));
+		}
 		let event_lock = self.event_lock.clone();
 		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
 		Ok(())

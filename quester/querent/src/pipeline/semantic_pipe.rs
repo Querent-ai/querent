@@ -1,7 +1,8 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-	indexer::Indexer, EventStreamer, IndexingStatistics, Qflow, SourceActor, StorageMapper,
+	indexer::Indexer, EventStreamer, IndexingStatistics, MessageStateBatches, Qflow,
+	SemanticService, SourceActor, StorageMapper,
 };
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, MessageBus, QueueCapacity,
@@ -9,7 +10,11 @@ use actors::{
 };
 use async_trait::async_trait;
 use common::{PubSubBroker, TerimateSignal};
-use querent_synapse::{callbacks::EventType, querent::Workflow};
+use querent_synapse::{
+	callbacks::EventType,
+	comm::{ChannelHandler, IngestedTokens, MessageState, MessageType},
+	querent::Workflow,
+};
 use storage::Storage;
 use tokio::{sync::Semaphore, time::Instant};
 use tracing::{debug, error, info};
@@ -36,9 +41,8 @@ pub struct PipelineSettings {
 	pub qflow_id: String,
 	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
+	pub semantic_service_bus: MessageBus<SemanticService>,
 	pub qflow: Workflow,
-
-	pub pub_sub_handler: PubSubBroker,
 }
 
 struct PipelineHandlers {
@@ -67,17 +71,41 @@ pub struct SemanticPipeline {
 	pub terminate_sig: TerimateSignal,
 	// Statistics about the event processing system.
 	pub statistics: IndexingStatistics,
-	/// Handlers for the pipeline actors
+	// Handlers for the pipeline actors
 	handlers: Option<PipelineHandlers>,
+	// pubsub broker
+	pub pubsub_broker: PubSubBroker,
+	// token receiver and sender for internal communication
+	_token_receiver: Option<crossbeam_channel::Receiver<IngestedTokens>>,
+	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
+	_channel_receiver: Option<crossbeam_channel::Receiver<(MessageType, MessageState)>>,
+	channel_sender: Option<crossbeam_channel::Sender<(MessageType, MessageState)>>,
+	receiver_channel: Option<crossbeam_channel::Receiver<(MessageType, MessageState)>>,
+	_channel_communicator: Option<ChannelHandler>,
 }
 
 impl SemanticPipeline {
-	pub fn new(settings: PipelineSettings) -> Self {
+	pub fn new(settings: PipelineSettings, pubsub_broker: PubSubBroker) -> Self {
+		let (token_sender, token_receiver) = crossbeam_channel::unbounded();
+		let (channel_sender, channel_receiver) = crossbeam_channel::unbounded();
+		let (py_loop_side_sender, rust_loop_side_receiver) = crossbeam_channel::unbounded();
+		let channel_communicator = ChannelHandler::new(
+			Some(token_receiver.clone()),
+			Some(channel_receiver.clone()),
+			Some(py_loop_side_sender.clone()),
+		);
 		Self {
 			settings,
 			terminate_sig: TerimateSignal::default(),
 			statistics: IndexingStatistics::default(),
 			handlers: None,
+			pubsub_broker,
+			_token_receiver: Some(token_receiver),
+			token_sender: Some(token_sender),
+			_channel_receiver: Some(channel_receiver),
+			channel_sender: Some(channel_sender),
+			receiver_channel: Some(rust_loop_side_receiver),
+			_channel_communicator: Some(channel_communicator),
 		}
 	}
 
@@ -143,7 +171,7 @@ impl SemanticPipeline {
 		Health::Healthy
 	}
 
-	fn run_pipeline_observations(&mut self, ctx: &ActorContext<Self>) {
+	async fn run_pipeline_observations(&mut self, ctx: &ActorContext<Self>) {
 		let Some(handles) = &self.handlers else {
 			return;
 		};
@@ -157,6 +185,24 @@ impl SemanticPipeline {
 			&handles.indexer_handler.last_observation(),
 			&handles.storage_mapper_handler.last_observation(),
 		);
+		// check any new messages received from receive_channel
+		let mut message_state_batches = HashMap::new();
+		if let Some(receiver_channel) = &self.receiver_channel {
+			for (message_type, message_state) in receiver_channel.try_iter() {
+				let message_state_batch =
+					message_state_batches.entry(message_type).or_insert_with(|| Vec::new());
+				message_state_batch.push(message_state);
+			}
+		}
+		if !message_state_batches.is_empty() {
+			let message_state_batches = MessageStateBatches {
+				pipeline_id: self.settings.qflow_id.clone(),
+				message_state_batches,
+			};
+			let _ = ctx
+				.send_message(&self.settings.semantic_service_bus, message_state_batches)
+				.await;
+		}
 		ctx.observe(self);
 	}
 	async fn start_qflow(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
@@ -165,6 +211,7 @@ impl SemanticPipeline {
 			.await
 			.expect("The semaphore should not be closed.");
 		let qflow_id = self.settings.qflow_id.clone();
+
 		self.terminate_sig = ctx.terminate_sig().child();
 		info!(
 			qflow_id=?qflow_id,
@@ -280,7 +327,7 @@ impl Actor for SemanticPipeline {
 		_exit_status: &ActorExitStatus,
 		ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
-		self.run_pipeline_observations(ctx);
+		self.run_pipeline_observations(ctx).await;
 		Ok(())
 	}
 }
@@ -293,7 +340,7 @@ impl Handler<ControlLoop> for SemanticPipeline {
 		control_loop: ControlLoop,
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		self.run_pipeline_observations(ctx);
+		self.run_pipeline_observations(ctx).await;
 		self.run_health_check(ctx).await?;
 		ctx.schedule_self_msg(HEALTH_CHECK_INTERVAL, control_loop).await;
 		Ok(())
@@ -316,6 +363,59 @@ impl Handler<Trigger> for SemanticPipeline {
 			error!(error = ?spawn_error, retry_count = trigger.retry_count, retry_delay = ?retry_delay, "error while spawning indexing pipeline, retrying after some time");
 			ctx.schedule_self_msg(retry_delay, Trigger { retry_count: trigger.retry_count + 1 })
 				.await;
+		}
+		Ok(())
+	}
+}
+
+#[derive(Clone, Debug)]
+pub struct ShutdownPipe {
+	pub pipeline_id: String,
+}
+
+#[async_trait]
+impl Handler<ShutdownPipe> for SemanticPipeline {
+	type Reply = ();
+	async fn handle(
+		&mut self,
+		_shutdown_pipe: ShutdownPipe,
+		_ctx: &ActorContext<Self>,
+	) -> Result<(), ActorExitStatus> {
+		if self.settings.qflow_id != _shutdown_pipe.pipeline_id {
+			return Ok(());
+		}
+		self.terminate().await;
+		Ok(())
+	}
+}
+
+#[async_trait]
+impl Handler<IngestedTokens> for SemanticPipeline {
+	type Reply = ();
+	async fn handle(
+		&mut self,
+		ingested_tokens: IngestedTokens,
+		_ctx: &ActorContext<Self>,
+	) -> Result<(), ActorExitStatus> {
+		if let Some(sender) = self.token_sender.as_ref() {
+			sender.send(ingested_tokens).unwrap();
+		}
+		Ok(())
+	}
+}
+
+#[async_trait]
+impl Handler<MessageState> for SemanticPipeline {
+	type Reply = ();
+	async fn handle(
+		&mut self,
+		message_state: MessageState,
+		_ctx: &ActorContext<Self>,
+	) -> Result<(), ActorExitStatus> {
+		if let Some(sender) = self.channel_sender.as_ref() {
+			sender
+				.send((message_state.clone().message_type, message_state.clone()))
+				.unwrap();
 		}
 		Ok(())
 	}

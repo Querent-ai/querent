@@ -1,18 +1,13 @@
 [package]
-name = "node"
+name = "cluster"
 version = "0.0.1"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
-description = "Querent Node: A node for the Querent network with CLI and REST API"
-repository = "https://github.com/querent-ai/quester"
+description = "cluster for Querent AI inspired by quickwit-cluster"
+repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
-documentation = "https://querent.xyz/docs/"
-default-run = "querent"
-
-[[bin]]
-name = "querent"
-path = "src/main.rs"
+documentation = "https:/querent.xyz/docs/"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -54,23 +49,22 @@ tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { workspace = true }
 utoipa = { workspace = true }
+num_cpus = { workspace = true }
 chitchat = { workspace = true }
 warp = { workspace = true }
 serde_qs = { workspace = true }
-num_cpus = { workspace = true }
 hyper = { workspace = true }
-pyo3-asyncio = { workspace = true }
-pyo3 = { workspace = true }
-querent-synapse = { workspace = true }
-actors = { workspace = true }
-common = { workspace = true }
-querent = { workspace = true }
-cluster = { workspace = true }
-
-[build-dependencies]
-time = { workspace = true }
-
-[features]
-openssl-support = ["openssl-probe"]
-default = ["openssl-support"]
-testsuite = []
+milvus-sdk-rust= { workspace = true }
+neo4rs = { workspace = true }
+tokio-postgres = { workspace = true }
+tokio-postgres-rustls = { workspace = true }
+diesel-async = { workspace = true, features = [
+  "postgres",
+  "deadpool",
+]}
+diesel  = { workspace = true }
+deadpool = { workspace = true }
+rustls = { workspace = true }
+log = { workspace = true }
+futures-util = { workspace = true }
+common ={ workspace = true }
