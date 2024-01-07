@@ -31,3 +31,5 @@ pub mod net;
 pub use net::*;
 pub mod error;
 pub use error::*;
+pub mod types;
+pub use types::*;

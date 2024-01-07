@@ -1,15 +1,12 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use crate::{
-	indexer::Indexer, EventStreamer, IndexingStatistics, MessageStateBatches, Qflow,
-	SemanticService, SourceActor, StorageMapper,
-};
+use crate::{indexer::Indexer, EventStreamer, Qflow, SemanticService, SourceActor, StorageMapper};
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, MessageBus, QueueCapacity,
 	Supervisable, HEARTBEAT,
 };
 use async_trait::async_trait;
-use common::{PubSubBroker, TerimateSignal};
+use common::{IndexingStatistics, MessageStateBatches, PubSubBroker, TerimateSignal};
 use querent_synapse::{
 	callbacks::EventType,
 	comm::{ChannelHandler, IngestedTokens, MessageState, MessageType},

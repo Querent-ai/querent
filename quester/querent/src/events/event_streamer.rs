@@ -1,6 +1,6 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
-use common::RuntimeType;
+use common::{EventStreamerCounters, EventsBatch, RuntimeType};
 use querent_synapse::callbacks::{EventState, EventType};
 use std::{collections::HashMap, sync::Arc};
 use tokio::runtime::Handle;
@@ -8,7 +8,7 @@ use tokio::runtime::Handle;
 use crate::{
 	indexer::Indexer,
 	storage::{ContextualEmbeddings, ContextualTriples, StorageMapper},
-	EventLock, EventStreamerCounters, EventsBatch, IndexerKnowledge, NewEventLock,
+	EventLock, IndexerKnowledge, NewEventLock,
 };
 
 pub struct EventStreamer {

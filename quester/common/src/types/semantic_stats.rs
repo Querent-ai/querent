@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::atomic::Ordering};
+use std::{
+	collections::HashMap,
+	fmt::{Display, Formatter},
+	sync::atomic::Ordering,
+};
 
 use querent_synapse::{
 	callbacks::EventType,
@@ -17,7 +21,7 @@ pub struct MessageStateBatches {
 }
 
 /// A Struct that holds all statistical data about indexing
-#[derive(Clone, Debug, Default, Serialize)]
+#[derive(Clone, Debug, Default, Serialize, utoipa::ToSchema)]
 pub struct IndexingStatistics {
 	/// Number of document processed (valid or not)
 	pub total_docs: u64,
@@ -49,6 +53,30 @@ pub struct IndexingStatistics {
 	pub total_vector_events_sent: u64,
 	/// Number of semantic knowledge indexed
 	pub total_semantic_knowledge: u64,
+}
+
+impl Display for IndexingStatistics {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		write!(
+			f,
+			"total_docs: {}, total_events: {}, total_events_processed: {}, total_events_received: {}, total_events_sent: {}, total_batches: {}, total_sentences: {}, total_subjects: {}, total_predicates: {}, total_objects: {}, total_graph_events: {}, total_vector_events: {}, total_graph_events_sent: {}, total_vector_events_sent: {}, total_semantic_knowledge: {}",
+			self.total_docs,
+			self.total_events,
+			self.total_events_processed,
+			self.total_events_received,
+			self.total_events_sent,
+			self.total_batches,
+			self.total_sentences,
+			self.total_subjects,
+			self.total_predicates,
+			self.total_objects,
+			self.total_graph_events,
+			self.total_vector_events,
+			self.total_graph_events_sent,
+			self.total_vector_events_sent,
+			self.total_semantic_knowledge,
+		)
+	}
 }
 
 impl IndexingStatistics {

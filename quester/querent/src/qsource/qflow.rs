@@ -1,5 +1,6 @@
 use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
+use common::{EventsBatch, EventsCounter};
 use log;
 use querent_synapse::{
 	callbacks::{interface::EventHandler, EventState, EventType},
@@ -14,8 +15,8 @@ use tokio::{
 };
 
 use crate::{
-	EventLock, EventStreamer, EventsBatch, EventsCounter, NewEventLock, Source, SourceContext,
-	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
+	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
+	EMIT_BATCHES_TIMEOUT,
 };
 
 pub struct Qflow {

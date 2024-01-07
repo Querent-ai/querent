@@ -1,13 +1,11 @@
-use crate::{
-	IndexingStatistics, MessageStateBatches, PipelineSettings, SemanticPipeline, ShutdownPipe,
-};
+use crate::{PipelineSettings, SemanticPipeline, ShutdownPipe};
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, ActorState, Handler, Healthz, MessageBus,
 	Observation, HEARTBEAT,
 };
 use async_trait::async_trait;
 use cluster::Cluster;
-use common::PubSubBroker;
+use common::{IndexingStatistics, MessageStateBatches, PubSubBroker};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -81,7 +79,7 @@ impl SemanticService {
 				},
 			}
 		});
-		let _pipeline_metrics: HashMap<&String, IndexingStatistics> = self
+		let pipeline_metrics: HashMap<&String, IndexingStatistics> = self
 			.semantic_pipelines
 			.values()
 			.filter_map(|pipeline_handle| {
@@ -89,6 +87,7 @@ impl SemanticService {
 				Some((&pipeline_handle.pipeline_id, indexing_statistics))
 			})
 			.collect();
+		self.cluster.update_semantic_service_metrics(&pipeline_metrics).await;
 		Ok(())
 	}
 

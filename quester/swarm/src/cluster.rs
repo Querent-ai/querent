@@ -1,5 +1,5 @@
 use std::{
-	collections::{BTreeMap, HashSet},
+	collections::{BTreeMap, HashMap, HashSet},
 	fmt::{Debug, Display},
 	net::SocketAddr,
 	sync::Arc,
@@ -11,6 +11,7 @@ use chitchat::{
 	spawn_chitchat, transport::Transport, Chitchat, ChitchatConfig, ChitchatHandle, ChitchatId,
 	ClusterStateSnapshot, FailureDetectorConfig, KeyChangeEvent, ListenerHandle, NodeState,
 };
+use common::IndexingStatistics;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use tokio::{
@@ -27,7 +28,7 @@ use crate::{
 	change::{compute_cluster_change_events, ClusterChange},
 	member::{
 		build_cluster_member, ClusterMember, NodeStateExt, GRPC_ADVERTISE_ADDR_KEY, READINESS_KEY,
-		READINESS_VALUE_NOT_READY, READINESS_VALUE_READY,
+		READINESS_VALUE_NOT_READY, READINESS_VALUE_READY, SEMANTIC_METRICS_PREFIX,
 	},
 	types::NodeId,
 	ClusterNode,
@@ -280,6 +281,28 @@ impl Cluster {
 		);
 		self.set_self_node_readiness(false).await;
 		tokio::time::sleep(GOSSIP_INTERVAL * 2).await;
+	}
+
+	/// Value:      179m,76MB/s
+	pub async fn update_semantic_service_metrics(
+		&self,
+		semantic_metrics: &HashMap<&String, IndexingStatistics>,
+	) {
+		let chitchat = self.chitchat().await;
+		let mut chitchat_guard = chitchat.lock().await;
+		let node_state = chitchat_guard.self_node_state();
+		let mut current_metrics_keys: HashSet<String> = node_state
+			.iter_prefix(SEMANTIC_METRICS_PREFIX)
+			.map(|(key, _)| key.to_string())
+			.collect();
+		for (pipeline_id, metrics) in semantic_metrics {
+			let key = format!("{SEMANTIC_METRICS_PREFIX}{pipeline_id}");
+			current_metrics_keys.remove(&key);
+			node_state.set(key, metrics.to_string());
+		}
+		for obsolete_task_key in current_metrics_keys {
+			node_state.mark_for_deletion(&obsolete_task_key);
+		}
 	}
 
 	pub async fn chitchat(&self) -> Arc<Mutex<Chitchat>> {

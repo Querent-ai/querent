@@ -1,6 +1,7 @@
 use std::{collections::HashMap, sync::atomic::Ordering};
 
 use actors::Quester;
+use common::StorageMapperCounters;
 use querent::{storage::StorageMapper, EventStreamer, Qflow, SourceActor};
 use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
@@ -150,7 +151,7 @@ async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> 
 	// Verify that the event handler sent the expected event
 	assert_eq!(observed_state.events_received.load(Ordering::Relaxed), 1);
 
-	let storage_messages: std::sync::Arc<querent::storage::StorageMapperCounters> =
+	let storage_messages: std::sync::Arc<StorageMapperCounters> =
 		storage_mapper.process_pending_and_observe().await.state;
 	assert!(storage_messages.total.load(Ordering::Relaxed) == 1);
 
