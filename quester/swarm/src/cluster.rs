@@ -29,6 +29,7 @@ use crate::{
 	member::{
 		build_cluster_member, ClusterMember, NodeStateExt, GRPC_ADVERTISE_ADDR_KEY, READINESS_KEY,
 		READINESS_VALUE_NOT_READY, READINESS_VALUE_READY, SEMANTIC_METRICS_PREFIX,
+		SEMANTIC_PIPE_PREFIX,
 	},
 	types::NodeId,
 	ClusterNode,
@@ -303,6 +304,19 @@ impl Cluster {
 		for obsolete_task_key in current_metrics_keys {
 			node_state.mark_for_deletion(&obsolete_task_key);
 		}
+	}
+
+	pub async fn update_semantic_pipeline_state(
+		&self,
+		pipeline_id: &str,
+		state: &str,
+	) -> anyhow::Result<()> {
+		let chitchat = self.chitchat().await;
+		let mut chitchat_guard = chitchat.lock().await;
+		let node_state = chitchat_guard.self_node_state();
+		let key = format!("{SEMANTIC_PIPE_PREFIX}{pipeline_id}");
+		node_state.set(key, state);
+		Ok(())
 	}
 
 	pub async fn chitchat(&self) -> Arc<Mutex<Chitchat>> {

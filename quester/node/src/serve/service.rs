@@ -1,9 +1,15 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, NodeConfig, PubSubBroker, RuntimesConfig};
 use querent::{start_semantic_service, SemanticService};
+use tokio::sync::oneshot;
+use tracing::{debug, error};
+
+use crate::rest;
+
+use super::node_readiness;
 
 const _READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "testsuite")) {
 	Duration::from_millis(25)
@@ -15,7 +21,6 @@ pub struct QuesterServices {
 	pub node_config: NodeConfig,
 	pub cluster: Cluster,
 	pub event_broker: PubSubBroker,
-	pub quester_cloud: Quester,
 	pub semantic_service_bus: MessageBus<SemanticService>,
 }
 
@@ -27,15 +32,75 @@ pub async fn serve_quester(
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Quester::new();
-	let _semantic_service_bus = start_semantic_service(
-		&node_config,
-		&quester_cloud,
-		&cluster,
-		&event_broker,
-		shutdown_signal,
-	)
-	.await
-	.expect("Failed to start semantic service");
+	let semantic_service_bus =
+		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
+			.await
+			.expect("Failed to start semantic service");
+	let _grpc_listen_addr = node_config.grpc_listen_addr;
+	let rest_listen_addr = node_config.rest_config.listen_addr;
 
-	Err(anyhow::anyhow!("Not implemented"))
+	// Setup and start REST server.
+	let (rest_readiness_trigger_tx, rest_readiness_signal_rx) = oneshot::channel::<()>();
+	let rest_readiness_trigger = Box::pin(async move {
+		if rest_readiness_trigger_tx.send(()).is_err() {
+			debug!("REST server readiness signal receiver was dropped");
+		}
+	});
+	let (rest_shutdown_trigger_tx, rest_shutdown_signal_rx) = oneshot::channel::<()>();
+	let rest_shutdown_signal = Box::pin(async move {
+		if rest_shutdown_signal_rx.await.is_err() {
+			debug!("REST server shutdown trigger sender was dropped");
+		}
+	});
+	let services = Arc::new(QuesterServices {
+		node_config,
+		cluster: cluster.clone(),
+		event_broker,
+		semantic_service_bus,
+	});
+	let rest_server = rest::start_rest_server(
+		rest_listen_addr,
+		services,
+		rest_readiness_trigger,
+		rest_shutdown_signal,
+	);
+	// Setup and start gRPC server.
+	let (grpc_readiness_trigger_tx, grpc_readiness_signal_rx) = oneshot::channel::<()>();
+	let _grpc_readiness_trigger = Box::pin(async move {
+		if grpc_readiness_trigger_tx.send(()).is_err() {
+			debug!("gRPC server readiness signal receiver was dropped");
+		}
+	});
+	let (grpc_shutdown_trigger_tx, grpc_shutdown_signal_rx) = oneshot::channel::<()>();
+	let _grpc_shutdown_signal = Box::pin(async move {
+		if grpc_shutdown_signal_rx.await.is_err() {
+			debug!("gRPC server shutdown trigger sender was dropped");
+		}
+	});
+	// TODO implement gRPC server
+	tokio::spawn(node_readiness(
+		cluster.clone(),
+		grpc_readiness_signal_rx,
+		rest_readiness_signal_rx,
+	));
+	let shutdown_handle = tokio::spawn(async move {
+		shutdown_signal.await;
+		debug!("Shutting down node");
+		let actor_exit_statuses = quester_cloud.quit().await;
+
+		if grpc_shutdown_trigger_tx.send(()).is_err() {
+			debug!("gRPC server shutdown signal receiver was dropped");
+		}
+		if rest_shutdown_trigger_tx.send(()).is_err() {
+			debug!("REST server shutdown signal receiver was dropped");
+		}
+		actor_exit_statuses
+	});
+	let rest_join_handle = tokio::spawn(rest_server);
+	let rest_res = tokio::try_join!(rest_join_handle);
+	if let Err(rest_err) = rest_res {
+		error!("REST server failed: {:?}", rest_err);
+	}
+	let actor_exit_statuses = shutdown_handle.await?;
+	Ok(actor_exit_statuses)
 }

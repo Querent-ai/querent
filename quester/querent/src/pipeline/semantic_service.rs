@@ -87,6 +87,7 @@ impl SemanticService {
 				Some((&pipeline_handle.pipeline_id, indexing_statistics))
 			})
 			.collect();
+
 		self.cluster.update_semantic_service_metrics(&pipeline_metrics).await;
 		Ok(())
 	}

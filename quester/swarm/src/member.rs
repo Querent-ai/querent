@@ -16,6 +16,7 @@ pub(crate) const READINESS_KEY: &str = "readiness";
 pub(crate) const READINESS_VALUE_READY: &str = "READY";
 pub(crate) const READINESS_VALUE_NOT_READY: &str = "NOT_READY";
 pub(crate) const SEMANTIC_METRICS_PREFIX: &str = "semantic_metrics:";
+pub(crate) const SEMANTIC_PIPE_PREFIX: &str = "semantic_pipelines:";
 
 pub const SEMANTIC_CPU_CAPACITY_KEY: &str = "semantic_cpu_capacity";
 

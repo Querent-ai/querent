@@ -1,7 +1,7 @@
 pub mod qsource;
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
-use common::{BoxFutureInfaillible, NodeConfig, PubSubBroker};
+use common::{NodeConfig, PubSubBroker};
 pub use qsource::*;
 pub mod events;
 pub use events::*;
@@ -20,7 +20,6 @@ pub async fn start_semantic_service(
 	quester: &Quester,
 	cluster: &Cluster,
 	pubsub_broker: &PubSubBroker,
-	_shutdown_signal: BoxFutureInfaillible<()>,
 ) -> anyhow::Result<MessageBus<SemanticService>> {
 	info!("Starting semantic service");
 

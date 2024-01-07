@@ -36,7 +36,7 @@ pub(crate) mod tests;
 pub use actor::{Actor, ActorExitStatus, DeferableReplyHandler, Handler};
 pub use actor_handle::{ActorHandle, Health, Healthz, Supervisable};
 pub use command::{Command, Observe};
-use common::TerimateSignal;
+use common::{ServiceError, ServiceErrorCode, TerimateSignal};
 pub use observation::{Observation, ObservationType};
 pub use quester::Quester;
 pub use spawn_builder::SpawnContext;
@@ -108,4 +108,14 @@ pub enum AskError<E: fmt::Debug> {
 	ProcessMessageError,
 	#[error("the handler returned an error: `{0:?}`")]
 	ErrorReply(#[from] E),
+}
+
+impl<E: fmt::Debug + ServiceError> ServiceError for AskError<E> {
+	fn error_code(&self) -> ServiceErrorCode {
+		match self {
+			AskError::MessageNotDelivered => ServiceErrorCode::Internal,
+			AskError::ProcessMessageError => ServiceErrorCode::Internal,
+			AskError::ErrorReply(err) => err.error_code(),
+		}
+	}
 }

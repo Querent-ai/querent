@@ -1,0 +1,223 @@
+use std::{net::SocketAddr, sync::Arc};
+
+use common::{BoxFutureInfaillible, ServiceErrorCode};
+use hyper::{http, http::HeaderValue, Method};
+use tower::{make::Shared, ServiceBuilder};
+use tower_http::{
+	compression::{
+		predicate::{DefaultPredicate, Predicate, SizeAbove},
+		CompressionLayer,
+	},
+	cors::CorsLayer,
+};
+use tracing::{error, info};
+use warp::{redirect, Filter, Rejection, Reply};
+
+use crate::{
+	cluster_api::cluster_handler,
+	health_check_api::health_check_handlers,
+	json_api_response::{ApiError, JsonApiResponse},
+	metrics_handler, node_info_handler, pipelines_get_handler, ui_handler, BodyFormat, BuildInfo,
+	QuesterServices, RuntimeInfo,
+};
+
+/// The minimum size a response body must be in order to
+/// be automatically compressed with gzip.
+const MINIMUM_RESPONSE_COMPRESSION_SIZE: u16 = 10 << 10;
+
+#[derive(Debug)]
+pub(crate) struct InvalidJsonRequest(pub serde_json::Error);
+
+impl warp::reject::Reject for InvalidJsonRequest {}
+
+#[derive(Debug)]
+pub(crate) struct InvalidArgument(pub String);
+
+impl warp::reject::Reject for InvalidArgument {}
+
+/// Starts REST services.
+pub(crate) async fn start_rest_server(
+	rest_listen_addr: SocketAddr,
+	services: Arc<QuesterServices>,
+	readiness_trigger: BoxFutureInfaillible<()>,
+	shutdown_signal: BoxFutureInfaillible<()>,
+) -> anyhow::Result<()> {
+	let request_counter = warp::log::custom(|_| {
+		crate::SERVE_METRICS.http_requests_total.inc();
+	});
+	// Docs routes
+	let api_doc = warp::path("openapi.json")
+		.and(warp::get())
+		.map(|| warp::reply::json(&crate::openapi::build_docs()));
+
+	// `/health/*` routes.
+	let health_check_routes = health_check_handlers(
+		services.cluster.clone(),
+		Some(services.semantic_service_bus.clone()),
+	);
+
+	// `/metrics` route.
+	let metrics_routes = warp::path("metrics").and(warp::get()).map(metrics_handler);
+
+	// `/api/v1/*` routes.
+	let api_v1_root_route = api_v1_routes(services.clone());
+
+	let redirect_root_to_ui_route = warp::path::end()
+		.and(warp::get())
+		.map(|| redirect(http::Uri::from_static("/ui/search")));
+
+	let extra_headers =
+		warp::reply::with::headers(services.node_config.rest_config.extra_headers.clone());
+
+	// Combine all the routes together.
+	let rest_routes = api_v1_root_route
+		.or(api_doc)
+		.or(redirect_root_to_ui_route)
+		.or(ui_handler())
+		.or(health_check_routes)
+		.or(metrics_routes)
+		.with(request_counter)
+		.recover(recover_fn)
+		.with(extra_headers)
+		.boxed();
+
+	let warp_service = warp::service(rest_routes);
+	let compression_predicate =
+		DefaultPredicate::new().and(SizeAbove::new(MINIMUM_RESPONSE_COMPRESSION_SIZE));
+	let cors = build_cors(&services.node_config.rest_config.cors_allow_origins);
+
+	let service = ServiceBuilder::new()
+		.layer(CompressionLayer::new().gzip(true).compress_when(compression_predicate))
+		.layer(cors)
+		.service(warp_service);
+
+	info!(
+		rest_listen_addr=?rest_listen_addr,
+		"Starting REST server listening on {rest_listen_addr}."
+	);
+
+	// `graceful_shutdown()` seems to be blocking in presence of existing connections.
+	// The following approach of dropping the serve supposedly is not bullet proof, but it seems to
+	// work in our unit test.
+	//
+	// See more of the discussion here:
+	// https://github.com/hyperium/hyper/issues/2386
+	let serve_fut = async move {
+		tokio::select! {
+			 res = hyper::Server::bind(&rest_listen_addr).serve(Shared::new(service)) => { res }
+			 _ = shutdown_signal => { Ok(()) }
+		}
+	};
+
+	let (serve_res, _trigger_res) = tokio::join!(serve_fut, readiness_trigger);
+	serve_res?;
+	Ok(())
+}
+
+fn api_v1_routes(
+	services: Arc<QuesterServices>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	if !services.node_config.rest_config.extra_headers.is_empty() {
+		info!(
+			"Extra headers will be added to all responses: {:?}",
+			services.node_config.rest_config.extra_headers
+		);
+	}
+	let api_v1_root_url = warp::path!("api" / "v1" / ..);
+	api_v1_root_url.and(
+		cluster_handler(services.cluster.clone())
+			.or(node_info_handler(
+				BuildInfo::get(),
+				RuntimeInfo::get(),
+				Arc::new(services.node_config.clone()),
+			))
+			.or(pipelines_get_handler(Some(services.semantic_service_bus.clone()))),
+	)
+}
+
+/// This function returns a formatted error based on the given rejection reason.
+/// The ordering of rejection processing is very important, we need to start
+/// with the most specific rejections and end with the most generic. If not, Quickwit
+/// will return useless errors to the user.
+// TODO: we may want in the future revamp rejections as our usage does not exactly
+// match rejection behaviour. When a filter returns a rejection, it means that it
+// did not match, but maybe another filter can. Consequently warp will continue
+// to try to match other filters. Once a filter is matched, we can enter into
+// our own logic and return a proper reply.
+// More on this here: https://github.com/seanmonstar/warp/issues/388.
+// We may use this work on the PR is merged: https://github.com/seanmonstar/warp/pull/909.
+pub async fn recover_fn(rejection: Rejection) -> Result<impl Reply, Rejection> {
+	let err = get_status_with_error(rejection);
+	let status_code = err.service_code.to_http_status_code();
+	Ok(JsonApiResponse::new::<(), _>(&Err(err), status_code, &BodyFormat::default()))
+}
+
+fn get_status_with_error(rejection: Rejection) -> ApiError {
+	if rejection.is_not_found() {
+		ApiError {
+			service_code: ServiceErrorCode::NotFound,
+			message: "Route not found".to_string(),
+		}
+	} else if let Some(error) = rejection.find::<serde_qs::Error>() {
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<InvalidJsonRequest>() {
+		// Happens when the request body could not be deserialized correctly.
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.0.to_string() }
+	} else if let Some(error) = rejection.find::<InvalidArgument>() {
+		// Happens when the url path or request body contains invalid argument(s).
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.0.to_string() }
+	} else if let Some(error) = rejection.find::<warp::filters::body::BodyDeserializeError>() {
+		// Happens when the request body could not be deserialized correctly.
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<warp::reject::UnsupportedMediaType>() {
+		ApiError {
+			service_code: ServiceErrorCode::UnsupportedMediaType,
+			message: error.to_string(),
+		}
+	} else if let Some(error) = rejection.find::<warp::reject::InvalidQuery>() {
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<warp::reject::LengthRequired>() {
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<warp::reject::MissingHeader>() {
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<warp::reject::InvalidHeader>() {
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<warp::reject::MethodNotAllowed>() {
+		ApiError { service_code: ServiceErrorCode::MethodNotAllowed, message: error.to_string() }
+	} else if let Some(error) = rejection.find::<warp::reject::PayloadTooLarge>() {
+		ApiError { service_code: ServiceErrorCode::BadRequest, message: error.to_string() }
+	} else {
+		error!("REST server error: {:?}", rejection);
+		ApiError {
+			service_code: ServiceErrorCode::Internal,
+			message: "internal server error".to_string(),
+		}
+	}
+}
+
+fn build_cors(cors_origins: &[String]) -> CorsLayer {
+	let mut cors = CorsLayer::new().allow_methods([
+		Method::GET,
+		Method::POST,
+		Method::PUT,
+		Method::DELETE,
+		Method::OPTIONS,
+	]);
+	if !cors_origins.is_empty() {
+		let allow_any = cors_origins.iter().any(|origin| origin.as_str() == "*");
+
+		if allow_any {
+			info!("CORS is enabled, all origins will be allowed");
+			cors = cors.allow_origin(tower_http::cors::Any);
+		} else {
+			info!(origins = ?cors_origins, "CORS is enabled, the following origins will be allowed");
+			let origins = cors_origins
+				.iter()
+				.map(|origin| origin.parse::<HeaderValue>().unwrap())
+				.collect::<Vec<_>>();
+			cors = cors.allow_origin(origins);
+		};
+	}
+
+	cors
+}
