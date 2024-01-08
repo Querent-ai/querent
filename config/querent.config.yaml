@@ -8,79 +8,21 @@
 # Config file format version.
 version: 0.1
 
-# Querent ID. Must be unique within a cluster. If not set, a random UUID is added on workflow start.
-querent_id: node-1
-
-# -------------------------------- Collector Configuration --------------------------------
-
-# Define the collectors used by this node. You can specify multiple collectors.
-collectors:
-  - name: LocalCollector
-    backend: localfile
-    # Add backend-specific configuration here if needed.
-    config:
-      root_path: /path/to/local/files
-
-  - name: S3Collector
-    backend: s3
-    # Add backend-specific configuration here if needed.
-    config:
-      bucket: my-s3-bucket
-      region: us-east-1
-      access_key: your-access-key
-      secret_key: your-secret-key
-
-  - name: GCSCollector
-    backend: gcs
-    # Add backend-specific configuration here if needed.
-    config:
-      bucket: my-gcs-bucket
-      access_key: your-access-key
-      secret_key: your-secret-key
-  
-  - name: AzureBlobCollector
-    backend: azureblob
-    # Add backend-specific configuration here if needed.
-    config:
-      container: my-azure-blob-container
-      account_name: your-account-name
-      account_key: your-account-key
-
-# -------------------------------- Engine Configuration --------------------------------
-
-# Define the engines used by this node. You can specify multiple engines.
-engines:
-  - name: BertLLMEngine
-    num_workers: 4
-    max_retries: 3
-    retry_interval: 2.0
-    message_throttle_limit: 100
-    message_throttle_delay: 0.1
-
-# -------------------------------- Storage Configuration --------------------------------
-
-# Define the storage options used by this node. You can specify multiple storage options.
-storage:
-  - name: LocalFileStorage
-    backend: localfile
-    # Add backend-specific configuration here if needed.
-    config:
-      root_path: /path/to/local/storage
-
-  - name: RedisStorage
-    backend: redis
-    # Add backend-specific configuration here if needed.
-    config:
-      host: redis-host
-      port: 6379
-      password: your-redis-password
-
-# -------------------------------- Resource Configuration --------------------------------
-
-# Define resource management options for this node.
-resource:
-  auto_scale_threshold: 10
-
-# -------------------------------- Additional Settings --------------------------------
-
-# Add any additional settings specific to your use case here.
+# Unique cluster ID. This is used to identify the cluster to which this node belongs.
+cluster_id: querent-cluster
+# Node identifier. This is used to identify this node within the cluster running semantic search.
+node_id: querent-node
+listen_address: 0.0.0.0
+advertise_address: 0.0.0.0
+gossip_listen_port: 2222
+grpc_listen_port: 3333
+cpu_capacity: 5
+peer_seeds:
+# -------------------------------- Restful Configuration --------------------------------
+rest_config:
+  listen_port: 1111
+  cors_allow_origins:
+    - "*"
+  extra_headers:
+    x-header-1: header-value-1
+    x-header-2: header-value-2

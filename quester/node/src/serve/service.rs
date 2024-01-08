@@ -1,8 +1,8 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
-use common::{BoxFutureInfaillible, NodeConfig, PubSubBroker, RuntimesConfig};
+use common::{BoxFutureInfaillible, Host, NodeConfig, PubSubBroker, RuntimesConfig};
 use querent::{start_semantic_service, SemanticService};
 use tokio::sync::oneshot;
 use tracing::{debug, error};
@@ -32,12 +32,14 @@ pub async fn serve_quester(
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Quester::new();
-	let semantic_service_bus =
+	let semantic_service_bus: MessageBus<SemanticService> =
 		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
 			.await
 			.expect("Failed to start semantic service");
-	let _grpc_listen_addr = node_config.grpc_listen_addr;
-	let rest_listen_addr = node_config.rest_config.listen_addr;
+	let listen_host = node_config.listen_address.parse::<Host>()?;
+	let listen_ip = listen_host.resolve().await?;
+	let _grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_listen_port);
+	let rest_listen_addr = SocketAddr::new(listen_ip, node_config.rest_config.listen_port);
 
 	// Setup and start REST server.
 	let (rest_readiness_trigger_tx, rest_readiness_signal_rx) = oneshot::channel::<()>();
@@ -97,7 +99,8 @@ pub async fn serve_quester(
 		actor_exit_statuses
 	});
 	let rest_join_handle = tokio::spawn(rest_server);
-	let rest_res = tokio::try_join!(rest_join_handle);
+	let (rest_res,) = tokio::try_join!(rest_join_handle)
+	.expect("the tasks running the gRPC and REST servers should not panic or be cancelled");
 	if let Err(rest_err) = rest_res {
 		error!("REST server failed: {:?}", rest_err);
 	}

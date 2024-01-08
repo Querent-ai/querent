@@ -27,5 +27,6 @@ pub async fn start_semantic_service(
 		SemanticService::new(node_config.node_id.clone(), cluster.clone(), pubsub_broker.clone());
 
 	let (semantic_service_mailbox, _) = quester.spawn_builder().spawn(semantic_service);
+	info!("Starting semantic service started");
 	Ok(semantic_service_mailbox)
 }

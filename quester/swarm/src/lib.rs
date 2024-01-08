@@ -6,11 +6,13 @@ pub mod member;
 pub mod node;
 pub mod types;
 
+use std::net::SocketAddr;
+
 use chitchat::transport::UdpTransport;
 pub use chitchat::{
 	transport::ChannelTransport, FailureDetectorConfig, KeyChangeEvent, ListenerHandle,
 };
-use common::NodeConfig;
+use common::{Host, NodeConfig};
 use time::OffsetDateTime;
 
 pub use crate::{
@@ -43,7 +45,11 @@ impl From<u64> for GenerationId {
 
 pub async fn start_cluster_service(node_config: &NodeConfig) -> anyhow::Result<Cluster> {
 	let cluster_id = node_config.cluster_id.clone();
-	let gossip_listen_addr = node_config.gossip_listen_addr;
+	let listen_host = node_config.listen_address.parse::<Host>()?;
+	let listen_ip = listen_host.resolve().await?;
+
+	let gossip_listen_addr = SocketAddr::new(listen_ip, node_config.gossip_listen_port);
+	let grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_listen_port);
 	let peer_seed_addrs = node_config.peer_seed_addrs().await?;
 
 	let node_id: NodeId = node_config.node_id.clone().into();
@@ -54,8 +60,8 @@ pub async fn start_cluster_service(node_config: &NodeConfig) -> anyhow::Result<C
 		node_id,
 		generation_id,
 		is_ready,
-		gossip_advertise_addr: node_config.gossip_advertise_addr,
-		grpc_advertise_addr: node_config.grpc_advertise_addr,
+		gossip_advertise_addr: gossip_listen_addr,
+		grpc_advertise_addr: grpc_listen_addr,
 		indexing_cpu_capacity: cpu_capacity,
 	};
 	let cluster: Cluster = Cluster::join(

@@ -3,12 +3,13 @@ use common::{initialize_runtimes, RuntimesConfig};
 use tokio::signal;
 use tracing::debug;
 
-use crate::{cli::load_node_config, serve_quester};
+use crate::{cli::load_node_config, config_cli_arg, serve_quester};
 
 pub fn build_serve_command() -> Command {
 	Command::new("serve")
 		.about("Starts a Querent node.")
 		.long_about("Starts a Querent node with all services enabled by default.")
+		.arg(config_cli_arg())
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -18,9 +19,7 @@ pub struct Serve {
 
 impl Serve {
 	pub fn parse_cli_args(mut matches: ArgMatches) -> anyhow::Result<Self> {
-		let config_uri = matches
-			.remove_one::<String>("node-config")
-			.expect("`node config` should be a required arg.");
+		let config_uri = matches.remove_one::<String>("config").expect("`node config required");
 		Ok(Serve { node_config_uri: config_uri })
 	}
 
