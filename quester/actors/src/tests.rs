@@ -485,9 +485,6 @@ impl Handler<AddOperand> for Adder {
 	}
 }
 
-#[derive(Debug)]
-struct Sleep(Duration);
-
 #[tokio::test]
 async fn test_actor_return_response() -> anyhow::Result<()> {
 	let quester = Quester::with_accelerated_time();

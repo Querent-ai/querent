@@ -49,8 +49,8 @@ fn readiness_handler(
 async fn get_liveness(semantic_service: Option<MessageBus<SemanticService>>) -> impl warp::Reply {
 	let mut is_live = true;
 
-	if let Some(indexer_service) = semantic_service {
-		if !indexer_service.ask(Healthz).await.unwrap_or(false) {
+	if let Some(semantic_service) = semantic_service {
+		if !semantic_service.ask(Healthz).await.unwrap_or(false) {
 			error!("the semantic service is unhealthy");
 			is_live = false;
 		}
