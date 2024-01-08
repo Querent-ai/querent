@@ -11,7 +11,7 @@ pub enum ServiceErrorCode {
 	Internal,
 	MethodNotAllowed,
 	NotFound,
-	// Used for APIs that are available in Elasticsearch but not available yet in Quickwit.
+	// Used for APIs that are available in Elasticsearch but not available yet in Querent.
 	NotSupportedYet,
 	RateLimited,
 	Timeout,

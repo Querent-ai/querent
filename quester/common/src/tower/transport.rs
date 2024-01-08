@@ -259,8 +259,5 @@ mod tests {
 
 		// `ready()` is lying... See `unlazy_stream()` comment.
 		balance_channel.ready().await.unwrap();
-
-		// The rest of the test lives in the `quickwit-codegen-example` crate.
-		// TODO: Move the test here.
 	}
 }

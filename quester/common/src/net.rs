@@ -269,7 +269,7 @@ fn is_forwardable_ip(ip_addr: &IpAddr) -> bool {
                 "fe80::/10",
             ]
             .iter()
-            .map(|network| network.parse().expect("Failed to parse network range. This should never happen! Please, report on https://github.com/quickwit-oss/quickwit/issues."))
+            .map(|network| network.parse().expect("Failed to parse network range. This should never happen! Please, report on https://github.com/querent-ai/quester/issues."))
             .collect()
         })
         .iter()
@@ -282,7 +282,7 @@ fn is_private_ip(ip_addr: &IpAddr) -> bool {
         .get_or_init(|| {
             ["192.168.0.0/16", "172.16.0.0/12", "10.0.0.0/8", "fc00::/7"]
                 .iter()
-                .map(|network| network.parse().expect("Failed to parse network range. This should never happen! Please, report on https://github.com/quickwit-oss/quickwit/issues."))
+                .map(|network| network.parse().expect("Failed to parse network range. This should never happen! Please, report on https://github.com/querent-ai/quester/issues."))
                 .collect()
         })
         .iter()

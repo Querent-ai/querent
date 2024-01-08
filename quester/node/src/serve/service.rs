@@ -100,7 +100,7 @@ pub async fn serve_quester(
 	});
 	let rest_join_handle = tokio::spawn(rest_server);
 	let (rest_res,) = tokio::try_join!(rest_join_handle)
-	.expect("the tasks running the gRPC and REST servers should not panic or be cancelled");
+		.expect("the tasks running the gRPC and REST servers should not panic or be cancelled");
 	if let Err(rest_err) = rest_res {
 		error!("REST server failed: {:?}", rest_err);
 	}

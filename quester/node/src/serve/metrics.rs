@@ -11,11 +11,10 @@ impl Default for RestMetrics {
 			http_requests_total: new_counter(
 				"http_requests_total",
 				"Total number of HTTP requests received",
-				"quickwit",
+				"querent",
 			),
 		}
 	}
 }
 
-/// Serve counters exposes a bunch a set of metrics about the request received to quickwit.
 pub static SERVE_METRICS: Lazy<RestMetrics> = Lazy::new(RestMetrics::default);

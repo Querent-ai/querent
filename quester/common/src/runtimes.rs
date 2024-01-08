@@ -102,7 +102,7 @@ impl RuntimeType {
                 }
                 #[cfg(not(any(test, feature = "testsuite")))]
                 {
-                    panic!("Tokio runtimes not initialized. Please, report this issue on GitHub: https://github.com/quickwit-oss/quickwit/issues.");
+                    panic!("Tokio runtimes not initialized. Please, report this issue on GitHub: https://github.com/querent-ai/quester/issues.");
                 }
             })
             .get(&self)
