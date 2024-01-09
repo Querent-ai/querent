@@ -17,8 +17,8 @@ use crate::{
 	cluster_api::cluster_handler,
 	health_check_api::health_check_handlers,
 	json_api_response::{ApiError, JsonApiResponse},
-	metrics_handler, node_info_handler, pipelines_get_handler, ui_handler, BodyFormat, BuildInfo,
-	QuesterServices, RuntimeInfo,
+	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
+	ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -131,7 +131,8 @@ fn api_v1_routes(
 				RuntimeInfo::get(),
 				Arc::new(services.node_config.clone()),
 			))
-			.or(pipelines_get_handler(Some(services.semantic_service_bus.clone()))),
+			.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone()))
+				.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))),
 	)
 }
 

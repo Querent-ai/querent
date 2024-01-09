@@ -1,4 +1,4 @@
-use crate::{PipelineSettings, SemanticPipeline, ShutdownPipe};
+use crate::{PipelineErrors, PipelineSettings, SemanticPipeline, ShutdownPipe};
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, ActorState, Handler, Healthz, MessageBus,
 	Observation, HEARTBEAT,
@@ -95,11 +95,11 @@ impl SemanticService {
 	async fn observe_pipeline(
 		&mut self,
 		pipeline_id: String,
-	) -> Result<Observation<IndexingStatistics>, anyhow::Error> {
+	) -> Result<Observation<IndexingStatistics>, PipelineErrors> {
 		let pipeline_handle = &self
 			.semantic_pipelines
 			.get(&pipeline_id)
-			.ok_or(anyhow::anyhow!("Semantic pipeline `{}` not found.", pipeline_id))?
+			.ok_or(PipelineErrors::PipelineNotFound { pipeline_id })?
 			.handle;
 		let observation = pipeline_handle.observe().await;
 		Ok(observation)
@@ -185,7 +185,7 @@ pub struct SpawnPipeline {
 
 #[async_trait]
 impl Handler<ObservePipeline> for SemanticService {
-	type Reply = Result<Observation<IndexingStatistics>, anyhow::Error>;
+	type Reply = Result<IndexingStatistics, PipelineErrors>;
 
 	async fn handle(
 		&mut self,
@@ -193,7 +193,10 @@ impl Handler<ObservePipeline> for SemanticService {
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		let observation = self.observe_pipeline(msg.pipeline_id).await;
-		Ok(observation)
+		match observation {
+			Ok(observation) => Ok(Ok(observation.state)),
+			Err(e) => Ok(Err(e)),
+		}
 	}
 }
 
