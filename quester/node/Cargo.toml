@@ -71,6 +71,7 @@ cluster = { workspace = true }
 rust-embed = { workspace = true }
 mime_guess = { workspace = true }
 uuid = { workspace = true }
+storage = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }

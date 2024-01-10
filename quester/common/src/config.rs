@@ -42,8 +42,7 @@ pub struct StorageBackend {
 
 #[serde_as]
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub struct StorageConfigs(#[serde_as(as = "EnumMap")] Vec<StorageConfig>);
-
+pub struct StorageConfigs(#[serde_as(as = "EnumMap")] pub Vec<StorageConfig>);
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeConfig {
 	pub cluster_id: String,

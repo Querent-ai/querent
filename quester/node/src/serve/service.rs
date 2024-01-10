@@ -4,6 +4,8 @@ use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, Host, NodeConfig, PubSubBroker, RuntimesConfig};
 use querent::{start_semantic_service, SemanticService};
+use querent_synapse::callbacks::EventType;
+use storage::{create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error};
 
@@ -22,6 +24,8 @@ pub struct QuesterServices {
 	pub cluster: Cluster,
 	pub event_broker: PubSubBroker,
 	pub semantic_service_bus: MessageBus<SemanticService>,
+	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	pub index_storages: Vec<Arc<dyn Storage>>,
 }
 
 pub async fn serve_quester(
@@ -54,11 +58,14 @@ pub async fn serve_quester(
 			debug!("REST server shutdown trigger sender was dropped");
 		}
 	});
+	let (event_storages, index_storages) = create_storages(&node_config.storage_configs).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
 		cluster: cluster.clone(),
 		event_broker,
 		semantic_service_bus,
+		event_storages,
+		index_storages,
 	});
 	let rest_server = rest::start_rest_server(
 		rest_listen_addr,
