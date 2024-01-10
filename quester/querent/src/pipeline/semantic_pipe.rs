@@ -34,6 +34,7 @@ pub struct Trigger {
 #[derive(Debug)]
 struct ControlLoop;
 
+#[derive(Clone, Debug)]
 pub struct PipelineSettings {
 	pub qflow_id: String,
 	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,

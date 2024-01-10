@@ -110,7 +110,7 @@ impl SemanticService {
 		ctx: &ActorContext<Self>,
 		settings: PipelineSettings,
 		pipeline_id: String,
-	) -> Result<String, anyhow::Error> {
+	) -> Result<String, PipelineErrors> {
 		self.spawn_pipeline_inner(ctx, pipeline_id.clone(), settings).await?;
 		Ok(pipeline_id)
 	}
@@ -120,9 +120,9 @@ impl SemanticService {
 		ctx: &ActorContext<Self>,
 		pipeline_id: String,
 		settings: PipelineSettings,
-	) -> Result<(), anyhow::Error> {
+	) -> Result<(), PipelineErrors> {
 		if self.semantic_pipelines.contains_key(&pipeline_id) {
-			return Err(anyhow::anyhow!("Semantic pipeline `{}` already exists.", pipeline_id));
+			return Err(PipelineErrors::PipelineAlreadyExists { pipeline_id });
 		}
 		let semantic_pipe = SemanticPipeline::new(settings, self.pubsub_broker.clone());
 		let (pipeline_mailbox, pipeline_handle) = ctx.spawn_actor().spawn(semantic_pipe);
@@ -178,6 +178,7 @@ pub struct ShutdownPipeline {
 	pub pipeline_id: String,
 }
 
+#[derive(Clone, Debug)]
 pub struct SpawnPipeline {
 	pub settings: PipelineSettings,
 	pub pipeline_id: String,
@@ -202,12 +203,12 @@ impl Handler<ObservePipeline> for SemanticService {
 
 #[async_trait]
 impl Handler<SpawnPipeline> for SemanticService {
-	type Reply = Result<String, anyhow::Error>;
+	type Reply = Result<String, PipelineErrors>;
 	async fn handle(
 		&mut self,
 		message: SpawnPipeline,
 		ctx: &ActorContext<Self>,
-	) -> Result<Result<String, anyhow::Error>, ActorExitStatus> {
+	) -> Result<Self::Reply, ActorExitStatus> {
 		Ok(self.spawn_pipeline(ctx, message.settings, message.pipeline_id).await)
 	}
 }

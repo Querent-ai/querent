@@ -83,3 +83,26 @@ pub fn observe_pipeline_get_handler(
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }
+
+// #[utoipa::path(
+//     post,
+//     tag = "Semantic Service",
+//     path = "/semantics",
+//     request_body = SemanticPipelineRequest,
+//     responses(
+//         // We return `VersionedIndexMetadata` as it's the serialized model view.
+//         (status = 200, description = "Successfully started semantic pipeline.", body = SemanticPipelineResponse)
+//     ),
+// )]
+// Starts a new semantic pipeline
+// async fn start_pipeline(
+// 	semantic_service_mailbox: MessageBus<SemanticService>,
+// 	request: SemanticPipelineRequest,
+// ) -> Result<String, PipelineErrors> {
+// 	let new_uuid = uuid::Uuid::new_v4();
+// 	let pipeline_settings = PipelineSettings { qflow_id: new_uuid.to_string(), ..request.workflow.config };
+// 	let pipeline_rest = semantic_service_mailbox
+// 		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.to_string() })
+// 		.await;
+// 	pipeline_rest.unwrap()
+// }

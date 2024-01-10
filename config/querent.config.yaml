@@ -26,3 +26,25 @@ rest_config:
   extra_headers:
     x-header-1: header-value-1
     x-header-2: header-value-2
+
+storage_config:
+  postgres:
+    name: semantic_postgres_db
+    storage_type: index
+    config:
+      url: postgres://postgres:postgres@localhost:5432/semantic_postgres_db?sslmode=disable
+  milvus:
+    name: semantic_milvus_db
+    storage_type: vector
+    config:
+      url: http://localhost:19530
+      username: user
+      password: password
+  neo4j:
+    name: semantic_neo4j_db
+    storage_type: graph
+    config:
+      url: bolt://localhost:7687
+      username: neo4j
+      password: neo4j
+

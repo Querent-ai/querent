@@ -1,6 +1,6 @@
 use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use common::{Neo4jConfig, SemanticKnowledgePayload, VectorPayload};
+use common::{storage_config::Neo4jConfig, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
 use std::sync::Arc;
 

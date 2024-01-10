@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Duration};
 
-use common::{MilvusConfig, SemanticKnowledgePayload, VectorPayload};
+use common::{storage_config::MilvusConfig, SemanticKnowledgePayload, VectorPayload};
 use milvus::{
 	client::Client as MilvusClient,
 	data::FieldColumn,

@@ -1,11 +1,48 @@
+use std::collections::HashMap;
+
 use anyhow::bail;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, EnumMap};
 use tracing::warn;
 
 use crate::HostAddr;
 
 pub const DEFAULT_CONFIG_PATH: &str = "config/querent.config.yaml";
+
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub enum StorageType {
+	#[serde(rename = "index")]
+	Index,
+	#[serde(rename = "graph")]
+	Graph,
+	#[serde(rename = "vector")]
+	Vector,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub enum StorageConfig {
+	#[serde(rename = "postgres")]
+	Postgres(StorageBackend),
+	#[serde(rename = "milvus")]
+	Milvus(StorageBackend),
+	#[serde(rename = "neo4j")]
+	Neo4j(StorageBackend),
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StorageBackend {
+	pub name: String,
+	pub storage_type: StorageType,
+	pub config: HashMap<String, String>,
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct StorageConfigs(#[serde_as(as = "EnumMap")] Vec<StorageConfig>);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeConfig {
@@ -18,6 +55,7 @@ pub struct NodeConfig {
 	pub rest_config: RestConfig,
 	pub peer_seeds: Vec<String>,
 	pub cpu_capacity: u32,
+	pub storage_configs: StorageConfigs,
 }
 
 impl NodeConfig {

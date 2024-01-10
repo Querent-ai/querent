@@ -45,6 +45,7 @@ tracing = { workspace = true }
 pyo3 = { workspace = true }
 querent-synapse = { workspace = true }
 utoipa = { workspace = true }
+serde_with = { workspace = true }
 
 [features]
 testsuite = []

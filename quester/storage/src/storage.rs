@@ -1,4 +1,7 @@
-use std::{fmt, sync::Arc};
+use std::{
+	fmt::{self, Debug},
+	sync::Arc,
+};
 
 use async_trait::async_trait;
 use common::{SemanticKnowledgePayload, VectorPayload};
@@ -82,4 +85,10 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
+}
+
+impl Debug for dyn Storage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("Storage").finish()
+	}
 }

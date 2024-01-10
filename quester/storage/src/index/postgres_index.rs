@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::{PostgresConfig, SemanticKnowledgePayload, VectorPayload};
+use common::{storage_config::PostgresConfig, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult, Error as DieselError, Error::QueryBuilderError},
 	table, Insertable, Queryable, Selectable,
