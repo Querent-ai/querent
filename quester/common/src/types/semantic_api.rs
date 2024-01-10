@@ -2,15 +2,15 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Default, utoipa::ToSchema)]
+#[derive(Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WorkflowConfig {
-	pub version: String,
+	pub version: f32,
 	pub collectors: Vec<CollectorConfig>,
 	pub engines: Vec<EngineConfig>,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
+#[derive(Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum SupportedSources {
 	#[serde(rename = "azure")]
@@ -35,7 +35,24 @@ pub enum SupportedSources {
 	Slack,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
+impl Into<String> for SupportedSources {
+	fn into(self) -> String {
+		match self {
+			SupportedSources::AzureBlob => "azure".to_string(),
+			SupportedSources::GCS => "gcs".to_string(),
+			SupportedSources::S3 => "s3".to_string(),
+			SupportedSources::Jira => "jira".to_string(),
+			SupportedSources::Drive => "drive".to_string(),
+			SupportedSources::OneDrive => "onedrive".to_string(),
+			SupportedSources::Email => "email".to_string(),
+			SupportedSources::Dropbox => "dropbox".to_string(),
+			SupportedSources::Github => "github".to_string(),
+			SupportedSources::Slack => "slack".to_string(),
+		}
+	}
+}
+
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub enum SupportedBackend {
 	#[serde(rename = "llama2_v1")]
@@ -44,6 +61,14 @@ pub enum SupportedBackend {
 	KnowledgeGraphOpenAI,
 }
 
+impl Into<String> for SupportedBackend {
+	fn into(self) -> String {
+		match self {
+			SupportedBackend::KnowledgeGraphLlama2V1 => "llama2_v1".to_string(),
+			SupportedBackend::KnowledgeGraphOpenAI => "openai".to_string(),
+		}
+	}
+}
 #[derive(Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EngineConfig {
@@ -51,7 +76,7 @@ pub struct EngineConfig {
 	pub backend: SupportedBackend,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
+#[derive(Deserialize, Debug, PartialEq, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CollectorConfig {
 	pub name: String,
@@ -59,14 +84,15 @@ pub struct CollectorConfig {
 	pub backend: SupportedSources,
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Default, utoipa::ToSchema)]
+#[derive(Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SemanticPipelineRequest {
 	pub name: String,
 	pub import: String,
 	pub attr: String,
 	pub code: Option<String>,
-	pub config: WorkflowConfig,
+	pub workflow_config: WorkflowConfig,
+	pub config: HashMap<String, String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, utoipa::ToSchema)]

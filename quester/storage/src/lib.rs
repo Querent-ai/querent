@@ -34,6 +34,7 @@ pub async fn create_storages(
 
 				match postgres {
 					Ok(postgres) => {
+						postgres.check_connectivity().await?;
 						let postgres = Arc::new(postgres);
 						index_storages.push(postgres.clone());
 					},
@@ -55,6 +56,7 @@ pub async fn create_storages(
 				});
 				match milvus {
 					Ok(milvus) => {
+						milvus.check_connectivity().await?;
 						let milvus = Arc::new(milvus);
 						event_storages.insert(EventType::Vector, milvus.clone());
 					},
@@ -89,6 +91,7 @@ pub async fn create_storages(
 
 				match neo4j {
 					Ok(neo4j) => {
+						neo4j.check_connectivity().await?;
 						let neo4j = Arc::new(neo4j);
 						event_storages.insert(EventType::Graph, neo4j.clone());
 					},

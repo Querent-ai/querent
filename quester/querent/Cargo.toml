@@ -29,6 +29,7 @@ tracing = { workspace = true }
 crossbeam-channel = { workspace = true }
 thiserror = { workspace = true }
 tonic = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }

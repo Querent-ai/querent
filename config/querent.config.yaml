@@ -29,22 +29,23 @@ rest_config:
 
 storage_configs:
   postgres:
-    name: semantic_postgres_db
+    name: querent_test
     storage_type: index
     config:
-      url: postgres://postgres:postgres@localhost:5432/semantic_postgres_db?sslmode=disable
+      url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
   milvus:
     name: semantic_milvus_db
     storage_type: vector
     config:
       url: http://localhost:19530
-      username: user
-      password: password
+      username: ""
+      password: ""
   neo4j:
     name: semantic_neo4j_db
     storage_type: graph
     config:
+      db_name: neo4j
       url: bolt://localhost:7687
       username: neo4j
-      password: neo4j
+      password: password_neo
 
