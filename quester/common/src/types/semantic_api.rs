@@ -2,15 +2,17 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WorkflowConfig {
 	pub version: f32,
+	#[serde(default)]
 	pub collectors: Vec<CollectorConfig>,
+	#[serde(default)]
 	pub engines: Vec<EngineConfig>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum SupportedSources {
 	#[serde(rename = "azure")]
@@ -52,7 +54,7 @@ impl Into<String> for SupportedSources {
 	}
 }
 
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, Clone, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub enum SupportedBackend {
 	#[serde(rename = "llama2_v1")]
@@ -69,14 +71,14 @@ impl Into<String> for SupportedBackend {
 		}
 	}
 }
-#[derive(Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EngineConfig {
 	pub config: HashMap<String, String>,
 	pub backend: SupportedBackend,
 }
 
-#[derive(Deserialize, Debug, PartialEq, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CollectorConfig {
 	pub name: String,
@@ -84,12 +86,13 @@ pub struct CollectorConfig {
 	pub backend: SupportedSources,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SemanticPipelineRequest {
 	pub name: String,
 	pub import: String,
 	pub attr: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub code: Option<String>,
 	pub workflow_config: WorkflowConfig,
 	pub config: HashMap<String, String>,

@@ -1,7 +1,10 @@
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 
 use actors::{AskError, MessageBus, Observe};
-use common::{IndexingStatistics, SemanticPipelineRequest, SemanticPipelineResponse};
+use common::{
+	CollectorConfig, EngineConfig, IndexingStatistics, SemanticPipelineRequest,
+	SemanticPipelineResponse, WorkflowConfig, SupportedBackend, SupportedSources,
+};
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
 	SemanticService, SemanticServiceCounters, SpawnPipeline,
@@ -18,7 +21,12 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		SemanticPipelineRequest,
 		SemanticPipelineResponse,
 		SemanticServiceCounters,
-		IndexingStatistics
+		IndexingStatistics,
+		WorkflowConfig,
+		CollectorConfig,
+		EngineConfig,
+		SupportedBackend,
+		SupportedSources,
 	))
 )]
 pub struct SemanticApi;
