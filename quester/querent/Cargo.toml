@@ -30,6 +30,7 @@ crossbeam-channel = { workspace = true }
 thiserror = { workspace = true }
 tonic = { workspace = true }
 uuid = { workspace = true }
+utoipa = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }

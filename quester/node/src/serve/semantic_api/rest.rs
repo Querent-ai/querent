@@ -12,7 +12,15 @@ use warp::{reject::Rejection, Filter};
 use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 
 #[derive(utoipa::OpenApi)]
-#[openapi(paths(semantic_endpoint, describe_pipeline, start_pipeline))]
+#[openapi(
+	paths(semantic_endpoint, describe_pipeline, start_pipeline),
+	components(schemas(
+		SemanticPipelineRequest,
+		SemanticPipelineResponse,
+		SemanticServiceCounters,
+		IndexingStatistics
+	))
+)]
 pub struct SemanticApi;
 
 #[utoipa::path(

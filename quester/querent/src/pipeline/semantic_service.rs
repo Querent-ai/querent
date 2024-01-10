@@ -13,7 +13,7 @@ use std::{
 };
 use tracing::{error, info};
 
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SemanticServiceCounters {
 	pub num_running_pipelines: usize,
 	pub num_successful_pipelines: usize,
