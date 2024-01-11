@@ -83,15 +83,16 @@ pub struct SemanticPipeline {
 }
 
 impl SemanticPipeline {
-	pub fn new(settings: PipelineSettings, pubsub_broker: PubSubBroker) -> Self {
-		let (token_sender, token_receiver) = crossbeam_channel::unbounded();
-		let (channel_sender, channel_receiver) = crossbeam_channel::unbounded();
-		let (py_loop_side_sender, rust_loop_side_receiver) = crossbeam_channel::unbounded();
-		let channel_communicator = ChannelHandler::new(
-			Some(token_receiver.clone()),
-			Some(channel_receiver.clone()),
-			Some(py_loop_side_sender.clone()),
-		);
+	pub fn new(
+		settings: PipelineSettings,
+		pubsub_broker: PubSubBroker,
+		token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
+		token_sender: crossbeam_channel::Sender<IngestedTokens>,
+		channel_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
+		channel_sender: crossbeam_channel::Sender<(MessageType, MessageState)>,
+		rust_loop_side_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
+		channel_communicator: ChannelHandler,
+	) -> Self {
 		Self {
 			settings,
 			terminate_sig: TerimateSignal::default(),
@@ -359,8 +360,11 @@ impl Handler<Trigger> for SemanticPipeline {
 		if let Err(spawn_error) = self.start_qflow(ctx).await {
 			let retry_delay = wait_time(trigger.retry_count + 1);
 			error!(error = ?spawn_error, retry_count = trigger.retry_count, retry_delay = ?retry_delay, "error while spawning indexing pipeline, retrying after some time");
-			ctx.schedule_self_msg(retry_delay, Trigger { retry_count: trigger.retry_count + 1 })
-				.await;
+			self.terminate().await;
+			return Err(ActorExitStatus::Failure(
+				anyhow::anyhow!("error while spawning indexing pipeline, retrying after some time")
+					.into(),
+			));
 		}
 		Ok(())
 	}

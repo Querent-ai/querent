@@ -3,13 +3,13 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use actors::{AskError, MessageBus, Observe};
 use common::{
 	CollectorConfig, EngineConfig, IndexingStatistics, SemanticPipelineRequest,
-	SemanticPipelineResponse, WorkflowConfig, SupportedBackend, SupportedSources,
+	SemanticPipelineResponse, SupportedBackend, SupportedSources, WorkflowConfig,
 };
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
 	SemanticService, SemanticServiceCounters, SpawnPipeline,
 };
-use querent_synapse::callbacks::EventType;
+use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use warp::{reject::Rejection, Filter};
 
 use crate::{extract_format_from_qs, make_json_api_response, serve::require};
@@ -27,6 +27,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		EngineConfig,
 		SupportedBackend,
 		SupportedSources,
+		IngestedTokens,
 	))
 )]
 pub struct SemanticApi;
