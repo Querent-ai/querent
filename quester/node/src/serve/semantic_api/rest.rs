@@ -52,7 +52,7 @@ async fn semantic_endpoint(
 #[utoipa::path(
 	get,
 	tag = "Semantic Service",
-	path = "/semantics/{pipeline_id}",
+	path = "/semantics/{pipeline_id}/describe",
 	responses(
 		(status = 200, description = "Successfully observed semantic pipelines.", body = IndexingStatistics)
 	),
