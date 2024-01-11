@@ -80,6 +80,7 @@ pub struct SemanticPipeline {
 	channel_sender: Option<crossbeam_channel::Sender<(MessageType, MessageState)>>,
 	receiver_channel: Option<crossbeam_channel::Receiver<(MessageType, MessageState)>>,
 	_channel_communicator: Option<ChannelHandler>,
+	retry_count: usize,
 }
 
 impl SemanticPipeline {
@@ -105,6 +106,7 @@ impl SemanticPipeline {
 			channel_sender: Some(channel_sender),
 			receiver_channel: Some(rust_loop_side_receiver),
 			_channel_communicator: Some(channel_communicator),
+			retry_count: 0,
 		}
 	}
 
@@ -291,9 +293,16 @@ impl SemanticPipeline {
 		match health {
 			Health::Healthy => {},
 			Health::FailureOrUnhealthy => {
-				self.terminate().await;
+				if self.retry_count > 3 {
+					self.terminate().await;
+					return Err(ActorExitStatus::Failure(
+						anyhow::anyhow!("Semantic pipeline failure.").into(),
+					));
+				}
 				let first_retry_delay = wait_time(0);
-				ctx.schedule_self_msg(first_retry_delay, Trigger { retry_count: 0 }).await;
+				self.retry_count += 1;
+				ctx.schedule_self_msg(first_retry_delay, Trigger { retry_count: self.retry_count })
+					.await;
 			},
 			Health::Success => {
 				return Err(ActorExitStatus::Success);
