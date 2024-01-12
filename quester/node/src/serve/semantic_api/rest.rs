@@ -8,7 +8,7 @@ use common::{
 };
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
-	SemanticService, SemanticServiceCounters, SpawnPipeline,
+	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
 use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use warp::{reject::Rejection, Filter};
@@ -17,7 +17,13 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-	paths(semantic_endpoint, describe_pipeline, start_pipeline, get_pipelines_metadata),
+	paths(
+		semantic_endpoint,
+		describe_pipeline,
+		start_pipeline,
+		get_pipelines_metadata,
+		stop_pipeline
+	),
 	components(schemas(
 		SemanticPipelineRequest,
 		SemanticPipelineResponse,
@@ -183,6 +189,41 @@ pub fn get_pipelines_metadata_handler(
 		.and(warp::get())
 		.and(require(semantic_service_bus))
 		.then(get_pipelines_metadata)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+	delete,
+	tag = "Semantic Service",
+	path = "/semantics/{pipeline_id}",
+	responses(
+		(status = 200, description = "Successfully stopped semantic pipeline.", body = SemanticPipelineResponse)
+	),
+	params(
+		("pipeline_id" = String, Path, description = "The pipeline id running semantic loop to stop.")
+	)
+)]
+
+/// Stop semantic pipeline
+async fn stop_pipeline(
+	pipeline_id: String,
+	semantic_service_mailbox: MessageBus<SemanticService>,
+) -> Result<(), PipelineErrors> {
+	let pipeline_rest = semantic_service_mailbox.ask(ShutdownPipeline { pipeline_id }).await;
+	match pipeline_rest {
+		Ok(_) => Ok(()),
+		Err(e) => Err(PipelineErrors::UnknownError(e.to_string()).into()),
+	}
+}
+
+pub fn stop_pipeline_delete_handler(
+	semantic_service_bus: Option<MessageBus<SemanticService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / String)
+		.and(warp::delete())
+		.and(require(semantic_service_bus))
+		.then(stop_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }

@@ -19,7 +19,8 @@ use crate::{
 	health_check_api::health_check_handlers,
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
-	start_pipeline_post_handler, ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
+	start_pipeline_post_handler, stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo,
+	QuesterServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -140,7 +141,8 @@ fn api_v1_routes(
 					services.event_storages.clone(),
 					services.index_storages.clone(),
 				)))
-			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone()))),
+			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone()))
+				.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))),
 	)
 }
 

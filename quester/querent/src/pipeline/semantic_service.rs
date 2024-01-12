@@ -277,6 +277,7 @@ impl Handler<ShutdownPipeline> for SemanticService {
 			.ok_or(anyhow::anyhow!("Semantic pipeline `{}` not found.", message.pipeline_id))?;
 		let shutdown_message = ShutdownPipe { pipeline_id: message.pipeline_id.clone() };
 		pipeline_handle.mailbox.send_message(shutdown_message).await?;
+		self.semantic_pipelines.remove(&message.pipeline_id);
 		Ok(())
 	}
 }

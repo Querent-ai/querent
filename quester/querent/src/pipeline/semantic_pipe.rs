@@ -396,7 +396,7 @@ impl Handler<ShutdownPipe> for SemanticPipeline {
 			return Ok(());
 		}
 		self.terminate().await;
-		Ok(())
+		Err(ActorExitStatus::Success)
 	}
 }
 
