@@ -43,6 +43,7 @@ pub(crate) async fn start_rest_server(
 	readiness_trigger: BoxFutureInfaillible<()>,
 	shutdown_signal: BoxFutureInfaillible<()>,
 ) -> anyhow::Result<()> {
+	info!("Starting REST server 📡: check /openapi.json for available APIs");
 	let request_counter = warp::log::custom(|_| {
 		crate::SERVE_METRICS.http_requests_total.inc();
 	});

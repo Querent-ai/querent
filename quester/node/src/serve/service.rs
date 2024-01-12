@@ -1,5 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
+use crate::rest;
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, Host, NodeConfig, PubSubBroker, RuntimesConfig};
@@ -8,8 +9,6 @@ use querent_synapse::callbacks::EventType;
 use storage::{create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error};
-
-use crate::rest;
 
 use super::node_readiness;
 
@@ -77,13 +76,13 @@ pub async fn serve_quester(
 	let (grpc_readiness_trigger_tx, grpc_readiness_signal_rx) = oneshot::channel::<()>();
 	let _grpc_readiness_trigger = Box::pin(async move {
 		if grpc_readiness_trigger_tx.send(()).is_err() {
-			debug!("gRPC server readiness signal receiver was dropped");
+			debug!("gRPC server readiness signal receiver was dropped 📡");
 		}
 	});
 	let (grpc_shutdown_trigger_tx, grpc_shutdown_signal_rx) = oneshot::channel::<()>();
 	let _grpc_shutdown_signal = Box::pin(async move {
 		if grpc_shutdown_signal_rx.await.is_err() {
-			debug!("gRPC server shutdown trigger sender was dropped");
+			debug!("gRPC server shutdown trigger sender was dropped 📡");
 		}
 	});
 	// TODO implement gRPC server
@@ -94,7 +93,7 @@ pub async fn serve_quester(
 	));
 	let shutdown_handle = tokio::spawn(async move {
 		shutdown_signal.await;
-		debug!("Shutting down node");
+		debug!("Shutting down node 📴");
 		let actor_exit_statuses = quester_cloud.quit().await;
 
 		if grpc_shutdown_trigger_tx.send(()).is_err() {

@@ -1,7 +1,7 @@
 use clap::{ArgMatches, Command};
 use common::{initialize_runtimes, RuntimesConfig};
 use tokio::signal;
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{cli::load_node_config, config_cli_arg, serve_quester};
 
@@ -35,12 +35,9 @@ impl Serve {
 				.await
 				.expect("Registering a signal handler for SIGINT should not fail.");
 		});
-		let serve_result = serve_quester(node_config, runtimes_config, shutdown_signal).await;
-		let _return_code = match serve_result {
-			Ok(_) => 0,
-			Err(_) => 1,
-		};
-		serve_result?;
+		info!("Starting Querent node");
+		let serve_result = serve_quester(node_config, runtimes_config, shutdown_signal).await?;
+		info!("Querent node stopped: {:?}", serve_result);
 		Ok(())
 	}
 }

@@ -8,6 +8,7 @@ use common::{
 use querent_synapse::callbacks::EventType;
 pub use storage::*;
 pub mod vector;
+use tracing::info;
 pub use vector::*;
 pub mod graph;
 pub use graph::*;
@@ -19,6 +20,7 @@ pub async fn create_storages(
 ) -> anyhow::Result<(HashMap<EventType, Arc<dyn Storage>>, Vec<Arc<dyn Storage>>)> {
 	let mut event_storages: HashMap<EventType, Arc<dyn Storage>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
+
 	for storage_config in storage_configs.0.iter() {
 		match storage_config {
 			StorageConfig::Postgres(backend) => {
@@ -102,5 +104,6 @@ pub async fn create_storages(
 			},
 		}
 	}
+	info!("Storages created successfully ✅");
 	Ok((event_storages, index_storages))
 }
