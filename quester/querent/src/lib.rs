@@ -39,6 +39,33 @@ pub async fn start_semantic_service(
 	Ok(semantic_service_mailbox)
 }
 
+const CODE_CONFIG_EVENT_HANDLER: &str = r#"
+import asyncio
+import json
+
+async def print_querent(config, text: str):
+    """Prints the provided text and sends supported event_type and event_data"""
+    print(text)
+    if config['workflow'] is not None:
+        event_type = "Graph"  # Replace with the desired event type
+        payload = {
+            "subject": "Querent AI LLC",
+            "subject_type": "Organization",
+            "object": "Querent",
+            "object_type": "Software",
+            "predicate": "developed by",
+            "predicate_type": "ownership",
+            "sentence": "Querent is developed by Querent AI LLC"
+        }
+        event_data = {
+            "event_type": event_type,
+            "timestamp": 123.45,  # Replace with the actual timestamp
+            "payload": json.dumps(payload),
+            "file": "file_name"  # Replace with the actual file name
+        }
+        config['workflow']['event_handler'].handle_event(event_type, event_data)
+"#;
+
 pub async fn create_querent_synapose_workflow(
 	id: String,
 	request: &SemanticPipelineRequest,
@@ -87,12 +114,13 @@ pub async fn create_querent_synapose_workflow(
 		engines: engine_configs,
 		resource: None,
 	};
+	//let _example_asyncio_python_code_sending_events_loop
 	let workflow = Workflow {
 		name: request.name.clone(),
 		id: id.to_string(),
-		import: request.import.clone(),
-		attr: request.attr.clone(),
-		code: request.code.clone(),
+		import: "".to_string(),
+		attr: "print_querent".to_string(),
+		code: Some(CODE_CONFIG_EVENT_HANDLER.to_string()),
 		arguments: vec![CLRepr::String("Starting Querent".to_string(), StringType::Normal)],
 		config: Some(config),
 	};

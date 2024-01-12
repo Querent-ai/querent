@@ -1,8 +1,9 @@
 use common::{SemanticKnowledgePayload, VectorPayload};
 use querent_synapse::callbacks::{EventState, EventType};
 use serde::Serialize;
+use tracing::error;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct ContextualTriples {
 	event_type: EventType,
 	pub qflow_id: String,
@@ -40,10 +41,15 @@ impl ContextualTriples {
 	}
 
 	pub fn event_payload(&self) -> Vec<(String, SemanticKnowledgePayload)> {
-		self.triple_states
-			.iter()
-			.map(|x| (x.file.clone(), serde_json::from_str(&x.payload).unwrap_or_default()))
-			.collect()
+		let mut triples: Vec<(String, SemanticKnowledgePayload)> = Vec::new();
+		for triple in &self.triple_states {
+			let payload = serde_json::from_str(&triple.payload);
+			match payload {
+				Ok(payload) => triples.push((triple.file.clone(), payload)),
+				Err(e) => error!("Failed to deserialize payload: {:?}", e),
+			}
+		}
+		triples
 	}
 }
 

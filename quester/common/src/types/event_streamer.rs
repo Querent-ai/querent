@@ -5,7 +5,7 @@ use std::{
 	sync::atomic::{AtomicU64, Ordering},
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct EventsBatch {
 	pub qflow_id: String,
 	pub events: HashMap<EventType, EventState>,

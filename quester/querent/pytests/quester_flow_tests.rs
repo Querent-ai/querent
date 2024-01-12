@@ -25,8 +25,16 @@ async def print_querent(config, text: str):
         event_data = {
             "event_type": event_type,
             "timestamp": 123.45,  # Replace with the actual timestamp
-            "payload": "🚀🚀",  # Replace with the actual payload data
-			"file": "file_name"  # Replace with the actual file name
+            "payload": {
+                "subject": "Querent AI LLC",
+                "subject_type": "Organization",
+                "object": "Querent",
+                "object_type": "Software",
+                "predicate": "developed by",
+                "predicated_type": "ownership",
+                "sentence": "Querent is developed by Querent AI LLC"
+            },
+            "file": "file_name"  # Replace with the actual file name
         }
         config['workflow']['event_handler'].handle_event(event_type, event_data)
 "#;

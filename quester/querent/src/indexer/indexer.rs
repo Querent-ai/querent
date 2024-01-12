@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use common::{IndexerCounters, RuntimeType, SemanticKnowledgePayload};
 use storage::Storage;
 use tokio::runtime::Handle;
+use tracing::error;
 
 use crate::{ContextualTriples, EventLock, IndexerKnowledge, NewEventLock};
 
@@ -86,7 +87,9 @@ impl Actor for Indexer {
 			ActorExitStatus::Killed |
 			ActorExitStatus::Failure(_) |
 			ActorExitStatus::Panicked => return Ok(()),
-			ActorExitStatus::Quit | ActorExitStatus::Success => {},
+			ActorExitStatus::Quit | ActorExitStatus::Success => {
+				log::info!("Indexer exiting with success");
+			},
 		}
 		Ok(())
 	}
@@ -117,6 +120,7 @@ impl Handler<ContextualTriples> for Indexer {
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		let _indexing_items = message.event_payload();
+		error!("indexing_items: {:?}", _indexing_items);
 		// items are document file vs triples
 		// we would want to index the triples and send to various storages
 		Err(ActorExitStatus::Success)

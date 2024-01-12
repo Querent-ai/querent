@@ -626,6 +626,14 @@ async def print_querent(config, text):
 
 #[pyo3_asyncio::tokio::test]
 async fn workflow_manager_python_tests_with_config_channel_break() -> pyo3::PyResult<()> {
+	let (_token_sender, token_receiver) = crossbeam_channel::unbounded();
+	let (_channel_sender, channel_receiver) = crossbeam_channel::unbounded();
+	let (py_loop_side_sender, _rust_loop_side_receiver) = crossbeam_channel::unbounded();
+	let channel_communicator: ChannelHandler = ChannelHandler::new(
+		Some(token_receiver.clone()),
+		Some(channel_receiver.clone()),
+		Some(py_loop_side_sender.clone()),
+	);
 	// Create a sample Config object
 	let config = Config {
 		version: 1.0,
@@ -636,7 +644,7 @@ async fn workflow_manager_python_tests_with_config_channel_break() -> pyo3::PyRe
 			id: "workflow_id".to_string(),
 			config: HashMap::new(),
 			channel: None,
-			inner_channel: None,
+			inner_channel: Some(channel_communicator),
 			inner_event_handler: None,
 			event_handler: None,
 			inner_tokens_feader: None,

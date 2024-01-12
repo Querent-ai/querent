@@ -103,7 +103,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
-		let storage = self.event_storages.get(&event_type);
+		let storage: Option<&Arc<dyn Storage>> = self.event_storages.get(&event_type);
 		let storage_items = message.event_payload();
 		if let Some(storage) = storage {
 			let upsert_result = storage.insert_graph(&storage_items).await;
@@ -118,7 +118,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 				},
 			}
 		}
-		Err(ActorExitStatus::Success)
+		Ok(())
 	}
 }
 
@@ -149,8 +149,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 				},
 			}
 		}
-
-		Err(ActorExitStatus::Success)
+		Ok(())
 	}
 }
 

@@ -92,13 +92,14 @@ impl Source for Qflow {
 
 		let workflow_id = self.workflow.id.clone();
 		let event_sender = self.event_sender.clone();
+
 		// Store the JoinHandle with the result in the Qflow struct
 		self.workflow_handle = Some(tokio::spawn(async move {
 			let result = querent.start_workflows().await;
 			match result {
 				Ok(()) => {
 					// Handle the success
-					log::info!("Successfully the workflow with id: {}", workflow_id);
+					log::info!("Successfully started the workflow with id: {}", workflow_id);
 					// send yourself a success message to stop
 					event_sender
 						.send((
@@ -116,7 +117,6 @@ impl Source for Qflow {
 				},
 				Err(err) => {
 					// Handle the error, e.g., log it
-					log::error!("Failed to start the workflow with id: {}", workflow_id);
 					event_sender
 						.send((
 							EventType::Failure,
@@ -151,16 +151,22 @@ impl Source for Qflow {
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
+		if self.workflow_handle.is_none() || self.workflow_handle.as_ref().unwrap().is_finished() {
+			return Err(ActorExitStatus::Success);
+		}
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut events_collected = HashMap::new();
-		let mut is_success = false;
 		let mut is_failure = false;
+		let mut is_success = false;
 		let mut counter = 0;
 		loop {
 			tokio::select! {
 				event_opt = self.event_receiver.recv() => {
 					if let Some((event_type, event_data)) = event_opt {
+						if event_data.payload.is_empty() {
+							continue;
+						}
 						if event_type == EventType::Success {
 							is_success = true;
 							break;
@@ -192,16 +198,17 @@ impl Source for Qflow {
 			);
 			ctx.send_message(event_streamer_messagebus, events_batch).await?;
 		}
-		if is_success {
-			ctx.protect_future(self.event_lock.kill()).await;
-			ctx.send_exit_with_success(event_streamer_messagebus).await?;
-			return Err(ActorExitStatus::Success);
-		}
 		if is_failure {
 			ctx.protect_future(self.event_lock.kill()).await;
 			return Err(ActorExitStatus::Failure(
 				anyhow::anyhow!("Querent Python workflow failed").into(),
 			));
+		}
+
+		if is_success {
+			ctx.protect_future(self.event_lock.kill()).await;
+			ctx.send_exit_with_success(event_streamer_messagebus).await?;
+			return Err(ActorExitStatus::Success);
 		}
 		Ok(Duration::default())
 	}
