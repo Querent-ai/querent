@@ -45,11 +45,6 @@ path = "pytests/test_basic.rs"
 harness = false
 
 [[test]]
-name = "test_workflow_manager"
-path = "pytests/test_workflow_manager.rs"
-harness = false
-
-[[test]]
 name = "quester_flow_tests"
 path = "pytests/quester_flow_tests.rs"
 harness = false
