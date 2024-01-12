@@ -9,10 +9,11 @@ use querent_synapse::{
 };
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
-	sync::{mpsc, Semaphore},
+	sync::mpsc,
 	task::JoinHandle,
 	time::{self},
 };
+use tracing::error;
 
 use crate::{
 	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
@@ -79,7 +80,11 @@ impl Source for Qflow {
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
-			return Ok(());
+			if self.workflow_handle.as_ref().unwrap().is_finished() {
+				error!("Qflow is already finished");
+				return Err(ActorExitStatus::Success);
+			}
+			return Ok(())
 		}
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(
@@ -128,7 +133,7 @@ impl Source for Qflow {
 							EventState {
 								event_type: EventType::Failure,
 								timestamp: chrono::Utc::now().timestamp_millis() as f64,
-								payload: "".to_string(),
+								payload: err.to_string(),
 								file: "".to_string(),
 							},
 						))
@@ -138,9 +143,6 @@ impl Source for Qflow {
 				},
 			}
 		}));
-		if self.workflow_handle.is_none() {
-			return Err(ActorExitStatus::Quit);
-		}
 		let event_lock = self.event_lock.clone();
 		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
 		Ok(())
@@ -158,8 +160,6 @@ impl Source for Qflow {
 		tokio::pin!(deadline);
 		let mut events_collected = HashMap::new();
 		let mut counter = 0;
-		let semanphore_success = Semaphore::new(1);
-		let semaphore_failure = Semaphore::new(1);
 		loop {
 			tokio::select! {
 				event_opt = self.event_receiver.recv() => {
@@ -168,12 +168,10 @@ impl Source for Qflow {
 							continue;
 						}
 						if event_type == EventType::Success {
-							semanphore_success.add_permits(1);
-							break;
+							break
 						}
 						if event_type == EventType::Failure {
-							semaphore_failure.add_permits(1);
-							break;
+							break
 						}
 						self.counters.increment_total();
 						events_collected.insert(event_type, event_data);
@@ -197,18 +195,6 @@ impl Source for Qflow {
 				chrono::Utc::now().timestamp_millis() as u64,
 			);
 			ctx.send_message(event_streamer_messagebus, events_batch).await?;
-		}
-		if semaphore_failure.available_permits() > 0 {
-			ctx.protect_future(self.event_lock.kill()).await;
-			return Err(ActorExitStatus::Failure(
-				anyhow::anyhow!("Querent Python workflow failed").into(),
-			));
-		}
-
-		if semanphore_success.available_permits() > 0 {
-			ctx.protect_future(self.event_lock.kill()).await;
-			ctx.send_exit_with_success(event_streamer_messagebus).await?;
-			return Err(ActorExitStatus::Success);
 		}
 		Ok(Duration::default())
 	}

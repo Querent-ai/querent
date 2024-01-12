@@ -155,9 +155,6 @@ impl Handler<IndexerKnowledge> for Indexer {
 
 		self.counters
 			.increment_total_documents_indexed(total_unique_docs.try_into().unwrap_or_default());
-		let sentence_count: usize =
-			doc_map.iter().fold(0, |acc, (_doc, triples)| acc + triples.len());
-		self.counters.increment_total_sentences_indexed(sentence_count as u64);
 		doc_map.iter().for_each(|(_doc, triples)| {
 			self.counters.increment_total_sentences_indexed(triples.len() as u64);
 
