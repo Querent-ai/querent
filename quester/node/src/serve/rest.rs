@@ -15,6 +15,7 @@ use warp::{redirect, Filter, Rejection, Reply};
 
 use crate::{
 	cluster_api::cluster_handler,
+	get_pipelines_metadata_handler,
 	health_check_api::health_check_handlers,
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
@@ -137,7 +138,8 @@ fn api_v1_routes(
 					Some(services.semantic_service_bus.clone()),
 					services.event_storages.clone(),
 					services.index_storages.clone(),
-				))),
+				)))
+			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone()))),
 	)
 }
 

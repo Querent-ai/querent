@@ -46,7 +46,7 @@ import json
 async def print_querent(config, text: str):
     """Prints the provided text and sends supported event_type and event_data"""
     while True:
-        print(text)
+        print(text+config['querent_id'])
         if config['workflow'] is not None:
             event_type = "Graph"  # Replace with the desired event type
             payload = {

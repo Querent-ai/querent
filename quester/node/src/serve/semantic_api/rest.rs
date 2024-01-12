@@ -2,8 +2,9 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc};
 
 use actors::{AskError, MessageBus, Observe};
 use common::{
-	CollectorConfig, EngineConfig, IndexingStatistics, SemanticPipelineRequest,
-	SemanticPipelineResponse, SupportedBackend, SupportedSources, WorkflowConfig,
+	CollectorConfig, EngineConfig, GetAllPipelines, IndexingStatistics, PipelineMetadata,
+	PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse, SupportedBackend,
+	SupportedSources, WorkflowConfig,
 };
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
@@ -16,7 +17,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-	paths(semantic_endpoint, describe_pipeline, start_pipeline),
+	paths(semantic_endpoint, describe_pipeline, start_pipeline, get_pipelines_metadata),
 	components(schemas(
 		SemanticPipelineRequest,
 		SemanticPipelineResponse,
@@ -28,6 +29,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		SupportedBackend,
 		SupportedSources,
 		IngestedTokens,
+		PipelinesMetadata,
+		PipelineMetadata,
 	))
 )]
 pub struct SemanticApi;
@@ -152,6 +155,34 @@ pub fn start_pipeline_post_handler(
 		.and(require(Some(event_storages)))
 		.and(require(Some(index_storages)))
 		.then(start_pipeline)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+	get,
+	tag = "Semantic Service",
+	path = "/semantics/pipelines",
+	responses(
+		(status = 200, description = "Get pipelines metadata", body = PipelinesMetadata)
+	),
+)]
+
+/// Get pipelines metadata
+async fn get_pipelines_metadata(
+	semantic_service_mailbox: MessageBus<SemanticService>,
+) -> Result<PipelinesMetadata, AskError<Infallible>> {
+	let pipelines = semantic_service_mailbox.ask(GetAllPipelines).await?;
+	Ok(PipelinesMetadata { pipelines })
+}
+
+pub fn get_pipelines_metadata_handler(
+	semantic_service_bus: Option<MessageBus<SemanticService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "pipelines")
+		.and(warp::get())
+		.and(require(semantic_service_bus))
+		.then(get_pipelines_metadata)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }

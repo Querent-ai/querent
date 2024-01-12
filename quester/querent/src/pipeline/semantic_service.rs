@@ -5,7 +5,9 @@ use actors::{
 };
 use async_trait::async_trait;
 use cluster::Cluster;
-use common::{IndexingStatistics, MessageStateBatches, PubSubBroker};
+use common::{
+	GetAllPipelines, IndexingStatistics, MessageStateBatches, PipelineMetadata, PubSubBroker,
+};
 use querent_synapse::comm::{ChannelHandler, IngestedTokens, MessageState, MessageType};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -25,6 +27,7 @@ struct PipelineHandle {
 	mailbox: MessageBus<SemanticPipeline>,
 	handle: ActorHandle<SemanticPipeline>,
 	pipeline_id: String,
+	settings: PipelineSettings,
 	_token_sender: crossbeam_channel::Sender<IngestedTokens>,
 	_token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 	_channel_sender: crossbeam_channel::Sender<(MessageType, MessageState)>,
@@ -141,7 +144,7 @@ impl SemanticService {
 			Some(py_loop_side_sender.clone()),
 		);
 		let semantic_pipe = SemanticPipeline::new(
-			settings,
+			settings.clone(),
 			self.pubsub_broker.clone(),
 			token_receiver.clone(),
 			token_sender.clone(),
@@ -154,6 +157,7 @@ impl SemanticService {
 		let pipeline_handle = PipelineHandle {
 			mailbox: pipeline_mailbox,
 			handle: pipeline_handle,
+			settings,
 			pipeline_id: pipeline_id.clone(),
 			_token_sender: token_sender,
 			_token_receiver: token_receiver,
@@ -313,5 +317,28 @@ impl Handler<SendIngestedTokens> for SemanticService {
 			pipeline_handle.mailbox.send_message(token).await?;
 		}
 		Ok(())
+	}
+}
+
+#[async_trait]
+impl Handler<GetAllPipelines> for SemanticService {
+	type Reply = Vec<PipelineMetadata>;
+
+	async fn handle(
+		&mut self,
+		_message: GetAllPipelines,
+		_ctx: &ActorContext<Self>,
+	) -> Result<Self::Reply, ActorExitStatus> {
+		let pipelines_metadata: Vec<PipelineMetadata> = self
+			.semantic_pipelines
+			.values()
+			.map(|pipeline_handle| PipelineMetadata {
+				pipeline_id: pipeline_handle.pipeline_id.clone(),
+				name: pipeline_handle.settings.qflow.name.clone(),
+				import: pipeline_handle.settings.qflow.import.clone(),
+				attr: pipeline_handle.settings.qflow.attr.clone(),
+			})
+			.collect();
+		Ok(pipelines_metadata)
 	}
 }

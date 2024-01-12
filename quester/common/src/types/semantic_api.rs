@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct WorkflowConfig {
 	pub version: f32,
@@ -71,14 +71,14 @@ impl Into<String> for SupportedBackend {
 		}
 	}
 }
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EngineConfig {
 	pub config: HashMap<String, String>,
 	pub backend: SupportedBackend,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema)]
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CollectorConfig {
 	pub name: String,
@@ -102,4 +102,23 @@ pub struct SemanticPipelineRequest {
 #[serde(deny_unknown_fields)]
 pub struct SemanticPipelineResponse {
 	pub pipeline_id: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GetAllPipelines;
+
+#[derive(Clone, Debug, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PipelinesMetadata {
+	pub pipelines: Vec<PipelineMetadata>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PipelineMetadata {
+	pub pipeline_id: String,
+	pub name: String,
+	pub import: String,
+	pub attr: String,
 }
