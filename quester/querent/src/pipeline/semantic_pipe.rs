@@ -73,10 +73,7 @@ pub struct SemanticPipeline {
 	handlers: Option<PipelineHandlers>,
 	// pubsub broker
 	pub pubsub_broker: PubSubBroker,
-	// token receiver and sender for internal communication
-	_token_receiver: Option<crossbeam_channel::Receiver<IngestedTokens>>,
 	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
-	_channel_receiver: Option<crossbeam_channel::Receiver<(MessageType, MessageState)>>,
 	channel_sender: Option<crossbeam_channel::Sender<(MessageType, MessageState)>>,
 	receiver_channel: Option<crossbeam_channel::Receiver<(MessageType, MessageState)>>,
 	_channel_communicator: Option<ChannelHandler>,
@@ -87,22 +84,31 @@ impl SemanticPipeline {
 	pub fn new(
 		settings: PipelineSettings,
 		pubsub_broker: PubSubBroker,
-		token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 		token_sender: crossbeam_channel::Sender<IngestedTokens>,
-		channel_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
 		channel_sender: crossbeam_channel::Sender<(MessageType, MessageState)>,
 		rust_loop_side_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
 		channel_communicator: ChannelHandler,
 	) -> Self {
+		let qflow = settings.qflow.clone();
+		let mut qflow_config = qflow.config.unwrap().clone();
+		qflow_config.workflow.inner_channel = Some(channel_communicator.clone());
+		qflow_config.workflow.inner_tokens_feader = Some(channel_communicator.clone());
+		qflow_config.collectors.iter_mut().for_each(|collector| {
+			collector.inner_channel = Some(channel_communicator.clone());
+		});
+		qflow_config.engines.iter_mut().for_each(|engine| {
+			engine.inner_channel = Some(channel_communicator.clone());
+		});
+
+		let qflow = Workflow { config: Some(qflow_config), ..qflow };
+		let settings = PipelineSettings { qflow, ..settings };
 		Self {
 			settings,
 			terminate_sig: TerimateSignal::default(),
 			statistics: IndexingStatistics::default(),
 			handlers: None,
 			pubsub_broker,
-			_token_receiver: Some(token_receiver),
 			token_sender: Some(token_sender),
-			_channel_receiver: Some(channel_receiver),
 			channel_sender: Some(channel_sender),
 			receiver_channel: Some(rust_loop_side_receiver),
 			_channel_communicator: Some(channel_communicator),
@@ -394,6 +400,16 @@ impl Handler<ShutdownPipe> for SemanticPipeline {
 	) -> Result<(), ActorExitStatus> {
 		if self.settings.qflow_id != _shutdown_pipe.pipeline_id {
 			return Ok(());
+		}
+		let message_state = MessageState {
+			message_type: MessageType::Stop,
+			timestamp: chrono::Utc::now().timestamp_millis() as f64,
+			payload: "Shutdown signal received".to_string(),
+		};
+		if let Some(sender) = self.channel_sender.as_ref() {
+			sender
+				.send((message_state.clone().message_type, message_state.clone()))
+				.unwrap();
 		}
 		self.terminate().await;
 		Err(ActorExitStatus::Success)

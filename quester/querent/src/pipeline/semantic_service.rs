@@ -146,9 +146,7 @@ impl SemanticService {
 		let semantic_pipe = SemanticPipeline::new(
 			settings.clone(),
 			self.pubsub_broker.clone(),
-			token_receiver.clone(),
 			token_sender.clone(),
-			channel_receiver.clone(),
 			channel_sender.clone(),
 			rust_loop_side_receiver.clone(),
 			channel_communicator.clone(),
@@ -271,13 +269,13 @@ impl Handler<ShutdownPipeline> for SemanticService {
 		message: ShutdownPipeline,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		let pipeline_handle = &self
-			.semantic_pipelines
-			.get(&message.pipeline_id)
-			.ok_or(anyhow::anyhow!("Semantic pipeline `{}` not found.", message.pipeline_id))?;
+		let pipeline_handle_opt = &self.semantic_pipelines.get(&message.pipeline_id);
+		if pipeline_handle_opt.is_none() {
+			return Ok(());
+		}
+		let pipeline_handle_opt = pipeline_handle_opt.unwrap();
 		let shutdown_message = ShutdownPipe { pipeline_id: message.pipeline_id.clone() };
-		pipeline_handle.mailbox.send_message(shutdown_message).await?;
-		self.semantic_pipelines.remove(&message.pipeline_id);
+		pipeline_handle_opt.mailbox.send_message(shutdown_message).await?;
 		Ok(())
 	}
 }
@@ -288,9 +286,14 @@ impl Handler<MessageStateBatches> for SemanticService {
 
 	async fn handle(
 		&mut self,
-		_message: MessageStateBatches,
+		message: MessageStateBatches,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
+		let _pipeline_handle = &self
+			.semantic_pipelines
+			.get(&message.pipeline_id)
+			.ok_or(anyhow::anyhow!("Semantic pipeline `{}` not found.", message.pipeline_id))?;
+		// TODO: periodically this gets triggered and we can send MessageState batches to a logger or something
 		Ok(())
 	}
 }

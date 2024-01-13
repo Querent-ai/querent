@@ -209,10 +209,10 @@ pub fn get_pipelines_metadata_handler(
 async fn stop_pipeline(
 	pipeline_id: String,
 	semantic_service_mailbox: MessageBus<SemanticService>,
-) -> Result<(), PipelineErrors> {
+) -> Result<bool, PipelineErrors> {
 	let pipeline_rest = semantic_service_mailbox.ask(ShutdownPipeline { pipeline_id }).await;
 	match pipeline_rest {
-		Ok(_) => Ok(()),
+		Ok(_) => Ok(true),
 		Err(e) => Err(PipelineErrors::UnknownError(e.to_string()).into()),
 	}
 }

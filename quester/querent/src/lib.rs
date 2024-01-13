@@ -44,9 +44,24 @@ import asyncio
 import json
 
 async def print_querent(config, text: str):
-    """Prints the provided text and sends supported event_type and event_data"""
+    """Prints the provided text and config"""
+    print(text)
+    
     while True:
-        print(text+config['querent_id'])
+        print(text + config['querent_id'])
+        message_state = config['workflow']['channel'].receive_in_python()
+        
+        if message_state is not None:
+            message_type = message_state['message_type']
+            
+            if message_type == "stop" or message_type == "Stop":
+                print("Received stop signal. Exiting...")
+                break
+            else:
+                print("Received message of type: " + message_type)
+                # ...
+
+        # Continue sending events
         if config['workflow'] is not None:
             event_type = "Graph"  # Replace with the desired event type
             payload = {
@@ -65,7 +80,8 @@ async def print_querent(config, text: str):
                 "file": "file_name"  # Replace with the actual file name
             }
             config['workflow']['event_handler'].handle_event(event_type, event_data)
-            await asyncio.sleep(1)  # Adjust the sleep duration as needed
+
+        await asyncio.sleep(1)  # Adjust the sleep duration as needed
 "#;
 
 pub async fn create_querent_synapose_workflow(

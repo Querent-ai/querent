@@ -153,13 +153,15 @@ impl Source for Qflow {
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
-		if self.workflow_handle.is_none() || self.workflow_handle.as_ref().unwrap().is_finished() {
+		if self.workflow_handle.is_none() {
 			return Err(ActorExitStatus::Success);
 		}
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut events_collected = HashMap::new();
 		let mut counter = 0;
+		let mut is_successs = false;
+		let mut is_failure = false;
 		loop {
 			tokio::select! {
 				event_opt = self.event_receiver.recv() => {
@@ -168,9 +170,11 @@ impl Source for Qflow {
 							continue;
 						}
 						if event_type == EventType::Success {
+							is_successs = true;
 							break
 						}
 						if event_type == EventType::Failure {
+							is_failure = true;
 							break
 						}
 						self.counters.increment_total();
@@ -196,6 +200,12 @@ impl Source for Qflow {
 			);
 			ctx.send_message(event_streamer_messagebus, events_batch).await?;
 		}
+		if is_successs {
+			return Err(ActorExitStatus::Success);
+		}
+		if is_failure {
+			return Err(ActorExitStatus::Failure(anyhow::anyhow!("Qflow failed").into()));
+		}
 		Ok(Duration::default())
 	}
 
@@ -205,5 +215,14 @@ impl Source for Qflow {
 
 	fn observable_state(&self) -> serde_json::Value {
 		serde_json::to_value(&self.counters).unwrap()
+	}
+
+	async fn finalize(
+		&mut self,
+		_exit_status: &ActorExitStatus,
+		_ctx: &SourceContext,
+	) -> anyhow::Result<()> {
+		self.workflow_handle.take().unwrap().abort();
+		Ok(())
 	}
 }
