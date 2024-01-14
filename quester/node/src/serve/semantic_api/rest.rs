@@ -23,7 +23,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		describe_pipeline,
 		start_pipeline,
 		get_pipelines_metadata,
-		stop_pipeline
+		stop_pipeline,
+		ingest_tokens,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
