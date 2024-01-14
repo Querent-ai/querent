@@ -123,7 +123,7 @@ impl Source for Qflow {
 				Err(err) => {
 					// Handle the error, e.g., log it
 					log::error!(
-						"Failed to start the workflow with id: {} and error: {:?}",
+						"Failed to run the workflow with id: {} and error: {:?}",
 						workflow_id,
 						err
 					);

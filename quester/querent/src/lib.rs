@@ -44,22 +44,25 @@ import asyncio
 import json
 
 async def print_querent(config, text: str):
-    """Prints the provided text and config"""
     print(text)
-    
+
     while True:
         print(text + config['querent_id'])
         message_state = config['workflow']['channel'].receive_in_python()
-        
+        tokens_received = config['workflow']['tokens_feader'].receive_tokens_in_python()
+
+        if tokens_received is not None:
+            print("Received tokens: " + str(tokens_received))
+
         if message_state is not None:
             message_type = message_state['message_type']
             
-            if message_type == "stop" or message_type == "Stop":
+            if message_type.lower() == "stop":
                 print("Received stop signal. Exiting...")
                 break
             else:
                 print("Received message of type: " + message_type)
-                # ...
+                # Handle other message types...
 
         # Continue sending events
         if config['workflow'] is not None:

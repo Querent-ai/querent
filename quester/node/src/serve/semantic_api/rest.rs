@@ -294,8 +294,9 @@ async fn ingest_token_ws(
 	put,
 	tag = "Semantic Service",
 	path = "/semantics/{pipeline_id}/ingest",
+	request_body = Vec<IngestedTokens>,
 	responses(
-		(status = 200, description = "Successfully ingested tokens.", body = SemanticPipelineResponse)
+		(status = 200, description = "Successfully ingested tokens.", body = bool)
 	),
 	params(
 		("pipeline_id" = String, Path, description = "The pipeline id running semantic loop to ingest tokens.")
