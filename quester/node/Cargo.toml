@@ -72,6 +72,7 @@ rust-embed = { workspace = true }
 mime_guess = { workspace = true }
 uuid = { workspace = true }
 storage = { workspace = true }
+futures-util = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }

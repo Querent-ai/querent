@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use cluster::Cluster;
 use common::{
 	GetAllPipelines, IndexingStatistics, MessageStateBatches, PipelineMetadata, PubSubBroker,
+	SendIngestedTokens,
 };
 use querent_synapse::comm::{ChannelHandler, IngestedTokens, MessageState, MessageType};
 use serde::{Deserialize, Serialize};
@@ -296,12 +297,6 @@ impl Handler<MessageStateBatches> for SemanticService {
 		// TODO: periodically this gets triggered and we can send MessageState batches to a logger or something
 		Ok(())
 	}
-}
-
-#[derive(Debug, Clone)]
-pub struct SendIngestedTokens {
-	pub pipeline_id: String,
-	pub tokens: Vec<IngestedTokens>,
 }
 
 #[async_trait]

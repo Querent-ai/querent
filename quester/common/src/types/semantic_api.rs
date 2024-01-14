@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use querent_synapse::comm::IngestedTokens;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
@@ -121,4 +122,10 @@ pub struct PipelineMetadata {
 	pub name: String,
 	pub import: String,
 	pub attr: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct SendIngestedTokens {
+	pub pipeline_id: String,
+	pub tokens: Vec<IngestedTokens>,
 }

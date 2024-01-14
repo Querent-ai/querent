@@ -1,17 +1,18 @@
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
-
 use actors::{AskError, MessageBus, Observe};
 use common::{
 	CollectorConfig, EngineConfig, GetAllPipelines, IndexingStatistics, PipelineMetadata,
-	PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse, SupportedBackend,
-	SupportedSources, WorkflowConfig,
+	PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
+	SupportedBackend, SupportedSources, WorkflowConfig,
 };
+use futures_util::StreamExt;
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
 	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
 use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
-use warp::{reject::Rejection, Filter};
+use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use tracing::{error, warn};
+use warp::{filters::ws::WebSocket, reject::Rejection, Filter};
 
 use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 
@@ -224,6 +225,102 @@ pub fn stop_pipeline_delete_handler(
 		.and(warp::delete())
 		.and(require(semantic_service_bus))
 		.then(stop_pipeline)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+pub fn ingest_token_handler(
+	semantic_service_bus: Option<MessageBus<SemanticService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / String / "ingest")
+		.and(warp::ws())
+		.and(require(semantic_service_bus))
+		.and_then(|pipeline_id, ws, semantic_service_mailbox| {
+			ingest_token(pipeline_id, ws, semantic_service_mailbox)
+		})
+}
+
+async fn ingest_token(
+	pipeline_id: String,
+	ws: warp::ws::Ws,
+	semantic_service_mailbox: MessageBus<SemanticService>,
+) -> Result<impl warp::Reply, Infallible> {
+	let ws = ws.on_upgrade(move |socket| {
+		ingest_token_ws(socket, pipeline_id.clone(), semantic_service_mailbox.clone())
+	});
+	Ok(ws)
+}
+
+async fn ingest_token_ws(
+	socket: WebSocket,
+	pipeline_id: String,
+	semantic_service_mailbox: MessageBus<SemanticService>,
+) {
+	let (_tx, mut rx) = socket.split();
+	while let Some(result) = rx.next().await {
+		match result {
+			Ok(msg) =>
+				if msg.is_text() {
+					if let Ok(text) = msg.to_str() {
+						if let Ok(tokens_vec) = serde_json::from_str::<Vec<IngestedTokens>>(text) {
+							if let Err(e) = semantic_service_mailbox
+								.ask(SendIngestedTokens {
+									pipeline_id: pipeline_id.clone(),
+									tokens: tokens_vec,
+								})
+								.await
+							{
+								error!("Error sending tokens to pipeline: {:?}", e);
+							}
+						} else {
+							warn!("Failed to parse JSON: {:?}", text);
+						}
+					} else {
+						warn!("Failed to convert message to string: {:?}", msg);
+					}
+				} else {
+					warn!("Received non-text message: {:?}", msg);
+				},
+			Err(e) => {
+				error!("Error receiving message: {:?}", e);
+				break;
+			},
+		}
+	}
+}
+
+#[utoipa::path(
+	put,
+	tag = "Semantic Service",
+	path = "/semantics/{pipeline_id}/ingest",
+	responses(
+		(status = 200, description = "Successfully ingested tokens.", body = SemanticPipelineResponse)
+	),
+	params(
+		("pipeline_id" = String, Path, description = "The pipeline id running semantic loop to ingest tokens.")
+	)
+)]
+async fn ingest_tokens(
+	pipeline_id: String,
+	tokens: Vec<IngestedTokens>,
+	semantic_service_mailbox: MessageBus<SemanticService>,
+) -> Result<bool, PipelineErrors> {
+	let pipeline_rest =
+		semantic_service_mailbox.ask(SendIngestedTokens { pipeline_id, tokens }).await;
+	match pipeline_rest {
+		Ok(_) => Ok(true),
+		Err(e) => Err(PipelineErrors::UnknownError(e.to_string()).into()),
+	}
+}
+
+pub fn ingest_tokens_put_handler(
+	semantic_service_bus: Option<MessageBus<SemanticService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / String / "ingest")
+		.and(warp::put())
+		.and(warp::body::json())
+		.and(require(semantic_service_bus))
+		.then(ingest_tokens)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }
