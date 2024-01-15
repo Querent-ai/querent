@@ -27,6 +27,7 @@ pub mod web_interface;
 use tokio::sync::oneshot;
 use tracing::info;
 pub use web_interface::*;
+pub mod grpc;
 
 use warp::{reject::Rejection, Filter};
 
