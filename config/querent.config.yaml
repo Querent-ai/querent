@@ -18,6 +18,7 @@ gossip_listen_port: 2222
 grpc_listen_port: 3333
 cpu_capacity: 5
 peer_seeds:
+
 # -------------------------------- Restful Configuration --------------------------------
 rest_config:
   listen_port: 1111
@@ -27,6 +28,7 @@ rest_config:
     x-header-1: header-value-1
     x-header-2: header-value-2
 
+# -------------------------------- Storage Configuration --------------------------------
 storage_configs:
   postgres:
     name: querent_test
@@ -49,3 +51,11 @@ storage_configs:
       username: neo4j
       password: password_neo
 
+
+# -------------------------------- Distributed Tracing Configuration --------------------------------
+tracing:
+  jaeger:
+    enable_endpoint: true
+    lookback_period_hours: 24
+    max_trace_duration_secs: 600
+    max_fetch_spans: 1000

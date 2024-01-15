@@ -52,7 +52,7 @@ async def print_querent(config, text: str):
         tokens_received = config['workflow']['tokens_feader'].receive_tokens_in_python()
 
         if tokens_received is not None:
-            print("Received tokens: " + str(tokens_received))
+            print("Received tokens: " + str(tokens_received['data']))
 
         if message_state is not None:
             message_type = message_state['message_type']

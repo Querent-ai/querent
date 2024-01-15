@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroU64, time::Duration};
 
 use anyhow::bail;
 use http::HeaderMap;
@@ -40,9 +40,84 @@ pub struct StorageBackend {
 	pub config: HashMap<String, String>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct JaegerConfig {
+	/// Enables the gRPC endpoint that allows the Jaeger Query Service to connect and retrieve
+	/// traces.
+	#[serde(default = "JaegerConfig::default_enable_endpoint")]
+	pub enable_endpoint: bool,
+	/// How far back in time we look for spans when queries at not time-bound (`get_services`,
+	/// `get_operations`, `get_trace` operations).
+	#[serde(default = "JaegerConfig::default_lookback_period_hours")]
+	lookback_period_hours: NonZeroU64,
+	/// The assumed maximum duration of a trace in seconds.
+	///
+	/// Finding a trace happens in two phases: the first phase identifies at least one span that
+	/// matches the query, while the second phase retrieves the spans that belong to the trace.
+	/// The `max_trace_duration_secs` parameter is used during the second phase to restrict the
+	/// search time interval to [span.end_timestamp - max_trace_duration, span.start_timestamp
+	/// + max_trace_duration].
+	#[serde(default = "JaegerConfig::default_max_trace_duration_secs")]
+	max_trace_duration_secs: NonZeroU64,
+	/// The maximum number of spans that can be retrieved in a single request.
+	#[serde(default = "JaegerConfig::default_max_fetch_spans")]
+	pub max_fetch_spans: NonZeroU64,
+}
+
+impl JaegerConfig {
+	pub fn lookback_period(&self) -> Duration {
+		Duration::from_secs(self.lookback_period_hours.get() * 3600)
+	}
+
+	pub fn max_trace_duration(&self) -> Duration {
+		Duration::from_secs(self.max_trace_duration_secs.get())
+	}
+
+	fn default_enable_endpoint() -> bool {
+		#[cfg(any(test, feature = "testsuite"))]
+		{
+			false
+		}
+		#[cfg(not(any(test, feature = "testsuite")))]
+		{
+			true
+		}
+	}
+
+	fn default_lookback_period_hours() -> NonZeroU64 {
+		NonZeroU64::new(72).unwrap() // 3 days
+	}
+
+	fn default_max_trace_duration_secs() -> NonZeroU64 {
+		NonZeroU64::new(3600).unwrap() // 1 hour
+	}
+
+	fn default_max_fetch_spans() -> NonZeroU64 {
+		NonZeroU64::new(10_000).unwrap() // 10k spans
+	}
+}
+
+impl Default for JaegerConfig {
+	fn default() -> Self {
+		Self {
+			enable_endpoint: Self::default_enable_endpoint(),
+			lookback_period_hours: Self::default_lookback_period_hours(),
+			max_trace_duration_secs: Self::default_max_trace_duration_secs(),
+			max_fetch_spans: Self::default_max_fetch_spans(),
+		}
+	}
+}
+
 #[serde_as]
 #[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct StorageConfigs(#[serde_as(as = "EnumMap")] pub Vec<StorageConfig>);
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Tracing {
+	pub jaeger: JaegerConfig,
+}
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeConfig {
 	pub cluster_id: String,
@@ -55,6 +130,7 @@ pub struct NodeConfig {
 	pub peer_seeds: Vec<String>,
 	pub cpu_capacity: u32,
 	pub storage_configs: StorageConfigs,
+	pub tracing: Tracing,
 }
 
 impl NodeConfig {
