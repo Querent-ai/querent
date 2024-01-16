@@ -147,8 +147,19 @@ async fn start_pipeline(
 	let pipeline_rest = semantic_service_mailbox
 		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.to_string() })
 		.await;
-	let pipeline_id = pipeline_rest.unwrap_or(Ok(new_uuid.to_string()));
-	Ok(SemanticPipelineResponse { pipeline_id: pipeline_id.unwrap() })
+	let pipeline_id = pipeline_rest.unwrap_or(Ok("".to_string()));
+	if pipeline_id.is_err() {
+		return Err(PipelineErrors::UnknownError(pipeline_id.unwrap_err().to_string()).into());
+	}
+	let id: String = pipeline_id.unwrap();
+	let result_pipe_obs = describe_pipeline(id.clone(), semantic_service_mailbox.clone()).await;
+	if result_pipe_obs.is_err() {
+		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+			"Failed to describe pipeline: {:?}",
+			result_pipe_obs.unwrap_err()
+		)));
+	}
+	Ok(SemanticPipelineResponse { pipeline_id: id })
 }
 
 pub fn start_pipeline_post_handler(

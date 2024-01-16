@@ -141,7 +141,7 @@ pub async fn create_querent_synapose_workflow(
 		id: id.to_string(),
 		import: request.import.clone(),
 		attr: request.attr.clone(),
-		code: request.code.clone(),
+		code: Some(_CODE_CONFIG_EVENT_HANDLER.to_string()),
 		arguments: vec![CLRepr::String("Starting Querent".to_string(), StringType::Normal)],
 		config: Some(config),
 	};

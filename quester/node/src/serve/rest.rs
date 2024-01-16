@@ -20,7 +20,7 @@ use crate::{
 	ingest_token_handler, ingest_tokens_put_handler,
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
-	start_pipeline_post_handler, stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo,
+	start_pipeline_post_handler, stop_pipeline_delete_handler, BodyFormat, BuildInfo,
 	QuesterServices, RuntimeInfo,
 };
 
@@ -77,7 +77,6 @@ pub(crate) async fn start_rest_server(
 	let rest_routes = api_v1_root_route
 		.or(api_doc)
 		.or(redirect_root_to_ui_route)
-		.or(ui_handler())
 		.or(health_check_routes)
 		.or(metrics_routes)
 		.with(request_counter)
