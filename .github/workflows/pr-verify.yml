@@ -170,7 +170,7 @@ jobs:
             QUESTER_COMMIT_TAGS=${{ env.QUESTER_COMMIT_TAGS }}
             GITHUB_SHA=${{ github.sha }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          tags: ${{ github.sha }}, "latest"
+          tags: ${{ github.sha }},"latest"
   generate-docs:
     name: Generate quester rust docs
     runs-on: ubuntu-latest
