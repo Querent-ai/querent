@@ -136,12 +136,16 @@ pub async fn create_querent_synapose_workflow(
 		resource: None,
 	};
 	//let _example_asyncio_python_code_sending_events_loop
+	let code = match request.code.clone() {
+		Some(code) => code,
+		None => _CODE_CONFIG_EVENT_HANDLER.to_string(),
+	};
 	let workflow = Workflow {
 		name: request.name.clone(),
 		id: id.to_string(),
 		import: request.import.clone(),
 		attr: request.attr.clone(),
-		code: Some(_CODE_CONFIG_EVENT_HANDLER.to_string()),
+		code: Some(code),
 		arguments: vec![CLRepr::String("Starting Querent".to_string(), StringType::Normal)],
 		config: Some(config),
 	};
