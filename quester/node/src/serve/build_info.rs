@@ -23,17 +23,17 @@ impl BuildInfo {
 		static INSTANCE: OnceCell<BuildInfo> = OnceCell::new();
 
 		INSTANCE.get_or_init(|| {
-			let commit_date = option_env!("QUERENT_COMMIT_DATE")
+			let commit_date = option_env!("QUESTER_COMMIT_DATE")
 				.filter(|commit_date| !commit_date.is_empty())
 				.unwrap_or(UNKNOWN);
-			let commit_hash = option_env!("QUERENT_COMMIT_HASH")
+			let commit_hash = option_env!("QUESTER_COMMIT_HASH")
 				.filter(|commit_hash| !commit_hash.is_empty())
 				.unwrap_or(UNKNOWN);
-			let commit_short_hash = option_env!("QUERENT_COMMIT_HASH")
+			let commit_short_hash = option_env!("QUESTER_COMMIT_HASH")
 				.filter(|commit_hash| commit_hash.len() >= 7)
 				.map(|commit_hash| &commit_hash[..7])
 				.unwrap_or(UNKNOWN);
-			let mut commit_tags: Vec<String> = option_env!("QUERENT_COMMIT_TAGS")
+			let mut commit_tags: Vec<String> = option_env!("QUESTER_COMMIT_TAGS")
 				.map(|tags| {
 					tags.split(',')
 						.map(|tag| tag.trim().to_string())
