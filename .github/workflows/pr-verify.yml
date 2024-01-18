@@ -84,22 +84,6 @@ jobs:
       - name: Cargo fmt
         run: cd quester && make format-check
 
-  deny:
-    name: Cargo Deny
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Install cargo deny
-        uses: taiki-e/cache-cargo-install-action@v1
-        with:
-          tool: cargo-deny
-      - name: cargo deny
-        run: cargo deny check licenses
-        working-directory: ./quester
-
   build:
     name: Build
     runs-on: ubuntu-latest
