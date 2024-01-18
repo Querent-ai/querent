@@ -42,8 +42,6 @@ jobs:
           echo "valid-version=true" >> $GITHUB_OUTPUT
       - name: Check Out Repo
         uses: actions/checkout@v3
-        with:
-          ref: ${{env.NEW_RELEASE_TAG_FROM_UI}}
       - name: Set up tags for cp image
         id: querent-tags
         uses: docker/metadata-action@v4
