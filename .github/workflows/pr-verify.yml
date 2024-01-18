@@ -130,9 +130,6 @@ jobs:
           default: true
           profile: minimal
           target: wasm32-unknown-unknown
-
-      - name: Cargo build
-        run: cd quester && make build
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
       - name: Set up Docker Buildx

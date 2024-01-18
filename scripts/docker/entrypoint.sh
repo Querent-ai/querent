@@ -7,10 +7,14 @@
 # Check if the user-defined configuration file exists
 if [ -f "$QUESTER_NODE_CONFIG" ]; then
   echo "Using user-defined configuration file: $QUESTER_NODE_CONFIG"
+  # Print the content of the configuration file
+  # cat "$QUESTER_NODE_CONFIG"
   # Execute quester serve with the user-defined configuration
   exec querent serve --config "$QUESTER_NODE_CONFIG"
 else
   echo "Using default configuration file: $QUESTER_CONFIG"
+  # Print the content of the default configuration file
+  cat "$QUESTER_CONFIG"
   # Execute quester serve with the default configuration
   exec querent serve --config "$QUESTER_CONFIG"
 fi

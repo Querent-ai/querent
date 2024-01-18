@@ -1,0 +1,61 @@
+# ============================ Node Configuration ==============================
+#
+# Website: https://github.com/querent-ai/querent
+# Docs: https://github.com/querent-ai/querent-docs
+#
+# -------------------------------- General settings --------------------------------
+
+# Config file format version.
+version: 0.1
+
+# Unique cluster ID. This is used to identify the cluster to which this node belongs.
+cluster_id: querent-cluster
+# Node identifier. This is used to identify this node within the cluster running semantic search.
+node_id: querent-node
+listen_address: 0.0.0.0
+advertise_address: 0.0.0.0
+gossip_listen_port: 2222
+grpc_listen_port: 3333
+cpu_capacity: 5
+peer_seeds:
+
+# -------------------------------- Restful Configuration --------------------------------
+rest_config:
+  listen_port: 1111
+  cors_allow_origins:
+    - "*"
+  extra_headers:
+    x-header-1: header-value-1
+    x-header-2: header-value-2
+
+# -------------------------------- Storage Configuration --------------------------------
+storage_configs:
+  postgres:
+    name: querent_test
+    storage_type: index
+    config:
+      url: postgres://querent:querent@172.19.0.2:5432/querent_test?sslmode=prefer
+  milvus:
+    name: semantic_milvus_db
+    storage_type: vector
+    config:
+      url: http://172.19.0.5:19530
+      username: ""
+      password: ""
+  neo4j:
+    name: semantic_neo4j_db
+    storage_type: graph
+    config:
+      db_name: neo4j
+      url: bolt://172.19.0.4:7687
+      username: neo4j
+      password: password_neo
+
+
+# -------------------------------- Distributed Tracing Configuration --------------------------------
+tracing:
+  jaeger:
+    enable_endpoint: true
+    lookback_period_hours: 24
+    max_trace_duration_secs: 600
+    max_fetch_spans: 1000
