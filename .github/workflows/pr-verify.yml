@@ -92,23 +92,13 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+      - name: Install cargo deny
+        uses: taiki-e/cache-cargo-install-action@v1
         with:
-          toolchain: nightly
-          default: true
-          profile: minimal
-          target: wasm32-unknown-unknown
-
-      - name: Set Up Cargo Deny
-        run: |
-          cd quester
-          cargo install --force cargo-deny
-          cargo generate-lockfile
-
-      - name: License and Issue Check
-        run: cd quester && make deny
+          tool: cargo-deny
+      - name: cargo deny
+        run: cargo deny check licenses
+        working-directory: ./quester
 
   build:
     name: Build
