@@ -4,6 +4,5 @@
 **/build
 **/Dockerfile
 **/node_modules
-**/target
 docs
 examples
