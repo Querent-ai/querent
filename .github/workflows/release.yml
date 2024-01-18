@@ -72,4 +72,4 @@ jobs:
           platforms: linux/amd64
           push: ${{env.TEST_RUN != 'true'}}
           file: ./Dockerfile
-          tags: ${{ steps.querent-tags.outputs.tags }}
+          tags: ${{ env.DOCKER_HUB_PROFILE }}/${{ env.IMAGE_NAME }}:${{env.NEW_RELEASE_TAG_FROM_UI}}
