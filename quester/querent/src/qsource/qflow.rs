@@ -198,7 +198,18 @@ impl Source for Qflow {
 				events_collected,
 				chrono::Utc::now().timestamp_millis() as u64,
 			);
-			ctx.send_message(event_streamer_messagebus, events_batch).await?;
+			let batches_error =
+				ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
+			if batches_error.is_err() {
+				log::error!("Failed to send events batch: {:?}", batches_error);
+				//re-trying
+				let retry_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
+				if retry_error.is_err() {
+					return Err(ActorExitStatus::Failure(
+						anyhow::anyhow!("Failed to send events batch: {:?}", retry_error).into(),
+					));
+				}
+			}
 		}
 		if is_successs {
 			return Err(ActorExitStatus::Success);

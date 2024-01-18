@@ -278,6 +278,16 @@ impl SemanticPipeline {
 	}
 
 	async fn terminate(&mut self) {
+		let message_state = MessageState {
+			message_type: MessageType::Stop,
+			timestamp: chrono::Utc::now().timestamp_millis() as f64,
+			payload: "Shutdown signal received".to_string(),
+		};
+		if let Some(sender) = self.channel_sender.as_ref() {
+			sender
+				.send((message_state.clone().message_type, message_state.clone()))
+				.unwrap();
+		}
 		self.terminate_sig.kill();
 		if let Some(handles) = self.handlers.take() {
 			tokio::join!(
@@ -400,16 +410,6 @@ impl Handler<ShutdownPipe> for SemanticPipeline {
 	) -> Result<(), ActorExitStatus> {
 		if self.settings.qflow_id != _shutdown_pipe.pipeline_id {
 			return Ok(());
-		}
-		let message_state = MessageState {
-			message_type: MessageType::Stop,
-			timestamp: chrono::Utc::now().timestamp_millis() as f64,
-			payload: "Shutdown signal received".to_string(),
-		};
-		if let Some(sender) = self.channel_sender.as_ref() {
-			sender
-				.send((message_state.clone().message_type, message_state.clone()))
-				.unwrap();
 		}
 		self.terminate().await;
 		Err(ActorExitStatus::Success)
