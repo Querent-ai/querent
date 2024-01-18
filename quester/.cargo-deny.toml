@@ -106,18 +106,6 @@ allow = [
     "MIT",
     "Apache-2.0",
     "Apache-2.0 WITH LLVM-exception",
-    "0BSD",
-    "BSD-2-Clause",
-    "BSD-3-Clause",
-    "CC0-1.0",
-    "ISC",
-    "MIT",
-    "MPL-2.0",
-    "OpenSSL",
-    "Unicode-DFS-2016",
-    "Unlicense",
-    "Zlib",
-    "zlib-acknowledgement",
 ]
 # List of explicitly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
@@ -147,12 +135,9 @@ confidence-threshold = 0.9
 # Allow 1 or more licenses on a per-crate basis, so that particular licenses
 # aren't accepted for every possible crate as with the normal allow list
 exceptions = [
-    { name = "actors", allow = ["AGPL-3.0"], version = "*" },
-    { name = "common", allow = ["AGPL-3.0"], version = "*" },
-    { name = "node", allow = ["AGPL-3.0"], version = "*" },
-    { name = "querent", allow = ["AGPL-3.0"], version = "*" },
-    { name = "swarm", allow = ["AGPL-3.0"], version = "*" },
-    { name = "storage", allow = ["AGPL-3.0"], version = "*" },
+    # Each entry is the crate and version constraint, and its specific allow
+    # list
+    #{ allow = ["Zlib"], name = "adler32", version = "*" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
