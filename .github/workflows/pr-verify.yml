@@ -155,6 +155,8 @@ jobs:
           echo "QUESTER_COMMIT_DATE=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
           echo "QUESTER_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
           echo "QUESTER_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
+      - name: Build
+        run: cd quester && make build
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
