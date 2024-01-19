@@ -44,24 +44,34 @@ import asyncio
 import json
 
 async def print_querent(config, text: str):
-    print(text)
+    print( "🤖" + text) 
+    querent_started = False
 
-    while True:
-        print(text + config['querent_id'])
+    try:
+        import querent
+        print("✨ Querent imported successfully ✨")
+        querent_started = True
+        await querent.workflow.start_workflow(config)
+    except Exception as e:
+        query_started = False
+        print("❌ Failed to import querent: " + str(e))
+
+    while True and not querent_started:
+        print("⌛ Waiting for querent to start...sending dummy events")
         message_state = config['workflow']['channel'].receive_in_python()
         tokens_received = config['workflow']['tokens_feader'].receive_tokens_in_python()
 
         if tokens_received is not None:
-            print("Received tokens: " + str(tokens_received['data']))
+            print("📜 Received tokens: " + str(tokens_received['data']))
 
         if message_state is not None:
             message_type = message_state['message_type']
-            
+
             if message_type.lower() == "stop":
-                print("Received stop signal. Exiting...")
+                print("🛑 Received stop signal. Exiting...")
                 break
             else:
-                print("Received message of type: " + message_type)
+                print("📬 Received message of type: " + message_type)
                 # Handle other message types...
 
         # Continue sending events
