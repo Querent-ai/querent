@@ -87,7 +87,7 @@ services:
       - querent
   
   querent:
-    image: querent/quester:latest
+    image: querent/quester:v0.0.2-rc2
     ports:
       - "1111:1111"
       - "2222:2222"
