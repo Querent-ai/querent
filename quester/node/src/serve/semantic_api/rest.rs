@@ -127,6 +127,7 @@ pub fn observe_pipeline_get_handler(
     ),
 )]
 
+/// Start semantic pipeline by providing a `SemanticPipelineRequest`.
 async fn start_pipeline(
 	request: SemanticPipelineRequest,
 	semantic_service_mailbox: MessageBus<SemanticService>,
@@ -218,7 +219,7 @@ pub fn get_pipelines_metadata_handler(
 	)
 )]
 
-/// Stop semantic pipeline
+/// Stop semantic pipeline by providing a pipeline id.
 async fn stop_pipeline(
 	pipeline_id: String,
 	semantic_service_mailbox: MessageBus<SemanticService>,
@@ -313,6 +314,8 @@ async fn ingest_token_ws(
 		("pipeline_id" = String, Path, description = "The pipeline id running semantic loop to ingest tokens.")
 	)
 )]
+
+/// Send tokens to semantic pipeline by providing `IngestedTokens`.
 async fn ingest_tokens(
 	pipeline_id: String,
 	tokens: Vec<IngestedTokens>,
