@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use common::{BoxFutureInfaillible, ServiceErrorCode};
-use hyper::{http, http::HeaderValue, Method};
+use hyper::{http, http::HeaderValue, Method, Response, StatusCode};
 use tower::{make::Shared, ServiceBuilder};
 use tower_http::{
 	compression::{
@@ -11,7 +11,12 @@ use tower_http::{
 	cors::CorsLayer,
 };
 use tracing::{error, info};
-use warp::{redirect, Filter, Rejection, Reply};
+use utoipa_swagger_ui::Config;
+use warp::{
+	filters::path::{FullPath, Tail},
+	http::Uri,
+	redirect, Filter, Rejection, Reply,
+};
 
 use crate::{
 	cluster_api::cluster_handler,
@@ -38,6 +43,33 @@ pub(crate) struct InvalidArgument(pub String);
 
 impl warp::reject::Reject for InvalidArgument {}
 
+async fn serve_swagger(
+	full_path: FullPath,
+	tail: Tail,
+	config: Arc<utoipa_swagger_ui::Config<'static>>,
+) -> Result<Box<dyn Reply + 'static>, Rejection> {
+	if full_path.as_str() == "/swagger-ui" {
+		return Ok(Box::new(warp::redirect::found(Uri::from_static("/swagger-ui/"))));
+	}
+
+	let path = tail.as_str();
+	match utoipa_swagger_ui::serve(path, config) {
+		Ok(file) =>
+			if let Some(file) = file {
+				Ok(Box::new(
+					Response::builder().header("Content-Type", file.content_type).body(file.bytes),
+				))
+			} else {
+				Ok(Box::new(StatusCode::NOT_FOUND))
+			},
+		Err(error) => Ok(Box::new(
+			Response::builder()
+				.status(StatusCode::INTERNAL_SERVER_ERROR)
+				.body(error.to_string()),
+		)),
+	}
+}
+
 /// Starts REST services.
 pub(crate) async fn start_rest_server(
 	rest_listen_addr: SocketAddr,
@@ -45,14 +77,21 @@ pub(crate) async fn start_rest_server(
 	readiness_trigger: BoxFutureInfaillible<()>,
 	shutdown_signal: BoxFutureInfaillible<()>,
 ) -> anyhow::Result<()> {
-	info!("Starting REST server 📡: check /openapi.json for available APIs");
+	info!("Starting REST server 📡: check /api-doc.json for available APIs");
 	let request_counter = warp::log::custom(|_| {
 		crate::SERVE_METRICS.http_requests_total.inc();
 	});
 	// Docs routes
-	let api_doc = warp::path("openapi.json")
+	let api_doc = warp::path("api-doc.json")
 		.and(warp::get())
 		.map(|| warp::reply::json(&crate::openapi::build_docs()));
+	let config = Arc::new(Config::from("/api-doc.json"));
+	let swagger_ui = warp::path("swagger-ui")
+		.and(warp::get())
+		.and(warp::path::full())
+		.and(warp::path::tail())
+		.and(warp::any().map(move || config.clone()))
+		.and_then(serve_swagger);
 
 	// `/health/*` routes.
 	let health_check_routes = health_check_handlers(
@@ -76,6 +115,7 @@ pub(crate) async fn start_rest_server(
 	// Combine all the routes together.
 	let rest_routes = api_v1_root_route
 		.or(api_doc)
+		.or(swagger_ui)
 		.or(redirect_root_to_ui_route)
 		.or(health_check_routes)
 		.or(metrics_routes)
