@@ -25,6 +25,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		get_pipelines_metadata,
 		stop_pipeline,
 		ingest_tokens,
+		restart_pipeline,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
