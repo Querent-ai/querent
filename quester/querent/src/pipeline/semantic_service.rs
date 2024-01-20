@@ -79,11 +79,11 @@ impl SemanticService {
 					false
 				},
 				ActorState::Failure => {
-					// This should never happen: Indexing Pipelines are not supposed to fail,
+					// This should never happen: Semantic Pipelines are not supposed to fail,
 					// and are themselves in charge of supervising the pipeline actors.
 					error!(
 						qflow_id=%qflow_id,
-						"Indexing pipeline exited with failure. This should never happen."
+						"Semantic pipeline exited with failure. This should never happen."
 					);
 					self.counters.num_failed_pipelines += 1;
 					self.counters.num_running_pipelines -= 1;
@@ -339,5 +339,39 @@ impl Handler<GetAllPipelines> for SemanticService {
 			})
 			.collect();
 		Ok(pipelines_metadata)
+	}
+}
+
+#[derive(Clone, Debug)]
+pub struct RestartPipeline {
+	pub pipeline_id: String,
+}
+
+#[async_trait]
+impl Handler<RestartPipeline> for SemanticService {
+	type Reply = Result<String, PipelineErrors>;
+
+	async fn handle(
+		&mut self,
+		message: RestartPipeline,
+		ctx: &ActorContext<Self>,
+	) -> Result<Self::Reply, ActorExitStatus> {
+		let pipeline_handle = &self
+			.semantic_pipelines
+			.get(&message.pipeline_id)
+			.ok_or(anyhow::anyhow!("Semantic pipeline `{}` not found.", message.pipeline_id))?;
+		let settings = pipeline_handle.settings.clone();
+		let pipeline_id = pipeline_handle.pipeline_id.clone();
+		let success = ctx
+			.send_self_message(ShutdownPipeline { pipeline_id: pipeline_id.clone() })
+			.await;
+		if success.is_err() {
+			return Err(anyhow::anyhow!(
+				"Failed to restart pipeline `{}`. Could not shutdown pipeline.",
+				message.pipeline_id
+			)
+			.into());
+		}
+		Ok(self.spawn_pipeline(ctx, settings, message.pipeline_id).await)
 	}
 }

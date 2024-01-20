@@ -7,7 +7,7 @@ use common::{
 use futures_util::StreamExt;
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
-	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
+	RestartPipeline, SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
 use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
@@ -337,6 +337,41 @@ pub fn ingest_tokens_put_handler(
 		.and(warp::body::json())
 		.and(require(semantic_service_bus))
 		.then(ingest_tokens)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+/// restart semantic pipeline by providing a pipeline id.
+#[utoipa::path(
+	post,
+	tag = "Semantic Service",
+	path = "/semantics/{pipeline_id}/restart",
+	responses(
+		(status = 200, description = "Successfully restarted semantic pipeline.", body = SemanticPipelineResponse)
+	),
+	params(
+		("pipeline_id" = String, Path, description = "The pipeline id running semantic loop to restart.")
+	)
+)]
+/// Restart semantic pipeline by providing a pipeline id.
+async fn restart_pipeline(
+	pipeline_id: String,
+	semantic_service_mailbox: MessageBus<SemanticService>,
+) -> Result<bool, PipelineErrors> {
+	let pipeline_rest = semantic_service_mailbox.ask(RestartPipeline { pipeline_id }).await;
+	match pipeline_rest {
+		Ok(_) => Ok(true),
+		Err(e) => Err(PipelineErrors::UnknownError(e.to_string()).into()),
+	}
+}
+
+pub fn restart_pipeline_post_handler(
+	semantic_service_bus: Option<MessageBus<SemanticService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / String / "restart")
+		.and(warp::post())
+		.and(require(semantic_service_bus))
+		.then(restart_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }
