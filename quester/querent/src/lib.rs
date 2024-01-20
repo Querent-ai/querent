@@ -53,7 +53,7 @@ async def print_querent(config, text: str):
         querent_started = True
         await querent.workflow.start_workflow(config)
     except Exception as e:
-        query_started = False
+        querent_started = False
         print("❌ Failed to import querent: " + str(e))
 
     while True and not querent_started:
