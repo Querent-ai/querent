@@ -75,7 +75,13 @@ services:
       - "5432:5432"
     networks:
       - querent
-    
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "querent_test"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+
   neo4j:
     image: neo4j
     environment:
@@ -85,19 +91,30 @@ services:
       - "7687:7687"
     networks:
       - querent
+    healthcheck:
+      test: wget http://localhost:7474 || exit 1
+      interval: 1s
+      timeout: 10s
+      retries: 20
+      start_period: 3s
   
   querent:
-    image: querent/quester:v0.0.2-rc2
+    image: querent/quester:v0.0.2-rc3
     ports:
       - "1111:1111"
       - "2222:2222"
       - "3333:3333"
     depends_on:
-      - postgres
-      - neo4j
-      - etcd
-      - minio
-      - milvus
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      milvus:
+        condition: service_healthy
     volumes:
       - ./config:/external-config
     environment:
