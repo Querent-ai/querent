@@ -87,14 +87,34 @@ pub struct CollectorConfig {
 	pub backend: SupportedSources,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+pub enum NamedWorkflows {
+	#[serde(rename = "knowledge_graph_using_llama2_v1")]
+	KnowledgeGraphUsingLlama2V1,
+	#[serde(rename = "knowledge_graph_using_openai")]
+	KnowledgeGraphUsingOpenAI,
+}
+
+impl Default for NamedWorkflows {
+	fn default() -> Self {
+		NamedWorkflows::KnowledgeGraphUsingOpenAI
+	}
+}
+
+impl Into<String> for NamedWorkflows {
+	fn into(self) -> String {
+		match self {
+			NamedWorkflows::KnowledgeGraphUsingLlama2V1 =>
+				"knowledge_graph_using_llama2_v1".to_string(),
+			NamedWorkflows::KnowledgeGraphUsingOpenAI => "knowledge_graph_using_openai".to_string(),
+		}
+	}
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SemanticPipelineRequest {
-	pub name: String,
-	pub import: String,
-	pub attr: String,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub code: Option<String>,
+	pub name: NamedWorkflows,
 	pub workflow_config: WorkflowConfig,
 	pub config: HashMap<String, String>,
 }

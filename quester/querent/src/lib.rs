@@ -129,9 +129,9 @@ pub async fn create_querent_synapose_workflow(
 	let config = Config {
 		version: request.workflow_config.version.clone(),
 		querent_id: id.to_string(),
-		querent_name: request.name.clone(),
+		querent_name: request.name.clone().into(),
 		workflow: WorkflowConfig {
-			name: request.name.clone(),
+			name: request.name.clone().into(),
 			id: id.to_string(),
 			config: request.config.clone(),
 			channel: None,
@@ -145,17 +145,12 @@ pub async fn create_querent_synapose_workflow(
 		engines: engine_configs,
 		resource: None,
 	};
-	//let _example_asyncio_python_code_sending_events_loop
-	let code = match request.code.clone() {
-		Some(code) => code,
-		None => _CODE_CONFIG_EVENT_HANDLER.to_string(),
-	};
 	let workflow = Workflow {
-		name: request.name.clone(),
+		name: request.name.clone().into(),
 		id: id.to_string(),
-		import: request.import.clone(),
-		attr: request.attr.clone(),
-		code: Some(code),
+		import: "".to_string(),
+		attr: "print_querent".to_string(),
+		code: Some(_CODE_CONFIG_EVENT_HANDLER.to_string()),
 		arguments: vec![CLRepr::String("Starting Querent".to_string(), StringType::Normal)],
 		config: Some(config),
 	};
