@@ -3,16 +3,6 @@ use std::collections::HashMap;
 use querent_synapse::comm::IngestedTokens;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Default, utoipa::ToSchema)]
-#[serde(deny_unknown_fields)]
-pub struct WorkflowConfig {
-	pub version: f32,
-	#[serde(default)]
-	pub collectors: Vec<CollectorConfig>,
-	#[serde(default)]
-	pub engines: Vec<EngineConfig>,
-}
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum SupportedSources {
@@ -92,12 +82,19 @@ pub enum NamedWorkflows {
 	#[serde(rename = "knowledge_graph_using_llama2_v1")]
 	KnowledgeGraphUsingLlama2V1,
 	#[serde(rename = "knowledge_graph_using_openai")]
-	KnowledgeGraphUsingOpenAI,
+	KnowledgeGraphUsingOpenAI(OpenAIConfig),
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct OpenAIConfig {
+	#[serde(rename = "openai_api_key")]
+	pub openai_api_key: String,
 }
 
 impl Default for NamedWorkflows {
 	fn default() -> Self {
-		NamedWorkflows::KnowledgeGraphUsingOpenAI
+		NamedWorkflows::KnowledgeGraphUsingOpenAI(OpenAIConfig { openai_api_key: "".to_string() })
 	}
 }
 
@@ -106,7 +103,8 @@ impl Into<String> for NamedWorkflows {
 		match self {
 			NamedWorkflows::KnowledgeGraphUsingLlama2V1 =>
 				"knowledge_graph_using_llama2_v1".to_string(),
-			NamedWorkflows::KnowledgeGraphUsingOpenAI => "knowledge_graph_using_openai".to_string(),
+			NamedWorkflows::KnowledgeGraphUsingOpenAI(_) =>
+				"knowledge_graph_using_openai".to_string(),
 		}
 	}
 }
@@ -115,7 +113,8 @@ impl Into<String> for NamedWorkflows {
 #[serde(deny_unknown_fields)]
 pub struct SemanticPipelineRequest {
 	pub name: NamedWorkflows,
-	pub workflow_config: WorkflowConfig,
+	pub version: f32,
+	pub collectors: Vec<CollectorConfig>,
 	pub config: HashMap<String, String>,
 }
 

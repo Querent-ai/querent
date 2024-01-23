@@ -1,7 +1,9 @@
 pub mod qsource;
+use std::collections::HashMap;
+
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
-use common::{NodeConfig, PubSubBroker, SemanticPipelineRequest};
+use common::{NamedWorkflows, NodeConfig, PubSubBroker, SemanticPipelineRequest};
 pub use qsource::*;
 pub mod events;
 pub use events::*;
@@ -102,7 +104,6 @@ pub async fn create_querent_synapose_workflow(
 	request: &SemanticPipelineRequest,
 ) -> Result<Workflow, PipelineErrors> {
 	let collector_configs: Vec<CollectorConfig> = request
-		.workflow_config
 		.collectors
 		.iter()
 		.map(|c| CollectorConfig {
@@ -114,20 +115,23 @@ pub async fn create_querent_synapose_workflow(
 			config: c.config.clone(),
 		})
 		.collect();
-	let engine_configs: Vec<EngineConfig> = request
-		.workflow_config
-		.engines
-		.iter()
-		.map(|c| EngineConfig {
-			id: id.clone(),
-			name: c.backend.clone().into(),
-			inner_channel: None,
-			channel: None,
-			config: c.config.clone(),
-		})
-		.collect();
+	let mut engine_additionl_config = HashMap::new();
+	match request.name {
+		NamedWorkflows::KnowledgeGraphUsingOpenAI(ref config) => {
+			engine_additionl_config
+				.insert("openai_api_key".to_string(), config.openai_api_key.clone());
+		},
+		_ => {},
+	}
+	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {
+		id: id.clone(),
+		name: request.name.clone().into(),
+		inner_channel: None,
+		channel: None,
+		config: engine_additionl_config,
+	}];
 	let config = Config {
-		version: request.workflow_config.version.clone(),
+		version: request.version.clone(),
 		querent_id: id.to_string(),
 		querent_name: request.name.clone().into(),
 		workflow: WorkflowConfig {
