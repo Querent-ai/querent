@@ -1,8 +1,8 @@
 use actors::{AskError, MessageBus, Observe};
 use common::{
-	CollectorConfig, EngineConfig, GetAllPipelines, IndexingStatistics, PipelineMetadata,
-	PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
-	SupportedBackend, SupportedSources, WorkflowConfig,
+	CollectorConfig, EngineConfig, GetAllPipelines, IndexingStatistics, NamedWorkflows,
+	PipelineMetadata, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse,
+	SendIngestedTokens, SupportedBackend, SupportedSources, WorkflowConfig,
 };
 use futures_util::StreamExt;
 use querent::{
@@ -29,6 +29,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 	),
 	components(schemas(
 		SemanticPipelineRequest,
+		NamedWorkflows,
 		SemanticPipelineResponse,
 		SemanticServiceCounters,
 		IndexingStatistics,
