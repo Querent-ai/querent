@@ -32,6 +32,7 @@ RUN apt-get update \
 RUN rustup component add rustfmt
 
 COPY --from=ui-builder /quester/ui/build /quester/quester/web/build
+RUN ls -la /quester/quester/web/build
 
 COPY quester /quester
 COPY config /config
