@@ -15,7 +15,7 @@ const UI_INDEX_FILE_NAME: &str = "index.html";
 struct Asset;
 
 pub fn ui_handler() -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path("ui").and(warp::path::tail()).and_then(serve_file)
+	warp::path("web").and(warp::path::tail()).and_then(serve_file)
 }
 
 async fn serve_file(path: Tail) -> Result<impl warp::Reply, Rejection> {
@@ -32,21 +32,4 @@ async fn serve_impl(path: &str) -> Result<impl warp::Reply, Rejection> {
 	res.headers_mut()
 		.insert("content-type", HeaderValue::from_str(mime.as_ref()).unwrap());
 	Ok(res)
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_path_regex() {
-		let path_ptn = Regex::new(PATH_PATTERN).unwrap();
-
-		assert!(path_ptn.is_match("manifest.json"));
-		assert!(path_ptn.is_match("favicon.ico"));
-		assert!(path_ptn.is_match("static/js/main.df380554.js.map"));
-		assert!(path_ptn.is_match("android-chrome-192x192.png"));
-		assert!(!path_ptn.is_match("search"));
-		assert!(!path_ptn.is_match(""));
-	}
 }

@@ -26,7 +26,7 @@ use crate::{
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
 	restart_pipeline_post_handler, start_pipeline_post_handler, stop_pipeline_delete_handler,
-	BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
+	ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -119,6 +119,7 @@ pub(crate) async fn start_rest_server(
 		.or(redirect_root_to_ui_route)
 		.or(health_check_routes)
 		.or(metrics_routes)
+		.or(ui_handler())
 		.with(request_counter)
 		.recover(recover_fn)
 		.with(extra_headers)

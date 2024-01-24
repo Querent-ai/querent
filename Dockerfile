@@ -1,3 +1,13 @@
+
+FROM node:20 as ui-builder
+
+COPY ui /quester/ui
+
+WORKDIR /quester/ui
+
+RUN touch .gitignore_for_build_directory \
+    && NODE_ENV=production make install build
+
 # Stage 1: Build Stage
 FROM rust:bullseye AS bin-builder
 
@@ -20,6 +30,8 @@ RUN apt-get update \
     
 # Required by tonic
 RUN rustup component add rustfmt
+
+COPY --from=ui-builder /quester/ui/build /quester/quester/web/build
 
 COPY quester /quester
 COPY config /config
