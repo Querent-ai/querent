@@ -1,0 +1,13 @@
+
+html,
+body {
+  height: 100%;
+}
+
+#root {
+  height: 100%;
+}
+
+div.swagger-ui div.information-container {
+    display: none;
+}
