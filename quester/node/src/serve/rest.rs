@@ -107,7 +107,7 @@ pub(crate) async fn start_rest_server(
 
 	let redirect_root_to_ui_route = warp::path::end()
 		.and(warp::get())
-		.map(|| redirect(http::Uri::from_static("/ui/search")));
+		.map(|| redirect(http::Uri::from_static("/ui/workflows")));
 
 	let extra_headers =
 		warp::reply::with::headers(services.node_config.rest_config.extra_headers.clone());
