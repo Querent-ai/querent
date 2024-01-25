@@ -15,7 +15,7 @@ const UI_INDEX_FILE_NAME: &str = "index.html";
 struct Asset;
 
 pub fn ui_handler() -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path("web").and(warp::path::tail()).and_then(serve_file)
+	warp::path("ui").and(warp::path::tail()).and_then(serve_file)
 }
 
 async fn serve_file(path: Tail) -> Result<impl warp::Reply, Rejection> {
