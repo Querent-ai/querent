@@ -31,11 +31,11 @@ RUN apt-get update \
 # Required by tonic
 RUN rustup component add rustfmt
 
+COPY quester /quester
+COPY config /config
 COPY --from=ui-builder /quester/ui/build /quester/quester/web/build
 RUN ls -la /quester/quester/web/build
 
-COPY quester /quester
-COPY config /config
 WORKDIR /quester
 
 RUN echo "Building workspace with feature(s) '--all-features' and profile '$CARGO_PROFILE'" \
