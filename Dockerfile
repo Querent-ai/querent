@@ -33,8 +33,8 @@ RUN rustup component add rustfmt
 
 COPY quester /quester
 COPY config /config
-COPY --from=ui-builder /quester/ui/build /quester/quester/web/build
-RUN ls -la /quester/quester/web/build
+COPY --from=ui-builder /quester/ui/build /quester/web/build
+RUN ls -la /quester/web/build
 
 WORKDIR /quester
 
