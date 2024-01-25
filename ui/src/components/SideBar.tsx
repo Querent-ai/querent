@@ -11,10 +11,10 @@ import {
 } from 'react-router-dom';
 import { ListSubheader, styled, Typography } from '@mui/material';
 import { CodeSSlash } from "@styled-icons/remix-line/CodeSSlash"
-import { GroupWork } from '@styled-icons/material-outlined/GroupWork';
 import { Database } from '@styled-icons/feather/Database';
 import { Settings } from '@styled-icons/feather/Settings';
 import { APP_BAR_HEIGHT_PX } from './LayoutUtils';
+import { Nodered } from 'styled-icons/simple-icons';
 
 interface ListItemLinkProps {
   icon?: React.ReactElement;
@@ -54,19 +54,19 @@ const SideBarWrapper = styled('div')({
 });
 
 const SideBar = () => {
-  const semanticUrl = '/semantics';
+  const workflowsUrl = '/workflows';
   return (
     <SideBarWrapper sx={{ px: 0, py: 2 }}>
       <List dense={ true } sx={{ py: 0 }}>
         <ListSubheader sx={{lineHeight: '25px'}}>
           <Typography variant="body1">Discover</Typography>
         </ListSubheader>
-        <ListItemLink to={semanticUrl} primary={<Typography variant="body1">Workflows</Typography>} icon={<CodeSSlash size="18px" />} />
+        <ListItemLink to={workflowsUrl} primary={<Typography variant="body1">Workflows</Typography>} icon={<CodeSSlash size="18px" />} />
         <ListSubheader sx={{lineHeight: '25px', paddingTop: '10px'}}>
           <Typography variant="body1">Admin</Typography>
         </ListSubheader>
           <ListItemLink to="/storage" primary={<Typography variant="body1">Storage</Typography>} icon={<Database size="18px" />} />
-          <ListItemLink to="/cluster" primary={<Typography variant="body1">Cluster</Typography>} icon={<GroupWork size="18px" />} />
+          <ListItemLink to="/cluster" primary={<Typography variant="body1">Cluster</Typography>} icon={<Nodered size="18px" />} />
           <ListItemLink to="/node-info" primary={<Typography variant="body1">Node info</Typography>} icon={<Settings size="18px" />} />
           <ListItemLink to="/api-playground" primary={<Typography variant="body1">API </Typography>} icon={<CodeSSlash size="18px" />} />
       </List>
