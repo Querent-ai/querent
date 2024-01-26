@@ -1,6 +1,6 @@
 
 
-import { Cluster, QuesterBuildInfo, SemanticServiceCounters } from "../utils/models";
+import { Cluster, IndexingStatistics, PipelinesMetadata, QuesterBuildInfo, SemanticServiceCounters } from "../utils/models";
 
 export class Client {
   private readonly _host: string
@@ -32,6 +32,14 @@ export class Client {
 
   async getSemanticServiceCounters(): Promise<SemanticServiceCounters> {
     return await this.fetch(`${this.apiRoot()}semantics`, this.defaultGetRequestParams());
+  }
+
+  async getSemanticPipelinesMetadata(): Promise<PipelinesMetadata> {
+    return await this.fetch(`${this.apiRoot()}semantics/pipelines`, this.defaultGetRequestParams());
+  }
+
+  async getPipelineDescription(pipelineId: string): Promise<IndexingStatistics> {
+    return await this.fetch(`${this.apiRoot()}semantics/${pipelineId}/describe`, this.defaultGetRequestParams());
   }
 
   async fetch<T>(url: string, params: RequestInit): Promise<T> {
