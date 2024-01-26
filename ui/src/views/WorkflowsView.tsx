@@ -1,45 +1,55 @@
-
-
 import { Box, Typography } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
-import IndexesTable from '../components/IndexesTable';
 import { Client } from '../services/client';
 import Loader from '../components/Loader';
-import { IndexMetadata, ResponseError } from '../utils/models';
+import { ResponseError } from '../utils/models';
 import { ViewUnderAppBarBox, FullBoxContainer, QBreadcrumbs } from '../components/LayoutUtils';
 import ApiUrlFooter from '../components/ApiUrlFooter';
 import ErrorResponseDisplay from '../components/ResponseErrorDisplay';
 
-function IndexesView() {
+function WorkflowsView() {
   const [loading, setLoading] = useState(false);
   const [responseError, setResponseError] = useState<ResponseError | null>(null);
-  const [indexesMetadata, setIndexesMetadata] = useState<IndexMetadata[]>();
+  const [semanticServiceCounters, setSemanticServiceCounters] = useState({
+    num_failed_pipelines: 0,
+    num_running_pipelines: 0,
+    num_successful_pipelines: 0
+  });
   const questerClient = useMemo(() => new Client(), []);
 
-  const renderFetchIndexesResult = () => {
+  const renderSemanticServiceCounters = () => {
     if (responseError !== null) {
       return ErrorResponseDisplay(responseError);
     }
-    if (loading || indexesMetadata === undefined) {
+    if (loading) {
       return <Loader />;
     }
-    if (indexesMetadata.length > 0) {
-      return <FullBoxContainer sx={{ px: 0 }}>
-          <IndexesTable indexesMetadata={indexesMetadata} />
-        </FullBoxContainer>
-    }
-    return <Box>
-        You have no index registered in your metastore.
+
+    return (
+      <Box>
+        <Typography variant="h5" gutterBottom>
+          Semantic Pipelines Overview
+        </Typography>
+        <Typography>
+          Running Pipelines: {semanticServiceCounters.num_running_pipelines}
+        </Typography>
+        <Typography>
+          Successful Pipelines: {semanticServiceCounters.num_successful_pipelines}
+        </Typography>
+        <Typography>
+          Failed Pipelines: {semanticServiceCounters.num_failed_pipelines}
+        </Typography>
       </Box>
-  }
+    );
+  };
 
   useEffect(() => {
     setLoading(true);
-    questerClient.listIndexes().then(
-      (indexesMetadata) => {
+    questerClient.getSemanticServiceCounters().then(
+      (counters) => {
         setResponseError(null);
         setLoading(false);
-        setIndexesMetadata(indexesMetadata);
+        setSemanticServiceCounters(counters);
       },
       (error) => {
         setLoading(false);
@@ -52,13 +62,13 @@ function IndexesView() {
     <ViewUnderAppBarBox>
       <FullBoxContainer>
         <QBreadcrumbs aria-label="breadcrumb">
-          <Typography color="text.primary">Indexes</Typography>
+          <Typography color="text.primary">Semantic Pipelines</Typography>
         </QBreadcrumbs>
-        { renderFetchIndexesResult() }
+        {renderSemanticServiceCounters()}
       </FullBoxContainer>
-      { ApiUrlFooter('api/v1/indexes') }
+      {ApiUrlFooter('api/v1/semantics')}
     </ViewUnderAppBarBox>
   );
 }
 
-export default IndexesView;
+export default WorkflowsView;
