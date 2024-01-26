@@ -201,3 +201,10 @@ export type NodeId = {
   grpc_address: string,
   self: boolean,
 }
+
+
+export interface SemanticServiceCounters {
+  num_failed_pipelines: number;
+  num_running_pipelines: number;
+  num_successful_pipelines: number;
+}
