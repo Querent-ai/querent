@@ -42,6 +42,14 @@ export class Client {
     return await this.fetch(`${this.apiRoot()}semantics/${pipelineId}/describe`, this.defaultGetRequestParams());
   }
 
+  async deleteSemanticPipeline(pipelineId: string): Promise<void> {
+    await this.fetch(`${this.apiRoot()}semantics/${pipelineId}`, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+      cache: "default",
+    });
+  }
+
   async fetch<T>(url: string, params: RequestInit): Promise<T> {
     const response = await fetch(url, params);
     if (response.ok) {
