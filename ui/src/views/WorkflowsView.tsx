@@ -18,7 +18,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Client } from '../services/client';
 import Loader from '../components/Loader';
-import { ResponseError, PipelinesMetadata } from '../utils/models';
+import { ResponseError, PipelinesMetadata, IndexingStatistics } from '../utils/models';
 import {
   ViewUnderAppBarBox,
   FullBoxContainer,
@@ -28,6 +28,7 @@ import ApiUrlFooter from '../components/ApiUrlFooter';
 import ErrorResponseDisplay from '../components/ResponseErrorDisplay';
 import DeleteIcon from '@mui/icons-material/Delete';
 import InfoIcon from '@mui/icons-material/Info';
+import StatisticsView from '../components/SemanticStatisticsView';
 
 // StyledTableCell for custom styling
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
@@ -37,6 +38,7 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
 
 function WorkflowsView() {
   let healthyPipelineMap: Map<string, boolean> = new Map();
+  const [showStatistics, setShowStatistics] = useState(false);
   const [loading, setLoading] = useState(false);
   const [responseError, setResponseError] = useState<ResponseError | null>(null);
   const [semanticServiceCounters, setSemanticServiceCounters] = useState({
@@ -45,6 +47,7 @@ function WorkflowsView() {
     num_successful_pipelines: 0,
   });
   const [pipelinesMetadata, setPipelinesMetadata] = useState<PipelinesMetadata | undefined>(undefined);
+  const [statistics, setStatistics] = useState<IndexingStatistics | undefined>(undefined);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
@@ -266,6 +269,8 @@ function WorkflowsView() {
     questerClient.getPipelineDescription(pipelineId)
       .then((_info) => {
         healthyPipelineMap.set(pipelineId, true);
+        setShowStatistics(true); // Set state to show statistics
+        setStatistics(_info); // Set statistics
         // Optionally, you can display the info or perform any other actions
       })
       .catch((error) => {
@@ -274,7 +279,14 @@ function WorkflowsView() {
         // Handle the error as needed
       });
   };
-  
+
+  const renderInfoSection = () => {
+    if (showStatistics && statistics !== undefined) {
+      return <StatisticsView statistics={statistics} />;
+    }
+    return null;
+  };
+
   useEffect(() => {
     setLoading(true);
 
@@ -306,6 +318,7 @@ function WorkflowsView() {
         </QBreadcrumbs>
         {renderSemanticServiceCounters()}
         {renderPipelinesTable()}
+        {renderInfoSection()}
       </FullBoxContainer>
       {ApiUrlFooter('api/v1/semantics')}
     </ViewUnderAppBarBox>
