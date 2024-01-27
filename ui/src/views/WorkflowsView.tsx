@@ -280,9 +280,44 @@ function WorkflowsView() {
       });
   };
 
+  const closeStatisticsView = () => {
+    setShowStatistics(false);
+  };
+
   const renderInfoSection = () => {
     if (showStatistics && statistics !== undefined) {
-      return <StatisticsView statistics={statistics} />;
+      return (
+        <div style={{ position: 'relative' }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '0',
+              right: '0',
+              margin: '5px',
+              cursor: 'pointer',
+              zIndex: '1001', // Make sure close button is above overlay
+            }}
+            onClick={closeStatisticsView}
+          >
+            Close
+          </div>
+          <div
+            style={{
+              position: 'absolute',
+              top: '0',
+              left: '0',
+              right: '0',
+              bottom: '0',
+              background: 'rgba(255, 255, 255, 0.9)',
+              borderRadius: '5px',
+              padding: '10px',
+              zIndex: '1000',
+            }}
+          >
+            <StatisticsView statistics={statistics} />
+          </div>
+        </div>
+      );
     }
     return null;
   };
