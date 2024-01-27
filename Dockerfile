@@ -71,6 +71,8 @@ RUN apt-get update \
 ENV QUESTER_CONFIG=/quester/config/querent.config.yaml
 ENV QUESTER_DATA_DIR=/quester/quester_data
 ENV QUESTER_LISTEN_ADDRESS=0.0.0.0
+ENV PYTHONIOENCODING=utf-8
+
 
 RUN querent --version \
     && echo "Querent is ready to run!"

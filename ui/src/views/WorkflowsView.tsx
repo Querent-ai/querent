@@ -216,15 +216,14 @@ function WorkflowsView() {
     );
   };
 
-  const handleDeleteAction = (selectedRows: string[]) => {
-    // Implement your logic for delete action
-  
+  const handleDeleteAction = (selectedRows: string[]) => {  
     // Assuming you have an endpoint for deleting pipelines
     selectedRows.forEach((pipelineId) => {
       questerClient.deleteSemanticPipeline(pipelineId)
         .then(() => {
           console.log(`Pipeline with ID ${pipelineId} deleted successfully.`);
-          // Optionally, you can update your state or perform any other actions
+          // Fetch the updated data after deletion
+          fetchPipelinesData();
         })
         .catch((error) => {
           console.error(`Error deleting pipeline with ID ${pipelineId}:`, error);
@@ -232,7 +231,30 @@ function WorkflowsView() {
         });
     });
   };
-  
+
+  const fetchPipelinesData = () => {
+    setLoading(true);
+
+    // Fetch Semantic Service Counters
+    const fetchSemanticServiceCounters = questerClient.getSemanticServiceCounters();
+
+    // Fetch Pipelines Metadata
+    const fetchPipelinesMetadata = questerClient.getSemanticPipelinesMetadata();
+
+    // Execute both requests in parallel
+    Promise.all([fetchSemanticServiceCounters, fetchPipelinesMetadata])
+      .then(([counters, metadata]) => {
+        setResponseError(null);
+        setLoading(false);
+        setSemanticServiceCounters(counters);
+        setPipelinesMetadata(metadata);
+      })
+      .catch((error) => {
+        setLoading(false);
+        setResponseError(error);
+      });
+  };
+
   const handleInfoAction = (selectedRows: string[]) => {
     // Implement your logic for info action
   
