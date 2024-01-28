@@ -99,7 +99,7 @@ services:
       start_period: 3s
   
   querent:
-    image: querent/quester:v0.0.3-rc3
+    image: querent/quester:v0.0.3-rc5
     ports:
       - "1111:1111"
       - "2222:2222"

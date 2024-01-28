@@ -54,7 +54,7 @@ const SideBarWrapper = styled('div')({
 });
 
 const SideBar = () => {
-  const workflowsUrl = '/semantics';
+  const workflowsUrl = '/workflows';
   return (
     <SideBarWrapper sx={{ px: 0, py: 2 }}>
       <List dense={ true } sx={{ py: 0 }}>

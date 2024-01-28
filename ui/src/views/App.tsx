@@ -19,10 +19,11 @@ function App() {
         <FullBoxContainer sx={{flexDirection: 'row', p: 0}}>
           <CssBaseline />
           <TopBar />
+          <></>
           <SideBar />
           <Routes>
-            <Route path="/" element={<Navigate to="/semantics" />} />
-            <Route path="semantics" element={<WorkflowsView />} />
+            <Route path="/" element={<Navigate to="/workflows" />} />
+            <Route path="workflows" element={<WorkflowsView />} />
             <Route path="cluster" element={<ClusterView />} />
             <Route path="node-info" element={<NodeInfoView />} />
             <Route path="api-playground" element={<ApiView />} />

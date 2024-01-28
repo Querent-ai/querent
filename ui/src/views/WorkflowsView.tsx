@@ -14,6 +14,11 @@ import {
   CardContent,
   Card,
   Button,
+  Tooltip,
+  DialogTitle,
+  Dialog,
+  DialogActions,
+  DialogContent,
 } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { Client } from '../services/client';
@@ -38,6 +43,7 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
 
 function WorkflowsView() {
   let healthyPipelineMap: Map<string, boolean> = new Map();
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [showStatistics, setShowStatistics] = useState(false);
   const [loading, setLoading] = useState(false);
   const [responseError, setResponseError] = useState<ResponseError | null>(null);
@@ -48,11 +54,49 @@ function WorkflowsView() {
   });
   const [pipelinesMetadata, setPipelinesMetadata] = useState<PipelinesMetadata | undefined>(undefined);
   const [statistics, setStatistics] = useState<IndexingStatistics | undefined>(undefined);
+  const [pipelineId, setPipelineId] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const questerClient = useMemo(() => new Client(), []);
 
+  const handleDeleteAction = (selectedRows: string[]) => {
+    // Open the delete confirmation dialog
+    console.log(`Deleting pipelines with IDs: ${selectedRows}`);
+    setOpenDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      // Perform deletion logic here
+      await Promise.all(
+        selectedRows.map(async (pipelineId) => {
+          await questerClient.deleteSemanticPipeline(pipelineId);
+          console.log(`Pipeline with ID ${pipelineId} deleted successfully.`);
+        })
+      );
+  
+      // Close the delete confirmation dialog
+      setOpenDeleteDialog(false);
+      // sleep for 1 second to allow the backend to update
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Fetch updated data
+      await fetchPipelinesData();
+    } catch (error) {
+      setOpenDeleteDialog(false);
+      console.error('Error deleting pipelines:', error);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    // Close the delete confirmation dialog
+    setOpenDeleteDialog(false);
+  };
+
+  const toggleStatisticsView = () => {
+    setShowStatistics(false);
+  };
+  
   const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
       const allIds = pipelinesMetadata?.pipelines.map((pipeline) => pipeline.pipeline_id) || [];
@@ -130,27 +174,31 @@ function WorkflowsView() {
     return (
       <>
         <Box>
-          <Button
-            aria-label="Delete"
-            variant="contained"
-            color="error"
-            onClick={() => handleDeleteAction(selectedRows)}
-            disabled={selectedRows.length === 0}
-            style={{ backgroundColor: selectedRows.length > 0 ? '#ff1744' : 'inherit' }}
-          >
-            <DeleteIcon />
-          </Button>
+        <Tooltip title="Delete" arrow>
+            <Button
+              aria-label="Delete"
+              variant="contained"
+              color="error"
+              onClick={() => handleDeleteAction(selectedRows)}
+              disabled={selectedRows.length === 0}
+              style={{ backgroundColor: selectedRows.length > 0 ? '#ff1744' : 'inherit' }}
+            >
+              <DeleteIcon />
+            </Button>
+          </Tooltip>
           <></>
-          <Button
-            aria-label="Info"
-            variant="contained"
-            color="info"
-            onClick={() => handleInfoAction(selectedRows)}
-            disabled={selectedRows.length !== 1}
-            style={{ backgroundColor: selectedRows.length === 1 ? '#1976D2' : 'inherit' }}
-          >
-            <InfoIcon />
-          </Button>
+          <Tooltip title="Info" arrow>
+            <Button
+              aria-label="Info"
+              variant="contained"
+              color="info"
+              onClick={() => handleInfoAction(selectedRows)}
+              disabled={selectedRows.length !== 1}
+              style={{ backgroundColor: selectedRows.length === 1 ? '#1976D2' : 'inherit' }}
+            >
+              <InfoIcon />
+            </Button>
+          </Tooltip>
         </Box>
         <TableContainer component={Paper}>
           <Table>
@@ -166,7 +214,6 @@ function WorkflowsView() {
                 <StyledTableCell>Pipeline ID</StyledTableCell>
                 <StyledTableCell>Name</StyledTableCell>
                 <StyledTableCell>Status</StyledTableCell>
-                {/* Add more table headers based on your PipelinesMetadata structure */}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -192,7 +239,6 @@ function WorkflowsView() {
                   <TableCell>
                     {healthyPipelineMap.get(pipeline.pipeline_id) === true ? '✅' : '❌'}
                   </TableCell>
-                  {/* Add more table cells based on your PipelinesMetadata structure */}
                 </TableRow>
               ))}
               {emptyRows > 0 && (
@@ -219,22 +265,6 @@ function WorkflowsView() {
     );
   };
 
-  const handleDeleteAction = (selectedRows: string[]) => {  
-    // Assuming you have an endpoint for deleting pipelines
-    selectedRows.forEach((pipelineId) => {
-      questerClient.deleteSemanticPipeline(pipelineId)
-        .then(() => {
-          console.log(`Pipeline with ID ${pipelineId} deleted successfully.`);
-          // Fetch the updated data after deletion
-          fetchPipelinesData();
-        })
-        .catch((error) => {
-          console.error(`Error deleting pipeline with ID ${pipelineId}:`, error);
-          // Handle the error as needed
-        });
-    });
-  };
-
   const fetchPipelinesData = () => {
     setLoading(true);
 
@@ -259,9 +289,11 @@ function WorkflowsView() {
   };
 
   const handleInfoAction = (selectedRows: string[]) => {
-    // Implement your logic for info action
-  
-    // Assuming you have an endpoint for getting pipeline info
+    if (showStatistics) {
+      setShowStatistics(false);
+      setStatistics(undefined);
+      return;
+    }
     const pipelineId = selectedRows[0];
     if (pipelineId === undefined) {
       return;
@@ -271,7 +303,7 @@ function WorkflowsView() {
         healthyPipelineMap.set(pipelineId, true);
         setShowStatistics(true); // Set state to show statistics
         setStatistics(_info); // Set statistics
-        // Optionally, you can display the info or perform any other actions
+        setPipelineId(pipelineId); // Set pipeline ID
       })
       .catch((error) => {
         healthyPipelineMap.set(pipelineId, false);
@@ -280,48 +312,17 @@ function WorkflowsView() {
       });
   };
 
-  const closeStatisticsView = () => {
-    setShowStatistics(false);
-  };
-
   const renderInfoSection = () => {
     if (showStatistics && statistics !== undefined) {
       return (
-        <div style={{ position: 'relative' }}>
-          <div
-            style={{
-              position: 'absolute',
-              top: '0',
-              right: '0',
-              margin: '5px',
-              cursor: 'pointer',
-              zIndex: '1001', // Make sure close button is above overlay
-            }}
-            onClick={closeStatisticsView}
-          >
-            Close
-          </div>
-          <div
-            style={{
-              position: 'absolute',
-              top: '0',
-              left: '0',
-              right: '0',
-              bottom: '0',
-              background: 'rgba(255, 255, 255, 0.9)',
-              borderRadius: '5px',
-              padding: '10px',
-              zIndex: '1000',
-            }}
-          >
-            <StatisticsView statistics={statistics} />
-          </div>
+        <div className="sidebar">
+          <StatisticsView pipelineId={pipelineId ?? ""} statistics={statistics} onClose={toggleStatisticsView} />
         </div>
       );
     }
     return null;
   };
-
+  
   useEffect(() => {
     setLoading(true);
 
@@ -353,9 +354,25 @@ function WorkflowsView() {
         </QBreadcrumbs>
         {renderSemanticServiceCounters()}
         {renderPipelinesTable()}
-        {renderInfoSection()}
+        {showStatistics && renderInfoSection()}
       </FullBoxContainer>
       {ApiUrlFooter('api/v1/semantics')}
+      <Dialog open={openDeleteDialog} onClose={handleCancelDelete}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete the selected pipelines?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained">
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ViewUnderAppBarBox>
   );
 }

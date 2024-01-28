@@ -75,7 +75,7 @@ function NodeInfoView() {
       return <FullBoxContainer sx={{ px: 0 }}>
         <TabContext value={tabIndex}>
           <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-            <TabList onChange={handleTabIndexChange} aria-label="Index tabs">
+            <TabList onChange={handleTabIndexChange} aria-label="Node tabs">
               <Tab label="Node config" value="1" />
               <Tab label="Build info" value="2" />
             </TabList>

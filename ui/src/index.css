@@ -11,3 +11,39 @@ body {
 div.swagger-ui div.information-container {
     display: none;
 }
+
+.close-button {
+  position: absolute;
+  top: 10px; /* Adjust the value as needed */
+  right: 10px; /* Adjust the value as needed */
+}
+
+.sidebar {
+  width: 300px;
+  position: fixed;
+  background-color: #fff;
+  box-shadow: -1px 0 4px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+.statistics-sidebar {
+  max-width: 300px; /* Set the maximum width of the sidebar */
+  height: 100%;
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  right: 0;
+  padding: 8px; /* Add padding as needed */
+  box-shadow: -1px 0 4px rgba(0, 0, 0, 0.1); /* Optional: Add shadow for a sidebar effect */
+  z-index: 1000; /* Set a higher z-index to ensure the sidebar appears above other elements */
+}
+
+.statistics-sidebar-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.statistics-sidebar-content > * {
+  margin-bottom: 8px; /* Adjust the margin between items */
+}
