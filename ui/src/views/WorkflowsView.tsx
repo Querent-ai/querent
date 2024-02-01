@@ -42,7 +42,7 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
 }));
 
 function WorkflowsView() {
-  let healthyPipelineMap: Map<string, boolean> = new Map();
+  const healthyPipelineMap: Map<string, boolean> = new Map();
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [showStatistics, setShowStatistics] = useState(false);
   const [loading, setLoading] = useState(false);
