@@ -1,6 +1,6 @@
 
 
-import { Cluster, IndexingStatistics, PipelinesMetadata, QuesterBuildInfo, SemanticServiceCounters } from "../utils/models";
+import { Cluster, IndexingStatistics, NodeConfig, PipelinesMetadata, QuesterBuildInfo, SemanticServiceCounters } from "../utils/models";
 
 export class Client {
   private readonly _host: string
@@ -27,6 +27,10 @@ export class Client {
 
   // eslint-disable-next-line
   async config(): Promise<Record<string, any>> {
+    return await this.fetch(`${this.apiRoot()}config`, this.defaultGetRequestParams());
+  }
+
+  async node_config(): Promise<NodeConfig> {
     return await this.fetch(`${this.apiRoot()}config`, this.defaultGetRequestParams());
   }
 

@@ -233,3 +233,39 @@ export interface IndexingStatistics {
   total_vector_events: number;
   total_vector_events_sent: number;
 }
+
+export interface RestConfig {
+  listen_port: number;
+  cors_allow_origins: string[];
+  extra_headers: Record<string, string>;
+}
+
+export interface StorageConfig {
+  name: string;
+  storage_type: string;
+  config: Record<string, any>; // Adjust this if you know specific keys and types
+}
+
+export interface JaegerConfig {
+  enable_endpoint: boolean;
+  lookback_period_hours: number;
+  max_trace_duration_secs: number;
+  max_fetch_spans: number;
+}
+
+export interface NodeConfig {
+  cluster_id: string;
+  node_id: string;
+  listen_address: string;
+  advertise_address: string;
+  gossip_listen_port: number;
+  grpc_listen_port: number;
+  rest_config: RestConfig;
+  peer_seeds: string[];
+  cpu_capacity: number;
+  storage_configs: Record<string, StorageConfig>;
+  tracing: {
+    jaeger: JaegerConfig;
+  };
+}
+
