@@ -34,26 +34,34 @@ async def print_querent(config, text: str):
 
     try:
         import querent
-        print("✨ Querent imported successfully ✨")
+        print("✨ Querent for ingestion imported successfully ✨")
         querent_started = True
         await querent.workflow.start_ingestion(config)
     except Exception as e:
         querent_started = False
-        print("❌ Failed to import querent: " + str(e))
+        print("❌ Failed to import querent for ingestion: " + str(e))
 
     while True:
         if querent_started:
             print("✨ Querent is active ✨")
         else:
-            print("⌛ Waiting for ingestion to start...sending dummy events")
-            # Simulate token ingestion if querent is not started
-            ingested_tokens = {
-                "data": ["dummy", "tokens"],  # Replace with actual token data
-                "file": "dummy_file.txt",     # Replace with the actual file name
-                "is_token_stream": True
-            }
-            config['workflow']['tokens_feader'].send_tokens_in_rust(ingested_tokens)
-            print("📤 Sent dummy IngestedTokens")
+            print("⌛ Waiting for ingestion to start...")
+
+            # Check if tokens_feader exists and has the required methods
+            tokens_feader = config['workflow'].get('tokens_feader')
+            if tokens_feader and hasattr(tokens_feader, 'send_tokens_in_rust') and hasattr(tokens_feader, 'receive_tokens_in_python'):
+                ingested_tokens = {
+                    "data": ["dummy", "tokens"],  # Replace with actual token data
+                    "file": "dummy_file.txt",     # Replace with the actual file name
+                    "is_token_stream": True
+                }
+                try:
+                    tokens_feader.send_tokens_in_rust(ingested_tokens)
+                    print("📤 Sent dummy IngestedTokens")
+                except Exception as e:
+                    print(f"❌ Error sending tokens: {e}")
+            else:
+                print("❌ tokens_feader is not properly configured.")
 
         message_state = config['workflow']['channel'].receive_in_python()
 
@@ -66,6 +74,8 @@ async def print_querent(config, text: str):
             else:
                 print("📬 Received message of type: " + message_type)
                 # Handle other message types...
+
+        await asyncio.sleep(1)  # Adjust the sleep duration as needed
 
 "#;
 
