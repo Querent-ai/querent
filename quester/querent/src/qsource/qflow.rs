@@ -1,9 +1,10 @@
-use actors::{ActorExitStatus, MessageBus};
+use actors::{ActorExitStatus, ActorHandle, MessageBus};
 use async_trait::async_trait;
-use common::{EventsBatch, EventsCounter};
+use common::{EventsBatch, EventsCounter, TerimateSignal};
 use log;
 use querent_synapse::{
 	callbacks::{interface::EventHandler, EventState, EventType},
+	comm::IngestedTokens,
 	config::{config::WorkflowConfig, Config},
 	querent::{Querent, QuerentError, Workflow, WorkflowBuilder},
 };
@@ -16,8 +17,8 @@ use tokio::{
 use tracing::error;
 
 use crate::{
-	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
-	EMIT_BATCHES_TIMEOUT,
+	Collection, EventLock, EventStreamer, NewEventLock, Source, SourceContext, TriggerCollection,
+	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
 
 pub struct Qflow {
@@ -27,11 +28,20 @@ pub struct Qflow {
 	pub counters: Arc<EventsCounter>,
 	event_sender: mpsc::Sender<(EventType, EventState)>,
 	event_receiver: mpsc::Receiver<(EventType, EventState)>,
+	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
+	collection_handler: Option<ActorHandle<Collection>>,
+	// terimatesignal to kill actors in the pipeline.
+	pub terminate_sig: TerimateSignal,
 }
 
 impl Qflow {
-	pub fn new(id: String, workflow: Workflow) -> Self {
+	pub fn new(
+		id: String,
+		workflow: Workflow,
+		token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
+		terminate_sig: TerimateSignal,
+	) -> Self {
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 		let workflow_event_handler: EventHandler = EventHandler::new(Some(event_sender.clone()));
 		let mut config_copy = workflow.config.unwrap_or(Config::default());
@@ -64,6 +74,9 @@ impl Qflow {
 			event_sender,
 			event_receiver,
 			workflow_handle: None,
+			collection_handler: None,
+			token_sender,
+			terminate_sig,
 		}
 	}
 
@@ -86,11 +99,26 @@ impl Source for Qflow {
 			}
 			return Ok(())
 		}
+		// Start Collection Actor
+		let collector = Collection::new(
+			self.id.clone(),
+			self.workflow.clone(),
+			self.event_sender.clone(),
+			self.token_sender.clone(),
+		);
+
+		let (collector_message_bus, collector_inbox) =
+			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(collector);
+		self.collection_handler = Some(collector_inbox);
+		// Start the collector actor via TriggerCollection message
+		let trigger_collection = TriggerCollection;
+		collector_message_bus.send_message(trigger_collection).await?;
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(
 				anyhow::anyhow!("Failed to initialize querent: {:?}", e).into(),
 			)
 		})?;
+
 		querent.add_workflow(self.workflow.clone()).map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to add workflow: {:?}", e).into())
 		})?;
@@ -234,6 +262,10 @@ impl Source for Qflow {
 		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
 		self.workflow_handle.take().unwrap().abort();
+		if self.collection_handler.is_none() {
+			return Ok(());
+		}
+		self.collection_handler.take().unwrap().kill().await;
 		Ok(())
 	}
 }

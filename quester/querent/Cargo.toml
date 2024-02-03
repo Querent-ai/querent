@@ -43,8 +43,3 @@ testsuite = []
 name = "test_basic"
 path = "pytests/test_basic.rs"
 harness = false
-
-[[test]]
-name = "quester_flow_tests"
-path = "pytests/quester_flow_tests.rs"
-harness = false

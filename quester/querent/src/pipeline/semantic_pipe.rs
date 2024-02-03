@@ -228,6 +228,7 @@ impl SemanticPipeline {
 			.spawn_ctx()
 			.create_messagebus::<SourceActor>("SourceActor", QueueCapacity::Unbounded);
 		let current_timestamp = chrono::Utc::now().timestamp_millis() as u64;
+
 		// Storage mapper actor
 		let storage_mapper = StorageMapper::new(
 			qflow_id.clone(),
@@ -258,7 +259,12 @@ impl SemanticPipeline {
 			.spawn(event_streamer);
 
 		// Qflow actor
-		let qflow_source = Qflow::new(qflow_id.clone(), self.settings.qflow.clone());
+		let qflow_source = Qflow::new(
+			qflow_id.clone(),
+			self.settings.qflow.clone(),
+			self.token_sender.clone(),
+			self.terminate_sig.clone(),
+		);
 		let qflow_source_actor =
 			SourceActor { source: Box::new(qflow_source), event_streamer_messagebus };
 		let (qflow_message_bus, qflow_inbox) = ctx
@@ -283,10 +289,13 @@ impl SemanticPipeline {
 			timestamp: chrono::Utc::now().timestamp_millis() as f64,
 			payload: "Shutdown signal received".to_string(),
 		};
-		if let Some(sender) = self.channel_sender.as_ref() {
-			sender
-				.send((message_state.clone().message_type, message_state.clone()))
-				.unwrap();
+		// send 5 times to make sure the message is received
+		for _ in 0..5 {
+			if let Some(sender) = self.channel_sender.as_ref() {
+				sender
+					.send((message_state.clone().message_type, message_state.clone()))
+					.unwrap();
+			}
 		}
 		self.terminate_sig.kill();
 		if let Some(handles) = self.handlers.take() {
