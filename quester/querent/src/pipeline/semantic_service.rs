@@ -140,6 +140,7 @@ impl SemanticService {
 		let (channel_sender, channel_receiver) = crossbeam_channel::unbounded();
 		let (py_loop_side_sender, rust_loop_side_receiver) = crossbeam_channel::unbounded();
 		let channel_communicator: ChannelHandler = ChannelHandler::new(
+			Some(token_sender.clone()),
 			Some(token_receiver.clone()),
 			Some(channel_receiver.clone()),
 			Some(py_loop_side_sender.clone()),
