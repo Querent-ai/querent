@@ -43,7 +43,6 @@ format-check:
 .PHONY: build
 build:
 	@echo "Running Cargo build..."
-	@cargo install maturin
 	@cargo build --release --all-features
 
 .PHONY: doc
