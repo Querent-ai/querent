@@ -1,46 +1,48 @@
-use std::collections::HashMap;
-
 use querent_synapse::comm::IngestedTokens;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use crate::{
+	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
+	GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig, S3CollectorConfig,
+	SlackCollectorConfig,
+};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
 #[serde(deny_unknown_fields)]
 pub enum SupportedSources {
 	#[serde(rename = "azure")]
-	AzureBlob,
+	AzureBlob(AzureCollectorConfig),
 	#[serde(rename = "gcs")]
-	GCS,
+	GCS(GCSCollectorConfig),
 	#[serde(rename = "s3")]
-	S3,
+	S3(S3CollectorConfig),
 	#[serde(rename = "jira")]
-	Jira,
+	Jira(JiraCollectorConfig),
 	#[serde(rename = "drive")]
-	Drive,
-	#[serde(rename = "onedrive")]
-	OneDrive,
+	Drive(GoogleDriveCollectorConfig),
 	#[serde(rename = "email")]
-	Email,
+	Email(EmailCollectorConfig),
 	#[serde(rename = "dropbox")]
-	Dropbox,
+	Dropbox(DropBoxCollectorConfig),
 	#[serde(rename = "github")]
-	Github,
+	Github(GithubCollectorConfig),
 	#[serde(rename = "slack")]
-	Slack,
+	Slack(SlackCollectorConfig),
 }
 
-impl Into<String> for SupportedSources {
-	fn into(self) -> String {
+impl ToString for SupportedSources {
+	fn to_string(&self) -> String {
 		match self {
-			SupportedSources::AzureBlob => "azure".to_string(),
-			SupportedSources::GCS => "gcs".to_string(),
-			SupportedSources::S3 => "s3".to_string(),
-			SupportedSources::Jira => "jira".to_string(),
-			SupportedSources::Drive => "drive".to_string(),
-			SupportedSources::OneDrive => "onedrive".to_string(),
-			SupportedSources::Email => "email".to_string(),
-			SupportedSources::Dropbox => "dropbox".to_string(),
-			SupportedSources::Github => "github".to_string(),
-			SupportedSources::Slack => "slack".to_string(),
+			SupportedSources::AzureBlob(_) => "azure".to_string(),
+			SupportedSources::GCS(_) => "gcs".to_string(),
+			SupportedSources::S3(_) => "s3".to_string(),
+			SupportedSources::Jira(_) => "jira".to_string(),
+			SupportedSources::Drive(_) => "drive".to_string(),
+			SupportedSources::Email(_) => "email".to_string(),
+			SupportedSources::Dropbox(_) => "dropbox".to_string(),
+			SupportedSources::Github(_) => "github".to_string(),
+			SupportedSources::Slack(_) => "slack".to_string(),
 		}
 	}
 }
@@ -73,7 +75,6 @@ pub struct EngineConfig {
 #[serde(deny_unknown_fields)]
 pub struct CollectorConfig {
 	pub name: String,
-	pub config: HashMap<String, String>,
 	pub backend: SupportedSources,
 }
 

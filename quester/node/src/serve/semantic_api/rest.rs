@@ -5,7 +5,9 @@ use common::{
 		PipelineMetadata, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse,
 		SendIngestedTokens, SupportedBackend, SupportedSources,
 	},
-	IndexingStatistics,
+	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
+	GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig,
+	S3CollectorConfig, SlackCollectorConfig,
 };
 use futures_util::StreamExt;
 use querent::{
@@ -44,6 +46,15 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PipelinesMetadata,
 		PipelineMetadata,
 		OpenAIConfig,
+		GCSCollectorConfig,
+		S3CollectorConfig,
+		JiraCollectorConfig,
+		SlackCollectorConfig,
+		AzureCollectorConfig,
+		GoogleDriveCollectorConfig,
+		EmailCollectorConfig,
+		DropBoxCollectorConfig,
+		GithubCollectorConfig,
 	))
 )]
 pub struct SemanticApi;

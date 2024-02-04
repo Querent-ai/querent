@@ -1,7 +1,7 @@
 use pyo3::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct AzureCollectorConfig {
 	pub connection_string: String,
@@ -12,7 +12,7 @@ pub struct AzureCollectorConfig {
 	pub prefix: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct S3CollectorConfig {
 	pub access_key: String,
@@ -21,14 +21,14 @@ pub struct S3CollectorConfig {
 	pub bucket: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct GCSCollectorConfig {
 	pub credentials: String,
 	pub bucket: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct SlackCollectorConfig {
 	pub access_token: String,
@@ -36,11 +36,10 @@ pub struct SlackCollectorConfig {
 	pub cursor: Option<String>,
 	pub include_all_metadata: Option<bool>,
 	pub includive: Option<bool>,
-	pub latest: Option<bool>,
 	pub limit: Option<u64>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct DropBoxCollectorConfig {
 	pub dropbox_app_key: String,
@@ -49,7 +48,7 @@ pub struct DropBoxCollectorConfig {
 	pub dropbox_refresh_token: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct GithubCollectorConfig {
 	pub github_username: String,
@@ -57,7 +56,7 @@ pub struct GithubCollectorConfig {
 	pub repository: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct GoogleDriveCollectorConfig {
 	pub drive_refresh_token: String,
@@ -69,7 +68,7 @@ pub struct GoogleDriveCollectorConfig {
 	pub specific_file_type: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct EmailCollectorConfig {
 	pub imap_server: String,
@@ -81,7 +80,7 @@ pub struct EmailCollectorConfig {
 	pub imap_certfile: Option<String>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema)]
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
 #[pyclass]
 pub struct JiraCollectorConfig {
 	pub jira_server: String,
@@ -92,8 +91,6 @@ pub struct JiraCollectorConfig {
 	pub jira_api_token: Option<String>,
 	pub jira_start_at: Option<u16>,
 	pub jira_max_results: Option<u16>,
-	pub jira_fields: Option<(String, Vec<String>)>,
-	pub jira_expand: Option<String>,
 	pub jira_keyfile: Option<String>,
 	pub jira_certfile: Option<String>,
 	pub jira_verify: Option<bool>,
