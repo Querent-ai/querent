@@ -1,4 +1,4 @@
-use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
+use actors::{Actor, ActorContext, ActorExitStatus, QueueCapacity};
 use async_trait::async_trait;
 use common::{EventsCounter, RuntimeType};
 use log;
@@ -130,44 +130,7 @@ impl Collection {
 impl Actor for Collection {
 	type ObservableState = ();
 
-	fn observable_state(&self) -> Self::ObservableState {
-		()
-	}
-
-	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
-	}
-
-	fn runtime_handle(&self) -> Handle {
-		RuntimeType::Blocking.get_runtime_handle()
-	}
-
-	#[inline]
-	fn yield_after_each_message(&self) -> bool {
-		false
-	}
-	async fn finalize(
-		&mut self,
-		_exit_status: &ActorExitStatus,
-		_ctx: &ActorContext<Self>,
-	) -> anyhow::Result<()> {
-		self.workflow_handle.take().unwrap().abort();
-		Ok(())
-	}
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TriggerCollection;
-
-#[async_trait]
-impl Handler<TriggerCollection> for Collection {
-	type Reply = ();
-
-	async fn handle(
-		&mut self,
-		_trigger: TriggerCollection,
-		_ctx: &ActorContext<Collection>,
-	) -> Result<(), ActorExitStatus> {
+	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
 			if self.workflow_handle.as_ref().unwrap().is_finished() {
 				error!("Collection is already finished");
@@ -233,6 +196,30 @@ impl Handler<TriggerCollection> for Collection {
 				},
 			}
 		}));
+		Ok(())
+	}
+	fn observable_state(&self) -> Self::ObservableState {
+		()
+	}
+
+	fn queue_capacity(&self) -> QueueCapacity {
+		QueueCapacity::Bounded(10)
+	}
+
+	fn runtime_handle(&self) -> Handle {
+		RuntimeType::Blocking.get_runtime_handle()
+	}
+
+	#[inline]
+	fn yield_after_each_message(&self) -> bool {
+		false
+	}
+	async fn finalize(
+		&mut self,
+		_exit_status: &ActorExitStatus,
+		_ctx: &ActorContext<Self>,
+	) -> anyhow::Result<()> {
+		self.workflow_handle.take().unwrap().abort();
 		Ok(())
 	}
 }

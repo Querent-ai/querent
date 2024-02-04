@@ -14,10 +14,10 @@ use tokio::{
 	task::JoinHandle,
 	time::{self},
 };
-use tracing::error;
+use tracing::{error, info};
 
 use crate::{
-	Collection, EventLock, EventStreamer, NewEventLock, Source, SourceContext, TriggerCollection,
+	Collection, EventLock, EventStreamer, NewEventLock, Source, SourceContext,
 	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
 
@@ -107,19 +107,20 @@ impl Source for Qflow {
 			self.token_sender.clone(),
 		);
 
-		let (collector_message_bus, collector_inbox) =
+		info!("Starting the collector actor 📚");
+		let (_collector_message_bus, collector_inbox) =
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(collector);
 		self.collection_handler = Some(collector_inbox);
-		// Start the collector actor via TriggerCollection message
-		let trigger_collection = TriggerCollection;
-		collector_message_bus.send_message(trigger_collection).await?;
+
+		info!("Starting the engine 🚀");
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(
-				anyhow::anyhow!("Failed to initialize querent: {:?}", e).into(),
+				anyhow::anyhow!("Failed to initialize collector: {:?}", e).into(),
 			)
 		})?;
 
 		querent.add_workflow(self.workflow.clone()).map_err(|e| {
+			error!("Failed to add workflow: {:?}", e);
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to add workflow: {:?}", e).into())
 		})?;
 
