@@ -1,8 +1,11 @@
 use actors::{AskError, MessageBus, Observe};
 use common::{
-	CollectorConfig, EngineConfig, GetAllPipelines, IndexingStatistics, NamedWorkflows,
-	OpenAIConfig, PipelineMetadata, PipelinesMetadata, SemanticPipelineRequest,
-	SemanticPipelineResponse, SendIngestedTokens, SupportedBackend, SupportedSources,
+	semantic_api::{
+		CollectorConfig, EngineConfig, GetAllPipelines, NamedWorkflows, OpenAIConfig,
+		PipelineMetadata, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse,
+		SendIngestedTokens, SupportedBackend, SupportedSources,
+	},
+	IndexingStatistics,
 };
 use futures_util::StreamExt;
 use querent::{

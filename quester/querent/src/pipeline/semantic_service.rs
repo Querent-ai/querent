@@ -6,8 +6,8 @@ use actors::{
 use async_trait::async_trait;
 use cluster::Cluster;
 use common::{
-	GetAllPipelines, IndexingStatistics, MessageStateBatches, PipelineMetadata, PubSubBroker,
-	SendIngestedTokens,
+	semantic_api::{GetAllPipelines, PipelineMetadata, SendIngestedTokens},
+	IndexingStatistics, MessageStateBatches, PubSubBroker,
 };
 use querent_synapse::comm::{ChannelHandler, IngestedTokens, MessageState, MessageType};
 use serde::{Deserialize, Serialize};

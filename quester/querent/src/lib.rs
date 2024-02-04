@@ -3,7 +3,10 @@ use std::collections::HashMap;
 
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
-use common::{NamedWorkflows, NodeConfig, PubSubBroker, SemanticPipelineRequest};
+use common::{
+	semantic_api::{NamedWorkflows, SemanticPipelineRequest},
+	NodeConfig, PubSubBroker,
+};
 pub use qsource::*;
 pub mod events;
 pub use events::*;

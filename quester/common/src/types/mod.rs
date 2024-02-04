@@ -6,5 +6,6 @@ pub mod event_streamer;
 pub use event_streamer::*;
 pub mod storage_mapper;
 pub use storage_mapper::*;
+pub mod collector;
 pub mod semantic_api;
-pub use semantic_api::*;
+pub use collector::*;
