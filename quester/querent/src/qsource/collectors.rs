@@ -10,7 +10,7 @@ use querent_synapse::{
 };
 use std::sync::Arc;
 use tokio::{runtime::Handle, sync::mpsc, task::JoinHandle};
-use tracing::error;
+use tracing::{error, info};
 
 use crate::EventLock;
 
@@ -157,6 +157,7 @@ impl Actor for Collection {
 			match result {
 				Ok(()) => {
 					// Handle the success
+					info!("Successfully started the workflow with id: {}", workflow_id);
 					log::info!("Successfully started the workflow with id: {}", workflow_id);
 					// send yourself a success message to stop
 					event_sender
@@ -175,6 +176,10 @@ impl Actor for Collection {
 				},
 				Err(err) => {
 					// Handle the error, e.g., log it
+					error!(
+						"Failed to run the workflow with id: {} and error: {:?}",
+						workflow_id, err
+					);
 					log::error!(
 						"Failed to run the workflow with id: {} and error: {:?}",
 						workflow_id,
