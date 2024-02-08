@@ -1,3 +1,37 @@
+---
+title: Quickstart
+sidebar_position: 1
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+In this quick start guide, we will install Querent, create an index, add documents and finally execute search queries. All the Querent commands used in this guide are documented [in the CLI reference documentation](/docs/reference/cli.md).
+
+## Install Querent using Querent installer
+
+The Querent installer automatically picks the correct binary archive for your environment and then downloads and unpacks it in your working directory.
+This method works only for [some OS/architectures](installation.md#download), and you will also need to install some [external dependencies](installation.md#note-on-external-dependencies).
+
+```bash
+pip3 install querent
+curl -L https://install.querent.xyz | sh
+```
+
+```bash
+cd ./querent-v*/
+./querent --version
+```
+
+You can now move this executable directory wherever sensible for your environment and possibly add it to your `PATH` environment.
+
+## Use Querent's Docker image
+
+You can also pull and run the Querent binary in an isolated Docker container.
+
+Here is an example docker compose environment:
+
+```yaml
 version: '3'
 services:
   etcd:
@@ -126,3 +160,45 @@ services:
 
 networks:
   querent:
+
+```
+
+```bash
+docker-compose up
+```
+
+## Start Querent server using standalone binary
+
+<Tabs>
+
+<TabItem value="cli" label="CLI">
+
+```bash
+./querent serve --config ./config/querent.config.yaml
+```
+
+</TabItem>
+
+<TabItem value="docker" label="Docker">
+
+```bash
+docker run --rm -v $(pwd)/querent_data:/querent/querent_data -p 127.0.0.1:7280:7280 querent/querent env QUERENT_NODE_CONFIG=/path/to/querent.config.yaml
+```
+
+</TabItem>
+
+</Tabs>
+
+Tips: you can use the environment variable `RUST_LOG` to control querent verbosity.
+
+Check it's working by browsing the [UI at http://localhost:111](http://localhost:1111) or do a simple GET with cURL:
+
+```bash
+curl http://localhost:7280/api/v1/version
+```
+
+Here are the links you check:
+
+- [Swagger API documentation](http://localhost:1111/swagger-ui)
+
+- [Querent Dashboard](http://localhost:1111)

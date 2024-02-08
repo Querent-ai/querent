@@ -22,7 +22,7 @@ A commented example is available here: [quester.config.yaml](https://github.com/
 | `gossip_listen_port`| The port which to listen for the Gossip cluster membership service (UDP).                         | `QUESTER_GOSSIP_LISTEN_PORT`| `rest.listen_port`          |
 | `grpc_listen_port` | The port on which gRPC services listen for traffic.                                               | `QW_GRPC_LISTEN_PORT`     | `rest.listen_port + 1`       |
 | `peer_seeds`       | List of IP addresses or hostnames used to bootstrap the cluster and discover the complete set of nodes. This list may contain the current node address and does not need to be exhaustive. | `QUESTER_PEER_SEEDS`     |                              |
-| `data_dir`         | Path to directory where data (tmp data, splits kept for caching purpose) is persisted. This is mostly used in indexing. | `QUESTER_DATA_DIR`        | `./quester_data`             |
+| `data_dir`         | Path to directory where data (tmp data, splits kept for caching purpose) is persisted. This is mostly used in indexing. | `QUESTER_DATA_DIR`        | `./querent_data`             |
 |                    | Log level of Querent. Can be a direct log level, or a comma separated list of `module_name=level`  | `RUST_LOG`                | `info`                       |
 
 ## REST configuration

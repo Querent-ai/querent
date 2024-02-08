@@ -1,0 +1,181 @@
+---
+title: Installation
+sidebar_position: 2
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { useDocsVersion } from '@docusaurus/theme-common/internal';
+
+export const RenderIf = ({children, condition}) => (
+    <>
+        {condition && children}
+    </>
+);
+
+Querent compiles to a single binary and we provide different methods to install it:
+
+- Linux/MacOS binaries that you can [download manually](#download) or with the [install script](#install-script)
+- [Docker image](#use-the-docker-image)
+- [Helm chart](/docs/deployment/kubernetes.md)
+
+## Prerequisites
+
+Querent is officially only supported for Linux. Freebsd and MacOS are not officially supported, but should work as well.
+
+Querent supplies binaries for x86-64 and aarch64. No special instruction set is required, but on x86-64 SSE3 is recommended.
+Support of aarch64 is currently experimental.
+
+## Download
+
+<RenderIf condition={useDocsVersion().version == 'current'}>
+
+Version: nightly -
+License: [BSL 1.1](https://github.com/querent-ai/quester/blob/main/LICENSE.md) -
+Downloads `.tar.gz`:
+
+- [Linux ARM64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-aarch64-unknown-linux-gnu.tar.gz)
+- [Linux x86_64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-x86_64-unknown-linux-gnu.tar.gz)
+- [macOS aarch64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-aarch64-apple-darwin.tar.gz)
+- [macOS x86_64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-x86_64-apple-darwin.tar.gz)
+
+</RenderIf>
+
+<!-- Bellow is the set of links to edit when a new version is released -->
+<RenderIf condition={useDocsVersion().version != 'current'}>
+
+version: 0.7.1 - [Release notes](https://github.com/querent-ai/quester/releases/tag/v0.7.1) - [Changelog](https://github.com/querent-ai/quester/blob/main/CHANGELOG.md)
+License: [AGPL V3](https://github.com/querent-ai/quester/blob/main/LICENSE.md)
+Downloads `.tar.gz`:
+
+- [Linux ARM64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-aarch64-unknown-linux-gnu.tar.gz)
+- [Linux x86_64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-x86_64-unknown-linux-gnu.tar.gz)
+- [macOS aarch64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-aarch64-apple-darwin.tar.gz)
+- [macOS x86_64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-x86_64-apple-darwin.tar.gz)
+
+</RenderIf>
+
+Check out the available builds in greater detail on [GitHub](https://github.com/querent-ai/quester/releases)
+
+### Note on external dependencies
+
+Querent depends on the following external libraries to work correctly:
+
+- [`querent`](https://pypi.org/project/querent/) python package to run semantic workflows: `pip install querent`. Requiring python 3.9 or later.
+- `libssl`: the industry defacto cryptography library.
+These libraries can be installed on your system using the native package manager.
+You can install these dependencies using the following command:
+
+<Tabs>
+
+<TabItem value="ubuntu" label="Ubuntu">
+
+```bash
+apt-get -y update && apt-get -y install libssl
+```
+
+</TabItem>
+
+<TabItem value="aws-linux" label="AWS Linux">
+
+```bash
+yum -y update && yum -y install openssl
+```
+
+</TabItem>
+
+<TabItem value="arch-linux" label="Arch Linux">
+
+```bash
+pacman -S openssl
+```
+
+</TabItem>
+
+</Tabs>
+
+Additionally it requires a few more dependencies to compile it. These dependencies are not required on production system:
+
+- `clang`: used to compile some dependencies.
+- `protobuf-compiler`: used to compile protobuf definitions.
+- `libssl-dev`: headers for libssl.
+- `pkg-config`: used to locate libssl.
+- `cmake`: used to build librdkafka, for kafka support.
+These dependencies can be installed on your system using the native package manager.
+You can install these dependencies using the following command:
+
+<Tabs>
+
+<TabItem value="ubuntu" label="Ubuntu">
+
+```bash
+apt install -y clang protobuf-compiler libssl-dev pkg-config cmake
+```
+
+</TabItem>
+
+<TabItem value="aws-linux" label="AWS Linux">
+
+```bash
+yum -y update && yum -y install clang openssl-devel pkgconfig cmake3
+# amazonlinux only has protobuf-compiler 2.5, we need something much more up to date.
+wget https://github.com/protocolbuffers/protobuf/releases/download/v21.9/protoc-21.9-linux-x86_64.zip
+sudo unzip protoc-21.9-linux-x86_64.zip -d /usr/local
+# amazonlinux use cmake2 as cmake, we need cmake3
+ln -s /usr/bin/cmake3 /usr/bin/cmake
+```
+
+</TabItem>
+
+<TabItem value="arch-linux" label="Arch Linux">
+
+```bash
+pacman -S clang protobuf openssl pkg-config cmake make
+```
+
+</TabItem>
+
+</Tabs>
+
+## Install script
+
+To easily install Querent on your machine, just run the command below from your preferred shell.
+The script detects the architecture and then downloads the correct binary archive for the machine.
+
+```bash
+curl -L https://install.querent.io | sh
+```
+
+All this script does is download the correct binary archive for your machine and extracts it in the current working directory. This means you can download any desired archive from [github](https://github.com/querent-ai/quester/releases) that matches your OS architecture and manually extract it anywhere.
+
+Once installed or extracted, all of Querent's installation files can be found in a directory named `querent-{version}` where `version` is the corresponding version of Querent. This directory has the following layout:
+
+```bash
+querent-{version}
+    ├── config
+    │   └── querent.yaml
+    ├── LICENSE_AGPLv3.0.txt
+    ├── querent
+    └── qwdata
+```
+
+- `config/querent.yaml`: is the default configuration file.
+- `LICENSE_AGPLv3.0.txt`: the license file.
+- `querent`: the querent executable binary.
+- `querent_data/`: the default data directory.
+
+## Use the Docker image
+
+If you use Docker, this might be one of the quickest way to get going.
+The following command will pull the image from [Docker Hub](https://hub.docker.com/r/querent/querent)
+and start a container ready to execute Querent commands.
+
+```bash
+docker run --rm querent/querent --version
+
+# If you are using Apple silicon based macOS system you might need to specify the platform.
+# You can also safely ignore jemalloc warnings.
+docker run --rm --platform linux/amd64 querent/querent --version
+```
+
+To get the full gist of this, follow the [Quickstart guide](./quickstart.md).

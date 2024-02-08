@@ -27,7 +27,7 @@ RUN apt-get update \
 RUN apt-get update \
     && apt-get install -y ca-certificates libssl1.1 python3 python3-pip python3-dev tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
-    
+
 # Required by tonic
 RUN rustup component add rustfmt
 
@@ -54,7 +54,7 @@ LABEL org.opencontainers.image.licenses="BSL 1.1"
 
 
 WORKDIR /quester
-RUN mkdir config quester_data
+RUN mkdir config querent_data
 
 # Copy binaries and configuration from the build stage
 COPY --from=bin-builder /quester/bin/querent /usr/local/bin/querent
@@ -68,8 +68,8 @@ RUN apt-get update \
 # Install querent
 #RUN pip3 install querent
 
-ENV QUESTER_CONFIG=/quester/config/querent.config.yaml
-ENV QUESTER_DATA_DIR=/quester/quester_data
+ENV QUERENT_CONFIG=/quester/config/querent.config.yaml
+ENV QUESTER_DATA_DIR=/quester/querent_data
 ENV QUESTER_LISTEN_ADDRESS=0.0.0.0
 ENV PYTHONIOENCODING=utf-8
 
