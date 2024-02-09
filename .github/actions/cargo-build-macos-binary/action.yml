@@ -19,7 +19,7 @@ runs:
       with:
         node-version: 20
         cache: "yarn"
-        cache-dependency-path: querent/ui/yarn.lock
+        cache-dependency-path: ui/yarn.lock
     - run: yarn global add node-gyp
       shell: bash
     - run: make build-ui
