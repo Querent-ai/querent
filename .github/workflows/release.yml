@@ -17,7 +17,7 @@ on:
         required: true
 
 env:
-  NEW_RELEASE_TAG_FROM_UI: ${{github.event.inputs.release-version}}
+  NEW_RELEASE_TAG_FROM_UI: ${{github.event.inputs.release-version || github.ref_name}}
   TEST_RUN: ${{startsWith(github.event.inputs.release-version || github.ref_name, 'v0.0.1')}}
   DOCKER_HUB_PROFILE: querent
   IMAGE_NAME: quester
