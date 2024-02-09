@@ -24,6 +24,9 @@ runs:
       shell: bash
     - run: cd quester && make build-ui
       shell: bash
+    - name: copy build to quester/web/build
+      run: cp -r ui/build quester/web
+      shell: bash
     - name: Install protoc
       run: brew install protobuf
       shell: bash
@@ -51,7 +54,7 @@ runs:
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
     - name: Bundle archive
       run: |
-        make archive BINARY_FILE=quester/target/${{ inputs.target }}/release/quester \
+        make archive BINARY_FILE=quester/target/${{ inputs.target }}/release/querent \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
     - name: Save binary archive for three days
