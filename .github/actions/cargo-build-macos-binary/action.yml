@@ -22,7 +22,7 @@ runs:
         cache-dependency-path: ui/yarn.lock
     - run: yarn global add node-gyp
       shell: bash
-    - run: make build-ui
+    - run: cd quester && make build-ui
       shell: bash
     - name: Install protoc
       run: brew install protobuf

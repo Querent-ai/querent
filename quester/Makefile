@@ -60,4 +60,4 @@ all: check test clippy deny format build doc
 
 .PHONY: build-ui
 build-ui:
-	NODE_ENV=production cd ui && $(MAKE) install build
+	NODE_ENV=production cd ../ui && $(MAKE) install build
