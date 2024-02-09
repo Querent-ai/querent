@@ -15,14 +15,14 @@ A commented example is available here: [quester.config.yaml](https://github.com/
 | Property           | Description                                                                                       | Env variable              | Default value                |
 |--------------------|---------------------------------------------------------------------------------------------------|---------------------------|------------------------------|
 | `version`          | Config file version. `0.1`. Or any versioning needed for node                                     |                           |                              |
-| `cluster_id`       | Unique identifier of the cluster the node will be joining. Clusters sharing the same network should use distinct cluster IDs.| `QUESTER_CLUSTER_ID`      | `querent-default-cluster`    |
-| `node_id`          | Unique identifier of the node. It must be distinct from the node IDs of its cluster peers. Defaults to the instance's short hostname if not set. | `QUESTER_NODE_ID`         | short hostname               |
-| `listen_address`   | The IP address or hostname that Querent service binds to for starting REST and GRPC server and connecting this node to other nodes. By default, Querent binds itself to 127.0.0.1 (localhost). This default is not valid when trying to form a cluster. | `QUESTER_LISTEN_ADDRESS`  | `127.0.0.1`                  |
-| `advertise_address`| IP address advertised by the node, i.e., the IP address that peer nodes should use to connect to the node for RPCs. | `QUESTER_ADVERTISE_ADDRESS` | `listen_address`           |
-| `gossip_listen_port`| The port which to listen for the Gossip cluster membership service (UDP).                         | `QUESTER_GOSSIP_LISTEN_PORT`| `rest.listen_port`          |
+| `cluster_id`       | Unique identifier of the cluster the node will be joining. Clusters sharing the same network should use distinct cluster IDs.| `QUERENT_CLUSTER_ID`      | `querent-default-cluster`    |
+| `node_id`          | Unique identifier of the node. It must be distinct from the node IDs of its cluster peers. Defaults to the instance's short hostname if not set. | `QUERENT_NODE_ID`         | short hostname               |
+| `listen_address`   | The IP address or hostname that Querent service binds to for starting REST and GRPC server and connecting this node to other nodes. By default, Querent binds itself to 127.0.0.1 (localhost). This default is not valid when trying to form a cluster. | `QUERENT_LISTEN_ADDRESS`  | `127.0.0.1`                  |
+| `advertise_address`| IP address advertised by the node, i.e., the IP address that peer nodes should use to connect to the node for RPCs. | `QUERENT_ADVERTISE_ADDRESS` | `listen_address`           |
+| `gossip_listen_port`| The port which to listen for the Gossip cluster membership service (UDP).                         | `QUERENT_GOSSIP_LISTEN_PORT`| `rest.listen_port`          |
 | `grpc_listen_port` | The port on which gRPC services listen for traffic.                                               | `QW_GRPC_LISTEN_PORT`     | `rest.listen_port + 1`       |
-| `peer_seeds`       | List of IP addresses or hostnames used to bootstrap the cluster and discover the complete set of nodes. This list may contain the current node address and does not need to be exhaustive. | `QUESTER_PEER_SEEDS`     |                              |
-| `data_dir`         | Path to directory where data (tmp data, splits kept for caching purpose) is persisted. This is mostly used in indexing. | `QUESTER_DATA_DIR`        | `./querent_data`             |
+| `peer_seeds`       | List of IP addresses or hostnames used to bootstrap the cluster and discover the complete set of nodes. This list may contain the current node address and does not need to be exhaustive. | `QUERENT_PEER_SEEDS`     |                              |
+| `data_dir`         | Path to directory where data (tmp data, splits kept for caching purpose) is persisted. This is mostly used in indexing. | `QUERENT_DATA_DIR`        | `./querent_data`             |
 |                    | Log level of Querent. Can be a direct log level, or a comma separated list of `module_name=level`  | `RUST_LOG`                | `info`                       |
 
 ## REST configuration
@@ -31,7 +31,7 @@ This section contains the REST API configuration options.
 
 | Property            | Description                                                                                      | Env variable               | Default value |
 |---------------------|--------------------------------------------------------------------------------------------------|----------------------------|---------------|
-| `listen_port`       | The port on which the REST API listens for HTTP traffic.                                         | `QUESTER_REST_LISTEN_PORT` | `1111`        |
+| `listen_port`       | The port on which the REST API listens for HTTP traffic.                                         | `QUERENT_REST_LISTEN_PORT` | `1111`        |
 | `cors_allow_origins`| Configure the CORS origins which are allowed to access the API. [Read more](#configuring-cors-cross-origin-resource-sharing) |                            |               |
 | `extra_headers`     | List of header names and values                                                                  |                            |               |
 

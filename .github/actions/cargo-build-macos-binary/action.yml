@@ -1,0 +1,71 @@
+name: "Build Querent binary for macOS"
+description: "Build React app and Rust binary for macOS with cargo build."
+inputs:
+  target:
+    description: "Target"
+    required: true
+  version:
+    description: "Binary version"
+    required: true
+  token:
+    description: "GitHub access token"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
+      shell: bash
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 20
+        cache: "yarn"
+        cache-dependency-path: querent/ui/yarn.lock
+    - run: yarn global add node-gyp
+      shell: bash
+    - run: make build-ui
+      shell: bash
+    - name: Install protoc
+      run: brew install protobuf
+      shell: bash
+    - name: Install rustup
+      shell: bash
+      run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
+    - name: Add target aarch64-apple-darwin
+      if: "${{ inputs.target == 'aarch64-apple-darwin' }}"
+      run: rustup target add aarch64-apple-darwin
+      shell: bash
+      working-directory: ./quester
+    - name: Retrieve and export commit date, hash, and tags
+      run: |
+        echo "QUERENT_COMMIT_DATE=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+        echo "QUERENT_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
+        echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
+      shell: bash
+    - name: Build binary
+      run: cargo build --release --features release-macos-feature-vendored-set --target ${{ matrix.target }} --bin querent
+      shell: bash
+      working-directory: ./quester
+      env:
+        QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
+        QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
+        QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
+    - name: Bundle archive
+      run: |
+        make archive BINARY_FILE=quester/target/${{ inputs.target }}/release/quester \
+          BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
+      shell: bash
+    - name: Save binary archive for three days
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+        path: ./${{ env.ASSET_FULL_NAME }}.tar.gz
+        retention-days: 3
+    - name: Deploy archive to GitHub release
+      uses: quickwit-inc/upload-to-github-release@v1
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        file: ${{ env.ASSET_FULL_NAME }}.tar.gz
+        overwrite: true
+        draft: ${{ inputs.version != 'nightly' }}
+        tag_name: ${{ inputs.version }}
