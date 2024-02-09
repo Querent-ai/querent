@@ -42,7 +42,7 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build binary
-      run: cargo build --release --features release-macos-feature-vendored-set --target ${{ matrix.target }} --bin querent
+      run: cargo build --release  --target ${{ matrix.target }} --bin querent
       shell: bash
       working-directory: ./quester
       env:

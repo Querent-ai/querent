@@ -37,7 +37,7 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build Qurent binary
-      run: cross build --release --features release-feature-vendored-set --target ${{ inputs.target }} --bin querent
+      run: cross build --release --target ${{ inputs.target }} --bin querent
       shell: bash
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
