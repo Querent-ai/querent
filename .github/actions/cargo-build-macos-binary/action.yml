@@ -24,6 +24,9 @@ runs:
       shell: bash
     - run: cd quester && make build-ui
       shell: bash
+    - name: copy build to quester/web/build
+      run: cp -r ui/build quester/web
+      shell: bash
     - name: Install protoc
       run: brew install protobuf
       shell: bash
