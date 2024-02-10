@@ -350,8 +350,8 @@ fn spawn_ready_members_task(
 					new_ready_members.push(member);
 				}
 			}
-			if *ready_members_tx.borrow() != new_ready_members &&
-				ready_members_tx.send(new_ready_members).is_err()
+			if *ready_members_tx.borrow() != new_ready_members
+				&& ready_members_tx.send(new_ready_members).is_err()
 			{
 				break;
 			}

@@ -97,7 +97,7 @@ impl Source for Qflow {
 				error!("Qflow is already finished");
 				return Err(ActorExitStatus::Success);
 			}
-			return Ok(())
+			return Ok(());
 		}
 		// Start Collection Actor
 		let collector = Collection::new(

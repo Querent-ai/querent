@@ -30,7 +30,7 @@ fn main() -> Result<(), QuerentError> {
 					return Err(QuerentError::internal(format!(
 						"Failed to initialize Python runtime: {}",
 						e
-					)))
+					)));
 				},
 			}
 			Ok(())

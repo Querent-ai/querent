@@ -66,17 +66,19 @@ impl<A: Actor> Actor for Supervisor<A> {
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::Quit =>
+			ActorExitStatus::Quit => {
 				if let Some(handle) = self.handle_opt.take() {
 					handle.quit().await;
-				},
-			ActorExitStatus::Killed =>
+				}
+			},
+			ActorExitStatus::Killed => {
 				if let Some(handle) = self.handle_opt.take() {
 					handle.kill().await;
-				},
-			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Success |
-			ActorExitStatus::DownstreamClosed => {},
+				}
+			},
+			ActorExitStatus::Failure(_)
+			| ActorExitStatus::Success
+			| ActorExitStatus::DownstreamClosed => {},
 			ActorExitStatus::Panicked => {},
 		}
 

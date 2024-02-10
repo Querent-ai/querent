@@ -288,7 +288,7 @@ async fn ingest_token_ws(
 	let (_tx, mut rx) = socket.split();
 	while let Some(result) = rx.next().await {
 		match result {
-			Ok(msg) =>
+			Ok(msg) => {
 				if msg.is_text() {
 					if let Ok(text) = msg.to_str() {
 						if let Ok(tokens_vec) = serde_json::from_str::<Vec<IngestedTokens>>(text) {
@@ -309,7 +309,8 @@ async fn ingest_token_ws(
 					}
 				} else {
 					warn!("Received non-text message: {:?}", msg);
-				},
+				}
+			},
 			Err(e) => {
 				error!("Error receiving message: {:?}", e);
 				break;

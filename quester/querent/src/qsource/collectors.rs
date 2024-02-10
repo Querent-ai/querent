@@ -136,7 +136,7 @@ impl Actor for Collection {
 				error!("Collection is already finished");
 				return Err(ActorExitStatus::Success);
 			}
-			return Ok(())
+			return Ok(());
 		}
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(

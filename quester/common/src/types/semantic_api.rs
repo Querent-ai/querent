@@ -102,10 +102,12 @@ impl Default for NamedWorkflows {
 impl Into<String> for NamedWorkflows {
 	fn into(self) -> String {
 		match self {
-			NamedWorkflows::KnowledgeGraphUsingLlama2V1 =>
-				"knowledge_graph_using_llama2_v1".to_string(),
-			NamedWorkflows::KnowledgeGraphUsingOpenAI(_) =>
-				"knowledge_graph_using_openai".to_string(),
+			NamedWorkflows::KnowledgeGraphUsingLlama2V1 => {
+				"knowledge_graph_using_llama2_v1".to_string()
+			},
+			NamedWorkflows::KnowledgeGraphUsingOpenAI(_) => {
+				"knowledge_graph_using_openai".to_string()
+			},
 		}
 	}
 }

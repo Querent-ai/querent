@@ -85,10 +85,10 @@ impl Actor for EventStreamer {
 		ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed |
-			ActorExitStatus::Killed |
-			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed
+			| ActorExitStatus::Killed
+			| ActorExitStatus::Failure(_)
+			| ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("EventStreamer exiting with success");
 				let _ = ctx.send_exit_with_success(&self.storage_mapper_messagebus).await;

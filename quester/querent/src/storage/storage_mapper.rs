@@ -79,10 +79,10 @@ impl Actor for StorageMapper {
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed |
-			ActorExitStatus::Killed |
-			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed
+			| ActorExitStatus::Killed
+			| ActorExitStatus::Failure(_)
+			| ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("StorageMapper exiting with success");
 			},

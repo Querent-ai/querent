@@ -44,8 +44,9 @@ pub enum DbConn<'a> {
 
 pub async fn get_conn<'a, 'b: 'a>(pool: &'a mut DbPool<'b>) -> Result<DbConn<'a>, DieselError> {
 	Ok(match pool {
-		DbPool::Pool(pool) =>
-			DbConn::Pool(pool.get().await.map_err(|e| QueryBuilderError(e.into()))?),
+		DbPool::Pool(pool) => {
+			DbConn::Pool(pool.get().await.map_err(|e| QueryBuilderError(e.into()))?)
+		},
 		DbPool::Conn(conn) => DbConn::Conn(conn),
 	})
 }

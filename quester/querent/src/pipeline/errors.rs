@@ -22,8 +22,9 @@ impl From<AskError<PipelineErrors>> for PipelineErrors {
 	fn from(error: AskError<PipelineErrors>) -> Self {
 		match error {
 			AskError::ErrorReply(error) => error,
-			AskError::MessageNotDelivered =>
-				PipelineErrors::UnknownError("the message could not be delivered".to_string()),
+			AskError::MessageNotDelivered => {
+				PipelineErrors::UnknownError("the message could not be delivered".to_string())
+			},
 			AskError::ProcessMessageError => PipelineErrors::UnknownError(
 				"an error occurred while processing the request".to_string(),
 			),
@@ -34,12 +35,15 @@ impl From<AskError<PipelineErrors>> for PipelineErrors {
 impl From<PipelineErrors> for tonic::Status {
 	fn from(error: PipelineErrors) -> Self {
 		match error {
-			PipelineErrors::PipelineNotFound { pipeline_id } =>
-				tonic::Status::not_found(format!("missing pipeline `{pipeline_id}`")),
-			PipelineErrors::PipelineAlreadyExists { pipeline_id } =>
-				tonic::Status::already_exists(format!("pipeline `{pipeline_id}` already exists")),
-			PipelineErrors::InvalidParams(error) =>
-				tonic::Status::invalid_argument(error.to_string()),
+			PipelineErrors::PipelineNotFound { pipeline_id } => {
+				tonic::Status::not_found(format!("missing pipeline `{pipeline_id}`"))
+			},
+			PipelineErrors::PipelineAlreadyExists { pipeline_id } => {
+				tonic::Status::already_exists(format!("pipeline `{pipeline_id}` already exists"))
+			},
+			PipelineErrors::InvalidParams(error) => {
+				tonic::Status::invalid_argument(error.to_string())
+			},
 			PipelineErrors::UnknownError(error) => tonic::Status::internal(error),
 		}
 	}
@@ -48,10 +52,12 @@ impl From<PipelineErrors> for tonic::Status {
 impl From<tonic::Status> for PipelineErrors {
 	fn from(status: tonic::Status) -> Self {
 		match status.code() {
-			tonic::Code::NotFound =>
-				PipelineErrors::PipelineNotFound { pipeline_id: "".to_string() },
-			tonic::Code::AlreadyExists =>
-				PipelineErrors::PipelineAlreadyExists { pipeline_id: "".to_string() },
+			tonic::Code::NotFound => {
+				PipelineErrors::PipelineNotFound { pipeline_id: "".to_string() }
+			},
+			tonic::Code::AlreadyExists => {
+				PipelineErrors::PipelineAlreadyExists { pipeline_id: "".to_string() }
+			},
 			_ => PipelineErrors::InvalidParams(anyhow!(status.message().to_string())),
 		}
 	}

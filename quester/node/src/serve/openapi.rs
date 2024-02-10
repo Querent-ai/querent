@@ -282,8 +282,9 @@ mod openapi_schema_tests {
 			Schema::Array(array) => {
 				let parent = format!("{parent_location}.Vec");
 				match &*array.items {
-					RefOr::Ref(r) =>
-						resolve_once.push(CheckResolve::new(r.ref_location.clone(), parent)),
+					RefOr::Ref(r) => {
+						resolve_once.push(CheckResolve::new(r.ref_location.clone(), parent))
+					},
 					RefOr::T(schema) => resolve_schema(resolve_once, &parent, schema),
 				}
 			},
@@ -291,8 +292,9 @@ mod openapi_schema_tests {
 				for (key, r) in object.properties.iter() {
 					let parent = format!("{parent_location}.{key}");
 					match r {
-						RefOr::Ref(r) =>
-							resolve_once.push(CheckResolve::new(r.ref_location.clone(), parent)),
+						RefOr::Ref(r) => {
+							resolve_once.push(CheckResolve::new(r.ref_location.clone(), parent))
+						},
 						RefOr::T(schema) => resolve_schema(resolve_once, &parent, schema),
 					}
 				}
@@ -304,8 +306,9 @@ mod openapi_schema_tests {
 								r.ref_location.clone(),
 								parent_location.to_owned(),
 							)),
-							RefOr::T(schema) =>
-								resolve_schema(resolve_once, parent_location, schema),
+							RefOr::T(schema) => {
+								resolve_schema(resolve_once, parent_location, schema)
+							},
 						}
 					}
 				}
@@ -320,7 +323,7 @@ mod openapi_schema_tests {
 					}
 				}
 			},
-			Schema::AllOf(all_of) =>
+			Schema::AllOf(all_of) => {
 				for r in &all_of.items {
 					match r {
 						RefOr::Ref(r) => resolve_once.push(CheckResolve::new(
@@ -329,7 +332,8 @@ mod openapi_schema_tests {
 						)),
 						RefOr::T(schema) => resolve_schema(resolve_once, parent_location, schema),
 					}
-				},
+				}
+			},
 			_ => unimplemented!("Unknown schema variant"),
 		}
 	}
@@ -346,31 +350,35 @@ mod openapi_schema_tests {
 			Schema::Array(array) => {
 				let parent = format!("{parent_location}.Vec");
 				match &*array.items {
-					RefOr::Ref(r) =>
+					RefOr::Ref(r) => {
 						if !schemas_lookup.contains(&r.ref_location) {
 							errors.push((parent, method.to_string(), path, String::new()));
-						},
-					RefOr::T(schema) =>
-						check_schema(method, path, schemas_lookup, errors, &parent, schema),
+						}
+					},
+					RefOr::T(schema) => {
+						check_schema(method, path, schemas_lookup, errors, &parent, schema)
+					},
 				}
 			},
 			Schema::Object(object) => {
 				for (key, r) in object.properties.iter() {
 					let parent = format!("{parent_location}.{key}");
 					match r {
-						RefOr::Ref(r) =>
+						RefOr::Ref(r) => {
 							if !schemas_lookup.contains(&r.ref_location) {
 								errors.push((parent, method.to_string(), path, String::new()));
-							},
-						RefOr::T(schema) =>
-							check_schema(method, path, schemas_lookup, errors, &parent, schema),
+							}
+						},
+						RefOr::T(schema) => {
+							check_schema(method, path, schemas_lookup, errors, &parent, schema)
+						},
 					}
 				}
 
 				if let Some(ref props) = object.additional_properties {
 					if let AdditionalProperties::RefOr(ref r) = **props {
 						match r {
-							RefOr::Ref(r) =>
+							RefOr::Ref(r) => {
 								if !schemas_lookup.contains(&r.ref_location) {
 									errors.push((
 										parent_location.to_string(),
@@ -378,7 +386,8 @@ mod openapi_schema_tests {
 										path,
 										String::new(),
 									));
-								},
+								}
+							},
 							RefOr::T(schema) => check_schema(
 								method,
 								path,
@@ -395,7 +404,7 @@ mod openapi_schema_tests {
 				let parent = format!("{parent_location}.Enum");
 				for r in &one_of.items {
 					match r {
-						RefOr::Ref(r) =>
+						RefOr::Ref(r) => {
 							if !schemas_lookup.contains(&r.ref_location) {
 								errors.push((
 									parent.clone(),
@@ -403,13 +412,15 @@ mod openapi_schema_tests {
 									path,
 									String::new(),
 								));
-							},
-						RefOr::T(schema) =>
-							check_schema(method, path, schemas_lookup, errors, &parent, schema),
+							}
+						},
+						RefOr::T(schema) => {
+							check_schema(method, path, schemas_lookup, errors, &parent, schema)
+						},
 					}
 				}
 			},
-			Schema::AllOf(all_of) =>
+			Schema::AllOf(all_of) => {
 				for r in &all_of.items {
 					match r {
 						RefOr::Ref(r) => {
@@ -428,7 +439,8 @@ mod openapi_schema_tests {
 							schema,
 						),
 					}
-				},
+				}
+			},
 			_ => unimplemented!("Unknown schema variant"),
 		}
 	}

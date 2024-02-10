@@ -28,10 +28,12 @@ impl TryFrom<CpuCapacityForSerialization> for CpuCapacity {
 		cpu_capacity_for_serialization: CpuCapacityForSerialization,
 	) -> Result<CpuCapacity, Self::Error> {
 		match cpu_capacity_for_serialization {
-			CpuCapacityForSerialization::Float(cpu_capacity) =>
-				Ok(CpuCapacity((cpu_capacity * 1000.0f32) as u32)),
-			CpuCapacityForSerialization::MilliCpuWithUnit(cpu_capacity_str) =>
-				Self::from_str(&cpu_capacity_str),
+			CpuCapacityForSerialization::Float(cpu_capacity) => {
+				Ok(CpuCapacity((cpu_capacity * 1000.0f32) as u32))
+			},
+			CpuCapacityForSerialization::MilliCpuWithUnit(cpu_capacity_str) => {
+				Self::from_str(&cpu_capacity_str)
+			},
 		}
 	}
 }
