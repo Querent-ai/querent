@@ -5,12 +5,11 @@ fn main() -> pyo3::PyResult<()> {
 		Ok(_) => {
 			println!("Python runtime initialized.");
 		},
-		Err(e) => {
+		Err(e) =>
 			return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
 				"Failed to initialize Python runtime: {}",
 				e
-			)))
-		},
+			))),
 	}
 	Ok(())
 }

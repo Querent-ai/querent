@@ -292,10 +292,10 @@ impl<A: Actor> ActorExecutionEnv<A> {
 
 	fn process_exit_status(&self, exit_status: &ActorExitStatus) {
 		match &exit_status {
-			ActorExitStatus::Success
-			| ActorExitStatus::Quit
-			| ActorExitStatus::DownstreamClosed
-			| ActorExitStatus::Killed => {},
+			ActorExitStatus::Success |
+			ActorExitStatus::Quit |
+			ActorExitStatus::DownstreamClosed |
+			ActorExitStatus::Killed => {},
 			ActorExitStatus::Failure(err) => {
 				error!(cause=?err, exit_status=?exit_status, "actor-failure");
 			},

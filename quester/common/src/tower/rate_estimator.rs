@@ -62,8 +62,8 @@ impl SmaRateEstimator {
 
 	/// Seeds the rate estimator with an initial rate.
 	pub fn with_initial_rate(self, initial_rate: ConstantRate) -> Self {
-		let initial_work = initial_rate.work() * self.inner.bucket_period_millis
-			/ initial_rate.period().as_millis() as u64;
+		let initial_work = initial_rate.work() * self.inner.bucket_period_millis /
+			initial_rate.period().as_millis() as u64;
 		for bucket_ord in 0..self.inner.num_buckets {
 			self.inner.buckets[bucket_ord as usize].increment_work(initial_work, 0);
 		}

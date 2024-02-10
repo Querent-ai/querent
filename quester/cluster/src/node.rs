@@ -72,10 +72,10 @@ impl Debug for ClusterNode {
 #[cfg(test)]
 impl PartialEq for ClusterNode {
 	fn eq(&self, other: &Self) -> bool {
-		self.inner.chitchat_id == other.inner.chitchat_id
-			&& self.inner.grpc_advertise_addr == other.inner.grpc_advertise_addr
-			&& self.inner.is_ready == other.inner.is_ready
-			&& self.inner.is_self_node == other.inner.is_self_node
+		self.inner.chitchat_id == other.inner.chitchat_id &&
+			self.inner.grpc_advertise_addr == other.inner.grpc_advertise_addr &&
+			self.inner.is_ready == other.inner.is_ready &&
+			self.inner.is_self_node == other.inner.is_self_node
 	}
 }
 

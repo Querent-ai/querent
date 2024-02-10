@@ -179,9 +179,9 @@ impl<T> Drop for Receiver<T> {
 
 impl<T> Receiver<T> {
 	pub fn is_empty(&self) -> bool {
-		self.low_priority_rx.is_empty()
-			&& self.pending_low_priority_message.is_none()
-			&& self.high_priority_rx.is_empty()
+		self.low_priority_rx.is_empty() &&
+			self.pending_low_priority_message.is_none() &&
+			self.high_priority_rx.is_empty()
 	}
 
 	pub fn try_recv_high_priority_message(&self) -> Result<T, RecvError> {
@@ -216,14 +216,13 @@ impl<T> Receiver<T> {
 			return Ok(pending_msg);
 		}
 		match self.low_priority_rx.try_recv() {
-			Ok(low_msg) => {
+			Ok(low_msg) =>
 				if let Ok(high_msg) = self.high_priority_rx.try_recv() {
 					self.pending_low_priority_message.place(low_msg);
 					Ok(high_msg)
 				} else {
 					Ok(low_msg)
-				}
-			},
+				},
 			Err(TryRecvError::Disconnected) => {
 				if let Ok(high_msg) = self.high_priority_rx.try_recv() {
 					Ok(high_msg)

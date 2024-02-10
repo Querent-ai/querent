@@ -76,8 +76,8 @@ impl<A: Actor> Supervisable for ActorHandle<A> {
 			error!(actor = self.name(), "actor-exit-without-success");
 			return Health::FailureOrUnhealthy;
 		}
-		if !check_for_progress
-			|| self.actor_context.progress().registered_activity_since_last_call()
+		if !check_for_progress ||
+			self.actor_context.progress().registered_activity_since_last_call()
 		{
 			Health::Healthy
 		} else {
