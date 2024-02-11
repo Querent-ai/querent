@@ -61,3 +61,15 @@ all: check test clippy deny format build doc
 .PHONY: build-ui
 build-ui:
 	NODE_ENV=production cd ../ui && $(MAKE) install build
+
+.PHONY: archive
+archive:
+	@echo "Archiving release binary & assets"
+	@mkdir -p "./querent-${BINARY_VERSION}/config"
+	@mkdir -p "./querent-${BINARY_VERSION}/querent_data"
+	@cp ./config/querent.config.yaml "./querent-${BINARY_VERSION}/config"
+	@cp ./config/querent.config.docker.yaml "./querent-${BINARY_VERSION}/config"
+	@cp ./LICENSE"./querent-${BINARY_VERSION}"
+	@cp "${BINARY_FILE}" "./querent-${BINARY_VERSION}"
+	@tar -czf "${ARCHIVE_NAME}.tar.gz" "./querent-${BINARY_VERSION}"
+	@rm -rf "./querent-${BINARY_VERSION}"
