@@ -28,7 +28,7 @@ runs:
       run: cp -r ui/build quester/web
       shell: bash
     - name: Install protoc
-      run: sudo apt-get install protobuf-compiler
+      run: brew install protobuf
       shell: bash
     - name: Install rustup
       shell: bash

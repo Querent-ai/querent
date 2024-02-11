@@ -42,7 +42,7 @@ runs:
       run: rustup target add aarch64-unknown-linux-gnu
       shell: bash
     - name: Install protoc
-      run: brew install protobuf
+      run: sudo apt-get install protobuf-compiler
       shell: bash
     - name: Install cross
       run: cargo install cross
