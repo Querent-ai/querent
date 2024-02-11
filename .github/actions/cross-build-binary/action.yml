@@ -32,9 +32,13 @@ runs:
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
     - name: Install Rust Toolchain
       run: rustup toolchain install nightly
-    - name: Add required targets
-      run: |
-        rustup target add ${{ inputs.target }}
+    - name: Add target x86_64-unknown-linux-gnu
+      if: "${{ inputs.target == 'x86_64-unknown-linux-gnu' }}"
+      run: rustup target add x86_64-unknown-linux-gnu
+      shell: bash
+    - name: Add target aarch64-unknown-linux-gnu
+      if: "${{ inputs.target == 'aarch64-unknown-linux-gnu' }}"
+      run: rustup target add aarch64-unknown-linux-gnu
       shell: bash
     - name: Install cross
       run: cargo install cross
