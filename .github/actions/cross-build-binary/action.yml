@@ -43,19 +43,19 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build Qurent binary
-      run: cross build --release --target ${{ inputs.target }} --bin querent
+      run: cargo build --release --target ${{ inputs.target }} --bin querent
       shell: bash
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
-
       working-directory: ./quester
     - name: Bundle archive
       run: |
         make archive BINARY_FILE=quester/target/${{ inputs.target }}/release/querent \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
+      working-directory: ./quester
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
       with:
