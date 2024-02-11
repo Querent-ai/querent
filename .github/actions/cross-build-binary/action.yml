@@ -32,6 +32,9 @@ runs:
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
     - name: Install Rust Toolchain
       run: rustup toolchain install nightly
+    - name: Add required targets
+      run: |
+        rustup target add ${{ inputs.target }}
       shell: bash
     - name: Install cross
       run: cargo install cross
