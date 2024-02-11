@@ -41,6 +41,9 @@ runs:
       if: "${{ inputs.target == 'aarch64-unknown-linux-gnu' }}"
       run: rustup target add aarch64-unknown-linux-gnu
       shell: bash
+    - name: Install protoc
+      run: brew install protobuf
+      shell: bash
     - name: Install cross
       run: cargo install cross
       shell: bash
