@@ -26,7 +26,7 @@ jobs:
   build-linux-binaries:
     strategy:
       matrix:
-        target: [x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu]
+        target: [x86_64-unknown-linux-gnu]
     name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
     steps:
