@@ -72,7 +72,7 @@ ENV QUERENT_CONFIG=/quester/config/querent.config.yaml
 ENV QUERENT_DATA_DIR=/quester/querent_data
 ENV QUERENT_LISTEN_ADDRESS=0.0.0.0
 ENV PYTHONIOENCODING=utf-8
-
+ENV LANG: C.UTF-8
 
 RUN querent --version \
     && echo "Querent is ready to run!"

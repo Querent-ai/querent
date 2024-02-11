@@ -119,8 +119,6 @@ services:
       - ./config:/external-config
     environment:
       QUERENT_NODE_CONFIG: /external-config/querent.config.docker.yaml
-      PYTHONIOENCODING: utf-8
-      LANG: C.UTF-8
     networks:
       - querent
 

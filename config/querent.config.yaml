@@ -30,26 +30,26 @@ rest_config:
 
 # -------------------------------- Storage Configuration --------------------------------
 storage_configs:
-  postgres:
-    name: querent_test
-    storage_type: index
-    config:
-      url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
-  milvus:
-    name: semantic_milvus_db
-    storage_type: vector
-    config:
-      url: http://localhost:19530
-      username: ""
-      password: ""
-  neo4j:
-    name: semantic_neo4j_db
-    storage_type: graph
-    config:
-      db_name: neo4j
-      url: bolt://localhost:7687
-      username: neo4j
-      password: password_neo
+  # postgres:
+  #   name: querent_test
+  #   storage_type: index
+  #   config:
+  #     url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
+  # milvus:
+  #   name: semantic_milvus_db
+  #   storage_type: vector
+  #   config:
+  #     url: http://localhost:19530
+  #     username: ""
+  #     password: ""
+  # neo4j:
+  #   name: semantic_neo4j_db
+  #   storage_type: graph
+  #   config:
+  #     db_name: neo4j
+  #     url: bolt://localhost:7687
+  #     username: neo4j
+  #     password: password_neo
 
 
 # -------------------------------- Distributed Tracing Configuration --------------------------------
