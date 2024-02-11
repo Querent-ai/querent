@@ -60,7 +60,6 @@ runs:
         make archive BINARY_FILE=quester/target/${{ inputs.target }}/release/querent \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
-      working-directory: ./quester
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
       with:
