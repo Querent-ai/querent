@@ -69,12 +69,14 @@ runs:
       working-directory: ./quester
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
+      working-directory: ./quester
       with:
         name: ${{ env.ASSET_FULL_NAME }}.tar.gz
         path: ./${{ env.ASSET_FULL_NAME }}.tar.gz
         retention-days: 3
     - name: Upload archive
       uses: quickwit-inc/upload-to-github-release@v1
+      working-directory: ./quester
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       with:
