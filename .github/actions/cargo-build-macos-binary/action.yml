@@ -57,7 +57,7 @@ runs:
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
     - name: Bundle archive
       run: |
-        make archive BINARY_FILE=quester/target/${{ inputs.target }}/release/querent \
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
       working-directory: ./quester
