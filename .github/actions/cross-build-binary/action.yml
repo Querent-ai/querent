@@ -30,6 +30,9 @@ runs:
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
+    - name: Install Rust Toolchain
+      run: rustup toolchain install nightly
+      shell: bash
     - name: Add target x86_64-unknown-linux-gnu
       if: "${{ inputs.target == 'x86_64-unknown-linux-gnu' }}"
       run: rustup target add x86_64-unknown-linux-gnu
