@@ -16,6 +16,7 @@ use querent::{
 };
 use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use storage::create_storages;
 use tracing::{error, warn};
 use warp::{filters::ws::WebSocket, reject::Rejection, Filter};
 
@@ -147,10 +148,21 @@ pub fn observe_pipeline_get_handler(
 async fn start_pipeline(
 	request: SemanticPipelineRequest,
 	semantic_service_mailbox: MessageBus<SemanticService>,
-	event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
-	index_storages: Vec<Arc<dyn storage::Storage>>,
+	mut event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
+	mut index_storages: Vec<Arc<dyn storage::Storage>>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4();
+	if request.storage_configs.is_none() && event_storages.is_empty() && index_storages.is_empty() {
+		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+			"Storage configs are missing and no event storages are provided."
+		)));
+	}
+	if request.storage_configs.is_some() {
+		(event_storages, index_storages) =
+			create_storages(&request.storage_configs.clone().unwrap()).await.map_err(|e| {
+				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
+			})?;
+	}
 	let qflow: querent_synapse::querent::Workflow =
 		create_querent_synapose_workflow(new_uuid.to_string(), &request).await?;
 	let pipeline_settings = PipelineSettings {

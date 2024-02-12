@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::{
 	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
 	GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig, S3CollectorConfig,
-	SlackCollectorConfig,
+	SlackCollectorConfig, StorageConfigs,
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
@@ -117,6 +117,7 @@ pub struct SemanticPipelineRequest {
 	pub version: f32,
 	pub collectors: Vec<CollectorConfig>,
 	pub config: HashMap<String, String>,
+	pub storage_configs: Option<StorageConfigs>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, utoipa::ToSchema)]
