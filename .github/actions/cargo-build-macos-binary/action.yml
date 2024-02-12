@@ -74,5 +74,4 @@ runs:
       with:
         file: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
         overwrite: true
-        draft: ${{ inputs.version != 'nightly' }}
         tag_name: ${{ inputs.version }}
