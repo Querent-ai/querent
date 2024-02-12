@@ -110,7 +110,7 @@ impl Default for JaegerConfig {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct StorageConfigs(#[serde_as(as = "EnumMap")] pub Vec<StorageConfig>);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
