@@ -7,7 +7,7 @@ use common::{
 	},
 	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
 	GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig,
-	S3CollectorConfig, SlackCollectorConfig, StorageConfigs,
+	S3CollectorConfig, SlackCollectorConfig, StorageConfig, StorageConfigs,
 };
 use futures_util::StreamExt;
 use querent::{
@@ -57,6 +57,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		DropBoxCollectorConfig,
 		GithubCollectorConfig,
 		StorageConfigs,
+		StorageConfig,
 	))
 )]
 pub struct SemanticApi;

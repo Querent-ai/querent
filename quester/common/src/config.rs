@@ -21,7 +21,7 @@ pub enum StorageType {
 	Vector,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub enum StorageConfig {
 	#[serde(rename = "postgres")]
@@ -32,7 +32,7 @@ pub enum StorageConfig {
 	Neo4j(StorageBackend),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StorageBackend {
 	pub name: String,
