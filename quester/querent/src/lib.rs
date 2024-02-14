@@ -49,7 +49,7 @@ import asyncio
 import json
 
 async def print_querent(config, text: str):
-    print( "🤖" + text) 
+    print("🤖" + text) 
     querent_started = False
 
     try:
@@ -57,6 +57,7 @@ async def print_querent(config, text: str):
         print("✨ Querent imported successfully ✨")
         querent_started = True
         await querent.workflow.start_workflow(config)
+        return
     except Exception as e:
         querent_started = False
         print("❌ Failed to import querent: " + str(e))

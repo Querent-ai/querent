@@ -37,6 +37,7 @@ async def print_querent(config, text: str):
         print("✨ Querent for ingestion imported successfully ✨")
         querent_started = True
         await querent.workflow.start_ingestion(config)
+        return
     except Exception as e:
         querent_started = False
         print("❌ Failed to import querent for ingestion: " + str(e))
@@ -76,7 +77,6 @@ async def print_querent(config, text: str):
                 # Handle other message types...
 
         await asyncio.sleep(1)  # Adjust the sleep duration as needed
-
 "#;
 
 impl Collection {

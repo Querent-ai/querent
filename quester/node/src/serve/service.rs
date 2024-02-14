@@ -57,7 +57,7 @@ pub async fn serve_quester(
 			debug!("REST server shutdown trigger sender was dropped");
 		}
 	});
-	let (event_storages, index_storages) = create_storages(&node_config.storage_configs).await?;
+	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
 		cluster: cluster.clone(),

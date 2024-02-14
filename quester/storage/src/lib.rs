@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use common::{
 	storage_config::{MilvusConfig, Neo4jConfig, PostgresConfig},
-	StorageConfig, StorageConfigs, StorageType,
+	StorageConfig, StorageType,
 };
 use querent_synapse::callbacks::EventType;
 pub use storage::*;
@@ -16,12 +16,12 @@ pub mod index;
 pub use index::*;
 
 pub async fn create_storages(
-	storage_configs: &StorageConfigs,
+	storage_configs: &Vec<StorageConfig>,
 ) -> anyhow::Result<(HashMap<EventType, Arc<dyn Storage>>, Vec<Arc<dyn Storage>>)> {
 	let mut event_storages: HashMap<EventType, Arc<dyn Storage>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
 
-	for storage_config in storage_configs.0.iter() {
+	for storage_config in storage_configs.iter() {
 		match storage_config {
 			StorageConfig::Postgres(backend) => {
 				if backend.storage_type != StorageType::Index {
