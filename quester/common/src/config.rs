@@ -1,4 +1,4 @@
-use std::{collections::HashMap, num::NonZeroU64, time::Duration};
+use std::{num::NonZeroU64, time::Duration};
 
 use anyhow::bail;
 use http::HeaderMap;
@@ -25,19 +25,42 @@ pub enum StorageType {
 #[serde(deny_unknown_fields)]
 pub enum StorageConfig {
 	#[serde(rename = "postgres")]
-	Postgres(StorageBackend),
+	Postgres(PostgresConfig),
 	#[serde(rename = "milvus")]
-	Milvus(StorageBackend),
+	Milvus(MilvusConfig),
 	#[serde(rename = "neo4j")]
-	Neo4j(StorageBackend),
+	Neo4j(Neo4jConfig),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(deny_unknown_fields)]
-pub struct StorageBackend {
+pub struct PostgresConfig {
 	pub name: String,
 	pub storage_type: StorageType,
-	pub config: HashMap<String, String>,
+	pub url: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MilvusConfig {
+	pub name: String,
+	pub storage_type: StorageType,
+	pub url: String,
+	pub username: String,
+	pub password: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Neo4jConfig {
+	pub name: String,
+	pub storage_type: StorageType,
+	pub db_name: String,
+	pub url: String,
+	pub username: String,
+	pub password: String,
+	pub max_connection_pool_size: Option<usize>,
+	pub fetch_size: Option<usize>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

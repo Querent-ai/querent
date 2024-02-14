@@ -27,8 +27,7 @@ pub async fn create_storages(
 				if backend.storage_type != StorageType::Index {
 					return Err(anyhow::anyhow!("Postgres storage type must be index"));
 				}
-				let postgres_config =
-					PostgresConfig { url: backend.config.get("url").unwrap().to_string() };
+				let postgres_config = PostgresConfig { url: backend.url.to_string() };
 				let postgres = PostgresStorage::new(postgres_config).await.map_err(|err| {
 					log::error!("Postgres client creation failed: {:?}", err);
 					err
@@ -47,9 +46,9 @@ pub async fn create_storages(
 			},
 			StorageConfig::Milvus(backend) => {
 				let vector_store_config = MilvusConfig {
-					url: backend.config.get("url").unwrap().to_string(),
-					username: backend.config.get("username").unwrap().to_string(),
-					password: backend.config.get("password").unwrap().to_string(),
+					url: backend.url.to_string(),
+					username: backend.username.to_string(),
+					password: backend.password.to_string(),
 				};
 
 				let milvus = MilvusStorage::new(vector_store_config).await.map_err(|err| {
@@ -69,22 +68,12 @@ pub async fn create_storages(
 			},
 			StorageConfig::Neo4j(backend) => {
 				let graph_storage_config = Neo4jConfig {
-					db_name: backend.config.get("db_name").unwrap().to_string(),
-					url: backend.config.get("url").unwrap().to_string(),
-					username: backend.config.get("username").unwrap().to_string(),
-					password: backend.config.get("password").unwrap().to_string(),
-					max_connections: backend
-						.config
-						.get("max_connections")
-						.unwrap_or(&"10".to_string())
-						.parse::<usize>()
-						.unwrap(),
-					fetch_size: backend
-						.config
-						.get("fetch_size")
-						.unwrap_or(&"1000".to_string())
-						.parse::<usize>()
-						.unwrap(),
+					db_name: backend.db_name.to_string(),
+					url: backend.url.to_string(),
+					username: backend.username.to_string(),
+					password: backend.password.to_string(),
+					max_connections: backend.max_connection_pool_size.unwrap_or(10),
+					fetch_size: backend.fetch_size.unwrap_or(1000),
 				};
 				let neo4j = Neo4jStorage::new(graph_storage_config).await.map_err(|err| {
 					log::error!("Neo4j client creation failed: {:?}", err);
