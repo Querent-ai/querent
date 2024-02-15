@@ -66,7 +66,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install querent
-RUN pip3 install querent
+#RUN pip3 install querent
 
 ENV QUERENT_CONFIG=/quester/config/querent.config.yaml
 ENV QUERENT_DATA_DIR=/quester/querent_data
