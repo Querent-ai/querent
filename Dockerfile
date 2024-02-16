@@ -73,6 +73,8 @@ ENV QUERENT_DATA_DIR=/quester/querent_data
 ENV QUERENT_LISTEN_ADDRESS=0.0.0.0
 ENV PYTHONIOENCODING=utf-8
 ENV LANG: C.UTF-8
+# Install spacy model
+RUN python3 -m spacy download en_core_web_lg
 
 RUN querent --version \
     && echo "Querent is ready to run!"

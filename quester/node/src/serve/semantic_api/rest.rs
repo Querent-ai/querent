@@ -164,7 +164,7 @@ async fn start_pipeline(
 			"Storage configs are missing and no event storages are provided."
 		)));
 	}
-	if request.storage_configs.is_some() {
+	if request.storage_configs.is_some() && !request.storage_configs.clone().unwrap().is_empty() {
 		(event_storages, index_storages) =
 			create_storages(&request.storage_configs.clone().unwrap()).await.map_err(|e| {
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
