@@ -19,6 +19,7 @@ pub struct S3CollectorConfig {
 	pub secret_key: String,
 	pub region: String,
 	pub bucket: String,
+	pub chunk: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
@@ -26,6 +27,7 @@ pub struct S3CollectorConfig {
 pub struct GCSCollectorConfig {
 	pub credentials: String,
 	pub bucket: String,
+	pub chunk: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
@@ -46,6 +48,7 @@ pub struct DropBoxCollectorConfig {
 	pub dropbox_app_secret: String,
 	pub folder_path: String,
 	pub dropbox_refresh_token: String,
+	pub chunk_size: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
@@ -66,6 +69,7 @@ pub struct GoogleDriveCollectorConfig {
 	pub drive_client_secret: String,
 	pub folder_to_crawl: Option<String>,
 	pub specific_file_type: Option<String>,
+	pub chunk_size: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]

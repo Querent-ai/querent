@@ -4,6 +4,8 @@
 # It checks if a user-defined configuration file exists, and if so,
 # it uses that file; otherwise, it falls back to the default configuration.
 
+python3 -m spacy download en_core_web_lg
+
 # Check if the user-defined configuration file exists
 if [ -f "$QUERENT_NODE_CONFIG" ]; then
   echo "Using user-defined configuration file: $QUERENT_NODE_CONFIG"
