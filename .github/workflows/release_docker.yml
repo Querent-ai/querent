@@ -1,15 +1,9 @@
-name: Release
+name: Release Docker Image
 run-name: Cut Release ${{github.event.inputs.release-version || github.ref_name}}
 concurrency:
   group: ${{github.workflow}}-${{github.ref}}
   cancel-in-progress: true
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+' # ex. v1.0.0
-      - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+' # ex. v1.1.0-rc1
-      - 'v0.0.1' # used for testing only
-      - 'v0.0.1-rc[0-9]+' # used for testing only
   workflow_dispatch:
     inputs:
       release-version:

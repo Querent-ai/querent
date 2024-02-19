@@ -1,10 +1,14 @@
 name: Build and publish release packages
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release version (v#.#.#[-rc#])'
+        required: true
 
+env:
+  INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version }}
 jobs:
   build-macos-binaries:
     name: Build ${{ matrix.target }}
@@ -15,12 +19,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Extract asset version
-        run: echo "ASSET_VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
       - uses: ./.github/actions/cargo-build-macos-binary
         with:
           target: ${{ matrix.target }}
-          version: ${{ env.ASSET_VERSION }}
+          version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux-binaries:
@@ -31,10 +33,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Extract asset version
-        run: echo "ASSET_VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
       - uses: ./.github/actions/cross-build-binary
         with:
           target: ${{ matrix.target }}
-          version: ${{ env.ASSET_VERSION }}
+          version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
