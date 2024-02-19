@@ -1,7 +1,6 @@
 use actors::AskError;
 use anyhow::anyhow;
 use common::{ServiceError, ServiceErrorCode};
-use thiserror;
 
 #[derive(Debug, thiserror::Error)]
 pub enum PipelineErrors {
