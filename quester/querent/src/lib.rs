@@ -54,7 +54,7 @@ async def print_querent(config, text: str):
 
     try:
         import querent
-        print("✨ Querent imported successfully ✨")
+        print("✨ Querent imported successfully for ai engines✨")
         querent_started = True
         await querent.workflow.start_workflow_engine(config)
         return
@@ -62,45 +62,6 @@ async def print_querent(config, text: str):
         querent_started = False
         print("❌ Failed to import querent: " + str(e))
 
-    while True and not querent_started:
-        print("⌛ Waiting for querent to start...sending dummy events")
-        message_state = config['workflow']['channel'].receive_in_python()
-        tokens_received = config['workflow']['tokens_feader'].receive_tokens_in_python()
-
-        if tokens_received is not None:
-            print("📜 Received tokens: " + str(tokens_received['data']))
-
-        if message_state is not None:
-            message_type = message_state['message_type']
-
-            if message_type.lower() == "stop":
-                print("🛑 Received stop signal. Exiting...")
-                break
-            else:
-                print("📬 Received message of type: " + message_type)
-                # Handle other message types...
-
-        # Continue sending events
-        if config['workflow'] is not None:
-            event_type = "Graph"  # Replace with the desired event type
-            payload = {
-                "subject": "Querent AI LLC",
-                "subject_type": "Organization",
-                "object": "Querent",
-                "object_type": "Software",
-                "predicate": "developed by",
-                "predicate_type": "ownership",
-                "sentence": "Querent is developed by Querent AI LLC"
-            }
-            event_data = {
-                "event_type": event_type,
-                "timestamp": 123.45,  # Replace with the actual timestamp
-                "payload": json.dumps(payload),
-                "file": "file_name"  # Replace with the actual file name
-            }
-            config['workflow']['event_handler'].handle_event(event_type, event_data)
-
-        await asyncio.sleep(1)  # Adjust the sleep duration as needed
 "#;
 
 pub async fn create_querent_synapose_workflow(

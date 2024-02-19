@@ -41,42 +41,6 @@ async def print_querent(config, text: str):
         querent_started = False
         print("❌ Failed to import querent for ingestion: " + str(e))
 
-    while True:
-        if querent_started:
-            print("✨ Querent finshihed digesting all the data sources ✨")
-			return
-        else:
-            print("⌛ Waiting for ingestion to start...")
-
-            # Check if tokens_feader exists and has the required methods
-            tokens_feader = config['workflow'].get('tokens_feader')
-            if tokens_feader and hasattr(tokens_feader, 'send_tokens_in_rust') and hasattr(tokens_feader, 'receive_tokens_in_python'):
-                ingested_tokens = {
-                    "data": ["dummy", "tokens"],  # Replace with actual token data
-                    "file": "dummy_file.txt",     # Replace with the actual file name
-                    "is_token_stream": True
-                }
-                try:
-                    tokens_feader.send_tokens_in_rust(ingested_tokens)
-                    print("📤 Sent dummy IngestedTokens")
-                except Exception as e:
-                    print(f"❌ Error sending tokens: {e}")
-            else:
-                print("❌ tokens_feader is not properly configured.")
-
-        message_state = config['workflow']['channel'].receive_in_python()
-
-        if message_state is not None:
-            message_type = message_state['message_type']
-
-            if message_type.lower() == "stop":
-                print("🛑 Received stop signal. Exiting...")
-                break
-            else:
-                print("📬 Received message of type: " + message_type)
-                # Handle other message types...
-
-        await asyncio.sleep(1)  # Adjust the sleep duration as needed
 "#;
 
 impl Collection {
