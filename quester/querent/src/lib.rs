@@ -49,7 +49,7 @@ import asyncio
 import json
 
 async def print_querent(config, text: str):
-    print("🤖" + text) 
+    print("Engine Bot 🤖" + text) 
     querent_started = False
 
     try:
