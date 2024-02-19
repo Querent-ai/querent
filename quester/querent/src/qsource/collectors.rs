@@ -44,7 +44,8 @@ async def print_querent(config, text: str):
 
     while True:
         if querent_started:
-            print("✨ Querent is active ✨")
+            print("✨ Querent finshihed digesting all the data sources ✨")
+			return
         else:
             print("⌛ Waiting for ingestion to start...")
 

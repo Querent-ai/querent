@@ -1,7 +1,6 @@
 use std::{
 	any::TypeId,
 	borrow::Borrow,
-	cmp::{Eq, PartialEq},
 	collections::HashMap,
 	fmt,
 	hash::Hash,
