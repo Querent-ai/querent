@@ -4,7 +4,7 @@ use hyper::{
 	http::{status, HeaderValue},
 	Body, Response,
 };
-use serde::{self, Serialize};
+use serde::Serialize;
 use warp::Reply;
 
 use super::BodyFormat;

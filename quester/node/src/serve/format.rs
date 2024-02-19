@@ -1,4 +1,4 @@
-use serde::{self, Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 use warp::{Filter, Rejection};
 
 /// Body output format used for the REST API.
