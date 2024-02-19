@@ -1,7 +1,6 @@
 use actors::{ActorExitStatus, ActorHandle, MessageBus};
 use async_trait::async_trait;
 use common::{EventsBatch, EventsCounter, TerimateSignal};
-use log;
 use querent_synapse::{
 	callbacks::{interface::EventHandler, EventState, EventType},
 	comm::IngestedTokens,
