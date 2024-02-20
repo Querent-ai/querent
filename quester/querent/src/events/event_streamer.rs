@@ -1,8 +1,8 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
 use common::{EventStreamerCounters, EventsBatch, RuntimeType};
-use querent_synapse::callbacks::{EventState, EventType};
-use std::{collections::HashMap, sync::Arc};
+use querent_synapse::callbacks::EventType;
+use std::sync::Arc;
 use tokio::runtime::Handle;
 
 use crate::{
@@ -109,16 +109,10 @@ impl Handler<EventsBatch> for EventStreamer {
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		self.counters.increment_batches_received();
-		let events = message.events;
-		self.counters.increment_events_received(events.len() as u64);
+		let grouped_events = message.events.clone();
+		self.counters.increment_events_received(message.events.len() as u64);
 		self.timestamp = message.timestamp;
 
-		// Group events by type
-		let mut grouped_events: HashMap<EventType, Vec<EventState>> = HashMap::new();
-		for (event_type, event_state) in events {
-			let entry = grouped_events.entry(event_type).or_insert_with(Vec::new);
-			entry.push(event_state);
-		}
 		// Send grouped events to StorageMapper
 		for (event_type, event_states) in grouped_events {
 			match event_type {

@@ -206,7 +206,13 @@ impl Source for Qflow {
 							break
 						}
 						self.counters.increment_total();
-						events_collected.insert(event_type, event_data);
+						// check if the event type is already in the map
+						if events_collected.contains_key(&event_type) {
+							let event_vec: &mut Vec<EventState> = events_collected.get_mut(&event_type).unwrap();
+							event_vec.push(event_data);
+						} else {
+							events_collected.insert(event_type, vec![event_data]);
+						}
 						counter += 1;
 					}
 					if counter >= BATCH_NUM_EVENTS_LIMIT {

@@ -8,12 +8,16 @@ use std::{
 #[derive(Debug, Default, Clone)]
 pub struct EventsBatch {
 	pub qflow_id: String,
-	pub events: HashMap<EventType, EventState>,
+	pub events: HashMap<EventType, Vec<EventState>>,
 	pub timestamp: u64,
 }
 
 impl EventsBatch {
-	pub fn new(qflow_id: String, events: HashMap<EventType, EventState>, timestamp: u64) -> Self {
+	pub fn new(
+		qflow_id: String,
+		events: HashMap<EventType, Vec<EventState>>,
+		timestamp: u64,
+	) -> Self {
 		Self { qflow_id, events, timestamp }
 	}
 
@@ -33,7 +37,7 @@ impl EventsBatch {
 		self.qflow_id.clone()
 	}
 
-	pub fn events(&self) -> HashMap<EventType, EventState> {
+	pub fn events(&self) -> HashMap<EventType, Vec<EventState>> {
 		self.events.clone()
 	}
 }
