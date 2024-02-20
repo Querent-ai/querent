@@ -76,7 +76,7 @@ impl Storage for Neo4jStorage {
 		})?;
 		for (_id, data) in payload {
 			let cypher_query = data.to_cypher_query();
-			let params = vec![
+			let params: Vec<(&str, String)> = vec![
 				("entity_type1", data.subject_type.clone()),
 				("predicate_type", data.predicate_type.clone()),
 				("entity1", data.subject.clone()),

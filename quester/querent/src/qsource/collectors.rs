@@ -28,7 +28,7 @@ import asyncio
 import json
 
 async def print_querent(config, text: str):
-    print("Collection Bot 🤖" + text)
+    print(text + ": Collection Bot 🤖")
     querent_started = False
 
     try:
