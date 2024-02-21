@@ -14,7 +14,8 @@ on:
         required: true
 
 env:
-  INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version }}
+  ## use tags to determine the release version
+  INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
 jobs:
   build-macos-binaries:
     name: Build ${{ matrix.target }}
