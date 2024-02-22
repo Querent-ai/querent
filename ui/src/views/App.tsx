@@ -11,7 +11,6 @@ import ClusterView from './ClusterView';
 import NodeInfoView from './NodeInfoView';
 import ApiView from './ApiView';
 import WorkflowsView from './WorkflowsView';
-import StorageView from './StorageView';
 
 function App() {
   return (
