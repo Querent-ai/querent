@@ -67,6 +67,7 @@ RUN apt-get update \
 
 # Install querent
 RUN pip3 install querent
+RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 ENV QUERENT_CONFIG=/quester/config/querent.config.yaml
 ENV QUERENT_DATA_DIR=/quester/querent_data
