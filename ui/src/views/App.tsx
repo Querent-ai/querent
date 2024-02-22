@@ -25,7 +25,6 @@ function App() {
           <Routes>
             <Route path="/" element={<Navigate to="/workflows" />} />
             <Route path="workflows" element={<WorkflowsView />} />
-            <Route path="storage" element={<StorageView />} />
             <Route path="cluster" element={<ClusterView />} />
             <Route path="node-info" element={<NodeInfoView />} />
             <Route path="api-playground" element={<ApiView />} />
