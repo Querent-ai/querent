@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use anyhow::Context;
 use common::metrics::IntCounter;
 use sync_wrapper::SyncWrapper;
@@ -51,6 +53,20 @@ impl SpawnContext {
 			terminate_sig: self.terminate_sig.child(),
 			registry: self.registry.clone(),
 		}
+	}
+
+	/// Schedules a new event.
+	/// Once `timeout` is elapsed, the future `fut` is
+	/// executed.
+	///
+	/// `fut` will be executed in the scheduler task, so it is
+	/// required to be short.
+	pub fn schedule_event<F: FnOnce() + Send + Sync + 'static>(
+		&self,
+		callback: F,
+		timeout: Duration,
+	) {
+		self.scheduler_client.schedule_event(callback, timeout)
 	}
 }
 
@@ -192,14 +208,8 @@ async fn recv_envelope<A: Actor>(inbox: &mut Inbox<A>, ctx: &ActorContext<A>) ->
 	}
 }
 
-fn try_recv_envelope<A: Actor>(inbox: &mut Inbox<A>, ctx: &ActorContext<A>) -> Option<Envelope<A>> {
-	if ctx.state().is_running() {
-		inbox.try_recv()
-	} else {
-		// The actor is paused. We only process command and scheduled message.
-		inbox.try_recv_cmd_and_scheduled_msg_only()
-	}
-	.ok()
+fn try_recv_envelope<A: Actor>(inbox: &mut Inbox<A>) -> Option<Envelope<A>> {
+	inbox.try_recv().ok()
 }
 
 struct ActorExecutionEnv<A: Actor> {
@@ -248,20 +258,25 @@ impl<A: Actor> ActorExecutionEnv<A> {
 	async fn process_all_available_messages(&mut self) -> Result<(), ActorExitStatus> {
 		self.yield_and_check_if_killed().await?;
 		let envelope = recv_envelope(&mut self.inbox, &self.ctx).await;
-		self.ctx.process();
 		self.process_one_message(envelope).await?;
-		loop {
-			while let Some(envelope) = try_recv_envelope(&mut self.inbox, &self.ctx) {
-				self.process_one_message(envelope).await?;
+		// If the actor is Running (not Paused), we consume all the messages in the mailbox
+		// and call `on_drained_message`.
+		if self.ctx.state().is_running() {
+			loop {
+				while let Some(envelope) = try_recv_envelope(&mut self.inbox) {
+					self.process_one_message(envelope).await?;
+				}
+				// We have reached the last message.
+				// Let's still yield and see if we have more messages:
+				// an upstream actor might have experienced backpressure, and is now waiting for our
+				// mailbox to have some room.
+				self.ctx.yield_now().await;
+				if self.inbox.is_empty() {
+					break;
+				}
 			}
-			self.ctx.yield_now().await;
-
-			if self.inbox.is_empty() {
-				break;
-			}
+			self.actor.get_mut().on_drained_messages(&self.ctx).await?;
 		}
-		self.actor.get_mut().on_drained_messages(&self.ctx).await?;
-		self.ctx.idle();
 		if self.ctx.messagebus().is_last_messagebus() {
 			// No one will be able to send us more messages.
 			// We can exit the actor.

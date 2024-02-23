@@ -186,7 +186,7 @@ impl Handler<SuperviseLoop> for SemanticService {
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		self.self_supervise().await?;
-		ctx.schedule_self_msg(*HEARTBEAT, SuperviseLoop).await;
+		ctx.schedule_self_msg(*HEARTBEAT, SuperviseLoop);
 		Ok(())
 	}
 }
