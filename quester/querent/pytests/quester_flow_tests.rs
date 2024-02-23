@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::atomic::Ordering};
 
 use actors::Quester;
 use common::StorageMapperCounters;
-use querent::{storage::StorageMapper, EventStreamer, Qflow, SourceActor};
+use querent::{storage::StorageMapper, EventStreamer, QSource, SourceActor};
 use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
 	cross::{CLRepr, StringType},
@@ -74,10 +74,10 @@ async fn qflow_basic_message_bus() -> pyo3::PyResult<()> {
 		config: Some(config),
 	};
 
-	// Create a sample Qflow
-	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+	// Create a sample QSource
+	let qflow_actor = QSource::new("qflow_id".to_string(), workflow);
 
-	// Initialize the Qflow
+	// Initialize the QSource
 	let qflow_source_actor =
 		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
 
@@ -126,8 +126,8 @@ async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> 
 		config: Some(config),
 	};
 
-	// Create a sample Qflow
-	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+	// Create a sample QSource
+	let qflow_actor = QSource::new("qflow_id".to_string(), workflow);
 
 	let (indexer_messagebus, indexer_inbox) = quester.create_test_messagebus();
 	// Create storage mapper message bus
@@ -146,7 +146,7 @@ async fn qflow_with_streamer_message_bus_storage_mapper() -> pyo3::PyResult<()> 
 	let (event_streamer_messagebus, event_handle) =
 		quester.spawn_builder().spawn(event_streamer_actor);
 
-	// Initialize the Qflow
+	// Initialize the QSource
 	let qflow_source_actor =
 		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
 
@@ -202,8 +202,8 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 		config: Some(config),
 	};
 
-	// Create a sample Qflow
-	let qflow_actor = Qflow::new("qflow_id".to_string(), workflow);
+	// Create a sample QSource
+	let qflow_actor = QSource::new("qflow_id".to_string(), workflow);
 
 	let (indexer_messagebus, _) = quester.create_test_messagebus();
 	// Create storage mapper message bus
@@ -219,7 +219,7 @@ async fn qflow_with_streamer_message_bus() -> pyo3::PyResult<()> {
 	let (event_streamer_messagebus, event_handle) =
 		quester.spawn_builder().spawn(event_streamer_actor);
 
-	// Initialize the Qflow
+	// Initialize the QSource
 	let qflow_source_actor =
 		SourceActor { source: Box::new(qflow_actor), event_streamer_messagebus };
 

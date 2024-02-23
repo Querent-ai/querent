@@ -3,7 +3,6 @@ use async_trait::async_trait;
 use common::{EventsBatch, EventsCounter, TerimateSignal};
 use querent_synapse::{
 	callbacks::{interface::EventHandler, EventState, EventType},
-	comm::IngestedTokens,
 	config::{config::WorkflowConfig, Config},
 	querent::{Querent, QuerentError, Workflow, WorkflowBuilder},
 };
@@ -20,28 +19,28 @@ use crate::{
 	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
 
-pub struct Qflow {
+pub struct QSource {
 	pub id: String,
 	pub workflow: Workflow,
 	pub event_lock: EventLock,
 	pub counters: Arc<EventsCounter>,
 	event_sender: mpsc::Sender<(EventType, EventState)>,
 	event_receiver: mpsc::Receiver<(EventType, EventState)>,
-	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 	collection_handler: Option<ActorHandle<Collection>>,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 }
 
-impl Qflow {
+impl QSource {
 	pub fn new(
 		id: String,
 		workflow: Workflow,
-		token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
+		collection_handler: Option<ActorHandle<Collection>>,
+		event_sender: mpsc::Sender<(EventType, EventState)>,
+		event_receiver: mpsc::Receiver<(EventType, EventState)>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
-		let (event_sender, event_receiver) = mpsc::channel(1000);
 		let workflow_event_handler: EventHandler = EventHandler::new(Some(event_sender.clone()));
 		let mut config_copy = workflow.config.unwrap_or(Config::default());
 		let workflow_config = WorkflowConfig {
@@ -73,8 +72,7 @@ impl Qflow {
 			event_sender,
 			event_receiver,
 			workflow_handle: None,
-			collection_handler: None,
-			token_sender,
+			collection_handler,
 			terminate_sig,
 		}
 	}
@@ -85,7 +83,7 @@ impl Qflow {
 }
 
 #[async_trait]
-impl Source for Qflow {
+impl Source for QSource {
 	async fn initialize(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
@@ -93,23 +91,11 @@ impl Source for Qflow {
 	) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
 			if self.workflow_handle.as_ref().unwrap().is_finished() {
-				error!("Qflow is already finished");
+				error!("QSource is already finished");
 				return Err(ActorExitStatus::Success);
 			}
 			return Ok(());
 		}
-		// Start Collection Actor
-		let collector = Collection::new(
-			self.id.clone(),
-			self.workflow.clone(),
-			self.event_sender.clone(),
-			self.token_sender.clone(),
-		);
-
-		info!("Starting the collector actor 📚");
-		let (_collector_message_bus, collector_inbox) =
-			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(collector);
-		self.collection_handler = Some(collector_inbox);
 
 		info!("Starting the engine 🚀");
 		let querent = Querent::new().map_err(|e| {
@@ -126,7 +112,7 @@ impl Source for Qflow {
 		let workflow_id = self.workflow.id.clone();
 		let event_sender = self.event_sender.clone();
 
-		// Store the JoinHandle with the result in the Qflow struct
+		// Store the JoinHandle with the result in the QSource struct
 		self.workflow_handle = Some(tokio::spawn(async move {
 			let result = querent.start_workflows().await;
 			match result {
@@ -249,7 +235,7 @@ impl Source for Qflow {
 			return Err(ActorExitStatus::Success);
 		}
 		if is_failure {
-			return Err(ActorExitStatus::Failure(anyhow::anyhow!("Qflow failed").into()));
+			return Err(ActorExitStatus::Failure(anyhow::anyhow!("QSource failed").into()));
 		}
 		Ok(Duration::default())
 	}

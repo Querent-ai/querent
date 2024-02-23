@@ -22,7 +22,7 @@ Quester is an enterprise-grade Rust engine built on top of Querent, designed to 
 
 ```mermaid
     sequenceDiagram
-        participant Qflow as Q
+        participant QSource as Q
         participant SourceActor as SA
         participant StorageMapper as SM
         participant Indexer as I

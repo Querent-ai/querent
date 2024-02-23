@@ -1,6 +1,6 @@
 [package]
 name = "common"
-version = "1.0.0"
+version = "1.0.4"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"

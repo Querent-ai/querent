@@ -1,6 +1,7 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
-
-use crate::{indexer::Indexer, EventStreamer, Qflow, SemanticService, SourceActor, StorageMapper};
+use crate::{
+	indexer::Indexer, Collection, EventStreamer, QSource, SemanticService, SourceActor,
+	StorageMapper,
+};
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, MessageBus, QueueCapacity,
 	Supervisable, HEARTBEAT,
@@ -12,8 +13,12 @@ use querent_synapse::{
 	comm::{ChannelHandler, IngestedTokens, MessageState, MessageType},
 	querent::Workflow,
 };
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use storage::Storage;
-use tokio::{sync::Semaphore, time::Instant};
+use tokio::{
+	sync::{mpsc, Semaphore},
+	time::Instant,
+};
 use tracing::{debug, error, info};
 
 static SPAWN_PIPELINE_SEMAPHORE: Semaphore = Semaphore::const_new(10);
@@ -257,12 +262,27 @@ impl SemanticPipeline {
 			.spawn_actor()
 			.set_terminate_sig(self.terminate_sig.clone())
 			.spawn(event_streamer);
+		let (event_sender, event_receiver) = mpsc::channel(1000);
 
-		// Qflow actor
-		let qflow_source = Qflow::new(
+		// Start Collection Actor
+		let collector = Collection::new(
 			qflow_id.clone(),
 			self.settings.qflow.clone(),
+			event_sender.clone(),
 			self.token_sender.clone(),
+		);
+
+		info!("Starting the collector actor 📚");
+		let (_collector_message_bus, collector_inbox) =
+			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(collector);
+
+		// QSource actor
+		let qflow_source = QSource::new(
+			qflow_id.clone(),
+			self.settings.qflow.clone(),
+			Some(collector_inbox),
+			event_sender,
+			event_receiver,
 			self.terminate_sig.clone(),
 		);
 		let qflow_source_actor =

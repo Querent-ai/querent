@@ -114,7 +114,7 @@ impl Actor for Collection {
 		})?;
 
 		let workflow_id = self.workflow.id.clone();
-		// Store the JoinHandle with the result in the Qflow struct
+		// Store the JoinHandle with the result in the QSource struct
 		let event_sender = self.event_sender.clone();
 		info!("Starting the workflow with id: {}", workflow_id);
 		self.workflow_handle = Some(tokio::spawn(async move {
