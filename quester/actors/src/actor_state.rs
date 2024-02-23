@@ -61,6 +61,7 @@ impl Default for AtomicState {
 }
 
 impl AtomicState {
+	#[allow(dead_code)]
 	pub(crate) fn process(&self) {
 		let _ = self.0.compare_exchange(
 			ActorState::Idle as u32,
@@ -70,6 +71,7 @@ impl AtomicState {
 		);
 	}
 
+	#[allow(dead_code)]
 	pub(crate) fn idle(&self) {
 		let _ = self.0.compare_exchange(
 			ActorState::Processing as u32,

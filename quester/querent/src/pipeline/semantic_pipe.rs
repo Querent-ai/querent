@@ -346,8 +346,7 @@ impl SemanticPipeline {
 				}
 				let first_retry_delay = wait_time(0);
 				self.retry_count += 1;
-				ctx.schedule_self_msg(first_retry_delay, Trigger { retry_count: self.retry_count })
-					.await;
+				ctx.schedule_self_msg(first_retry_delay, Trigger { retry_count: self.retry_count });
 			},
 			Health::Success => {
 				return Err(ActorExitStatus::Success);
@@ -395,7 +394,7 @@ impl Handler<ControlLoop> for SemanticPipeline {
 	) -> Result<(), ActorExitStatus> {
 		self.run_pipeline_observations(ctx).await;
 		self.run_health_check(ctx).await?;
-		ctx.schedule_self_msg(HEALTH_CHECK_INTERVAL, control_loop).await;
+		ctx.schedule_self_msg(HEALTH_CHECK_INTERVAL, control_loop);
 		Ok(())
 	}
 }

@@ -170,14 +170,6 @@ impl<A: Actor> ActorContext<A> {
 		self.actor_state.get_state()
 	}
 
-	pub(crate) fn process(&self) {
-		self.actor_state.process();
-	}
-
-	pub(crate) fn idle(&self) {
-		self.actor_state.idle();
-	}
-
 	pub(crate) fn pause(&self) {
 		self.actor_state.pause();
 	}
@@ -328,7 +320,7 @@ impl<A: Actor> ActorContext<A> {
 
 	/// Schedules a message that will be sent to the high-priority
 	/// queue of the actor MessageBus once `after_duration` has elapsed.
-	pub async fn schedule_self_msg<M>(&self, after_duration: Duration, message: M)
+	pub fn schedule_self_msg<M>(&self, after_duration: Duration, message: M)
 	where
 		A: DeferableReplyHandler<M>,
 		M: Sync + Send + std::fmt::Debug + 'static,
