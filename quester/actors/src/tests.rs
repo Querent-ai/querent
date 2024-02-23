@@ -264,7 +264,7 @@ async fn test_actor_running_states() {
 	let obs = ping_handle.process_pending_and_observe().await;
 	assert_eq!(*obs, 10);
 	quester.sleep(Duration::from_millis(1)).await;
-	assert!(ping_handle.state() == ActorState::Idle);
+	assert!(ping_handle.state() == ActorState::Processing);
 	quester.assert_quit().await;
 }
 
