@@ -50,6 +50,8 @@ pub struct PipelineSettings {
 
 struct PipelineHandlers {
 	pub _qflow_message_bus: MessageBus<SourceActor>,
+	pub _collectors_message_bus: MessageBus<SourceActor>,
+	pub collectors_handler: ActorHandle<SourceActor>,
 	pub qflow_handler: ActorHandle<SourceActor>,
 	pub event_streamer_handler: ActorHandle<EventStreamer>,
 	pub indexer_handler: ActorHandle<Indexer>,
@@ -188,6 +190,7 @@ impl SemanticPipeline {
 			return;
 		};
 		handles.qflow_handler.refresh_observe();
+		handles.collectors_handler.refresh_observe();
 		handles.event_streamer_handler.refresh_observe();
 		handles.indexer_handler.refresh_observe();
 		handles.storage_mapper_handler.refresh_observe();
@@ -217,6 +220,7 @@ impl SemanticPipeline {
 		}
 		ctx.observe(self);
 	}
+
 	async fn start_qflow(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
 		let _spawn_pipeline_permit = ctx
 			.protect_future(SPAWN_PIPELINE_SEMAPHORE.acquire())
@@ -232,6 +236,10 @@ impl SemanticPipeline {
 		let (source_message_bus, source_inbox) = ctx
 			.spawn_ctx()
 			.create_messagebus::<SourceActor>("SourceActor", QueueCapacity::Unbounded);
+
+		let (coll_message_bus, coll_inbox) = ctx
+			.spawn_ctx()
+			.create_messagebus::<SourceActor>("CollectionActor", QueueCapacity::Unbounded);
 		let current_timestamp = chrono::Utc::now().timestamp_millis() as u64;
 
 		// Storage mapper actor
@@ -272,15 +280,21 @@ impl SemanticPipeline {
 			self.token_sender.clone(),
 		);
 
-		info!("Starting the collector actor 📚");
-		let (_collector_message_bus, collector_inbox) =
-			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(collector);
+		info!("Starting the collector source actor 📚");
+		let collector_source_actor = SourceActor {
+			source: Box::new(collector),
+			event_streamer_messagebus: event_streamer_messagebus.clone(),
+		};
+		let (collector_message_bus, collector_inbox) = ctx
+			.spawn_actor()
+			.set_messagebuses(coll_message_bus, coll_inbox.clone())
+			.set_terminate_sig(self.terminate_sig.clone())
+			.spawn(collector_source_actor);
 
 		// QSource actor
 		let qflow_source = QSource::new(
 			qflow_id.clone(),
 			self.settings.qflow.clone(),
-			Some(collector_inbox),
 			event_sender,
 			event_receiver,
 			self.terminate_sig.clone(),
@@ -292,9 +306,12 @@ impl SemanticPipeline {
 			.set_messagebuses(source_message_bus, source_inbox)
 			.set_terminate_sig(self.terminate_sig.clone())
 			.spawn(qflow_source_actor);
+
 		self.handlers = Some(PipelineHandlers {
 			_qflow_message_bus: qflow_message_bus,
 			qflow_handler: qflow_inbox,
+			_collectors_message_bus: collector_message_bus,
+			collectors_handler: collector_inbox,
 			event_streamer_handler: event_streamer_inbox,
 			indexer_handler: indexer_inbox,
 			storage_mapper_handler: storage_mapper_inbox,
@@ -321,6 +338,7 @@ impl SemanticPipeline {
 		if let Some(handles) = self.handlers.take() {
 			tokio::join!(
 				handles.qflow_handler.kill(),
+				handles.collectors_handler.kill(),
 				handles.event_streamer_handler.kill(),
 				handles.indexer_handler.kill(),
 				handles.storage_mapper_handler.kill(),

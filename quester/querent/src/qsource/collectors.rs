@@ -1,23 +1,21 @@
-use actors::{Actor, ActorContext, ActorExitStatus, QueueCapacity};
+use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
-use common::{EventsCounter, RuntimeType};
 use querent_synapse::{
 	callbacks::{EventState, EventType},
 	comm::IngestedTokens,
 	config::Config,
 	querent::{Querent, QuerentError, Workflow, WorkflowBuilder},
 };
-use std::sync::Arc;
-use tokio::{runtime::Handle, sync::mpsc, task::JoinHandle};
+use std::time::Duration;
+use tokio::{sync::mpsc, task::JoinHandle};
 use tracing::{error, info};
 
-use crate::EventLock;
+use crate::{EventLock, EventStreamer, NewEventLock, Source, SourceContext};
 
 pub struct Collection {
 	pub id: String,
 	pub workflow: Workflow,
 	pub event_lock: EventLock,
-	pub counters: Arc<EventsCounter>,
 	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
 	event_sender: mpsc::Sender<(EventType, EventState)>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
@@ -62,7 +60,6 @@ impl Collection {
 			id: id.clone(),
 			workflow,
 			event_lock: EventLock::default(),
-			counters: Arc::new(EventsCounter::default()),
 			token_sender,
 			event_sender,
 			workflow_handle: None,
@@ -84,46 +81,48 @@ impl Collection {
 	pub fn get_event_lock(&self) -> EventLock {
 		self.event_lock.clone()
 	}
-
-	pub fn get_counters(&self) -> Arc<EventsCounter> {
-		self.counters.clone()
-	}
 }
 
 #[async_trait]
-impl Actor for Collection {
-	type ObservableState = ();
-
-	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
+impl Source for Collection {
+	async fn initialize(
+		&mut self,
+		_event_streamer_messagebus: &MessageBus<EventStreamer>,
+		ctx: &SourceContext,
+	) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
 			if self.workflow_handle.as_ref().unwrap().is_finished() {
-				error!("Collection is already finished");
+				error!("Collection for current pipeline is already finished");
 				return Err(ActorExitStatus::Success);
 			}
 			return Ok(());
 		}
+
+		info!("Starting data collection: 📚");
 		let querent = Querent::new().map_err(|e| {
 			ActorExitStatus::Failure(
-				anyhow::anyhow!("Failed to initialize collection task: {:?}", e).into(),
-			)
-		})?;
-		querent.add_workflow(self.workflow.clone()).map_err(|e| {
-			ActorExitStatus::Failure(
-				anyhow::anyhow!("Failed to add collection workflow: {:?}", e).into(),
+				anyhow::anyhow!("Failed to initialize collector: {:?}", e).into(),
 			)
 		})?;
 
+		querent.add_workflow(self.workflow.clone()).map_err(|e| {
+			error!("Failed to add workflow: {:?}", e);
+			ActorExitStatus::Failure(anyhow::anyhow!("Failed to add workflow: {:?}", e).into())
+		})?;
+
 		let workflow_id = self.workflow.id.clone();
-		// Store the JoinHandle with the result in the QSource struct
 		let event_sender = self.event_sender.clone();
-		info!("Starting the workflow with id: {}", workflow_id);
+
+		// Store the JoinHandle with the result in the QSource struct
 		self.workflow_handle = Some(tokio::spawn(async move {
-			let result: Result<(), QuerentError> = querent.start_workflows().await;
+			let result = querent.start_workflows().await;
 			match result {
 				Ok(()) => {
 					// Handle the success
-					info!("Successfully started the workflow with id: {}", workflow_id);
-					log::info!("Successfully started the workflow with id: {}", workflow_id);
+					log::info!(
+						"Successfully started the collection workflow with id: {}",
+						workflow_id
+					);
 					// send yourself a success message to stop
 					event_sender
 						.send((
@@ -141,10 +140,6 @@ impl Actor for Collection {
 				},
 				Err(err) => {
 					// Handle the error, e.g., log it
-					error!(
-						"Failed to run the workflow with id: {} and error: {:?}",
-						workflow_id, err
-					);
 					log::error!(
 						"Failed to run the workflow with id: {} and error: {:?}",
 						workflow_id,
@@ -166,28 +161,35 @@ impl Actor for Collection {
 				},
 			}
 		}));
+		let event_lock = self.event_lock.clone();
+		ctx.send_message(_event_streamer_messagebus, NewEventLock(event_lock)).await?;
 		Ok(())
 	}
-	fn observable_state(&self) -> Self::ObservableState {
-		()
+
+	async fn emit_events(
+		&mut self,
+		_event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ctx: &SourceContext,
+	) -> Result<Duration, ActorExitStatus> {
+		if self.workflow_handle.is_none() {
+			return Err(ActorExitStatus::Success);
+		}
+		Ok(Duration::default())
+	}
+	fn name(&self) -> String {
+		format!("Collection: {}", self.id)
 	}
 
-	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+	fn observable_state(&self) -> serde_json::Value {
+		serde_json::json!({
+			"workflow_id": self.workflow.id,
+		})
 	}
 
-	fn runtime_handle(&self) -> Handle {
-		RuntimeType::NonBlocking.get_runtime_handle()
-	}
-
-	#[inline]
-	fn yield_after_each_message(&self) -> bool {
-		false
-	}
 	async fn finalize(
 		&mut self,
 		_exit_status: &ActorExitStatus,
-		_ctx: &ActorContext<Self>,
+		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
 		self.workflow_handle.take().unwrap().abort();
 		Ok(())

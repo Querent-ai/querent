@@ -56,11 +56,15 @@ async def print_querent(config, text: str):
         import querent
         print("✨ Querent imported successfully for ai engines✨")
         querent_started = True
-        await querent.workflow.start_workflow_engine(config)
-        return
+        #await querent.workflow.start_workflow_engine(config)
     except Exception as e:
         querent_started = False
         print("❌ Failed to import querent: " + str(e))
+
+    # Adding a while True loop with asyncio.sleep
+    while True:
+        print("Running in loop source...")
+        await asyncio.sleep(1)  # Sleep for 1 second
 
 "#;
 
