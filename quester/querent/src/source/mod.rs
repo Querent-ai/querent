@@ -85,7 +85,7 @@ impl Actor for SourceActor {
 	}
 
 	fn runtime_handle(&self) -> Handle {
-		RuntimeType::NonBlocking.get_runtime_handle()
+		RuntimeType::Blocking.get_runtime_handle()
 	}
 
 	fn yield_after_each_message(&self) -> bool {
