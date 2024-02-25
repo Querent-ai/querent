@@ -177,7 +177,7 @@ impl Actor for Collection {
 	}
 
 	fn runtime_handle(&self) -> Handle {
-		RuntimeType::NonBlocking.get_runtime_handle()
+		RuntimeType::Blocking.get_runtime_handle()
 	}
 
 	#[inline]
