@@ -35,7 +35,7 @@ async def print_querent(config, text: str):
         import querent
         print("✨ Querent for ingestion imported successfully ✨")
         querent_started = True
-        await querent.workflow.start_ingestion(config)
+        # querent.workflow.start_ingestion(config)
         return
     except Exception as e:
         querent_started = False
