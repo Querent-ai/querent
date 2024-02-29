@@ -95,3 +95,16 @@ pub struct JiraCollectorConfig {
 	pub jira_certfile: Option<String>,
 	pub jira_verify: Option<bool>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize, utoipa::ToSchema, PartialEq)]
+#[pyclass]
+pub struct NewsCollectorConfig {
+	pub api_key: String,
+	pub query: String,
+	pub from_date: String,
+	pub to_date: String,
+	pub sources: Option<String>,
+	pub language: Option<String>,
+	pub domains: Option<String>,
+	pub exclude_domains: Option<String>,
+}

@@ -4,8 +4,8 @@ use std::collections::HashMap;
 
 use crate::{
 	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
-	GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig, S3CollectorConfig,
-	SlackCollectorConfig, StorageConfig,
+	GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig, NewsCollectorConfig,
+	S3CollectorConfig, SlackCollectorConfig, StorageConfig,
 };
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, utoipa::ToSchema, Clone)]
@@ -29,6 +29,8 @@ pub enum SupportedSources {
 	Github(GithubCollectorConfig),
 	#[serde(rename = "slack")]
 	Slack(SlackCollectorConfig),
+	#[serde(rename = "news")]
+	News(NewsCollectorConfig),
 }
 
 impl ToString for SupportedSources {
@@ -43,6 +45,7 @@ impl ToString for SupportedSources {
 			SupportedSources::Dropbox(_) => "dropbox".to_string(),
 			SupportedSources::Github(_) => "github".to_string(),
 			SupportedSources::Slack(_) => "slack".to_string(),
+			SupportedSources::News(_) => "news".to_string(),
 		}
 	}
 }

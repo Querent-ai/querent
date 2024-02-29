@@ -7,8 +7,8 @@ use common::{
 	},
 	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
 	GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig,
-	MilvusConfig, Neo4jConfig, PostgresConfig, S3CollectorConfig, SlackCollectorConfig,
-	StorageConfig, StorageConfigs, StorageType,
+	MilvusConfig, Neo4jConfig, NewsCollectorConfig, PostgresConfig, S3CollectorConfig,
+	SlackCollectorConfig, StorageConfig, StorageConfigs, StorageType,
 };
 use futures_util::StreamExt;
 use querent::{
@@ -57,6 +57,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		EmailCollectorConfig,
 		DropBoxCollectorConfig,
 		GithubCollectorConfig,
+		NewsCollectorConfig,
 		StorageConfigs,
 		StorageConfig,
 		StorageType,

@@ -187,6 +187,26 @@ pub async fn create_querent_synapose_workflow(
 					);
 					map
 				},
+				SupportedSources::News(config) => {
+					let mut map = HashMap::new();
+					map.insert("query".to_string(), config.query);
+					map.insert("api_key".to_string(), config.api_key);
+					if let Some(language) = config.language {
+						map.insert("language".to_string(), language);
+					}
+					if let Some(sources) = config.sources {
+						map.insert("sources".to_string(), sources);
+					}
+					if let Some(domains) = config.domains {
+						map.insert("domains".to_string(), domains);
+					}
+					if let Some(exclude_domains) = config.exclude_domains {
+						map.insert("exclude_domains".to_string(), exclude_domains);
+					}
+					map.insert("from_date".to_string(), config.from_date);
+					map.insert("to_date".to_string(), config.to_date);
+					map
+				},
 			};
 			CollectorConfig {
 				id: id.clone(),
