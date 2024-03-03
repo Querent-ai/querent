@@ -25,6 +25,8 @@ pub use storage::*;
 pub mod indexer;
 pub mod pipeline;
 pub use pipeline::*;
+pub mod query;
+pub use query::*;
 use tracing::info;
 
 #[allow(clippy::too_many_arguments)]
