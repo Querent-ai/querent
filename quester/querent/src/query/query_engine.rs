@@ -45,7 +45,7 @@ async def print_querent(config, text: str):
 "#;
 
 pub const QUERY_BATCHES_TIMEOUT: Duration =
-	Duration::from_millis(if cfg!(test) { 100 } else { 5_000 });
+	Duration::from_millis(if cfg!(test) { 100 } else { 10_000 });
 
 pub const BATCH_NUM_LIMIT: usize = 1;
 
@@ -211,6 +211,7 @@ impl Handler<IngestedTokens> for QueryEngine {
 		ingested_tokens: IngestedTokens,
 		ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
+		let message_id = ingested_tokens.file.clone();
 		self.token_sender.send(ingested_tokens).unwrap();
 		// wait for tokens to be processed and receive events
 		let deadline = time::sleep(QUERY_BATCHES_TIMEOUT);
@@ -234,7 +235,7 @@ impl Handler<IngestedTokens> for QueryEngine {
 							is_failure = true;
 							break
 						}
-						if event_type == EventType::QueryResult {
+						if event_type == EventType::QueryResult && message_id == event_data.file {
 							self.counters.increment_total();
 							events_collected.push((event_type, event_data));
 							counter += 1;
