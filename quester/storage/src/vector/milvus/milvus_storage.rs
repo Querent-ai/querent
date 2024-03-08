@@ -45,9 +45,14 @@ impl Storage for MilvusStorage {
 		Ok(())
 	}
 
-	async fn insert_vector(&self, _payload: &Vec<(String, VectorPayload)>) -> StorageResult<()> {
+	async fn insert_vector(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<(String, VectorPayload)>,
+	) -> StorageResult<()> {
 		for (id, payload) in _payload {
-			let result = self.insert_or_create_collection(&payload.namespace, &id, &payload).await;
+			let result =
+				self.insert_or_create_collection(_collection_id.as_str(), id, payload).await;
 			if let Err(err) = result {
 				log::error!("Vector insertion failed: {:?}", err);
 				return Err(err);
@@ -76,8 +81,8 @@ impl Storage for MilvusStorage {
 impl MilvusStorage {
 	async fn insert_or_create_collection(
 		&self,
-		collection_name: &str,
-		id: &str,
+		collection_name: &str,// this is workflow id 
+		id: &str, // this is document id
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let collection = self.client.get_collection(collection_name).await;
@@ -215,7 +220,10 @@ mod tests {
 		};
 
 		// Call the insert_vector function with the test data
-		let _result = storage.unwrap().insert_vector(&vec![("test_id".to_string(), payload)]).await;
+		let _result = storage
+			.unwrap()
+			.insert_vector("qflow_id".to_string(), &vec![("test_id".to_string(), payload)])
+			.await;
 
 		// Assert that the result is Ok indicating successful insertion
 		// Uncomment to test when local Milvus is running

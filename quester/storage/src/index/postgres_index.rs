@@ -188,7 +188,11 @@ impl Storage for PostgresStorage {
 		Ok(())
 	}
 
-	async fn insert_vector(&self, _payload: &Vec<(String, VectorPayload)>) -> StorageResult<()> {
+	async fn insert_vector(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<(String, VectorPayload)>,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 

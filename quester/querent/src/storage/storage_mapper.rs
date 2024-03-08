@@ -136,8 +136,9 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		let event_type = message.event_type();
 		let storage = self.event_storages.get(&event_type);
 		let storage_items = message.event_payload();
+		let qflow_id = message.qflow_id();
 		if let Some(storage) = storage {
-			let upsert_result = storage.insert_vector(&storage_items).await;
+			let upsert_result = storage.insert_vector(qflow_id, &storage_items).await;
 			match upsert_result {
 				Ok(()) => {
 					self.counters

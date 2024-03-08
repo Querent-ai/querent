@@ -50,7 +50,11 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
-	async fn insert_vector(&self, _payload: &Vec<(String, VectorPayload)>) -> StorageResult<()> {
+	async fn insert_vector(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<(String, VectorPayload)>,
+	) -> StorageResult<()> {
 		// Implement Neo4j vector insertion logic (if needed)
 		Ok(())
 	}
