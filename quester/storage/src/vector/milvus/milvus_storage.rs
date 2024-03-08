@@ -81,8 +81,8 @@ impl Storage for MilvusStorage {
 impl MilvusStorage {
 	async fn insert_or_create_collection(
 		&self,
-		collection_name: &str,// this is workflow id 
-		id: &str, // this is document id
+		collection_name: &str, // this is workflow id
+		id: &str,              // this is document id
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let collection = self.client.get_collection(collection_name).await;
@@ -104,6 +104,33 @@ impl MilvusStorage {
 		id: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
+		let has_partition = collection.has_partition(&payload.namespace).await;
+		match has_partition {
+			Ok(has_partition) =>
+				if !has_partition {
+					let partition = collection.create_partition(&payload.namespace).await;
+					match partition {
+						Ok(partition) => {
+							log::debug!("Partition created: {:?}", partition);
+						},
+						Err(err) => {
+							log::error!("Partition creation failed: {:?}", err);
+							return Err(StorageError {
+								kind: StorageErrorKind::PartitionCreation,
+								source: Arc::new(anyhow::Error::from(err)),
+							});
+						},
+					}
+				},
+			Err(err) => {
+				log::error!("Partition check failed: {:?}", err);
+				return Err(StorageError {
+					kind: StorageErrorKind::PartitionCreation,
+					source: Arc::new(anyhow::Error::from(err)),
+				});
+			},
+		}
+
 		let knowledge_field = FieldColumn::new(
 			collection.schema().get_field("knowledge").unwrap(),
 			ValueVec::String(vec![payload.id.clone()]),
@@ -122,7 +149,7 @@ impl MilvusStorage {
 		);
 
 		let records = vec![knowledge_field, relationship_field, document_field, embeddings_field];
-		let insert_result = collection.insert(records, None).await;
+		let insert_result = collection.insert(records, Some(payload.namespace.as_str())).await;
 		match insert_result {
 			Ok(insert_result) => {
 				log::debug!("Insert result: {:?}", insert_result);

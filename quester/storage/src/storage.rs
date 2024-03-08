@@ -17,6 +17,8 @@ pub enum StorageErrorKind {
 	CollectionBuilding,
 	/// Insertion error.
 	Insertion,
+	/// PartitionCreation error for vector storage.
+	PartitionCreation,
 	/// Database error.
 	Database,
 	/// The target index does not exist.
