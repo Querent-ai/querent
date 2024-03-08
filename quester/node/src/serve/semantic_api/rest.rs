@@ -159,7 +159,7 @@ async fn start_pipeline(
 	mut event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
 	mut index_storages: Vec<Arc<dyn storage::Storage>>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
-	let new_uuid = uuid::Uuid::new_v4();
+	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 	if request.storage_configs.is_none() && event_storages.is_empty() && index_storages.is_empty() {
 		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 			"Storage configs are missing and no event storages are provided."
@@ -172,9 +172,9 @@ async fn start_pipeline(
 			})?;
 	}
 	let qflow: querent_synapse::querent::Workflow =
-		create_querent_synapose_workflow(new_uuid.to_string(), &request).await?;
+		create_querent_synapose_workflow(new_uuid.clone(), &request).await?;
 	let pipeline_settings = PipelineSettings {
-		qflow_id: new_uuid.to_string(),
+		qflow_id: new_uuid.clone(),
 		qflow,
 		event_storages,
 		index_storages,
@@ -182,7 +182,7 @@ async fn start_pipeline(
 	};
 
 	let pipeline_rest = semantic_service_mailbox
-		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.to_string() })
+		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.clone() })
 		.await;
 	let pipeline_id = pipeline_rest.unwrap_or(Ok("".to_string()));
 	if pipeline_id.is_err() {
