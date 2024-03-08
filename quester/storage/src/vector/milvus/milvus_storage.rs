@@ -153,7 +153,20 @@ impl MilvusStorage {
 		match insert_result {
 			Ok(insert_result) => {
 				log::debug!("Insert result: {:?}", insert_result);
-				Ok(())
+				let flushed_collection = collection.flush().await;
+				match flushed_collection {
+					Ok(flushed_collection) => {
+						log::debug!("Collection flushed: {:?}", flushed_collection);
+						Ok(())
+					},
+					Err(err) => {
+						log::error!("Flush failed: {:?}", err);
+						Err(StorageError {
+							kind: StorageErrorKind::Insertion,
+							source: Arc::new(anyhow::Error::from(err)),
+						})
+					},
+				}
 			},
 			Err(err) => {
 				log::error!("Insert failed: {:?}", err);
