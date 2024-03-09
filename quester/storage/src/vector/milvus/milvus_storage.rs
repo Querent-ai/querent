@@ -184,10 +184,11 @@ impl MilvusStorage {
 		id: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
+		let collection_name = format!("workflow_{}", collection_name);
 		let description = format!("Semantic collection adhering to s->p->o ={:?}", payload.id);
-		let new_coll = CollectionSchemaBuilder::new(collection_name, description.as_str())
+		let new_coll = CollectionSchemaBuilder::new(collection_name.as_str(), description.as_str())
 			.add_field(FieldSchema::new_primary_int64("id", "auto id for each vector", true))
-			.add_field(FieldSchema::new_varchar("knowledge", "subject, predicate, object", 21))
+			.add_field(FieldSchema::new_varchar("knowledge", "subject, predicate, object", 512))
 			.add_field(FieldSchema::new_varchar(
 				"relationship",
 				"predicate associated with embedding",
