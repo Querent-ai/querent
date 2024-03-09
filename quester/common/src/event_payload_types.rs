@@ -6,6 +6,7 @@ pub struct VectorPayload {
 	pub embeddings: Vec<f32>,
 	pub size: u64,
 	pub namespace: String,
+	pub sentence: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

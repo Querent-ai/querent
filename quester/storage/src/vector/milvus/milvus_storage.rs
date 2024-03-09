@@ -148,7 +148,18 @@ impl MilvusStorage {
 			payload.embeddings.clone(),
 		);
 
-		let records = vec![knowledge_field, relationship_field, document_field, embeddings_field];
+		let sentence_field = FieldColumn::new(
+			collection.schema().get_field("sentence").unwrap(),
+			ValueVec::String(vec![payload.sentence.clone().unwrap_or_default()]),
+		);
+
+		let records = vec![
+			knowledge_field,
+			relationship_field,
+			document_field,
+			embeddings_field,
+			sentence_field,
+		];
 		let insert_result = collection.insert(records, Some(payload.namespace.as_str())).await;
 		match insert_result {
 			Ok(insert_result) => {
@@ -204,6 +215,11 @@ impl MilvusStorage {
 				"semantic vector embeddings",
 				payload.size as i64,
 			))
+			.add_field(FieldSchema::new_varchar(
+				"sentence",
+				"sentence associated with embedding",
+				5000,
+			))
 			.build();
 
 		match new_coll {
@@ -258,6 +274,7 @@ mod tests {
 			namespace: "test_namespace".to_string(),
 			size: 10,
 			embeddings: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
+			sentence: Some("test_sentence".to_string()),
 		};
 
 		// Call the insert_vector function with the test data
