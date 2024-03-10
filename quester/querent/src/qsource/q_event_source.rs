@@ -1,4 +1,4 @@
-use actors::{ActorExitStatus, ActorHandle, MessageBus};
+use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{EventsBatch, EventsCounter, TerimateSignal};
 use querent_synapse::{
@@ -15,8 +15,8 @@ use tokio::{
 use tracing::{error, info};
 
 use crate::{
-	Collection, EventLock, EventStreamer, NewEventLock, Source, SourceContext,
-	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
+	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
+	EMIT_BATCHES_TIMEOUT,
 };
 
 pub struct QSource {
@@ -27,7 +27,6 @@ pub struct QSource {
 	event_sender: mpsc::Sender<(EventType, EventState)>,
 	event_receiver: mpsc::Receiver<(EventType, EventState)>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
-	collection_handler: Option<ActorHandle<Collection>>,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 }
@@ -36,7 +35,6 @@ impl QSource {
 	pub fn new(
 		id: String,
 		workflow: Workflow,
-		collection_handler: Option<ActorHandle<Collection>>,
 		event_sender: mpsc::Sender<(EventType, EventState)>,
 		event_receiver: mpsc::Receiver<(EventType, EventState)>,
 		terminate_sig: TerimateSignal,
@@ -72,7 +70,6 @@ impl QSource {
 			event_sender,
 			event_receiver,
 			workflow_handle: None,
-			collection_handler,
 			terminate_sig,
 		}
 	}
@@ -254,10 +251,6 @@ impl Source for QSource {
 		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
 		self.workflow_handle.take().unwrap().abort();
-		if self.collection_handler.is_none() {
-			return Ok(());
-		}
-		self.collection_handler.take().unwrap().kill().await;
 		Ok(())
 	}
 }

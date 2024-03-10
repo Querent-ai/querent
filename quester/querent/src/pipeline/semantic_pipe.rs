@@ -1,6 +1,5 @@
 use crate::{
-	indexer::Indexer, Collection, EventStreamer, QSource, SemanticService, SourceActor,
-	StorageMapper,
+	indexer::Indexer, EventStreamer, QSource, SemanticService, SourceActor, StorageMapper,
 };
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, MessageBus, QueueCapacity,
@@ -264,23 +263,17 @@ impl SemanticPipeline {
 			.spawn(event_streamer);
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 
-		// Start Collection Actor
-		let collector = Collection::new(
-			qflow_id.clone(),
-			self.settings.qflow.clone(),
-			event_sender.clone(),
-			self.token_sender.clone(),
-		);
-
 		info!("Starting the collector actor 📚");
-		let (_collector_message_bus, collector_inbox) =
-			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(collector);
+		info!("Starting the engine actor 🧠");
+		info!("Starting the event streamer actor ⇵");
+		info!("Starting the indexer actor 📦");
+		info!("Starting the storage mapper actor 📦");
+		info!("Starting the source actor 🔗");
 
 		// QSource actor
 		let qflow_source = QSource::new(
 			qflow_id.clone(),
 			self.settings.qflow.clone(),
-			Some(collector_inbox),
 			event_sender,
 			event_receiver,
 			self.terminate_sig.clone(),
