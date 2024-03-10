@@ -50,9 +50,11 @@ impl Storage for MilvusStorage {
 		_collection_id: String,
 		_payload: &Vec<(String, VectorPayload)>,
 	) -> StorageResult<()> {
+		let collection_name = format!("pipeline_{}", _collection_id);
+
 		for (id, payload) in _payload {
 			let result =
-				self.insert_or_create_collection(_collection_id.as_str(), id, payload).await;
+				self.insert_or_create_collection(collection_name.as_str(), id, payload).await;
 			if let Err(err) = result {
 				log::error!("Vector insertion failed: {:?}", err);
 				return Err(err);
@@ -195,9 +197,8 @@ impl MilvusStorage {
 		id: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
-		let collection_name = format!("pipeline_{}", collection_name);
 		let description = format!("Semantic collection adhering to s->p->o ={:?}", payload.id);
-		let new_coll = CollectionSchemaBuilder::new(collection_name.as_str(), description.as_str())
+		let new_coll = CollectionSchemaBuilder::new(collection_name, description.as_str())
 			.add_field(FieldSchema::new_primary_int64("id", "auto id for each vector", true))
 			.add_field(FieldSchema::new_varchar("knowledge", "subject, predicate, object", 280))
 			.add_field(FieldSchema::new_varchar(
