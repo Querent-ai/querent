@@ -22,3 +22,5 @@ vite.config.ts.timestamp-*
 venv
 *.log
 *.log.1
+
+content/
