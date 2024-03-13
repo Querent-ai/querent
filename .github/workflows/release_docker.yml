@@ -4,12 +4,6 @@ concurrency:
   group: ${{github.workflow}}-${{github.ref}}
   cancel-in-progress: true
 on:
-  push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+' # ex. v1.0.0
-      - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+' # ex. v1.1.0-rc1
-      - 'v0.0.1' # used for testing only
-      - 'v0.0.1-rc[0-9]+' # used for testing only
   workflow_dispatch:
     inputs:
       release-version:
@@ -20,12 +14,12 @@ env:
   NEW_RELEASE_TAG_FROM_UI: ${{github.event.inputs.release-version || github.ref_name}}
   TEST_RUN: ${{startsWith(github.event.inputs.release-version || github.ref_name, 'v0.0.1')}}
   DOCKER_HUB_PROFILE: querent
-  IMAGE_NAME: quester
+  IMAGE_NAME: querent
 
 jobs:
   build-and-publish-container-image:
     name: Build and publish container image
-    runs-on: ubicloud-standard-4
+    runs-on: ubuntu-latest
     steps:
       - name: Validate Version Tag
         if: env.NEW_RELEASE_TAG_FROM_UI != ''

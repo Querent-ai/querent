@@ -99,7 +99,7 @@ services:
       start_period: 3s
   
   querent:
-    image: querent/quester:v1.0.2
+    image: querent/querent:v2.0.0
     ports:
       - "1111:1111"
       - "2222:2222"
@@ -117,7 +117,7 @@ services:
         condition: service_healthy
     volumes:
       - ./config:/external-config
-      - ${MODEL_PATH:-/dev/null}:/model
+      - ./content/models:/model
     environment:
       QUERENT_NODE_CONFIG: /external-config/querent.config.docker.yaml
     networks:
