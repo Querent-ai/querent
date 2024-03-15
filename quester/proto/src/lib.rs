@@ -4,6 +4,7 @@
 pub mod cluster;
 pub mod collectors;
 pub mod error;
+pub use error::*;
 pub mod semantics;
 pub mod storage;
 pub mod types;
