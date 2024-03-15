@@ -1,4 +1,7 @@
-use std::borrow::{Borrow, Cow};
+use std::{
+	borrow::{Borrow, Cow},
+	collections::HashMap,
+};
 
 use prometheus::{Encoder, HistogramOpts, Opts, TextEncoder};
 pub use prometheus::{
@@ -69,16 +72,27 @@ pub fn new_counter(name: &str, description: &str, namespace: &str) -> IntCounter
 	counter
 }
 
-pub fn new_counter_vec<const N: usize>(
+pub fn counter_vec<const N: usize>(
 	name: &str,
-	description: &str,
-	namespace: &str,
+	help: &str,
+	subsystem: &str,
+	const_labels: &[(&str, &str)],
 	label_names: [&str; N],
 ) -> IntCounterVec<N> {
-	let counter_opts = Opts::new(name, description).namespace(namespace);
+	let owned_const_labels: HashMap<String, String> = const_labels
+		.iter()
+		.map(|(label_name, label_value)| (label_name.to_string(), label_value.to_string()))
+		.collect();
+	let counter_opts = Opts::new(name, help)
+		.namespace("quickwit")
+		.subsystem(subsystem)
+		.const_labels(owned_const_labels);
 	let underlying = PrometheusIntCounterVec::new(counter_opts, &label_names)
-		.expect("Failed to create counter vec");
-	prometheus::register(Box::new(underlying.clone())).expect("Failed to register counter vec");
+		.expect("failed to create counter vec");
+
+	let collector = Box::new(underlying.clone());
+	prometheus::register(collector).expect("failed to register counter vec");
+
 	IntCounterVec { underlying }
 }
 
@@ -89,19 +103,6 @@ pub fn new_gauge(name: &str, description: &str, namespace: &str) -> IntGauge {
 	gauge
 }
 
-pub fn new_gauge_vec<const N: usize>(
-	name: &str,
-	description: &str,
-	namespace: &str,
-	label_names: [&str; N],
-) -> IntGaugeVec<N> {
-	let gauge_opts = Opts::new(name, description).namespace(namespace);
-	let underlying =
-		PrometheusIntGaugeVec::new(gauge_opts, &label_names).expect("Failed to create gauge vec");
-	prometheus::register(Box::new(underlying.clone())).expect("Failed to register gauge vec");
-	IntGaugeVec { underlying }
-}
-
 pub fn new_histogram(name: &str, description: &str, namespace: &str) -> Histogram {
 	let histogram_opts = HistogramOpts::new(name, description).namespace(namespace);
 	let histogram = Histogram::with_opts(histogram_opts).expect("Failed to create histogram");
@@ -109,17 +110,52 @@ pub fn new_histogram(name: &str, description: &str, namespace: &str) -> Histogra
 	histogram
 }
 
-pub fn new_histogram_vec<const N: usize>(
+pub fn histogram_vec<const N: usize>(
 	name: &str,
-	description: &str,
-	namespace: &str,
+	help: &str,
+	subsystem: &str,
+	const_labels: &[(&str, &str)],
 	label_names: [&str; N],
 ) -> HistogramVec<N> {
-	let histogram_opts = HistogramOpts::new(name, description).namespace(namespace);
+	let owned_const_labels: HashMap<String, String> = const_labels
+		.iter()
+		.map(|(label_name, label_value)| (label_name.to_string(), label_value.to_string()))
+		.collect();
+	let histogram_opts = HistogramOpts::new(name, help)
+		.namespace("quickwit")
+		.subsystem(subsystem)
+		.const_labels(owned_const_labels);
 	let underlying = PrometheusHistogramVec::new(histogram_opts, &label_names)
-		.expect("Failed to create histogram vec");
-	prometheus::register(Box::new(underlying.clone())).expect("Failed to register histogram vec");
+		.expect("failed to create histogram vec");
+
+	let collector = Box::new(underlying.clone());
+	prometheus::register(collector).expect("failed to register histogram vec");
+
 	HistogramVec { underlying }
+}
+
+pub fn gauge_vec<const N: usize>(
+	name: &str,
+	help: &str,
+	subsystem: &str,
+	const_labels: &[(&str, &str)],
+	label_names: [&str; N],
+) -> IntGaugeVec<N> {
+	let owned_const_labels: HashMap<String, String> = const_labels
+		.iter()
+		.map(|(label_name, label_value)| (label_name.to_string(), label_value.to_string()))
+		.collect();
+	let gauge_opts = Opts::new(name, help)
+		.namespace("quickwit")
+		.subsystem(subsystem)
+		.const_labels(owned_const_labels);
+	let underlying =
+		PrometheusIntGaugeVec::new(gauge_opts, &label_names).expect("failed to create gauge vec");
+
+	let collector = Box::new(underlying.clone());
+	prometheus::register(collector).expect("failed to register counter vec");
+
+	IntGaugeVec { underlying }
 }
 
 pub struct GaugeGuard(&'static IntGauge);

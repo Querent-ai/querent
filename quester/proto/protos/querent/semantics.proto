@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package querent.semantics;
+
+import "querent/collectors.proto";
+import "querent/storage.proto";
+import "querent/workflows.proto";
+
+service SemanticsService {
+  rpc StartPipeline(SemanticPipelineRequest) returns (SemanticPipelineResponse) {}
+  rpc ObservePipeline(EmptyObserve) returns (SemanticServiceCounters) {}
+  rpc GetPipelinesMetadata(EmptyGetPipelinesMetadata) returns (PipelinesMetadata) {}
+  rpc StopPipeline(StopPipelineRequest) returns (BooleanResponse) {}
+  rpc DescribePipeline(DescribePipelineRequest) returns (SemanticPipelineResponse) {}
+  rpc IngestTokens(IngestedTokens) returns (BooleanResponse) {}
+  rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
+}
+
+message EmptyObserve{}
+
+message EmptyGetPipelinesMetadata{}
+
+message StopPipelineRequest {
+  string pipeline_id = 1;
+}
+
+message DescribePipelineRequest {
+  string pipeline_id = 1;
+}
+
+message RestartPipelineRequest {
+  string pipeline_id = 1;
+}
+
+message SemanticPipelineRequest {
+  querent.workflows.NamedWorkflows workflow = 1;
+  float version = 2;
+  repeated querent.collectors.CollectorConfig collectors = 3;
+  repeated querent.storage.StorageConfig storage_configs = 4;
+  map<string, string> config = 5;
+}
+
+message SemanticPipelineResponse {
+  string pipeline_id = 1;
+}
+
+message SemanticServiceCounters {
+  int32 num_running_pipelines = 1;
+  int32 num_successful_pipelines = 2;
+  int32 num_failed_pipelines = 3;
+}
+
+message IngestedTokens {
+  string file = 1;
+  repeated string data = 2;
+  bool is_token_stream = 3;
+}
+
+message IndexingStatistics {
+  int64 total_docs = 1;
+  int64 total_events = 2;
+  int64 total_events_processed = 3;
+  int64 total_events_received = 4;
+  int64 total_events_sent = 5;
+  int64 total_batches = 6;
+  int64 total_sentences = 7;
+  int64 total_subjects = 8;
+  int64 total_predicates = 9;
+  int64 total_objects = 10;
+  int64 total_graph_events = 11;
+  int64 total_vector_events = 12;
+  int64 total_graph_events_sent = 13;
+  int64 total_vector_events_sent = 14;
+  int64 total_semantic_knowledge = 15;
+}
+
+message PipelineMetadata {
+  string pipeline_id = 1;
+  string name = 2;
+  string import = 3;
+  string attr = 4;
+}
+
+message PipelinesMetadata {
+  repeated PipelineMetadata pipelines = 1;
+}
+
+message BooleanResponse {
+  bool response = 1;
+}

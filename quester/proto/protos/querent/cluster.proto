@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package querent.cluster;
+
+message ChitchatId {
+  string node_id = 1;
+  uint64 generation_id = 2;
+  string gossip_advertise_addr = 3;
+}
+
+enum DeletionStatus {
+    Set = 0;
+    Deleted = 1;
+    DeleteAfterTtl = 2;
+}
+
+message VersionedKeyValue {
+  string key = 1;
+  string value = 2;
+  uint64 version = 3;
+  DeletionStatus status = 4;
+}
+
+message NodeState {
+  ChitchatId chitchat_id = 1;
+  repeated VersionedKeyValue key_values = 2;
+  uint64 max_version = 3;
+  uint64 last_gc_version = 4;
+}
+
+service ClusterService {
+  rpc FetchClusterState(FetchClusterStateRequest) returns (FetchClusterStateResponse);
+}
+
+message FetchClusterStateRequest {
+  string cluster_id = 1;
+}
+
+message FetchClusterStateResponse {
+  string cluster_id = 1;
+  repeated NodeState node_states = 2;
+}

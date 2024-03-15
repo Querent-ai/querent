@@ -21,7 +21,7 @@ pub use change::Change;
 pub use estimate_rate::{EstimateRate, EstimateRateLayer};
 pub use event_listener::{EventListener, EventListenerLayer};
 use futures::Future;
-pub use metrics::{PrometheusMetrics, PrometheusMetricsLayer};
+pub use metrics::*;
 pub use pool::Pool;
 pub use rate::{ConstantRate, Rate};
 pub use rate_estimator::{RateEstimator, SmaRateEstimator};
