@@ -1,4 +1,4 @@
 pub mod rest;
 pub use rest::*;
-pub mod grpc;
-pub use grpc::*;
+pub mod grpc_adapter;
+pub use grpc_adapter::*;

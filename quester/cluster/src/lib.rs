@@ -2,9 +2,12 @@
 
 pub mod change;
 pub mod cluster;
+mod grpc_service;
 pub mod member;
 pub mod node;
 pub mod types;
+pub use grpc_service::cluster_grpc_server;
+mod metrics;
 
 use std::net::SocketAddr;
 

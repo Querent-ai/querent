@@ -67,4 +67,6 @@ deadpool = { workspace = true }
 rustls = { workspace = true }
 log = { workspace = true }
 futures-util = { workspace = true }
-common ={ workspace = true }
+common = { workspace = true }
+proto = { workspace = true }
+rand = { workspace = true }

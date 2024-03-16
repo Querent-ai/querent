@@ -27,9 +27,8 @@ use tokio::sync::oneshot;
 use tracing::info;
 pub mod grpc;
 pub mod web_interface;
-pub use web_interface::*;
-
 use warp::{reject::Rejection, Filter};
+pub use web_interface::*;
 
 const READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "testsuite")) {
 	Duration::from_millis(25)

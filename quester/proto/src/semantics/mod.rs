@@ -1,3 +1,4 @@
+use actors::AskError;
 use thiserror;
 
 use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
@@ -39,5 +40,17 @@ impl GrpcServiceError for SemanticsError {
 
 	fn new_unavailable(message: String) -> Self {
 		Self::Unavailable(message)
+	}
+}
+
+impl From<AskError<SemanticsError>> for SemanticsError {
+	fn from(error: AskError<SemanticsError>) -> Self {
+		match error {
+			AskError::ErrorReply(error) => error,
+			AskError::MessageNotDelivered =>
+				Self::new_unavailable("request could not be delivered to pipeline".to_string()),
+			AskError::ProcessMessageError =>
+				Self::new_internal("an error occurred while processing the request".to_string()),
+		}
 	}
 }
