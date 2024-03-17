@@ -6,8 +6,6 @@ use std::{
 	sync::atomic::Ordering,
 };
 
-use thiserror;
-
 use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
 use serde::{Deserialize, Serialize};
 

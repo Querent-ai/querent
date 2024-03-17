@@ -1,5 +1,3 @@
-use thiserror;
-
 use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
 use serde::{Deserialize, Serialize};
 
