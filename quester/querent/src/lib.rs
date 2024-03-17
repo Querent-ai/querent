@@ -3,9 +3,9 @@ use std::collections::HashMap;
 
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
-use common::{
-	semantic_api::{NamedWorkflows, SemanticPipelineRequest, SupportedSources},
-	NodeConfig, PubSubBroker,
+use common::{NodeConfig, PubSubBroker};
+use proto::{
+	collectors::SupportedSources, semantics::SemanticPipelineRequest, workflows::NamedWorkflows,
 };
 pub use qsource::*;
 pub mod events;
@@ -74,173 +74,202 @@ pub async fn create_querent_synapose_workflow(
 		.collectors
 		.iter()
 		.map(|c| {
-			let config = match c.backend.clone() {
-				SupportedSources::GCS(config) => {
+			let mut backend = "".to_string();
+			let config = match &c.backend {
+				Some(SupportedSources { gcs: Some(config), .. }) => {
+					backend = "gcs".to_string();
 					let mut map = HashMap::new();
-					map.insert("bucket".to_string(), config.bucket);
-					map.insert("credentials".to_string(), config.credentials);
+					map.insert("bucket".to_string(), config.bucket.clone());
+					map.insert("credentials".to_string(), config.credentials.clone());
 					map
 				},
-				SupportedSources::S3(config) => {
+				Some(SupportedSources { s3: Some(config), .. }) => {
+					backend = "s3".to_string();
 					let mut map = HashMap::new();
-					map.insert("bucket".to_string(), config.bucket);
-					map.insert("region".to_string(), config.region);
-					map.insert("access_key".to_string(), config.access_key);
-					map.insert("secret_key".to_string(), config.secret_key);
+					map.insert("bucket".to_string(), config.bucket.clone());
+					map.insert("region".to_string(), config.region.clone());
+					map.insert("access_key".to_string(), config.access_key.clone());
+					map.insert("secret_key".to_string(), config.secret_key.clone());
 					map
 				},
-				SupportedSources::AzureBlob(config) => {
+				Some(SupportedSources { azure: Some(config), .. }) => {
+					backend = "azure".to_string();
 					let mut map = HashMap::new();
-					map.insert("container".to_string(), config.container);
-					map.insert("connection_string".to_string(), config.connection_string);
-					map.insert("account_url".to_string(), config.account_url);
-					map.insert("credentials".to_string(), config.credentials);
-					map.insert("prefix".to_string(), config.prefix.unwrap_or_default());
+					map.insert("container".to_string(), config.container.clone());
+					map.insert("connection_string".to_string(), config.connection_string.clone());
+					map.insert("account_url".to_string(), config.account_url.clone());
+					map.insert("credentials".to_string(), config.credentials.clone());
+					map.insert("prefix".to_string(), config.prefix.clone());
 					map
 				},
-				SupportedSources::Drive(config) => {
+				Some(SupportedSources { drive: Some(config), .. }) => {
+					backend = "drive".to_string();
 					let mut map = HashMap::new();
-					map.insert("drive_refresh_token".to_string(), config.drive_refresh_token);
-					map.insert("drive_client_id".to_string(), config.drive_client_id);
-					map.insert("drive_client_secret".to_string(), config.drive_client_secret);
-					map.insert("drive_scopes".to_string(), config.drive_scopes);
-					map.insert("drive_token".to_string(), config.drive_token);
 					map.insert(
-						"folder_to_crawl".to_string(),
-						config.folder_to_crawl.unwrap_or_default(),
+						"drive_refresh_token".to_string(),
+						config.drive_refresh_token.to_string(),
 					);
+					map.insert("drive_client_id".to_string(), config.drive_client_id.to_string());
+					map.insert(
+						"drive_client_secret".to_string(),
+						config.drive_client_secret.to_string(),
+					);
+					map.insert("drive_scopes".to_string(), config.drive_scopes.to_string());
+					map.insert("drive_token".to_string(), config.drive_token.to_string());
+					map.insert("folder_to_crawl".to_string(), config.folder_to_crawl.to_string());
 					map.insert(
 						"specific_file_type".to_string(),
-						config.specific_file_type.unwrap_or_default(),
+						config.specific_file_type.to_string(),
 					);
 					map
 				},
-				SupportedSources::Dropbox(config) => {
+				Some(SupportedSources { dropbox: Some(config), .. }) => {
+					backend = "dropbox".to_string();
 					let mut map = HashMap::new();
-					map.insert("dropbox_app_key".to_string(), config.dropbox_app_key);
-					map.insert("dropbox_app_secret".to_string(), config.dropbox_app_secret);
-					map.insert("folder_path".to_string(), config.folder_path);
-					map.insert("dropbox_refresh_token".to_string(), config.dropbox_refresh_token);
+					map.insert("dropbox_app_key".to_string(), config.dropbox_app_key.to_string());
+					map.insert(
+						"dropbox_app_secret".to_string(),
+						config.dropbox_app_secret.to_string(),
+					);
+					map.insert("folder_path".to_string(), config.folder_path.to_string());
+					map.insert(
+						"dropbox_refresh_token".to_string(),
+						config.dropbox_refresh_token.to_string(),
+					);
 					map
 				},
-				SupportedSources::Github(config) => {
+				Some(SupportedSources { github: Some(config), .. }) => {
+					backend = "github".to_string();
 					let mut map = HashMap::new();
-					map.insert("github_username".to_string(), config.github_username);
-					map.insert("github_access_token".to_string(), config.github_access_token);
-					map.insert("repository".to_string(), config.repository);
+					map.insert("github_username".to_string(), config.github_username.to_string());
+					map.insert(
+						"github_access_token".to_string(),
+						config.github_access_token.to_string(),
+					);
+					map.insert("repository".to_string(), config.repository.to_string());
 					map
 				},
-				SupportedSources::Slack(config) => {
+				Some(SupportedSources { slack: Some(config), .. }) => {
+					backend = "slack".to_string();
 					let mut map = HashMap::new();
-					map.insert("access_token".to_string(), config.access_token);
-					map.insert("channel_name".to_string(), config.channel_name);
-					map.insert("cursor".to_string(), config.cursor.unwrap_or_default());
+					map.insert("access_token".to_string(), config.access_token.to_string());
+					map.insert("channel_name".to_string(), config.channel_name.to_string());
+					map.insert("cursor".to_string(), config.cursor.to_string());
 					map.insert(
 						"include_all_metadata".to_string(),
-						config.include_all_metadata.unwrap_or(true).to_string(),
+						config.include_all_metadata.to_string(),
 					);
-					map.insert("limit".to_string(), config.limit.unwrap_or(100).to_string());
+					if config.limit == 0 {
+						map.insert("limit".to_string(), "100".to_string());
+					} else {
+						map.insert("limit".to_string(), config.limit.to_string());
+					}
 					map
 				},
-				SupportedSources::Jira(config) => {
+				Some(SupportedSources { jira: Some(config), .. }) => {
+					backend = "jira".to_string();
 					let mut map = HashMap::new();
-					map.insert("jira_server".to_string(), config.jira_server);
-					map.insert("jira_username".to_string(), config.jira_username);
-					map.insert(
-						"jira_password".to_string(),
-						config.jira_password.unwrap_or_default(),
-					);
-					map.insert("jira_project".to_string(), config.jira_project);
-					map.insert("jira_query".to_string(), config.jira_query);
-					map.insert(
-						"jira_max_results".to_string(),
-						config.jira_max_results.unwrap_or(100).to_string(),
-					);
-					map.insert(
-						"jira_api_token".to_string(),
-						config.jira_api_token.unwrap_or_default(),
-					);
-					map.insert(
-						"jira_start_at".to_string(),
-						config.jira_start_at.unwrap_or(0).to_string(),
-					);
-					map.insert("jira_keyfile".to_string(), config.jira_keyfile.unwrap_or_default());
-					map.insert(
-						"jira_certfile".to_string(),
-						config.jira_certfile.unwrap_or_default(),
-					);
-					map.insert(
-						"jira_verify".to_string(),
-						config.jira_verify.unwrap_or_default().to_string(),
-					);
+					map.insert("jira_server".to_string(), config.jira_server.to_string());
+					map.insert("jira_username".to_string(), config.jira_username.to_string());
+					map.insert("jira_password".to_string(), config.jira_password.to_string());
+					map.insert("jira_project".to_string(), config.jira_project.to_string());
+					map.insert("jira_query".to_string(), config.jira_query.to_string());
+					if config.jira_max_results == 0 {
+						map.insert("jira_max_results".to_string(), "100".to_string());
+					} else {
+						map.insert(
+							"jira_max_results".to_string(),
+							config.jira_max_results.to_string(),
+						);
+					}
+					map.insert("jira_api_token".to_string(), config.jira_api_token.to_string());
+					map.insert("jira_start_at".to_string(), config.jira_start_at.to_string());
+					map.insert("jira_keyfile".to_string(), config.jira_keyfile.to_string());
+					map.insert("jira_certfile".to_string(), config.jira_certfile.to_string());
+					map.insert("jira_verify".to_string(), config.jira_verify.to_string());
 					map
 				},
-				SupportedSources::Email(config) => {
+				Some(SupportedSources { email: Some(config), .. }) => {
+					backend = "email".to_string();
 					let mut map = HashMap::new();
-					map.insert("imap_server".to_string(), config.imap_server);
+					map.insert("imap_server".to_string(), config.imap_server.to_string());
 					map.insert("imap_port".to_string(), config.imap_port.to_string());
-					map.insert("imap_username".to_string(), config.imap_username);
-					map.insert("imap_password".to_string(), config.imap_password);
-					map.insert("imap_folder".to_string(), config.imap_folder);
-					map.insert("imap_keyfile".to_string(), config.imap_keyfile.unwrap_or_default());
-					map.insert(
-						"imap_certfile".to_string(),
-						config.imap_certfile.unwrap_or_default(),
-					);
+					map.insert("imap_username".to_string(), config.imap_username.to_string());
+					map.insert("imap_password".to_string(), config.imap_password.to_string());
+					map.insert("imap_folder".to_string(), config.imap_folder.to_string());
+					map.insert("imap_keyfile".to_string(), config.imap_keyfile.to_string());
+					map.insert("imap_certfile".to_string(), config.imap_certfile.to_string());
 					map
 				},
-				SupportedSources::News(config) => {
+				Some(SupportedSources { news: Some(config), .. }) => {
+					backend = "news".to_string();
 					let mut map = HashMap::new();
-					map.insert("query".to_string(), config.query);
-					map.insert("api_key".to_string(), config.api_key);
-					if let Some(language) = config.language {
-						map.insert("language".to_string(), language);
+					map.insert("query".to_string(), config.query.to_string());
+					map.insert("api_key".to_string(), config.api_key.to_string());
+					if !config.language.is_empty() {
+						map.insert("language".to_string(), config.language.to_string());
 					}
-					if let Some(sources) = config.sources {
-						map.insert("sources".to_string(), sources);
+					if !config.sources.is_empty() {
+						map.insert("sources".to_string(), config.sources.to_string());
 					}
-					if let Some(domains) = config.domains {
-						map.insert("domains".to_string(), domains);
+					if !config.domains.is_empty() {
+						map.insert("domains".to_string(), config.domains.to_string());
 					}
-					if let Some(exclude_domains) = config.exclude_domains {
-						map.insert("exclude_domains".to_string(), exclude_domains);
+					if !config.exclude_domains.is_empty() {
+						map.insert(
+							"exclude_domains".to_string(),
+							config.exclude_domains.to_string(),
+						);
 					}
-					map.insert("from_date".to_string(), config.from_date);
-					map.insert("to_date".to_string(), config.to_date);
+					map.insert("from_date".to_string(), config.from_date.to_string());
+					map.insert("to_date".to_string(), config.to_date.to_string());
+					map
+				},
+				_ => {
+					let map = HashMap::new();
 					map
 				},
 			};
 			CollectorConfig {
 				id: id.clone(),
 				name: c.name.clone(),
-				backend: c.backend.clone().to_string(),
+				backend,
 				config,
 				inner_channel: None,
 				channel: None,
 			}
 		})
 		.collect();
-	let mut engine_additionl_config = HashMap::new();
-	match request.name {
-		NamedWorkflows::KnowledgeGraphUsingOpenAI(ref config) => {
-			engine_additionl_config
-				.insert("openai_api_key".to_string(), config.openai_api_key.clone());
+
+	let mut engine_name = "knowledge_graph_using_llama2_v1".to_string();
+	let mut engine_additional_config = HashMap::new();
+	match &request.name {
+		None => {
+			engine_name = "knowledge_graph_using_llama2_v1".to_string();
 		},
-		_ => {},
-	}
+		Some(NamedWorkflows { knowledge_graph_using_llama2_v1: _, .. }) => {
+			engine_name = "knowledge_graph_using_llama2_v1".to_string();
+		},
+		Some(NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. }) => {
+			engine_name = "knowledge_graph_using_openai".to_string();
+			engine_additional_config
+				.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
+		},
+	};
+
 	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {
 		id: id.clone(),
-		name: request.name.clone().into(),
+		name: engine_name.clone(),
 		inner_channel: None,
 		channel: None,
-		config: engine_additionl_config,
+		config: engine_additional_config,
 	}];
 	let config = Config {
 		version: request.version.clone(),
 		querent_id: id.to_string(),
-		querent_name: request.name.clone().into(),
+		querent_name: engine_name.clone(),
 		workflow: WorkflowConfig {
-			name: request.name.clone().into(),
+			name: engine_name.clone(),
 			id: id.to_string(),
 			config: request.config.clone(),
 			channel: None,
@@ -255,7 +284,7 @@ pub async fn create_querent_synapose_workflow(
 		resource: None,
 	};
 	let workflow = Workflow {
-		name: request.name.clone().into(),
+		name: engine_name.clone(),
 		id: id.to_string(),
 		import: "".to_string(),
 		attr: "print_querent".to_string(),

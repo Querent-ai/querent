@@ -11,7 +11,7 @@ service SemanticsService {
   rpc ObservePipeline(EmptyObserve) returns (SemanticServiceCounters) {}
   rpc GetPipelinesMetadata(EmptyGetPipelinesMetadata) returns (PipelinesMetadata) {}
   rpc StopPipeline(StopPipelineRequest) returns (BooleanResponse) {}
-  rpc DescribePipeline(DescribePipelineRequest) returns (SemanticPipelineResponse) {}
+  rpc DescribePipeline(DescribePipelineRequest) returns (IndexingStatistics) {}
   rpc IngestTokens(IngestedTokens) returns (BooleanResponse) {}
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
 }
@@ -33,7 +33,7 @@ message RestartPipelineRequest {
 }
 
 message SemanticPipelineRequest {
-  querent.workflows.NamedWorkflows workflow = 1;
+  querent.workflows.NamedWorkflows name = 1;
   float version = 2;
   repeated querent.collectors.CollectorConfig collectors = 3;
   repeated querent.storage.StorageConfig storage_configs = 4;
@@ -57,21 +57,21 @@ message IngestedTokens {
 }
 
 message IndexingStatistics {
-  int64 total_docs = 1;
-  int64 total_events = 2;
-  int64 total_events_processed = 3;
-  int64 total_events_received = 4;
-  int64 total_events_sent = 5;
-  int64 total_batches = 6;
-  int64 total_sentences = 7;
-  int64 total_subjects = 8;
-  int64 total_predicates = 9;
-  int64 total_objects = 10;
-  int64 total_graph_events = 11;
-  int64 total_vector_events = 12;
-  int64 total_graph_events_sent = 13;
-  int64 total_vector_events_sent = 14;
-  int64 total_semantic_knowledge = 15;
+  uint64 total_docs = 1;
+  uint64 total_events = 2;
+  uint64 total_events_processed = 3;
+  uint64 total_events_received = 4;
+  uint64 total_events_sent = 5;
+  uint64 total_batches = 6;
+  uint64 total_sentences = 7;
+  uint64 total_subjects = 8;
+  uint64 total_predicates = 9;
+  uint64 total_objects = 10;
+  uint64 total_graph_events = 11;
+  uint64 total_vector_events = 12;
+  uint64 total_graph_events_sent = 13;
+  uint64 total_vector_events_sent = 14;
+  uint64 total_semantic_knowledge = 15;
 }
 
 message PipelineMetadata {

@@ -1,16 +1,17 @@
 use actors::{AskError, MessageBus, Observe};
-use common::{
-	semantic_api::{
-		CollectorConfig, EngineConfig, GetAllPipelines, NamedWorkflows, OpenAIConfig,
-		PipelineMetadata, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse,
-		SendIngestedTokens, SupportedBackend, SupportedSources,
-	},
-	AzureCollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig, GCSCollectorConfig,
-	GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig,
-	MilvusConfig, Neo4jConfig, NewsCollectorConfig, PostgresConfig, S3CollectorConfig,
-	SlackCollectorConfig, StorageConfig, StorageConfigs, StorageType,
-};
 use futures_util::StreamExt;
+use proto::{
+	collectors::{
+		AzureCollectorConfig, CollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig,
+		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig,
+		NewsCollectorConfig, S3CollectorConfig, SlackCollectorConfig,
+	},
+	semantics::{
+		IndexingStatistics, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse,
+	},
+	storage::{MilvusConfig, Neo4jConfig, PostgresConfig, StorageConfig, StorageType},
+};
+
 use querent::{
 	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
 	RestartPipeline, SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
@@ -160,14 +161,15 @@ async fn start_pipeline(
 	mut index_storages: Vec<Arc<dyn storage::Storage>>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
-	if request.storage_configs.is_none() && event_storages.is_empty() && index_storages.is_empty() {
+	if request.storage_configs.is_empty() && event_storages.is_empty() && index_storages.is_empty()
+	{
 		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 			"Storage configs are missing and no event storages are provided."
 		)));
 	}
-	if request.storage_configs.is_some() && !request.storage_configs.clone().unwrap().is_empty() {
+	if !request.storage_configs.is_empty() {
 		(event_storages, index_storages) =
-			create_storages(&request.storage_configs.clone().unwrap()).await.map_err(|e| {
+			create_storages(&request.storage_configs.clone()).await.map_err(|e| {
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
 			})?;
 	}

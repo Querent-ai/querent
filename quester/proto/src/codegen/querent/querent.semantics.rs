@@ -32,7 +32,7 @@ pub struct RestartPipelineRequest {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
     #[prost(message, optional, tag = "1")]
-    pub workflow: ::core::option::Option<super::workflows::NamedWorkflows>,
+    pub name: ::core::option::Option<super::workflows::NamedWorkflows>,
     #[prost(float, tag = "2")]
     pub version: f32,
     #[prost(message, repeated, tag = "3")]
@@ -78,36 +78,36 @@ pub struct IngestedTokens {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IndexingStatistics {
-    #[prost(int64, tag = "1")]
-    pub total_docs: i64,
-    #[prost(int64, tag = "2")]
-    pub total_events: i64,
-    #[prost(int64, tag = "3")]
-    pub total_events_processed: i64,
-    #[prost(int64, tag = "4")]
-    pub total_events_received: i64,
-    #[prost(int64, tag = "5")]
-    pub total_events_sent: i64,
-    #[prost(int64, tag = "6")]
-    pub total_batches: i64,
-    #[prost(int64, tag = "7")]
-    pub total_sentences: i64,
-    #[prost(int64, tag = "8")]
-    pub total_subjects: i64,
-    #[prost(int64, tag = "9")]
-    pub total_predicates: i64,
-    #[prost(int64, tag = "10")]
-    pub total_objects: i64,
-    #[prost(int64, tag = "11")]
-    pub total_graph_events: i64,
-    #[prost(int64, tag = "12")]
-    pub total_vector_events: i64,
-    #[prost(int64, tag = "13")]
-    pub total_graph_events_sent: i64,
-    #[prost(int64, tag = "14")]
-    pub total_vector_events_sent: i64,
-    #[prost(int64, tag = "15")]
-    pub total_semantic_knowledge: i64,
+    #[prost(uint64, tag = "1")]
+    pub total_docs: u64,
+    #[prost(uint64, tag = "2")]
+    pub total_events: u64,
+    #[prost(uint64, tag = "3")]
+    pub total_events_processed: u64,
+    #[prost(uint64, tag = "4")]
+    pub total_events_received: u64,
+    #[prost(uint64, tag = "5")]
+    pub total_events_sent: u64,
+    #[prost(uint64, tag = "6")]
+    pub total_batches: u64,
+    #[prost(uint64, tag = "7")]
+    pub total_sentences: u64,
+    #[prost(uint64, tag = "8")]
+    pub total_subjects: u64,
+    #[prost(uint64, tag = "9")]
+    pub total_predicates: u64,
+    #[prost(uint64, tag = "10")]
+    pub total_objects: u64,
+    #[prost(uint64, tag = "11")]
+    pub total_graph_events: u64,
+    #[prost(uint64, tag = "12")]
+    pub total_vector_events: u64,
+    #[prost(uint64, tag = "13")]
+    pub total_graph_events_sent: u64,
+    #[prost(uint64, tag = "14")]
+    pub total_vector_events_sent: u64,
+    #[prost(uint64, tag = "15")]
+    pub total_semantic_knowledge: u64,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -198,7 +198,7 @@ pub trait SemanticsService: std::fmt::Debug + dyn_clone::DynClone + Send + Sync 
     async fn describe_pipeline(
         &mut self,
         request: DescribePipelineRequest,
-    ) -> crate::semantics::SemanticsResult<SemanticPipelineResponse>;
+    ) -> crate::semantics::SemanticsResult<IndexingStatistics>;
     async fn ingest_tokens(
         &mut self,
         request: IngestedTokens,
@@ -322,7 +322,7 @@ impl SemanticsService for SemanticsServiceClient {
     async fn describe_pipeline(
         &mut self,
         request: DescribePipelineRequest,
-    ) -> crate::semantics::SemanticsResult<SemanticPipelineResponse> {
+    ) -> crate::semantics::SemanticsResult<IndexingStatistics> {
         self.inner.describe_pipeline(request).await
     }
     async fn ingest_tokens(
@@ -374,7 +374,7 @@ pub mod semantics_service_mock {
         async fn describe_pipeline(
             &mut self,
             request: super::DescribePipelineRequest,
-        ) -> crate::semantics::SemanticsResult<super::SemanticPipelineResponse> {
+        ) -> crate::semantics::SemanticsResult<super::IndexingStatistics> {
             self.inner.lock().await.describe_pipeline(request).await
         }
         async fn ingest_tokens(
@@ -467,7 +467,7 @@ impl tower::Service<StopPipelineRequest> for Box<dyn SemanticsService> {
     }
 }
 impl tower::Service<DescribePipelineRequest> for Box<dyn SemanticsService> {
-    type Response = SemanticPipelineResponse;
+    type Response = IndexingStatistics;
     type Error = crate::semantics::SemanticsError;
     type Future = BoxFuture<Self::Response, Self::Error>;
     fn poll_ready(
@@ -540,7 +540,7 @@ struct SemanticsServiceTowerServiceStack {
     >,
     describe_pipeline_svc: common::tower::BoxService<
         DescribePipelineRequest,
-        SemanticPipelineResponse,
+        IndexingStatistics,
         crate::semantics::SemanticsError,
     >,
     ingest_tokens_svc: common::tower::BoxService<
@@ -597,7 +597,7 @@ impl SemanticsService for SemanticsServiceTowerServiceStack {
     async fn describe_pipeline(
         &mut self,
         request: DescribePipelineRequest,
-    ) -> crate::semantics::SemanticsResult<SemanticPipelineResponse> {
+    ) -> crate::semantics::SemanticsResult<IndexingStatistics> {
         self.describe_pipeline_svc.ready().await?.call(request).await
     }
     async fn ingest_tokens(
@@ -656,11 +656,11 @@ type StopPipelineLayer = common::tower::BoxLayer<
 type DescribePipelineLayer = common::tower::BoxLayer<
     common::tower::BoxService<
         DescribePipelineRequest,
-        SemanticPipelineResponse,
+        IndexingStatistics,
         crate::semantics::SemanticsError,
     >,
     DescribePipelineRequest,
-    SemanticPipelineResponse,
+    IndexingStatistics,
     crate::semantics::SemanticsError,
 >;
 type IngestTokensLayer = common::tower::BoxLayer<
@@ -801,25 +801,25 @@ impl SemanticsServiceTowerLayerStack {
         L: tower::Layer<
                 common::tower::BoxService<
                     DescribePipelineRequest,
-                    SemanticPipelineResponse,
+                    IndexingStatistics,
                     crate::semantics::SemanticsError,
                 >,
             > + Clone + Send + Sync + 'static,
         <L as tower::Layer<
             common::tower::BoxService<
                 DescribePipelineRequest,
-                SemanticPipelineResponse,
+                IndexingStatistics,
                 crate::semantics::SemanticsError,
             >,
         >>::Service: tower::Service<
                 DescribePipelineRequest,
-                Response = SemanticPipelineResponse,
+                Response = IndexingStatistics,
                 Error = crate::semantics::SemanticsError,
             > + Clone + Send + Sync + 'static,
         <<L as tower::Layer<
             common::tower::BoxService<
                 DescribePipelineRequest,
-                SemanticPipelineResponse,
+                IndexingStatistics,
                 crate::semantics::SemanticsError,
             >,
         >>::Service as tower::Service<DescribePipelineRequest>>::Future: Send + 'static,
@@ -967,13 +967,13 @@ impl SemanticsServiceTowerLayerStack {
         L: tower::Layer<
                 common::tower::BoxService<
                     DescribePipelineRequest,
-                    SemanticPipelineResponse,
+                    IndexingStatistics,
                     crate::semantics::SemanticsError,
                 >,
             > + Send + Sync + 'static,
         L::Service: tower::Service<
                 DescribePipelineRequest,
-                Response = SemanticPipelineResponse,
+                Response = IndexingStatistics,
                 Error = crate::semantics::SemanticsError,
             > + Clone + Send + Sync + 'static,
         <L::Service as tower::Service<DescribePipelineRequest>>::Future: Send + 'static,
@@ -1234,12 +1234,9 @@ where
         >
         + tower::Service<
             DescribePipelineRequest,
-            Response = SemanticPipelineResponse,
+            Response = IndexingStatistics,
             Error = crate::semantics::SemanticsError,
-            Future = BoxFuture<
-                SemanticPipelineResponse,
-                crate::semantics::SemanticsError,
-            >,
+            Future = BoxFuture<IndexingStatistics, crate::semantics::SemanticsError>,
         >
         + tower::Service<
             IngestedTokens,
@@ -1281,7 +1278,7 @@ where
     async fn describe_pipeline(
         &mut self,
         request: DescribePipelineRequest,
-    ) -> crate::semantics::SemanticsResult<SemanticPipelineResponse> {
+    ) -> crate::semantics::SemanticsResult<IndexingStatistics> {
         self.call(request).await
     }
     async fn ingest_tokens(
@@ -1374,7 +1371,7 @@ where
     async fn describe_pipeline(
         &mut self,
         request: DescribePipelineRequest,
-    ) -> crate::semantics::SemanticsResult<SemanticPipelineResponse> {
+    ) -> crate::semantics::SemanticsResult<IndexingStatistics> {
         self.inner
             .describe_pipeline(request)
             .await
@@ -1464,7 +1461,7 @@ for SemanticsServiceGrpcServerAdapter {
     async fn describe_pipeline(
         &self,
         request: tonic::Request<DescribePipelineRequest>,
-    ) -> Result<tonic::Response<SemanticPipelineResponse>, tonic::Status> {
+    ) -> Result<tonic::Response<IndexingStatistics>, tonic::Status> {
         self.inner
             .clone()
             .describe_pipeline(request.into_inner())
@@ -1701,7 +1698,7 @@ pub mod semantics_service_grpc_client {
             &mut self,
             request: impl tonic::IntoRequest<super::DescribePipelineRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::SemanticPipelineResponse>,
+            tonic::Response<super::IndexingStatistics>,
             tonic::Status,
         > {
             self.inner
@@ -1822,7 +1819,7 @@ pub mod semantics_service_grpc_server {
             &self,
             request: tonic::Request<super::DescribePipelineRequest>,
         ) -> std::result::Result<
-            tonic::Response<super::SemanticPipelineResponse>,
+            tonic::Response<super::IndexingStatistics>,
             tonic::Status,
         >;
         async fn ingest_tokens(
@@ -2105,7 +2102,7 @@ pub mod semantics_service_grpc_server {
                         T: SemanticsServiceGrpc,
                     > tonic::server::UnaryService<super::DescribePipelineRequest>
                     for DescribePipelineSvc<T> {
-                        type Response = super::SemanticPipelineResponse;
+                        type Response = super::IndexingStatistics;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,

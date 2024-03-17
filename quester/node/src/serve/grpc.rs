@@ -20,8 +20,8 @@ pub(crate) async fn start_grpc_server(
 ) -> anyhow::Result<()> {
 	let mut server = Server::builder();
 	let cluster_grpc_service = cluster_grpc_server(services.cluster.clone());
-	let semantics_grpc_service = SemanticsServiceClient::tower()
-		.stack_layer(SEMANTIC_GRPC_SERVER_METRICS_LAYER.clone())
-		.build_from_mailbox(services.semantic_service_bus.clone());
+	// let semantics_grpc_service = SemanticsServiceClient::tower()
+	// 	.stack_layer(SEMANTIC_GRPC_SERVER_METRICS_LAYER.clone())
+	// 	.build_from_mailbox(services.semantic_service_bus.clone());
 	Ok(())
 }

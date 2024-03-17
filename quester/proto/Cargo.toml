@@ -34,7 +34,7 @@ tracing-opentelemetry = { workspace = true }
 ulid = { workspace = true }
 utoipa = { workspace = true }
 zstd = { workspace = true }
-
+querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
 
