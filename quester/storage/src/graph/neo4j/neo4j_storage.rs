@@ -2,7 +2,7 @@ use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
 use common::{SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
-use proto::storage::Neo4jConfig;
+use proto::semantics::Neo4jConfig;
 use std::sync::Arc;
 
 pub struct Neo4jStorage {
@@ -126,7 +126,7 @@ impl Storage for Neo4jStorage {
 
 #[cfg(test)]
 mod tests {
-	use proto::storage::StorageType;
+	use proto::semantics::StorageType;
 
 	use super::*;
 

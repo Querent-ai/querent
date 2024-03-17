@@ -1,5 +1,5 @@
 pub mod storage;
-use proto::storage::{StorageConfig, StorageType};
+use proto::semantics::{StorageConfig, StorageType};
 use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 pub use storage::*;

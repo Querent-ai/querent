@@ -2,18 +2,16 @@ use actors::{AskError, MessageBus, Observe};
 use common::semantic_api::SendIngestedTokens;
 use futures_util::StreamExt;
 use proto::{
-	collectors::{
-		AzureCollectorConfig, CollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig,
-		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig,
-		NewsCollectorConfig, S3CollectorConfig, SlackCollectorConfig, SupportedSources,
-	},
 	config::StorageConfigs,
 	semantics::{
-		EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata, PipelinesMetadata,
-		SemanticPipelineRequest, SemanticPipelineResponse,
+		AzureCollectorConfig, CollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig,
+		EmptyGetPipelinesMetadata, GcsCollectorConfig, GithubCollectorConfig,
+		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig,
+		NamedWorkflows, Neo4jConfig, NewsCollectorConfig, OpenAiConfig, PipelineMetadata,
+		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SemanticPipelineRequest,
+		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
+		SupportedSources,
 	},
-	storage::{MilvusConfig, Neo4jConfig, PostgresConfig, StorageConfig, StorageType},
-	workflows::{NamedWorkflows, OpenAiConfig},
 };
 
 use querent::{

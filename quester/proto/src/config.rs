@@ -1,9 +1,8 @@
-use crate::storage::StorageConfig;
+use crate::semantics::StorageConfig;
 use anyhow::bail;
 use common::HostAddr;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, EnumMap};
 use std::{num::NonZeroU64, time::Duration};
 use tracing::warn;
 
@@ -78,9 +77,8 @@ impl Default for JaegerConfig {
 	}
 }
 
-#[serde_as]
-#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
-pub struct StorageConfigs(#[serde_as(as = "EnumMap")] pub Vec<StorageConfig>);
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct StorageConfigs(pub Vec<StorageConfig>);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

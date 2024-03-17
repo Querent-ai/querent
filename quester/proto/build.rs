@@ -13,12 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	// Semantic service proto code generation
 	ProtoGenerator::builder()
-		.with_protos(&[
-			"protos/querent/semantics.proto",
-			"protos/querent/collectors.proto",
-			"protos/querent/storage.proto",
-			"protos/querent/workflows.proto",
-		])
+		.with_protos(&["protos/querent/semantics.proto"])
 		.with_includes(&["protos"])
 		.with_output_dir("src/codegen/querent")
 		.with_result_type_path("crate::semantics::SemanticsResult")
