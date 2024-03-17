@@ -7,7 +7,7 @@ use milvus::{
 	schema::{CollectionSchemaBuilder, FieldSchema},
 	value::ValueVec,
 };
-use proto::storage::MilvusConfig;
+use proto::semantics::MilvusConfig;
 
 use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
@@ -254,7 +254,7 @@ impl MilvusStorage {
 
 #[cfg(test)]
 mod tests {
-	use proto::storage::StorageType;
+	use proto::semantics::StorageType;
 
 	use super::*;
 

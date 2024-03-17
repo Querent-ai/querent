@@ -15,7 +15,7 @@ use diesel_async::{
 	RunQueryDsl,
 };
 use futures_util::{future::BoxFuture, FutureExt};
-use proto::storage::PostgresConfig;
+use proto::semantics::PostgresConfig;
 use std::{
 	ops::{Deref, DerefMut},
 	sync::Arc,
@@ -259,7 +259,7 @@ table! {
 
 #[cfg(test)]
 mod test {
-	use proto::storage::StorageType;
+	use proto::semantics::StorageType;
 
 	use super::*;
 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
