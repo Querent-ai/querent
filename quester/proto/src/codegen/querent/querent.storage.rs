@@ -22,8 +22,8 @@ pub struct PostgresConfig {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
     /// Type of the storage.
-    #[prost(message, optional, tag = "2")]
-    pub storage_type: ::core::option::Option<StorageType>,
+    #[prost(enumeration = "StorageType", tag = "2")]
+    pub storage_type: i32,
     /// URL of the Postgres storage.
     #[prost(string, tag = "3")]
     pub url: ::prost::alloc::string::String,
@@ -37,8 +37,8 @@ pub struct MilvusConfig {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
     /// Type of the storage.
-    #[prost(message, optional, tag = "2")]
-    pub storage_type: ::core::option::Option<StorageType>,
+    #[prost(enumeration = "StorageType", tag = "2")]
+    pub storage_type: i32,
     /// URL of the Milvus storage.
     #[prost(string, tag = "3")]
     pub url: ::prost::alloc::string::String,
@@ -58,8 +58,8 @@ pub struct Neo4jConfig {
     #[prost(string, tag = "1")]
     pub name: ::prost::alloc::string::String,
     /// Type of the storage.
-    #[prost(message, optional, tag = "2")]
-    pub storage_type: ::core::option::Option<StorageType>,
+    #[prost(enumeration = "StorageType", tag = "2")]
+    pub storage_type: i32,
     /// URL of the Neo4j storage.
     #[prost(string, tag = "3")]
     pub url: ::prost::alloc::string::String,
@@ -79,12 +79,39 @@ pub struct Neo4jConfig {
     #[prost(int32, tag = "8")]
     pub max_connection_pool_size: i32,
 }
-/// StorageType is a message to hold type of storage.
+/// Enum for defining different types of storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct StorageType {
-    /// Type of the storage.
-    #[prost(string, tag = "1")]
-    pub r#type: ::prost::alloc::string::String,
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum StorageType {
+    /// Default value, representing an unknown storage type.
+    Unknown = 0,
+    Index = 1,
+    Vector = 2,
+    Graph = 3,
+}
+impl StorageType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            StorageType::Unknown => "UNKNOWN",
+            StorageType::Index => "INDEX",
+            StorageType::Vector => "VECTOR",
+            StorageType::Graph => "GRAPH",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "UNKNOWN" => Some(Self::Unknown),
+            "INDEX" => Some(Self::Index),
+            "VECTOR" => Some(Self::Vector),
+            "GRAPH" => Some(Self::Graph),
+            _ => None,
+        }
+    }
 }

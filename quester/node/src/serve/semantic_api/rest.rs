@@ -1,15 +1,17 @@
 use actors::{AskError, MessageBus, Observe};
+use common::{semantic_api::SendIngestedTokens, StorageConfigs};
 use futures_util::StreamExt;
 use proto::{
 	collectors::{
 		AzureCollectorConfig, CollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, JiraCollectorConfig,
-		NewsCollectorConfig, S3CollectorConfig, SlackCollectorConfig,
+		NewsCollectorConfig, S3CollectorConfig, SlackCollectorConfig, SupportedSources,
 	},
 	semantics::{
-		IndexingStatistics, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse,
+		EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata, PipelinesMetadata, SemanticPipelineRequest, SemanticPipelineResponse
 	},
 	storage::{MilvusConfig, Neo4jConfig, PostgresConfig, StorageConfig, StorageType},
+	workflows::{NamedWorkflows, OpenAiConfig},
 };
 
 use querent::{
@@ -42,14 +44,12 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		SemanticServiceCounters,
 		IndexingStatistics,
 		CollectorConfig,
-		EngineConfig,
-		SupportedBackend,
 		SupportedSources,
 		IngestedTokens,
 		PipelinesMetadata,
 		PipelineMetadata,
-		OpenAIConfig,
-		GCSCollectorConfig,
+		OpenAiConfig,
+		GcsCollectorConfig,
 		S3CollectorConfig,
 		JiraCollectorConfig,
 		SlackCollectorConfig,
@@ -230,7 +230,7 @@ pub fn start_pipeline_post_handler(
 async fn get_pipelines_metadata(
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<PipelinesMetadata, AskError<Infallible>> {
-	let pipelines = semantic_service_mailbox.ask(GetAllPipelines).await?;
+	let pipelines = semantic_service_mailbox.ask(EmptyGetPipelinesMetadata{}).await?;
 	Ok(PipelinesMetadata { pipelines })
 }
 
