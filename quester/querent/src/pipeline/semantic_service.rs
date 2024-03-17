@@ -5,10 +5,8 @@ use actors::{
 };
 use async_trait::async_trait;
 use cluster::Cluster;
-use common::{
-	semantic_api::{GetAllPipelines, PipelineMetadata, SendIngestedTokens},
-	IndexingStatistics, MessageStateBatches, PubSubBroker,
-};
+use common::{semantic_api::SendIngestedTokens, MessageStateBatches, PubSubBroker};
+use proto::semantics::{EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata};
 use querent_synapse::comm::{ChannelHandler, IngestedTokens, MessageState, MessageType};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -321,12 +319,12 @@ impl Handler<SendIngestedTokens> for SemanticService {
 }
 
 #[async_trait]
-impl Handler<GetAllPipelines> for SemanticService {
+impl Handler<EmptyGetPipelinesMetadata> for SemanticService {
 	type Reply = Vec<PipelineMetadata>;
 
 	async fn handle(
 		&mut self,
-		_message: GetAllPipelines,
+		_message: EmptyGetPipelinesMetadata,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		let pipelines_metadata: Vec<PipelineMetadata> = self

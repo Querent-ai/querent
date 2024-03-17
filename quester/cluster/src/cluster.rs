@@ -11,8 +11,8 @@ use chitchat::{
 	spawn_chitchat, transport::Transport, Chitchat, ChitchatConfig, ChitchatHandle, ChitchatId,
 	ClusterStateSnapshot, FailureDetectorConfig, KeyChangeEvent, ListenerHandle, NodeState,
 };
-use common::IndexingStatistics;
 use futures::Stream;
+use proto::semantics::IndexingStatistics;
 use serde::{Deserialize, Serialize};
 use tokio::{
 	sync::{mpsc, watch, Mutex, RwLock},

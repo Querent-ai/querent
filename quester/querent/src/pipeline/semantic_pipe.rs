@@ -6,7 +6,8 @@ use actors::{
 	Supervisable, HEARTBEAT,
 };
 use async_trait::async_trait;
-use common::{IndexingStatistics, MessageStateBatches, PubSubBroker, TerimateSignal};
+use common::{MessageStateBatches, PubSubBroker, TerimateSignal};
+use proto::semantics::IndexingStatistics;
 use querent_synapse::{
 	callbacks::EventType,
 	comm::{ChannelHandler, IngestedTokens, MessageState, MessageType},
