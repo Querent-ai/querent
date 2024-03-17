@@ -2,6 +2,14 @@ syntax = "proto3";
 
 package querent.storage;
 
+// Enum for defining different types of storage.
+enum StorageType {
+  UNKNOWN = 0; // Default value, representing an unknown storage type.
+  INDEX = 1;
+  VECTOR = 2;
+  GRAPH = 3;
+}
+
 // StorageConfig is a message to hold configuration for a storage.
 message StorageConfig {
   // Postgres configuration.
@@ -54,10 +62,4 @@ message Neo4jConfig {
   int32 fetch_size = 7;
   // Maximum connection pool size for the Neo4j storage.
   int32 max_connection_pool_size = 8;
-}
-
-// StorageType is a message to hold type of storage.
-message StorageType {
-  // Type of the storage.
-  string type = 1;
 }

@@ -1,11 +1,7 @@
 pub mod storage;
-use std::{collections::HashMap, sync::Arc};
-
-use common::{
-	storage_config::{MilvusConfig, Neo4jConfig, PostgresConfig},
-	StorageConfig, StorageType,
-};
+use proto::storage::{StorageConfig, StorageType};
 use querent_synapse::callbacks::EventType;
+use std::{collections::HashMap, sync::Arc};
 pub use storage::*;
 pub mod vector;
 use tracing::info;
@@ -16,83 +12,53 @@ pub mod index;
 pub use index::*;
 
 pub async fn create_storages(
-	storage_configs: &Vec<StorageConfig>,
+	storage_configs: &[StorageConfig],
 ) -> anyhow::Result<(HashMap<EventType, Arc<dyn Storage>>, Vec<Arc<dyn Storage>>)> {
 	let mut event_storages: HashMap<EventType, Arc<dyn Storage>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
 
-	for storage_config in storage_configs.iter() {
+	for storage_config in storage_configs {
 		match storage_config {
-			StorageConfig::Postgres(backend) => {
-				if backend.storage_type != StorageType::Index {
-					return Err(anyhow::anyhow!("Postgres storage type must be index"));
+			StorageConfig { postgres: Some(config), .. } => {
+				if config.storage_type != StorageType::Index as i32 {
+					return Err(anyhow::anyhow!(
+						"Invalid storage type: Postgres is only supported for index storage"
+					));
 				}
-				let postgres_config = PostgresConfig { url: backend.url.to_string() };
-				let postgres = PostgresStorage::new(postgres_config).await.map_err(|err| {
+				let postgres = PostgresStorage::new(config.clone()).await.map_err(|err| {
 					log::error!("Postgres client creation failed: {:?}", err);
 					err
-				});
+				})?;
 
-				match postgres {
-					Ok(postgres) => {
-						postgres.check_connectivity().await?;
-						let postgres = Arc::new(postgres);
-						index_storages.push(postgres.clone());
-					},
-					Err(err) => {
-						log::error!("Postgres client creation failed: {:?}", err);
-					},
-				}
+				postgres.check_connectivity().await?;
+				let postgres = Arc::new(postgres);
+				index_storages.push(postgres);
 			},
-			StorageConfig::Milvus(backend) => {
-				let vector_store_config = MilvusConfig {
-					url: backend.url.to_string(),
-					username: backend.username.to_string(),
-					password: backend.password.to_string(),
-				};
-
-				let milvus = MilvusStorage::new(vector_store_config).await.map_err(|err| {
+			StorageConfig { milvus: Some(config), .. } => {
+				let milvus = MilvusStorage::new(config.clone()).await.map_err(|err| {
 					log::error!("Milvus client creation failed: {:?}", err);
 					err
-				});
-				match milvus {
-					Ok(milvus) => {
-						milvus.check_connectivity().await?;
-						let milvus = Arc::new(milvus);
-						event_storages.insert(EventType::Vector, milvus.clone());
-					},
-					Err(err) => {
-						log::error!("Milvus client creation failed: {:?}", err);
-					},
-				}
+				})?;
+
+				milvus.check_connectivity().await?;
+				let milvus = Arc::new(milvus);
+				event_storages.insert(EventType::Vector, milvus);
 			},
-			StorageConfig::Neo4j(backend) => {
-				let graph_storage_config = Neo4jConfig {
-					db_name: backend.db_name.to_string(),
-					url: backend.url.to_string(),
-					username: backend.username.to_string(),
-					password: backend.password.to_string(),
-					max_connections: backend.max_connection_pool_size.unwrap_or(10),
-					fetch_size: backend.fetch_size.unwrap_or(1000),
-				};
-				let neo4j = Neo4jStorage::new(graph_storage_config).await.map_err(|err| {
+			StorageConfig { neo4j: Some(config), .. } => {
+				let neo4j = Neo4jStorage::new(config.clone()).await.map_err(|err| {
 					log::error!("Neo4j client creation failed: {:?}", err);
 					err
-				});
+				})?;
 
-				match neo4j {
-					Ok(neo4j) => {
-						neo4j.check_connectivity().await?;
-						let neo4j = Arc::new(neo4j);
-						event_storages.insert(EventType::Graph, neo4j.clone());
-					},
-					Err(err) => {
-						log::error!("Neo4j client creation failed: {:?}", err);
-					},
-				}
+				neo4j.check_connectivity().await?;
+				let neo4j = Arc::new(neo4j);
+				event_storages.insert(EventType::Graph, neo4j);
 			},
+			// Handle other storage types if necessary
+			_ => {}, // Ignore or handle unexpected storage configs
 		}
 	}
+
 	info!("Storages created successfully ✅");
 	Ok((event_storages, index_storages))
 }

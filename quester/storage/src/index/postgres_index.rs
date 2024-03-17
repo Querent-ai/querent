@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::{storage_config::PostgresConfig, SemanticKnowledgePayload, VectorPayload};
+use common::{SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult, Error as DieselError, Error::QueryBuilderError},
 	table, Insertable, Queryable, Selectable,
@@ -15,6 +15,7 @@ use diesel_async::{
 	RunQueryDsl,
 };
 use futures_util::{future::BoxFuture, FutureExt};
+use proto::storage::PostgresConfig;
 use std::{
 	ops::{Deref, DerefMut},
 	sync::Arc,
@@ -258,6 +259,8 @@ table! {
 
 #[cfg(test)]
 mod test {
+	use proto::storage::StorageType;
+
 	use super::*;
 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
 
@@ -265,7 +268,11 @@ mod test {
 	#[tokio::test]
 	async fn test_postgres_storage() {
 		// Create a postgres config
-		let config = PostgresConfig { url: TEST_DB_URL.to_string() };
+		let config = PostgresConfig {
+			url: TEST_DB_URL.to_string(),
+			name: "test".to_string(),
+			storage_type: StorageType::Index as i32,
+		};
 
 		// Create a PostgresStorage instance with the test database URL
 		let storage_result = PostgresStorage::new(config).await;

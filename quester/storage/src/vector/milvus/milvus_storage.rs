@@ -1,12 +1,13 @@
 use std::{sync::Arc, time::Duration};
 
-use common::{storage_config::MilvusConfig, SemanticKnowledgePayload, VectorPayload};
+use common::{SemanticKnowledgePayload, VectorPayload};
 use milvus::{
 	client::Client as MilvusClient,
 	data::FieldColumn,
 	schema::{CollectionSchemaBuilder, FieldSchema},
 	value::ValueVec,
 };
+use proto::storage::MilvusConfig;
 
 use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
@@ -253,6 +254,8 @@ impl MilvusStorage {
 
 #[cfg(test)]
 mod tests {
+	use proto::storage::StorageType;
+
 	use super::*;
 
 	#[tokio::test]
@@ -260,6 +263,8 @@ mod tests {
 		// Create a MilvusStorage instance for testing with a local URL
 		const URL: &str = "http://localhost:19530";
 		let storage_config = MilvusConfig {
+			name: "milvus".to_string(),
+			storage_type: StorageType::Vector as i32,
 			url: URL.to_string(),
 			username: "".to_string(),
 			password: "".to_string(),
