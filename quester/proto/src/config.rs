@@ -1,67 +1,13 @@
-use std::{num::NonZeroU64, time::Duration};
-
+use crate::storage::StorageConfig;
 use anyhow::bail;
+use common::HostAddr;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, EnumMap};
+use std::{num::NonZeroU64, time::Duration};
 use tracing::warn;
 
-use crate::HostAddr;
-
 pub const DEFAULT_CONFIG_PATH: &str = "config/querent.config.yaml";
-
-#[derive(Clone, Serialize, Deserialize, Debug, Eq, PartialEq, utoipa::ToSchema)]
-#[serde(deny_unknown_fields)]
-pub enum StorageType {
-	#[serde(rename = "index")]
-	Index,
-	#[serde(rename = "graph")]
-	Graph,
-	#[serde(rename = "vector")]
-	Vector,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(deny_unknown_fields)]
-pub enum StorageConfig {
-	#[serde(rename = "postgres")]
-	Postgres(PostgresConfig),
-	#[serde(rename = "milvus")]
-	Milvus(MilvusConfig),
-	#[serde(rename = "neo4j")]
-	Neo4j(Neo4jConfig),
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PostgresConfig {
-	pub name: String,
-	pub storage_type: StorageType,
-	pub url: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(deny_unknown_fields)]
-pub struct MilvusConfig {
-	pub name: String,
-	pub storage_type: StorageType,
-	pub url: String,
-	pub username: String,
-	pub password: String,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
-#[serde(deny_unknown_fields)]
-pub struct Neo4jConfig {
-	pub name: String,
-	pub storage_type: StorageType,
-	pub db_name: String,
-	pub url: String,
-	pub username: String,
-	pub password: String,
-	pub max_connection_pool_size: Option<usize>,
-	pub fetch_size: Option<usize>,
-}
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -133,7 +79,7 @@ impl Default for JaegerConfig {
 }
 
 #[serde_as]
-#[derive(Debug, Clone, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct StorageConfigs(#[serde_as(as = "EnumMap")] pub Vec<StorageConfig>);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

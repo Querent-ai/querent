@@ -1,6 +1,3 @@
-pub mod config;
-pub mod storage_config;
-pub use config::*;
 pub mod metrics;
 pub mod terminate_sig;
 pub use terminate_sig::TerimateSignal;

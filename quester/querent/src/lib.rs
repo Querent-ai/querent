@@ -3,9 +3,10 @@ use std::collections::HashMap;
 
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
-use common::{NodeConfig, PubSubBroker};
+use common::PubSubBroker;
 use proto::{
 	collectors::SupportedSources, semantics::SemanticPipelineRequest, workflows::NamedWorkflows,
+	NodeConfig,
 };
 pub use qsource::*;
 pub mod events;
@@ -243,19 +244,14 @@ pub async fn create_querent_synapose_workflow(
 
 	let mut engine_name = "knowledge_graph_using_llama2_v1".to_string();
 	let mut engine_additional_config = HashMap::new();
-	match &request.name {
-		None => {
-			engine_name = "knowledge_graph_using_llama2_v1".to_string();
-		},
-		Some(NamedWorkflows { knowledge_graph_using_llama2_v1: _, .. }) => {
-			engine_name = "knowledge_graph_using_llama2_v1".to_string();
-		},
-		Some(NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. }) => {
-			engine_name = "knowledge_graph_using_openai".to_string();
-			engine_additional_config
-				.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
-		},
-	};
+
+	if let Some(NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. }) =
+		&request.name
+	{
+		engine_name = "knowledge_graph_using_openai".to_string();
+		engine_additional_config
+			.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
+	}
 
 	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {
 		id: id.clone(),

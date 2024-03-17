@@ -3,7 +3,8 @@ use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 use crate::rest;
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
-use common::{BoxFutureInfaillible, Host, NodeConfig, PubSubBroker, RuntimesConfig};
+use common::{BoxFutureInfaillible, Host, PubSubBroker, RuntimesConfig};
+use proto::config::NodeConfig;
 use querent::{start_semantic_service, SemanticService};
 use querent_synapse::callbacks::EventType;
 use storage::{create_storages, Storage};
@@ -57,6 +58,7 @@ pub async fn serve_quester(
 			debug!("REST server shutdown trigger sender was dropped");
 		}
 	});
+
 	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,

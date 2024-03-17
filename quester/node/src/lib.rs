@@ -1,7 +1,7 @@
 pub mod cli;
 pub mod serve;
 use clap::Arg;
-use common::DEFAULT_CONFIG_PATH;
+use proto::config::DEFAULT_CONFIG_PATH;
 pub use serve::*;
 
 fn config_cli_arg() -> Arg {
