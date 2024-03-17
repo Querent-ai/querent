@@ -1,8 +1,8 @@
 pub mod cli_main;
 pub use cli_main::*;
 pub mod logger;
-use common::NodeConfig;
 pub use logger::*;
+use proto::config::NodeConfig;
 pub mod service;
 use anyhow::Context;
 pub use service::*;

@@ -25,7 +25,6 @@ pub mod metrics_api;
 pub use metrics_api::*;
 use tokio::sync::oneshot;
 use tracing::info;
-pub mod grpc;
 pub mod web_interface;
 use warp::{reject::Rejection, Filter};
 pub use web_interface::*;

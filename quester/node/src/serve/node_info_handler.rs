@@ -1,4 +1,4 @@
-use common::NodeConfig;
+use proto::config::NodeConfig;
 use serde_json::json;
 use std::sync::Arc;
 use warp::{Filter, Rejection};
