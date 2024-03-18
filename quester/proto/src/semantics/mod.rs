@@ -157,3 +157,14 @@ impl Display for IndexingStatistics {
 		)
 	}
 }
+
+impl Display for StorageType {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Graph => write!(f, "graph"),
+			Self::Vector => write!(f, "vector"),
+			Self::Index => write!(f, "index"),
+			Self::Unknown => write!(f, "unknown"),
+		}
+	}
+}

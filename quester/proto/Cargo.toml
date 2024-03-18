@@ -40,6 +40,8 @@ zstd = { workspace = true }
 querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
+strum_macros = { workspace = true }
+strum = { workspace = true }
 
 [dev-dependencies]
 futures = { workspace = true }

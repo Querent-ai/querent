@@ -529,6 +529,7 @@ pub struct OpenAiConfig {
     pub openai_api_key: ::prost::alloc::string::String,
 }
 /// Enum for defining different types of storage.
+#[derive(strum_macros::EnumString)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
