@@ -12,7 +12,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.unwrap();
 
 	// Semantic service proto code generation
+	let mut prost_config = prost_build::Config::default();
+	prost_config
+		.type_attribute("querent.semantics.StorageType", "#[derive(strum_macros::EnumString)]");
 	ProtoGenerator::builder()
+		.with_prost_config(prost_config)
 		.with_protos(&["protos/querent/semantics.proto"])
 		.with_includes(&["protos"])
 		.with_output_dir("src/codegen/querent")
