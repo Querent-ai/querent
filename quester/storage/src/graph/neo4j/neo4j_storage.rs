@@ -142,7 +142,7 @@ mod tests {
 
 		// Create config for testing
 		let config = Neo4jConfig {
-			storage_type: StorageType::Graph as i32,
+			storage_type: Some(StorageType::Graph),
 			name: "neo4j".to_string(),
 			url: uri.to_string(),
 			username: user.to_string(),

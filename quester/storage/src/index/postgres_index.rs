@@ -271,7 +271,7 @@ mod test {
 		let config = PostgresConfig {
 			url: TEST_DB_URL.to_string(),
 			name: "test".to_string(),
-			storage_type: StorageType::Index as i32,
+			storage_type: Some(StorageType::Index),
 		};
 
 		// Create a PostgresStorage instance with the test database URL

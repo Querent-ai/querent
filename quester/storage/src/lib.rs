@@ -20,7 +20,9 @@ pub async fn create_storages(
 	for storage_config in storage_configs {
 		match storage_config {
 			StorageConfig { postgres: Some(config), .. } => {
-				if config.storage_type != StorageType::Index as i32 {
+				if config.storage_type.is_none() ||
+					config.storage_type.clone().unwrap() != StorageType::Index
+				{
 					return Err(anyhow::anyhow!(
 						"Invalid storage type: Postgres is only supported for index storage"
 					));

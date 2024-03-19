@@ -1,13 +1,15 @@
+use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
 use actors::AskError;
+use bytes::Bytes;
+use bytestring::ByteString;
 use common::{EventStreamerCounters, EventsCounter, IndexerCounters, StorageMapperCounters};
+use prost::{self, DecodeError};
 use querent_synapse::callbacks::EventType;
+use serde::{Deserialize, Serialize};
 use std::{
-	fmt::{Display, Formatter},
+	fmt::{Debug, Display, Formatter},
 	sync::atomic::Ordering,
 };
-
-use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
-use serde::{Deserialize, Serialize};
 
 include!("../codegen/querent/querent.semantics.rs");
 
@@ -158,13 +160,150 @@ impl Display for IndexingStatistics {
 	}
 }
 
+#[derive(Clone, Default, Eq, PartialEq, Hash, Ord, PartialOrd, utoipa::ToSchema)]
+pub enum StorageType {
+	Index,
+	Vector,
+	#[default]
+	Graph,
+}
+
 impl Display for StorageType {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		match self {
-			Self::Graph => write!(f, "graph"),
-			Self::Vector => write!(f, "vector"),
 			Self::Index => write!(f, "index"),
-			Self::Unknown => write!(f, "unknown"),
+			Self::Vector => write!(f, "vector"),
+			Self::Graph => write!(f, "graph"),
 		}
+	}
+}
+
+impl Debug for StorageType {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Self::Index => write!(f, "index"),
+			Self::Vector => write!(f, "vector"),
+			Self::Graph => write!(f, "graph"),
+		}
+	}
+}
+
+impl StorageType {
+	pub fn as_bytes(&self) -> Bytes {
+		match self {
+			Self::Index => Bytes::from("index"),
+			Self::Vector => Bytes::from("vector"),
+			Self::Graph => Bytes::from("graph"),
+		}
+	}
+
+	pub fn from_i32(value: i32) -> Self {
+		match value {
+			0 => Self::Index,
+			1 => Self::Vector,
+			2 => Self::Graph,
+			_ => panic!("invalid storage type"),
+		}
+	}
+
+	pub fn as_i32(&self) -> i32 {
+		match self {
+			Self::Index => 0,
+			Self::Vector => 1,
+			Self::Graph => 2,
+		}
+	}
+
+	pub fn as_str(&self) -> &str {
+		match self {
+			Self::Index => "index",
+			Self::Vector => "vector",
+			Self::Graph => "graph",
+		}
+	}
+}
+
+impl From<ByteString> for StorageType {
+	fn from(value: ByteString) -> Self {
+		match &value[..] {
+			"index" => Self::Index,
+			"vector" => Self::Vector,
+			"graph" => Self::Graph,
+			_ => panic!("invalid storage type"),
+		}
+	}
+}
+
+impl From<String> for StorageType {
+	fn from(storage_type: String) -> Self {
+		Self::from(ByteString::from(storage_type))
+	}
+}
+
+impl Serialize for StorageType {
+	fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+		serializer.collect_str(self)
+	}
+}
+
+impl<'de> Deserialize<'de> for StorageType {
+	fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+		let type_str = String::deserialize(deserializer)?;
+		Ok(Self::from(type_str))
+	}
+}
+
+impl PartialEq<StorageType> for &StorageType {
+	#[inline]
+	fn eq(&self, other: &StorageType) -> bool {
+		*self == other
+	}
+}
+
+impl prost::Message for StorageType {
+	fn encode_raw<B>(&self, buf: &mut B)
+	where
+		B: prost::bytes::BufMut,
+	{
+		prost::encoding::bytes::encode(1u32, &self.as_bytes(), buf);
+	}
+
+	fn merge_field<B>(
+		&mut self,
+		tag: u32,
+		wire_type: prost::encoding::WireType,
+		buf: &mut B,
+		ctx: prost::encoding::DecodeContext,
+	) -> ::core::result::Result<(), prost::DecodeError>
+	where
+		B: prost::bytes::Buf,
+	{
+		const STRUCT_NAME: &str = "StorageType";
+
+		match tag {
+			1u32 => {
+				let mut value = Vec::new();
+				prost::encoding::bytes::merge(wire_type, &mut value, buf, ctx).map_err(
+					|mut error| {
+						error.push(STRUCT_NAME, "storage_type");
+						error
+					},
+				)?;
+				let byte_string = ByteString::try_from(value)
+					.map_err(|_| DecodeError::new("storage_type is not valid UTF-8"))?;
+				*self = Self::from(byte_string);
+				Ok(())
+			},
+			_ => prost::encoding::skip_field(wire_type, tag, buf, ctx),
+		}
+	}
+
+	#[inline]
+	fn encoded_len(&self) -> usize {
+		prost::encoding::bytes::encoded_len(1u32, &self.as_bytes())
+	}
+
+	fn clear(&mut self) {
+		*self = Self::default();
 	}
 }
