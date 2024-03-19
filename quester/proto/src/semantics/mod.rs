@@ -3,7 +3,7 @@ use actors::AskError;
 use bytes::Bytes;
 use bytestring::ByteString;
 use common::{EventStreamerCounters, EventsCounter, IndexerCounters, StorageMapperCounters};
-use prost::{self, DecodeError};
+use prost::DecodeError;
 use querent_synapse::callbacks::EventType;
 use serde::{Deserialize, Serialize};
 use std::{
