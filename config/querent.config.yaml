@@ -44,6 +44,8 @@ storage_configs:
       name: semantic_neo4j_db
       storage_type: graph
       db_name: neo4j
+      fetch_size: 1000
+      max_connection_pool_size: 100
       url: bolt://localhost:7687
       username: neo4j
       password: password_neo
