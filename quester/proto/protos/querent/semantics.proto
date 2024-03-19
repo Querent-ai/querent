@@ -8,7 +8,7 @@ service SemanticsService {
   rpc GetPipelinesMetadata(EmptyGetPipelinesMetadata) returns (PipelinesMetadata) {}
   rpc StopPipeline(StopPipelineRequest) returns (BooleanResponse) {}
   rpc DescribePipeline(DescribePipelineRequest) returns (IndexingStatistics) {}
-  rpc IngestTokens(IngestedTokens) returns (BooleanResponse) {}
+  rpc IngestTokens(SendIngestedTokens) returns (BooleanResponse) {}
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
 }
 
@@ -50,6 +50,11 @@ message IngestedTokens {
   string file = 1;
   repeated string data = 2;
   bool is_token_stream = 3;
+}
+
+message SendIngestedTokens {
+  string pipeline_id = 1;
+  repeated IngestedTokens tokens = 2;
 }
 
 message IndexingStatistics {

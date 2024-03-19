@@ -77,6 +77,15 @@ pub struct IngestedTokens {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SendIngestedTokens {
+    #[prost(string, tag = "1")]
+    pub pipeline_id: ::prost::alloc::string::String,
+    #[prost(message, repeated, tag = "2")]
+    pub tokens: ::prost::alloc::vec::Vec<IngestedTokens>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IndexingStatistics {
     #[prost(uint64, tag = "1")]
     pub total_docs: u64,
@@ -558,7 +567,7 @@ impl RpcName for DescribePipelineRequest {
         "describe_pipeline"
     }
 }
-impl RpcName for IngestedTokens {
+impl RpcName for SendIngestedTokens {
     fn rpc_name() -> &'static str {
         "ingest_tokens"
     }
@@ -593,7 +602,7 @@ pub trait SemanticsService: std::fmt::Debug + dyn_clone::DynClone + Send + Sync 
     ) -> crate::semantics::SemanticsResult<IndexingStatistics>;
     async fn ingest_tokens(
         &mut self,
-        request: IngestedTokens,
+        request: SendIngestedTokens,
     ) -> crate::semantics::SemanticsResult<BooleanResponse>;
     async fn restart_pipeline(
         &mut self,
@@ -719,7 +728,7 @@ impl SemanticsService for SemanticsServiceClient {
     }
     async fn ingest_tokens(
         &mut self,
-        request: IngestedTokens,
+        request: SendIngestedTokens,
     ) -> crate::semantics::SemanticsResult<BooleanResponse> {
         self.inner.ingest_tokens(request).await
     }
@@ -771,7 +780,7 @@ pub mod semantics_service_mock {
         }
         async fn ingest_tokens(
             &mut self,
-            request: super::IngestedTokens,
+            request: super::SendIngestedTokens,
         ) -> crate::semantics::SemanticsResult<super::BooleanResponse> {
             self.inner.lock().await.ingest_tokens(request).await
         }
@@ -874,7 +883,7 @@ impl tower::Service<DescribePipelineRequest> for Box<dyn SemanticsService> {
         Box::pin(fut)
     }
 }
-impl tower::Service<IngestedTokens> for Box<dyn SemanticsService> {
+impl tower::Service<SendIngestedTokens> for Box<dyn SemanticsService> {
     type Response = BooleanResponse;
     type Error = crate::semantics::SemanticsError;
     type Future = BoxFuture<Self::Response, Self::Error>;
@@ -884,7 +893,7 @@ impl tower::Service<IngestedTokens> for Box<dyn SemanticsService> {
     ) -> std::task::Poll<Result<(), Self::Error>> {
         std::task::Poll::Ready(Ok(()))
     }
-    fn call(&mut self, request: IngestedTokens) -> Self::Future {
+    fn call(&mut self, request: SendIngestedTokens) -> Self::Future {
         let mut svc = self.clone();
         let fut = async move { svc.ingest_tokens(request).await };
         Box::pin(fut)
@@ -936,7 +945,7 @@ struct SemanticsServiceTowerServiceStack {
         crate::semantics::SemanticsError,
     >,
     ingest_tokens_svc: common::tower::BoxService<
-        IngestedTokens,
+        SendIngestedTokens,
         BooleanResponse,
         crate::semantics::SemanticsError,
     >,
@@ -994,7 +1003,7 @@ impl SemanticsService for SemanticsServiceTowerServiceStack {
     }
     async fn ingest_tokens(
         &mut self,
-        request: IngestedTokens,
+        request: SendIngestedTokens,
     ) -> crate::semantics::SemanticsResult<BooleanResponse> {
         self.ingest_tokens_svc.ready().await?.call(request).await
     }
@@ -1057,11 +1066,11 @@ type DescribePipelineLayer = common::tower::BoxLayer<
 >;
 type IngestTokensLayer = common::tower::BoxLayer<
     common::tower::BoxService<
-        IngestedTokens,
+        SendIngestedTokens,
         BooleanResponse,
         crate::semantics::SemanticsError,
     >,
-    IngestedTokens,
+    SendIngestedTokens,
     BooleanResponse,
     crate::semantics::SemanticsError,
 >;
@@ -1217,29 +1226,29 @@ impl SemanticsServiceTowerLayerStack {
         >>::Service as tower::Service<DescribePipelineRequest>>::Future: Send + 'static,
         L: tower::Layer<
                 common::tower::BoxService<
-                    IngestedTokens,
+                    SendIngestedTokens,
                     BooleanResponse,
                     crate::semantics::SemanticsError,
                 >,
             > + Clone + Send + Sync + 'static,
         <L as tower::Layer<
             common::tower::BoxService<
-                IngestedTokens,
+                SendIngestedTokens,
                 BooleanResponse,
                 crate::semantics::SemanticsError,
             >,
         >>::Service: tower::Service<
-                IngestedTokens,
+                SendIngestedTokens,
                 Response = BooleanResponse,
                 Error = crate::semantics::SemanticsError,
             > + Clone + Send + Sync + 'static,
         <<L as tower::Layer<
             common::tower::BoxService<
-                IngestedTokens,
+                SendIngestedTokens,
                 BooleanResponse,
                 crate::semantics::SemanticsError,
             >,
-        >>::Service as tower::Service<IngestedTokens>>::Future: Send + 'static,
+        >>::Service as tower::Service<SendIngestedTokens>>::Future: Send + 'static,
         L: tower::Layer<
                 common::tower::BoxService<
                     RestartPipelineRequest,
@@ -1377,17 +1386,17 @@ impl SemanticsServiceTowerLayerStack {
     where
         L: tower::Layer<
                 common::tower::BoxService<
-                    IngestedTokens,
+                    SendIngestedTokens,
                     BooleanResponse,
                     crate::semantics::SemanticsError,
                 >,
             > + Send + Sync + 'static,
         L::Service: tower::Service<
-                IngestedTokens,
+                SendIngestedTokens,
                 Response = BooleanResponse,
                 Error = crate::semantics::SemanticsError,
             > + Clone + Send + Sync + 'static,
-        <L::Service as tower::Service<IngestedTokens>>::Future: Send + 'static,
+        <L::Service as tower::Service<SendIngestedTokens>>::Future: Send + 'static,
     {
         self.ingest_tokens_layers.push(common::tower::BoxLayer::new(layer));
         self
@@ -1631,7 +1640,7 @@ where
             Future = BoxFuture<IndexingStatistics, crate::semantics::SemanticsError>,
         >
         + tower::Service<
-            IngestedTokens,
+            SendIngestedTokens,
             Response = BooleanResponse,
             Error = crate::semantics::SemanticsError,
             Future = BoxFuture<BooleanResponse, crate::semantics::SemanticsError>,
@@ -1675,7 +1684,7 @@ where
     }
     async fn ingest_tokens(
         &mut self,
-        request: IngestedTokens,
+        request: SendIngestedTokens,
     ) -> crate::semantics::SemanticsResult<BooleanResponse> {
         self.call(request).await
     }
@@ -1772,7 +1781,7 @@ where
     }
     async fn ingest_tokens(
         &mut self,
-        request: IngestedTokens,
+        request: SendIngestedTokens,
     ) -> crate::semantics::SemanticsResult<BooleanResponse> {
         self.inner
             .ingest_tokens(request)
@@ -1863,7 +1872,7 @@ for SemanticsServiceGrpcServerAdapter {
     }
     async fn ingest_tokens(
         &self,
-        request: tonic::Request<IngestedTokens>,
+        request: tonic::Request<SendIngestedTokens>,
     ) -> Result<tonic::Response<BooleanResponse>, tonic::Status> {
         self.inner
             .clone()
@@ -2118,7 +2127,7 @@ pub mod semantics_service_grpc_client {
         }
         pub async fn ingest_tokens(
             &mut self,
-            request: impl tonic::IntoRequest<super::IngestedTokens>,
+            request: impl tonic::IntoRequest<super::SendIngestedTokens>,
         ) -> std::result::Result<
             tonic::Response<super::BooleanResponse>,
             tonic::Status,
@@ -2216,7 +2225,7 @@ pub mod semantics_service_grpc_server {
         >;
         async fn ingest_tokens(
             &self,
-            request: tonic::Request<super::IngestedTokens>,
+            request: tonic::Request<super::SendIngestedTokens>,
         ) -> std::result::Result<tonic::Response<super::BooleanResponse>, tonic::Status>;
         async fn restart_pipeline(
             &self,
@@ -2538,7 +2547,7 @@ pub mod semantics_service_grpc_server {
                     struct IngestTokensSvc<T: SemanticsServiceGrpc>(pub Arc<T>);
                     impl<
                         T: SemanticsServiceGrpc,
-                    > tonic::server::UnaryService<super::IngestedTokens>
+                    > tonic::server::UnaryService<super::SendIngestedTokens>
                     for IngestTokensSvc<T> {
                         type Response = super::BooleanResponse;
                         type Future = BoxFuture<
@@ -2547,7 +2556,7 @@ pub mod semantics_service_grpc_server {
                         >;
                         fn call(
                             &mut self,
-                            request: tonic::Request<super::IngestedTokens>,
+                            request: tonic::Request<super::SendIngestedTokens>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
