@@ -200,8 +200,6 @@ chitchat = { git = "https://github.com/quickwit-oss/chitchat.git", rev = "a3e3f8
 node = { version = "2.0.1", path = "./node" }
 crossbeam-channel = "0.5.10"
 futures_util = "0.3.14"
-strum_macros = "0.26.2"
-strum = "0.26"
 
 [profile.release]
 panic = "unwind"
