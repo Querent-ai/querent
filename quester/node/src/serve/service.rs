@@ -1,6 +1,6 @@
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
-use crate::rest;
+use crate::{grpc, rest};
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, Host, PubSubBroker, RuntimesConfig};
@@ -42,9 +42,9 @@ pub async fn serve_quester(
 			.expect("Failed to start semantic service");
 	let listen_host = node_config.listen_address.parse::<Host>()?;
 	let listen_ip = listen_host.resolve().await?;
-	let _grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_listen_port);
+	let grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_config.listen_port);
 	let rest_listen_addr = SocketAddr::new(listen_ip, node_config.rest_config.listen_port);
-
+	let grpc_config = node_config.grpc_config.clone();
 	// Setup and start REST server.
 	let (rest_readiness_trigger_tx, rest_readiness_signal_rx) = oneshot::channel::<()>();
 	let rest_readiness_trigger = Box::pin(async move {
@@ -70,24 +70,32 @@ pub async fn serve_quester(
 	});
 	let rest_server = rest::start_rest_server(
 		rest_listen_addr,
-		services,
+		services.clone(),
 		rest_readiness_trigger,
 		rest_shutdown_signal,
 	);
 	// Setup and start gRPC server.
 	let (grpc_readiness_trigger_tx, grpc_readiness_signal_rx) = oneshot::channel::<()>();
-	let _grpc_readiness_trigger = Box::pin(async move {
+	let grpc_readiness_trigger = Box::pin(async move {
 		if grpc_readiness_trigger_tx.send(()).is_err() {
 			debug!("gRPC server readiness signal receiver was dropped 📡");
 		}
 	});
 	let (grpc_shutdown_trigger_tx, grpc_shutdown_signal_rx) = oneshot::channel::<()>();
-	let _grpc_shutdown_signal = Box::pin(async move {
+	let grpc_shutdown_signal = Box::pin(async move {
 		if grpc_shutdown_signal_rx.await.is_err() {
 			debug!("gRPC server shutdown trigger sender was dropped 📡");
 		}
 	});
-	// TODO implement gRPC server
+
+	let grpc_server = grpc::start_grpc_server(
+		grpc_listen_addr,
+		grpc_config.max_message_size,
+		services.clone(),
+		grpc_readiness_trigger,
+		grpc_shutdown_signal,
+	);
+
 	tokio::spawn(node_readiness(
 		cluster.clone(),
 		grpc_readiness_signal_rx,
@@ -107,11 +115,19 @@ pub async fn serve_quester(
 		actor_exit_statuses
 	});
 	let rest_join_handle = tokio::spawn(rest_server);
-	let (rest_res,) = tokio::try_join!(rest_join_handle)
-		.expect("the tasks running the gRPC and REST servers should not panic or be cancelled");
+	let grpc_join_handle = tokio::spawn(grpc_server);
+
+	let (grpc_res, rest_res) = tokio::try_join!(grpc_join_handle, rest_join_handle)
+		.expect("tokio task running rest and gRPC servers should not panic or be cancelled");
+
 	if let Err(rest_err) = rest_res {
 		error!("REST server failed: {:?}", rest_err);
 	}
+
+	if let Err(grpc_err) = grpc_res {
+		error!("gRPC server failed: {:?}", grpc_err);
+	}
+
 	let actor_exit_statuses = shutdown_handle.await?;
 	Ok(actor_exit_statuses)
 }

@@ -28,6 +28,7 @@ use tracing::info;
 pub mod web_interface;
 use warp::{reject::Rejection, Filter};
 pub use web_interface::*;
+pub mod grpc;
 
 const READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "testsuite")) {
 	Duration::from_millis(25)

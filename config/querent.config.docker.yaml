@@ -15,7 +15,6 @@ node_id: querent-node
 listen_address: 0.0.0.0
 advertise_address: 0.0.0.0
 gossip_listen_port: 2222
-grpc_listen_port: 3333
 cpu_capacity: 5
 peer_seeds:
 
@@ -27,6 +26,10 @@ rest_config:
   extra_headers:
     x-header-1: header-value-1
     x-header-2: header-value-2
+
+grpc_config:
+  listen_port: 50051
+  max_message_size: 20 MB
 
 # -------------------------------- Storage Configuration --------------------------------
 storage_configs:

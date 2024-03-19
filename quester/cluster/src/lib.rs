@@ -2,9 +2,11 @@
 
 pub mod change;
 pub mod cluster;
+pub mod grpc_service;
 pub mod member;
 pub mod node;
 pub mod types;
+pub use grpc_service::*;
 use proto::NodeConfig;
 mod metrics;
 
@@ -51,7 +53,7 @@ pub async fn start_cluster_service(node_config: &NodeConfig) -> anyhow::Result<C
 	let listen_ip = listen_host.resolve().await?;
 
 	let gossip_listen_addr = SocketAddr::new(listen_ip, node_config.gossip_listen_port);
-	let grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_listen_port);
+	let grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_config.listen_port);
 	let peer_seed_addrs = node_config.peer_seed_addrs().await?;
 
 	let node_id: NodeId = node_config.node_id.clone().into();

@@ -1,5 +1,6 @@
 use crate::semantics::StorageConfig;
-use anyhow::bail;
+use anyhow::{bail, ensure};
+use bytesize::ByteSize;
 use common::HostAddr;
 use http::HeaderMap;
 use serde::{Deserialize, Serialize};
@@ -85,6 +86,7 @@ pub struct StorageConfigs(pub Vec<StorageConfig>);
 pub struct Tracing {
 	pub jaeger: JaegerConfig,
 }
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct NodeConfig {
 	pub cluster_id: String,
@@ -92,8 +94,8 @@ pub struct NodeConfig {
 	pub listen_address: String,
 	pub advertise_address: String,
 	pub gossip_listen_port: u16,
-	pub grpc_listen_port: u16,
 	pub rest_config: RestConfig,
+	pub grpc_config: GrpcConfig,
 	pub peer_seeds: Vec<String>,
 	pub cpu_capacity: u32,
 	pub storage_configs: StorageConfigs,
@@ -136,4 +138,33 @@ pub struct RestConfig {
 	pub cors_allow_origins: Vec<String>,
 	#[serde(with = "http_serde::header_map")]
 	pub extra_headers: HeaderMap,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct GrpcConfig {
+	pub listen_port: u16,
+	#[serde(default = "GrpcConfig::default_max_message_size")]
+	pub max_message_size: ByteSize,
+}
+
+impl GrpcConfig {
+	fn default_max_message_size() -> ByteSize {
+		ByteSize::mib(24)
+	}
+
+	pub fn validate(&self) -> anyhow::Result<()> {
+		ensure!(
+			self.max_message_size >= ByteSize::mb(1),
+			"max gRPC message size (`grpc.max_message_size`) must be at least 1MB, got `{}`",
+			self.max_message_size
+		);
+		Ok(())
+	}
+}
+
+impl Default for GrpcConfig {
+	fn default() -> Self {
+		Self { max_message_size: Self::default_max_message_size(), listen_port: 50051 }
+	}
 }
