@@ -99,7 +99,7 @@ async fn semantic_endpoint(
 )]
 
 /// Observes semantic pipelines.
-async fn describe_pipeline(
+pub async fn describe_pipeline(
 	pipeline_id: String,
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<IndexingStatistics, PipelineErrors> {
@@ -154,7 +154,7 @@ pub fn observe_pipeline_get_handler(
 )]
 
 /// Start semantic pipeline by providing a `SemanticPipelineRequest`.
-async fn start_pipeline(
+pub async fn start_pipeline(
 	request: SemanticPipelineRequest,
 	semantic_service_mailbox: MessageBus<SemanticService>,
 	mut event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
@@ -227,7 +227,7 @@ pub fn start_pipeline_post_handler(
 )]
 
 /// Get pipelines metadata
-async fn get_pipelines_metadata(
+pub async fn get_pipelines_metadata(
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<PipelinesMetadata, AskError<Infallible>> {
 	let pipelines = semantic_service_mailbox.ask(EmptyGetPipelinesMetadata {}).await?;
@@ -258,7 +258,7 @@ pub fn get_pipelines_metadata_handler(
 )]
 
 /// Stop semantic pipeline by providing a pipeline id.
-async fn stop_pipeline(
+pub async fn stop_pipeline(
 	pipeline_id: String,
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<bool, PipelineErrors> {
@@ -354,7 +354,7 @@ async fn ingest_token_ws(
 )]
 
 /// Send tokens to semantic pipeline by providing `IngestedTokens`.
-async fn ingest_tokens(
+pub async fn ingest_tokens(
 	pipeline_id: String,
 	tokens: Vec<IngestedTokens>,
 	semantic_service_mailbox: MessageBus<SemanticService>,
@@ -392,7 +392,7 @@ pub fn ingest_tokens_put_handler(
 	)
 )]
 /// Restart semantic pipeline by providing a pipeline id.
-async fn restart_pipeline(
+pub async fn restart_pipeline(
 	pipeline_id: String,
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<bool, PipelineErrors> {
