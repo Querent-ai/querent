@@ -1,7 +1,5 @@
-use std::net::SocketAddr;
-
 use bytesize::ByteSize;
-use common::tower::{make_channel, GrpcMetricsLayer};
+use common::tower::GrpcMetricsLayer;
 use once_cell::sync::Lazy;
 use proto::cluster::{
 	cluster_service_grpc_server::ClusterServiceGrpcServer, ChitchatId as ProtoChitchatId,
@@ -15,18 +13,8 @@ use crate::Cluster;
 
 const MAX_MESSAGE_SIZE: ByteSize = ByteSize::mib(64);
 
-static CLUSTER_GRPC_CLIENT_METRICS_LAYER: Lazy<GrpcMetricsLayer> =
-	Lazy::new(|| GrpcMetricsLayer::new("cluster", "client"));
 static CLUSTER_GRPC_SERVER_METRICS_LAYER: Lazy<GrpcMetricsLayer> =
 	Lazy::new(|| GrpcMetricsLayer::new("cluster", "server"));
-
-pub(crate) async fn cluster_grpc_client(socket_addr: SocketAddr) -> ClusterServiceClient {
-	let channel = make_channel(socket_addr).await;
-
-	ClusterServiceClient::tower()
-		.stack_layer(CLUSTER_GRPC_CLIENT_METRICS_LAYER.clone())
-		.build_from_channel(socket_addr, channel, MAX_MESSAGE_SIZE)
-}
 
 pub fn cluster_grpc_server(
 	cluster: Cluster,
