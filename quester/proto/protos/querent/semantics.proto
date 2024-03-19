@@ -280,12 +280,12 @@ message NewsCollectorConfig {
 // Storage
 
 
-// Enum for defining different types of storage.
-enum StorageType {
-  UNKNOWN = 0; // Default value, representing an unknown storage type.
-  INDEX = 1;
-  VECTOR = 2;
-  GRAPH = 3;
+// The corresponding Rust struct [`crate::types::StorageType`] is defined manually and
+// externally provided during code generation (see `build.rs`).
+//
+// Modify at your own risk.
+message StorageType {
+  bytes storage_type = 1;
 }
 
 // StorageConfig is a message to hold configuration for a storage.

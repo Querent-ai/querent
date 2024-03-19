@@ -264,7 +264,7 @@ mod tests {
 		const URL: &str = "http://localhost:19530";
 		let storage_config = MilvusConfig {
 			name: "milvus".to_string(),
-			storage_type: StorageType::Vector as i32,
+			storage_type: Some(StorageType::Vector),
 			url: URL.to_string(),
 			username: "".to_string(),
 			password: "".to_string(),
