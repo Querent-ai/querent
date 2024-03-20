@@ -3,7 +3,7 @@ use std::{net::SocketAddr, sync::Arc};
 use bytesize::ByteSize;
 use cluster::cluster_grpc_server;
 use common::BoxFutureInfaillible;
-use proto::semantics_service_grpc_server::SemanticsServiceGrpcServer;
+use proto::semantics::semantics_service_grpc_server::SemanticsServiceGrpcServer;
 use tonic::transport::Server;
 use tracing::info;
 

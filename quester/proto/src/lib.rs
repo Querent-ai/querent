@@ -6,6 +6,7 @@ pub mod error;
 pub use error::*;
 pub mod config;
 pub mod semantics;
-pub use semantics::*;
 pub mod types;
 pub use config::*;
+pub mod discovery;
+pub use discovery::*;

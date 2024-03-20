@@ -24,5 +24,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.generate_rpc_name_impls()
 		.run()
 		.unwrap();
+
+	// Discovery service proto code generation
+	ProtoGenerator::builder()
+		.with_protos(&["protos/querent/discovery.proto"])
+		.with_output_dir("src/codegen/querent")
+		.with_result_type_path("crate::discovery::DiscoveryResult")
+		.with_error_type_path("crate::discovery::DiscoveryError")
+		.generate_rpc_name_impls()
+		.run()
+		.unwrap();
 	Ok(())
 }

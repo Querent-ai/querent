@@ -1,6 +1,6 @@
 use actors::{MessageBus, Observe};
 use async_trait::async_trait;
-use proto::{semantics::semantics_service_grpc_server as grpc, BooleanResponse};
+use proto::semantics::{semantics_service_grpc_server as grpc, BooleanResponse};
 use querent::{PipelineErrors, SemanticService};
 use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, sync::Arc};
