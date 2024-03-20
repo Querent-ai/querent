@@ -24,3 +24,5 @@ venv
 *.log.1
 
 content/
+querent-env/
+models/
