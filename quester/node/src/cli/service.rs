@@ -24,7 +24,7 @@ impl Serve {
 	}
 
 	pub async fn execute(&self) -> anyhow::Result<()> {
-		debug!(args = ?self, "run-quester-service");
+		debug!(args = ?self, "run-querent-service");
 		querent_synapse::busy_detector::set_enabled(true);
 		let node_config = load_node_config(&self.node_config_uri).await?;
 
