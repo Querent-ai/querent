@@ -32,6 +32,18 @@ impl ServiceError for DiscoveryError {
 	}
 }
 
+impl common::ServiceError for DiscoveryError {
+	fn error_code(&self) -> common::ServiceErrorCode {
+		match self {
+			Self::Internal(_) => common::ServiceErrorCode::Internal,
+			Self::InvalidArgument(_) => common::ServiceErrorCode::BadRequest,
+			Self::StorageError(_) => common::ServiceErrorCode::Internal,
+			Self::Timeout(_) => common::ServiceErrorCode::Timeout,
+			Self::Unavailable(_) => common::ServiceErrorCode::Unavailable,
+		}
+	}
+}
+
 impl GrpcServiceError for DiscoveryError {
 	fn new_internal(message: String) -> Self {
 		Self::Internal(message)

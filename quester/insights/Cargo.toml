@@ -10,6 +10,8 @@ homepage = "https://querent.xyz/"
 documentation = "https:/querent.xyz/docs/"
 
 [dependencies]
+bytes = { workspace = true }
+bytesize = { workspace = true }
 querent-synapse = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }

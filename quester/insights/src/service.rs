@@ -25,7 +25,7 @@ impl DiscoveryImpl {
 		event_storages: HashMap<EventType, Arc<dyn Storage>>,
 		index_storages: Vec<Arc<dyn Storage>>,
 	) -> Self {
-		Self { event_storages, index_storages }
+		DiscoveryImpl { event_storages, index_storages }
 	}
 }
 

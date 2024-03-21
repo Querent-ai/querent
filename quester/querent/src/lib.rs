@@ -5,8 +5,8 @@ use actors::{MessageBus, Quester};
 use cluster::Cluster;
 use common::PubSubBroker;
 use proto::{
-	semantics::{SemanticPipelineRequest, SupportedSources},
-	NamedWorkflows, NodeConfig,
+	semantics::{NamedWorkflows, SemanticPipelineRequest, SupportedSources},
+	NodeConfig,
 };
 pub use qsource::*;
 pub mod events;

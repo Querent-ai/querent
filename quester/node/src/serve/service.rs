@@ -4,6 +4,7 @@ use crate::{grpc, rest};
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, Host, PubSubBroker, RuntimesConfig};
+use discovery::DiscoveryService;
 use proto::config::NodeConfig;
 use querent::{start_semantic_service, SemanticService};
 use querent_synapse::callbacks::EventType;
@@ -24,6 +25,7 @@ pub struct QuesterServices {
 	pub cluster: Cluster,
 	pub event_broker: PubSubBroker,
 	pub semantic_service_bus: MessageBus<SemanticService>,
+	pub discovery_service: Option<Arc<dyn DiscoveryService>>,
 	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 }
@@ -67,6 +69,7 @@ pub async fn serve_quester(
 		semantic_service_bus,
 		event_storages,
 		index_storages,
+		discovery_service: None,
 	});
 	let rest_server = rest::start_rest_server(
 		rest_listen_addr,
