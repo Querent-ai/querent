@@ -35,3 +35,4 @@ futures-util = { workspace = true }
 chrono = { workspace = true }
 tonic = { workspace = true }
 tower = { workspace = true }
+storage = { workspace = true }
