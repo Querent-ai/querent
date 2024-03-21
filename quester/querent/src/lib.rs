@@ -5,7 +5,7 @@ use actors::{MessageBus, Quester};
 use cluster::Cluster;
 use common::PubSubBroker;
 use proto::{
-	semantics::{NamedWorkflows, SemanticPipelineRequest, SupportedSources},
+	semantics::{SemanticPipelineRequest, SupportedSources},
 	NodeConfig,
 };
 pub use qsource::*;
@@ -245,12 +245,21 @@ pub async fn create_querent_synapose_workflow(
 	let mut engine_name = "knowledge_graph_using_llama2_v1".to_string();
 	let mut engine_additional_config = HashMap::new();
 
-	if let Some(NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. }) =
-		&request.name
-	{
-		engine_name = "knowledge_graph_using_openai".to_string();
-		engine_additional_config
-			.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
+	if let Some(workflow) = &request.name {
+		match workflow.workflow {
+			// Match against the enum variant for the `knowledge_graph_using_openai` workflow
+			Some(proto::semantics::named_workflows::Workflow::KnowledgeGraphUsingOpenai(
+				ref openai_config,
+			)) => {
+				engine_name = "knowledge_graph_using_openai".to_string();
+				engine_additional_config
+					.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
+			},
+			Some(proto::semantics::named_workflows::Workflow::KnowledgeGraphUsingLlama2V1(_)) => {
+				engine_name = "knowledge_graph_using_llama2_v1".to_string();
+			},
+			_ => (),
+		}
 	}
 
 	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {
