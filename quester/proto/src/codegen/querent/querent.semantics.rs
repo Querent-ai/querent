@@ -31,8 +31,8 @@ pub struct RestartPipelineRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-    #[prost(message, optional, tag = "1")]
-    pub name: ::core::option::Option<NamedWorkflows>,
+    #[prost(message, repeated, tag = "1")]
+    pub name: ::prost::alloc::vec::Vec<NamedWorkflows>,
     #[prost(float, tag = "2")]
     pub version: f32,
     #[prost(message, repeated, tag = "3")]

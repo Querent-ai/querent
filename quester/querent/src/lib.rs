@@ -5,8 +5,8 @@ use actors::{MessageBus, Quester};
 use cluster::Cluster;
 use common::PubSubBroker;
 use proto::{
-	semantics::{NamedWorkflows, SemanticPipelineRequest, SupportedSources},
-	NodeConfig,
+	semantics::{SemanticPipelineRequest, SupportedSources},
+	NamedWorkflows, NodeConfig,
 };
 pub use qsource::*;
 pub mod events;
@@ -241,16 +241,23 @@ pub async fn create_querent_synapose_workflow(
 			}
 		})
 		.collect();
-
+	let num_workflows = request.name.len() as usize;
+	if request.name.is_empty() || num_workflows > 1 {
+		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+			"Invalid number of workflows: one workflow is required."
+		)));
+	}
+	let current_workflow = request.name.get(0).unwrap();
 	let mut engine_name = "knowledge_graph_using_llama2_v1".to_string();
 	let mut engine_additional_config = HashMap::new();
 
-	if let Some(NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. }) =
-		&request.name
-	{
-		engine_name = "knowledge_graph_using_openai".to_string();
-		engine_additional_config
-			.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
+	match current_workflow {
+		NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. } => {
+			engine_name = "knowledge_graph_using_openai".to_string();
+			engine_additional_config
+				.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());
+		},
+		_ => (),
 	}
 
 	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {

@@ -29,7 +29,7 @@ message RestartPipelineRequest {
 }
 
 message SemanticPipelineRequest {
-  NamedWorkflows name = 1;
+  repeated NamedWorkflows name = 1;
   float version = 2;
   repeated CollectorConfig collectors = 3;
   repeated StorageConfig storage_configs = 4;
@@ -364,5 +364,3 @@ message OpenAIConfig {
   // API key of the OpenAI workflow.
   string openai_api_key = 1; // Corrected field name
 }
-
-
