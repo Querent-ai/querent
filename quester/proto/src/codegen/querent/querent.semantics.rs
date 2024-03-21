@@ -31,8 +31,8 @@ pub struct RestartPipelineRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-    #[prost(message, optional, tag = "1")]
-    pub name: ::core::option::Option<NamedWorkflows>,
+    #[prost(message, repeated, tag = "1")]
+    pub name: ::prost::alloc::vec::Vec<NamedWorkflows>,
     #[prost(float, tag = "2")]
     pub version: f32,
     #[prost(message, repeated, tag = "3")]
@@ -519,23 +519,12 @@ pub struct Neo4jConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NamedWorkflows {
-    #[prost(oneof = "named_workflows::Workflow", tags = "1, 2")]
-    pub workflow: ::core::option::Option<named_workflows::Workflow>,
-}
-/// Nested message and enum types in `NamedWorkflows`.
-pub mod named_workflows {
-    #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-    #[serde(rename_all = "snake_case")]
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Workflow {
-        /// Knowledge graph using Llama2 v1 workflow.
-        #[prost(string, tag = "1")]
-        KnowledgeGraphUsingLlama2V1(::prost::alloc::string::String),
-        /// Knowledge graph using OpenAI workflow.
-        #[prost(message, tag = "2")]
-        KnowledgeGraphUsingOpenai(super::OpenAiConfig),
-    }
+    /// Knowledge graph using Llama2 v1 workflow.
+    #[prost(string, tag = "1")]
+    pub knowledge_graph_using_llama2_v1: ::prost::alloc::string::String,
+    /// Knowledge graph using OpenAI workflow.
+    #[prost(message, optional, tag = "2")]
+    pub knowledge_graph_using_openai: ::core::option::Option<OpenAiConfig>,
 }
 /// OpenAIConfig is a message to hold configuration for an OpenAI workflow.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

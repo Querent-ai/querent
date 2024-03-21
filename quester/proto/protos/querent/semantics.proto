@@ -29,7 +29,7 @@ message RestartPipelineRequest {
 }
 
 message SemanticPipelineRequest {
-  NamedWorkflows name = 1;
+  repeated NamedWorkflows name = 1;
   float version = 2;
   repeated CollectorConfig collectors = 3;
   repeated StorageConfig storage_configs = 4;
@@ -353,12 +353,10 @@ message Neo4jConfig {
 
 // NamedWorkflows is a message to hold named workflows for semantic pipelines.
 message NamedWorkflows {
-  oneof workflow {
-    // Knowledge graph using Llama2 v1 workflow.
-    string knowledge_graph_using_llama2_v1 = 1;
-    // Knowledge graph using OpenAI workflow.
-    OpenAIConfig knowledge_graph_using_openai = 2;
-  }
+  // Knowledge graph using Llama2 v1 workflow.
+  string knowledge_graph_using_llama2_v1 = 1;
+  // Knowledge graph using OpenAI workflow.
+  OpenAIConfig knowledge_graph_using_openai = 2;
 }
 
 // OpenAIConfig is a message to hold configuration for an OpenAI workflow.
@@ -366,5 +364,3 @@ message OpenAIConfig {
   // API key of the OpenAI workflow.
   string openai_api_key = 1; // Corrected field name
 }
-
-
