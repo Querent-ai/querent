@@ -35,10 +35,10 @@ impl DiscoveryService for DiscoveryImpl {
 		&self,
 		_request: DiscoveryRequest,
 	) -> crate::Result<DiscoveryResponse> {
-        // TODO: Implement this method utilizing the event_storages and index_storages
-        // and return the appropriate response via GraphRag mechanism
-        // GraphRag essentially is a graph-based recommendation system that can be used to
-        // recommend insights based on the data in the storages
+		// TODO: Implement this method utilizing the event_storages and index_storages
+		// and return the appropriate response via GraphRag mechanism
+		// GraphRag essentially is a graph-based recommendation system that can be used to
+		// recommend insights based on the data in the storages
 		Ok(DiscoveryResponse::default())
 	}
 }

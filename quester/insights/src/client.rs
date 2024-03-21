@@ -17,6 +17,6 @@ enum DiscoveryServiceClientImpl {
 
 #[derive(Clone)]
 pub struct SearchServiceClient {
-    client_impl: DiscoveryServiceClientImpl,
-    grpc_addr: SocketAddr,
+	client_impl: DiscoveryServiceClientImpl,
+	grpc_addr: SocketAddr,
 }
