@@ -1,5 +1,5 @@
 use discovery::{error::DiscoveryError, DiscoveryService};
-use proto::discovery::{DiscoveryRequest, DiscoveryResponse};
+use proto::discovery::{DiscoveryRequest, DiscoveryResponse, Insight};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{reject::Rejection, Filter};
@@ -9,7 +9,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 #[derive(utoipa::OpenApi)]
 #[openapi(
 	paths(discovery_post_handler, discovery_get_handler,),
-	components(schemas(DiscoveryRequest, DiscoveryResponse, DiscoveryRequestParam),)
+	components(schemas(DiscoveryRequest, DiscoveryResponse, DiscoveryRequestParam, Insight),)
 )]
 pub struct DiscoveryApi;
 
