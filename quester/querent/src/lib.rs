@@ -6,7 +6,7 @@ use cluster::Cluster;
 use common::PubSubBroker;
 use proto::{
 	semantics::{SemanticPipelineRequest, SupportedSources},
-	NamedWorkflows, NodeConfig,
+	NodeConfig,
 };
 pub use qsource::*;
 pub mod events;
@@ -241,18 +241,20 @@ pub async fn create_querent_synapose_workflow(
 			}
 		})
 		.collect();
-	let num_workflows = request.name.len() as usize;
-	if request.name.is_empty() || num_workflows > 1 {
+	if request.name.is_none() || request.name.clone().unwrap().workflows.len() > 1 {
 		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
-			"Invalid number of workflows: one workflow is required."
+			"Invalid number of workflows: one workflow is supported in current version."
 		)));
 	}
-	let current_workflow = request.name.get(0).unwrap();
+	let named_flow = request.name.clone().unwrap();
+	let current_workflow = named_flow.workflows.get(0).unwrap();
 	let mut engine_name = "knowledge_graph_using_llama2_v1".to_string();
 	let mut engine_additional_config = HashMap::new();
 
 	match current_workflow {
-		NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. } => {
+		proto::semantics::Workflow {
+			knowledge_graph_using_openai: Some(openai_config), ..
+		} => {
 			engine_name = "knowledge_graph_using_openai".to_string();
 			engine_additional_config
 				.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());

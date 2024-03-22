@@ -31,8 +31,8 @@ pub struct RestartPipelineRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-    #[prost(message, repeated, tag = "1")]
-    pub name: ::prost::alloc::vec::Vec<NamedWorkflows>,
+    #[prost(message, optional, tag = "1")]
+    pub name: ::core::option::Option<NamedWorkflows>,
     #[prost(float, tag = "2")]
     pub version: f32,
     #[prost(message, repeated, tag = "3")]
@@ -519,6 +519,14 @@ pub struct Neo4jConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct NamedWorkflows {
+    #[prost(message, repeated, tag = "1")]
+    pub workflows: ::prost::alloc::vec::Vec<Workflow>,
+}
+/// Workflow enum with supported workflows.
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Workflow {
     /// Knowledge graph using Llama2 v1 workflow.
     #[prost(string, tag = "1")]
     pub knowledge_graph_using_llama2_v1: ::prost::alloc::string::String,
