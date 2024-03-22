@@ -42,11 +42,12 @@ pub struct SemanticPipelineRequest {
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
-    #[prost(oneof = "semantic_pipeline_request::Name", tags = "1, 2")]
-    pub name: ::core::option::Option<semantic_pipeline_request::Name>,
+    #[prost(oneof = "Name", tags = "1, 2")]
+    pub name: ::core::option::Option<Name>,
 }
 /// Nested message and enum types in `SemanticPipelineRequest`.
 pub mod semantic_pipeline_request {
+    use super::*;
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
     #[serde(rename_all = "snake_case")]
     #[allow(clippy::derive_partial_eq_without_eq)]
@@ -55,7 +56,7 @@ pub mod semantic_pipeline_request {
         #[prost(string, tag = "1")]
         KnowledgeGraphUsingLlama2V1(::prost::alloc::string::String),
         #[prost(message, tag = "2")]
-        KnowledgeGraphUsingOpenai(super::OpenAiConfig),
+        KnowledgeGraphUsingOpenai(OpenAiConfig),
     }
 }
 /// OpenAIConfig holds configuration for OpenAI workflows.
@@ -178,35 +179,36 @@ pub struct CollectorConfig {
         oneof = "collector_config::Backend",
         tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11"
     )]
-    pub backend: ::core::option::Option<collector_config::Backend>,
+    pub backend: ::core::option::Option<Backend>,
 }
 /// Nested message and enum types in `CollectorConfig`.
 pub mod collector_config {
+    use super::*;
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
     #[serde(rename_all = "snake_case")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Backend {
         #[prost(message, tag = "2")]
-        Azure(super::AzureCollectorConfig),
+        Azure(AzureCollectorConfig),
         #[prost(message, tag = "3")]
-        Gcs(super::GcsCollectorConfig),
+        Gcs(GcsCollectorConfig),
         #[prost(message, tag = "4")]
-        S3(super::S3CollectorConfig),
+        S3(S3CollectorConfig),
         #[prost(message, tag = "5")]
-        Jira(super::JiraCollectorConfig),
+        Jira(JiraCollectorConfig),
         #[prost(message, tag = "6")]
-        Drive(super::GoogleDriveCollectorConfig),
+        Drive(GoogleDriveCollectorConfig),
         #[prost(message, tag = "7")]
-        Email(super::EmailCollectorConfig),
+        Email(EmailCollectorConfig),
         #[prost(message, tag = "8")]
-        Dropbox(super::DropBoxCollectorConfig),
+        Dropbox(DropBoxCollectorConfig),
         #[prost(message, tag = "9")]
-        Github(super::GithubCollectorConfig),
+        Github(GithubCollectorConfig),
         #[prost(message, tag = "10")]
-        Slack(super::SlackCollectorConfig),
+        Slack(SlackCollectorConfig),
         #[prost(message, tag = "11")]
-        News(super::NewsCollectorConfig),
+        News(NewsCollectorConfig),
     }
 }
 /// AzureCollectorConfig is a message to hold configuration for an Azure collector.

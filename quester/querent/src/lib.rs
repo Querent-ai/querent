@@ -4,10 +4,7 @@ use std::collections::HashMap;
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
 use common::PubSubBroker;
-use proto::{
-	semantics::{NamedWorkflows, SemanticPipelineRequest, SupportedSources},
-	NodeConfig,
-};
+use proto::{semantics::SemanticPipelineRequest, NodeConfig};
 pub use qsource::*;
 pub mod events;
 pub use events::*;
@@ -77,14 +74,14 @@ pub async fn create_querent_synapose_workflow(
 		.map(|c| {
 			let mut backend = "".to_string();
 			let config = match &c.backend {
-				Some(SupportedSources { gcs: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Gcs(config)) => {
 					backend = "gcs".to_string();
 					let mut map = HashMap::new();
 					map.insert("bucket".to_string(), config.bucket.clone());
 					map.insert("credentials".to_string(), config.credentials.clone());
 					map
 				},
-				Some(SupportedSources { s3: Some(config), .. }) => {
+				Some(proto::semantics::Backend::S3(config)) => {
 					backend = "s3".to_string();
 					let mut map = HashMap::new();
 					map.insert("bucket".to_string(), config.bucket.clone());
@@ -93,7 +90,7 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("secret_key".to_string(), config.secret_key.clone());
 					map
 				},
-				Some(SupportedSources { azure: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Azure(config)) => {
 					backend = "azure".to_string();
 					let mut map = HashMap::new();
 					map.insert("container".to_string(), config.container.clone());
@@ -103,7 +100,7 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("prefix".to_string(), config.prefix.clone());
 					map
 				},
-				Some(SupportedSources { drive: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Drive(config)) => {
 					backend = "drive".to_string();
 					let mut map = HashMap::new();
 					map.insert(
@@ -124,7 +121,7 @@ pub async fn create_querent_synapose_workflow(
 					);
 					map
 				},
-				Some(SupportedSources { dropbox: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Dropbox(config)) => {
 					backend = "dropbox".to_string();
 					let mut map = HashMap::new();
 					map.insert("dropbox_app_key".to_string(), config.dropbox_app_key.to_string());
@@ -139,7 +136,7 @@ pub async fn create_querent_synapose_workflow(
 					);
 					map
 				},
-				Some(SupportedSources { github: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Github(config)) => {
 					backend = "github".to_string();
 					let mut map = HashMap::new();
 					map.insert("github_username".to_string(), config.github_username.to_string());
@@ -150,7 +147,7 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("repository".to_string(), config.repository.to_string());
 					map
 				},
-				Some(SupportedSources { slack: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Slack(config)) => {
 					backend = "slack".to_string();
 					let mut map = HashMap::new();
 					map.insert("access_token".to_string(), config.access_token.to_string());
@@ -167,7 +164,7 @@ pub async fn create_querent_synapose_workflow(
 					}
 					map
 				},
-				Some(SupportedSources { jira: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Jira(config)) => {
 					backend = "jira".to_string();
 					let mut map = HashMap::new();
 					map.insert("jira_server".to_string(), config.jira_server.to_string());
@@ -190,7 +187,7 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("jira_verify".to_string(), config.jira_verify.to_string());
 					map
 				},
-				Some(SupportedSources { email: Some(config), .. }) => {
+				Some(proto::semantics::Backend::Email(config)) => {
 					backend = "email".to_string();
 					let mut map = HashMap::new();
 					map.insert("imap_server".to_string(), config.imap_server.to_string());
@@ -202,7 +199,7 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("imap_certfile".to_string(), config.imap_certfile.to_string());
 					map
 				},
-				Some(SupportedSources { news: Some(config), .. }) => {
+				Some(proto::semantics::Backend::News(config)) => {
 					backend = "news".to_string();
 					let mut map = HashMap::new();
 					map.insert("query".to_string(), config.query.to_string());
@@ -241,18 +238,17 @@ pub async fn create_querent_synapose_workflow(
 			}
 		})
 		.collect();
-	let num_workflows = request.name.len() as usize;
-	if request.name.is_empty() || num_workflows > 1 {
+	if request.name.clone().is_none() {
 		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
-			"Invalid number of workflows: one workflow is required."
+			"Invalid number of workflows: one workflow is supported in current version."
 		)));
 	}
-	let current_workflow = request.name.get(0).unwrap();
+
+	let current_workflow = request.name.clone().unwrap();
 	let mut engine_name = "knowledge_graph_using_llama2_v1".to_string();
 	let mut engine_additional_config = HashMap::new();
-
-	match current_workflow {
-		NamedWorkflows { knowledge_graph_using_openai: Some(openai_config), .. } => {
+	match current_workflow.clone() {
+		proto::semantics::Name::KnowledgeGraphUsingOpenai(openai_config) => {
 			engine_name = "knowledge_graph_using_openai".to_string();
 			engine_additional_config
 				.insert("openai_api_key".to_string(), openai_config.openai_api_key.clone());

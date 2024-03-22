@@ -29,11 +29,20 @@ message RestartPipelineRequest {
 }
 
 message SemanticPipelineRequest {
-  repeated NamedWorkflows name = 1;
-  float version = 2;
-  repeated CollectorConfig collectors = 3;
-  repeated StorageConfig storage_configs = 4;
-  map<string, string> config = 5;
+  oneof name {
+    string knowledge_graph_using_llama2_v1 = 1;
+    OpenAIConfig knowledge_graph_using_openai = 2;
+  }
+  float version = 3;
+  repeated CollectorConfig collectors = 4;
+  repeated StorageConfig storage_configs = 5;
+  map<string, string> config = 6;
+}
+
+
+// OpenAIConfig holds configuration for OpenAI workflows.
+message OpenAIConfig {
+  string openai_api_key = 1;
 }
 
 message SemanticPipelineResponse {
@@ -93,37 +102,21 @@ message BooleanResponse {
 // Collectors 
 
 // CollectorConfig is a message to hold configuration for a collector.
+// Defines a collector with a specific configuration.
 message CollectorConfig {
-  // Name of the collector.
   string name = 1;
-  // Backend to be used by the collector.
-  SupportedSources backend = 2;
-  // Additional configuration for the collector.
-  map<string, string> config = 3;
-}
-
-// SupportedSources is a message to hold supported sources for collectors.
-message SupportedSources {
-  // Azure configuration.
-  AzureCollectorConfig azure = 1;
-  // GCS configuration.
-  GCSCollectorConfig gcs = 2;
-  // S3 configuration.
-  S3CollectorConfig s3 = 3;
-  // Jira configuration.
-  JiraCollectorConfig jira = 4;
-  // Google Drive configuration.
-  GoogleDriveCollectorConfig drive = 5;
-  // Email configuration.
-  EmailCollectorConfig email = 6;
-  // DropBox configuration.
-  DropBoxCollectorConfig dropbox = 7;
-  // Github configuration.
-  GithubCollectorConfig github = 8;
-  // Slack configuration.
-  SlackCollectorConfig slack = 9;
-  // News configuration.
-  NewsCollectorConfig news = 10;
+  oneof backend {
+    AzureCollectorConfig azure = 2;
+    GCSCollectorConfig gcs = 3;
+    S3CollectorConfig s3 = 4;
+    JiraCollectorConfig jira = 5;
+    GoogleDriveCollectorConfig drive = 6;
+    EmailCollectorConfig email = 7;
+    DropBoxCollectorConfig dropbox = 8;
+    GithubCollectorConfig github = 9;
+    SlackCollectorConfig slack = 10;
+    NewsCollectorConfig news = 11;
+  }
 }
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
@@ -345,22 +338,4 @@ message Neo4jConfig {
   int32 fetch_size = 7;
   // Maximum connection pool size for the Neo4j storage.
   int32 max_connection_pool_size = 8;
-}
-
-// Workflows
-
-
-
-// NamedWorkflows is a message to hold named workflows for semantic pipelines.
-message NamedWorkflows {
-  // Knowledge graph using Llama2 v1 workflow.
-  string knowledge_graph_using_llama2_v1 = 1;
-  // Knowledge graph using OpenAI workflow.
-  OpenAIConfig knowledge_graph_using_openai = 2;
-}
-
-// OpenAIConfig is a message to hold configuration for an OpenAI workflow.
-message OpenAIConfig {
-  // API key of the OpenAI workflow.
-  string openai_api_key = 1; // Corrected field name
 }
