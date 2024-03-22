@@ -9,7 +9,7 @@ use tower::timeout::Timeout;
 enum DiscoveryServiceClientImpl {
 	Rest(Arc<dyn DiscoveryService>),
 	Grpc(
-		proto::discovery::discovery_grpc_client::DiscoveryGrpcClient<
+		proto::discovery::discovery_client::DiscoveryClient<
 			InterceptedService<Timeout<Channel>, SpanContextInterceptor>,
 		>,
 	),
@@ -37,7 +37,7 @@ impl fmt::Debug for DiscoveryServiceClient {
 impl DiscoveryServiceClient {
 	/// Create a discovery service client instance given a gRPC client and gRPC address.
 	pub fn from_grpc_client(
-		client: proto::discovery::discovery_grpc_client::DiscoveryGrpcClient<
+		client: proto::discovery::discovery_client::DiscoveryClient<
 			InterceptedService<Timeout<Channel>, SpanContextInterceptor>,
 		>,
 		grpc_addr: SocketAddr,
