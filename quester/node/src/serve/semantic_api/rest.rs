@@ -4,13 +4,12 @@ use futures_util::StreamExt;
 use proto::{
 	config::StorageConfigs,
 	semantics::{
-		AzureCollectorConfig, CollectorConfig, DropBoxCollectorConfig, EmailCollectorConfig,
-		EmptyGetPipelinesMetadata, GcsCollectorConfig, GithubCollectorConfig,
-		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig,
-		NamedWorkflows, Neo4jConfig, NewsCollectorConfig, OpenAiConfig, PipelineMetadata,
-		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SemanticPipelineRequest,
-		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
-		SupportedSources, Workflow as ProtoWorkflow,
+		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
+		EmailCollectorConfig, EmptyGetPipelinesMetadata, GcsCollectorConfig, GithubCollectorConfig,
+		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig, Name,
+		Neo4jConfig, NewsCollectorConfig, OpenAiConfig, PipelineMetadata, PipelinesMetadata,
+		PostgresConfig, S3CollectorConfig, SemanticPipelineRequest, SemanticPipelineResponse,
+		SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
@@ -39,13 +38,12 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 	),
 	components(schemas(
 		SemanticPipelineRequest,
-		NamedWorkflows,
-		ProtoWorkflow,
+		Backend,
+		Name,
 		SemanticPipelineResponse,
 		SemanticServiceCounters,
 		IndexingStatistics,
 		CollectorConfig,
-		SupportedSources,
 		IngestedTokens,
 		PipelinesMetadata,
 		PipelineMetadata,

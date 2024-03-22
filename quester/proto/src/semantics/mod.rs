@@ -10,9 +10,9 @@ use std::{
 	fmt::{Debug, Display, Formatter},
 	sync::atomic::Ordering,
 };
-
-include!("../codegen/querent/querent.semantics.rs");
-
+include!("../codegen/querent/production.semantics.rs");
+pub use collector_config::*;
+pub use semantic_pipeline_request::*;
 pub type SemanticsResult<T> = std::result::Result<T, SemanticsError>;
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq, Serialize, Deserialize)]
