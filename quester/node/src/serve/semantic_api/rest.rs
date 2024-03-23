@@ -6,10 +6,10 @@ use proto::{
 	semantics::{
 		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, GcsCollectorConfig, GithubCollectorConfig,
-		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig, Name,
-		Neo4jConfig, NewsCollectorConfig, OpenAiConfig, PipelineMetadata, PipelinesMetadata,
-		PostgresConfig, S3CollectorConfig, SemanticPipelineRequest, SemanticPipelineResponse,
-		SlackCollectorConfig, StorageConfig, StorageType,
+		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, LLamaConfig,
+		MilvusConfig, Name, Neo4jConfig, NewsCollectorConfig, OpenAiConfig, PipelineMetadata,
+		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SemanticPipelineRequest,
+		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
@@ -48,6 +48,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PipelinesMetadata,
 		PipelineMetadata,
 		OpenAiConfig,
+		LLamaConfig,
 		GcsCollectorConfig,
 		S3CollectorConfig,
 		JiraCollectorConfig,

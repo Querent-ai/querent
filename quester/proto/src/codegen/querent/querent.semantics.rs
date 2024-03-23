@@ -42,23 +42,27 @@ pub struct SemanticPipelineRequest {
         ::prost::alloc::string::String,
         ::prost::alloc::string::String,
     >,
-    #[prost(oneof = "Name", tags = "1, 2")]
-    pub name: ::core::option::Option<Name>,
+    #[prost(oneof = "semantic_pipeline_request::Name", tags = "1, 2")]
+    pub name: ::core::option::Option<semantic_pipeline_request::Name>,
 }
 /// Nested message and enum types in `SemanticPipelineRequest`.
 pub mod semantic_pipeline_request {
-    use super::*;
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
     #[serde(rename_all = "snake_case")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Name {
-        #[prost(string, tag = "1")]
-        KnowledgeGraphUsingLlama2V1(::prost::alloc::string::String),
+        #[prost(message, tag = "1")]
+        KnowledgeGraphUsingLlama2V1(super::LLamaConfig),
         #[prost(message, tag = "2")]
-        KnowledgeGraphUsingOpenai(OpenAiConfig),
+        KnowledgeGraphUsingOpenai(super::OpenAiConfig),
     }
 }
+/// LLamaConfig holds configuration for LLama workflows.
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LLamaConfig {}
 /// OpenAIConfig holds configuration for OpenAI workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -179,36 +183,35 @@ pub struct CollectorConfig {
         oneof = "collector_config::Backend",
         tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11"
     )]
-    pub backend: ::core::option::Option<Backend>,
+    pub backend: ::core::option::Option<collector_config::Backend>,
 }
 /// Nested message and enum types in `CollectorConfig`.
 pub mod collector_config {
-    use super::*;
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
     #[serde(rename_all = "snake_case")]
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Backend {
         #[prost(message, tag = "2")]
-        Azure(AzureCollectorConfig),
+        Azure(super::AzureCollectorConfig),
         #[prost(message, tag = "3")]
-        Gcs(GcsCollectorConfig),
+        Gcs(super::GcsCollectorConfig),
         #[prost(message, tag = "4")]
-        S3(S3CollectorConfig),
+        S3(super::S3CollectorConfig),
         #[prost(message, tag = "5")]
-        Jira(JiraCollectorConfig),
+        Jira(super::JiraCollectorConfig),
         #[prost(message, tag = "6")]
-        Drive(GoogleDriveCollectorConfig),
+        Drive(super::GoogleDriveCollectorConfig),
         #[prost(message, tag = "7")]
-        Email(EmailCollectorConfig),
+        Email(super::EmailCollectorConfig),
         #[prost(message, tag = "8")]
-        Dropbox(DropBoxCollectorConfig),
+        Dropbox(super::DropBoxCollectorConfig),
         #[prost(message, tag = "9")]
-        Github(GithubCollectorConfig),
+        Github(super::GithubCollectorConfig),
         #[prost(message, tag = "10")]
-        Slack(SlackCollectorConfig),
+        Slack(super::SlackCollectorConfig),
         #[prost(message, tag = "11")]
-        News(NewsCollectorConfig),
+        News(super::NewsCollectorConfig),
     }
 }
 /// AzureCollectorConfig is a message to hold configuration for an Azure collector.
