@@ -30,7 +30,7 @@ message RestartPipelineRequest {
 
 message SemanticPipelineRequest {
   oneof name {
-    string knowledge_graph_using_llama2_v1 = 1;
+    LLamaConfig knowledge_graph_using_llama2_v1 = 1;
     OpenAIConfig knowledge_graph_using_openai = 2;
   }
   float version = 3;
@@ -39,6 +39,8 @@ message SemanticPipelineRequest {
   map<string, string> config = 6;
 }
 
+// LLamaConfig holds configuration for LLama workflows.
+message LLamaConfig {}
 
 // OpenAIConfig holds configuration for OpenAI workflows.
 message OpenAIConfig {

@@ -52,12 +52,17 @@ pub mod semantic_pipeline_request {
     #[allow(clippy::derive_partial_eq_without_eq)]
     #[derive(Clone, PartialEq, ::prost::Oneof)]
     pub enum Name {
-        #[prost(string, tag = "1")]
-        KnowledgeGraphUsingLlama2V1(::prost::alloc::string::String),
+        #[prost(message, tag = "1")]
+        KnowledgeGraphUsingLlama2V1(super::LLamaConfig),
         #[prost(message, tag = "2")]
         KnowledgeGraphUsingOpenai(super::OpenAiConfig),
     }
 }
+/// LLamaConfig holds configuration for LLama workflows.
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct LLamaConfig {}
 /// OpenAIConfig holds configuration for OpenAI workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
