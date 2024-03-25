@@ -182,7 +182,7 @@ pub struct CollectorConfig {
     pub name: ::prost::alloc::string::String,
     #[prost(
         oneof = "collector_config::Backend",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
     )]
     pub backend: ::core::option::Option<Backend>,
 }
@@ -214,7 +214,17 @@ pub mod collector_config {
         Slack(SlackCollectorConfig),
         #[prost(message, tag = "11")]
         News(NewsCollectorConfig),
+        #[prost(message, tag = "12")]
+        Files(FileCollectorConfig),
     }
+}
+/// FileCollectorConfig is a message to hold configuration for a file collector.
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FileCollectorConfig {
+    #[prost(string, tag = "1")]
+    pub root_path: ::prost::alloc::string::String,
 }
 /// AzureCollectorConfig is a message to hold configuration for an Azure collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

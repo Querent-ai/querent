@@ -21,3 +21,4 @@ venv
 content/
 querent-env/
 models/
+querent-*
