@@ -118,7 +118,13 @@ message CollectorConfig {
     GithubCollectorConfig github = 9;
     SlackCollectorConfig slack = 10;
     NewsCollectorConfig news = 11;
+    FileCollectorConfig files = 12;
   }
+}
+
+// FileCollectorConfig is a message to hold configuration for a file collector.
+message FileCollectorConfig {
+  string root_path = 1;
 }
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.

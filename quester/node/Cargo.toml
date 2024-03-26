@@ -1,6 +1,6 @@
 [package]
 name = "node"
-version = "2.0.1"
+version = "3.0.1"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"

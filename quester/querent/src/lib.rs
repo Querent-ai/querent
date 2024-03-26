@@ -223,6 +223,12 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("to_date".to_string(), config.to_date.to_string());
 					map
 				},
+				Some(proto::semantics::Backend::Files(config)) => {
+					backend = "localfile".to_string();
+					let mut map = HashMap::new();
+					map.insert("root_path".to_string(), config.root_path.to_string());
+					map
+				},
 				_ => {
 					let map = HashMap::new();
 					map

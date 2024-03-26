@@ -1,5 +1,6 @@
 use common::metrics::{new_counter, new_gauge, IntCounter, IntGauge};
 
+#[allow(dead_code)]
 pub struct GrpcClusterMetrics {
 	pub live_nodes: IntGauge,
 	pub ready_nodes: IntGauge,

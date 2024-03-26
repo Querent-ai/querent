@@ -175,14 +175,15 @@ log = { version = "^0.4.17", features = [
   "release_max_level_debug"
 ] }
 querent-synapse = { version = "2.0.0" }
-actors = { version = "2.0.1", path = "./actors" }
-common = { version = "2.0.1", path = "./common" }
-querent = { version = "2.0.1", path = "./querent" }
-storage = { version = "2.0.1", path = "./storage" }
-cluster = { version = "2.0.1", path = "./cluster" }
-codegen = { version = "2.0.1", path = "./codegen" }
-proto = { version = "2.0.1", path = "./proto" }
-discovery = {version = "2.0.1", path = "./insights"}
+actors = { version = "3.0.1", path = "./actors" }
+common = { version = "3.0.1", path = "./common" }
+querent = { version = "3.0.1", path = "./querent" }
+storage = { version = "3.0.1", path = "./storage" }
+cluster = { version = "3.0.1", path = "./cluster" }
+codegen = { version = "3.0.1", path = "./codegen" }
+proto = { version = "3.0.1", path = "./proto" }
+discovery = {version = "3.0.1", path = "./insights"}
+
 pyo3-asyncio = { version = "0.20.0", features = [
   "attributes",
   "tokio-runtime",
@@ -198,7 +199,7 @@ rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
 diesel = "2.1.4"
 deadpool = { version = "0.10.0", features = ["rt_tokio_1"] }
 chitchat = { git = "https://github.com/quickwit-oss/chitchat.git", rev = "a3e3f8b" }
-node = { version = "2.0.1", path = "./node" }
+node = { version = "3.0.1", path = "./node" }
 crossbeam-channel = "0.5.10"
 futures_util = "0.3.14"
 
