@@ -24,5 +24,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.generate_rpc_name_impls()
 		.run()
 		.unwrap();
+
+	// Discovery service proto code generation
+	let mut prost_config = prost_build::Config::default();
+	prost_config.protoc_arg("--experimental_allow_proto3_optional");
+
+	tonic_build::configure()
+		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")
+		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema)]")
+		.type_attribute("DiscoveryRequest", "#[derive(Eq, Hash)]")
+		.type_attribute("SortFld", "#[derive(Eq, Hash)]")
+		.out_dir("src/codegen/querent")
+		.compile_with_config(prost_config, &["protos/querent/discovery.proto"], &["protos"])?;
+
 	Ok(())
 }

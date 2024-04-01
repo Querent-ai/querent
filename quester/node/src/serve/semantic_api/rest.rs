@@ -53,10 +53,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		GcsCollectorConfig,
 		S3CollectorConfig,
 		JiraCollectorConfig,
-		SlackCollectorConfig,
-		AzureCollectorConfig,
 		GoogleDriveCollectorConfig,
-		EmailCollectorConfig,
 		DropBoxCollectorConfig,
 		GithubCollectorConfig,
 		NewsCollectorConfig,
@@ -67,6 +64,9 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PostgresConfig,
 		MilvusConfig,
 		Neo4jConfig,
+		AzureCollectorConfig,
+		EmailCollectorConfig,
+		SlackCollectorConfig,
 	))
 )]
 pub struct SemanticApi;

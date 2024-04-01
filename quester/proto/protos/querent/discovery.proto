@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package querent.discovery;
+
+// Request message for querying insights from data
+message DiscoveryRequest {
+  // The query or question posed by the user
+  string query = 1;
+}
+
+// Response message containing insights discovered from the data
+message DiscoveryResponse {
+  // The insights discovered based on the user's query
+  repeated Insight insights = 1;
+}
+
+// Represents an insight discovered from the data
+message Insight {
+  // The title or summary of the insight
+  string title = 1;
+
+  // The detailed description or explanation of the insight
+  string description = 2;
+}
+
+// The Discovery service provides a method to query insights from data
+service Discovery {
+  // Discovers insights from data based on the user's query
+  rpc DiscoverInsights(DiscoveryRequest) returns (DiscoveryResponse);
+}
+
+

@@ -13,6 +13,8 @@ pub mod json_api_response;
 pub use json_api_response::*;
 pub mod semantic_api;
 pub use semantic_api::*;
+pub mod discovery_api;
+pub use discovery_api::*;
 pub mod health_check_api;
 pub mod openapi;
 pub use openapi::*;
