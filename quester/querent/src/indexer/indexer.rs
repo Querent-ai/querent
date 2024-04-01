@@ -1,5 +1,5 @@
 use std::{
-	collections::{HashMap, HashSet},
+	collections::{HashMap, VecDeque},
 	sync::Arc,
 };
 
@@ -18,6 +18,7 @@ pub struct Indexer {
 	pub counters: Arc<IndexerCounters>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub event_lock: EventLock,
+	pub doc_buffer: VecDeque<String>,
 }
 
 impl Indexer {
@@ -28,6 +29,7 @@ impl Indexer {
 			counters: Arc::new(IndexerCounters::new()),
 			event_lock: EventLock::default(),
 			index_storages,
+			doc_buffer: VecDeque::with_capacity(100),
 		}
 	}
 
@@ -144,14 +146,20 @@ impl Handler<IndexerKnowledge> for Indexer {
 			})?;
 		}
 		// collect statistics
-		let doc_map: HashMap<String, Vec<SemanticKnowledgePayload>> =
-			knowledge.into_iter().fold(HashMap::new(), |mut acc, (doc, payload)| {
-				acc.entry(doc.clone()).or_insert_with(Vec::new).push(payload);
-				acc
-			});
+		let mut doc_map: HashMap<String, Vec<SemanticKnowledgePayload>> = HashMap::new();
+		let mut new_docs: Vec<String> = Vec::new();
 
-		let unique_docs: HashSet<String> = doc_map.keys().cloned().collect();
-		let total_unique_docs = unique_docs.len();
+		for (doc, payload) in knowledge {
+			doc_map.entry(doc.clone()).or_insert_with(Vec::new).push(payload);
+
+			// Check if the document is already indexed via self.doc_buffer
+			if !self.doc_buffer.contains(&doc) {
+				new_docs.push(doc);
+			}
+		}
+
+		let total_unique_docs = new_docs.len();
+		self.doc_buffer.extend(new_docs);
 
 		self.counters
 			.increment_total_documents_indexed(total_unique_docs.try_into().unwrap_or_default());
