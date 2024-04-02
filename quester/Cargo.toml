@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto"]
+members = ["actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
 
 [profile.dev]
 debug = false
@@ -80,7 +80,7 @@ once_cell = "1"
 oneshot = "0.1.5"
 openssl = { version = "0.10.60", default-features = false }
 openssl-probe = "0.1.5"
-opentelemetry = { version = "0.19.0", features = ["rt-tokio"] }
+opentelemetry = { version = "0.20.0", features = ["rt-tokio"] }
 opentelemetry-otlp = "0.14.0"
 ouroboros = "0.18.0"
 pin-project = "1.1.0"
@@ -147,7 +147,7 @@ tower = { version = "0.4.13", features = [
 ] }
 tower-http = { version = "0.4.0", features = ["compression-gzip", "cors"] }
 tracing = "0.1.37"
-tracing-opentelemetry = "0.22.0"
+tracing-opentelemetry = "0.20.0"
 tracing-subscriber = { version = "0.3.16", features = [
   "env-filter",
   "std",
@@ -182,6 +182,8 @@ storage = { version = "3.0.1", path = "./storage" }
 cluster = { version = "3.0.1", path = "./cluster" }
 codegen = { version = "3.0.1", path = "./codegen" }
 proto = { version = "3.0.1", path = "./proto" }
+discovery = {version = "3.0.1", path = "./insights"}
+
 pyo3-asyncio = { version = "0.20.0", features = [
   "attributes",
   "tokio-runtime",

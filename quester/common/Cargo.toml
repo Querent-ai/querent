@@ -46,6 +46,7 @@ tracing = { workspace = true }
 pyo3 = { workspace = true }
 querent-synapse = { workspace = true }
 utoipa = { workspace = true }
+siphasher = { workspace = true }
 
 
 [features]

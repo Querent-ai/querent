@@ -3,11 +3,14 @@ use std::{net::SocketAddr, sync::Arc};
 use bytesize::ByteSize;
 use cluster::cluster_grpc_server;
 use common::BoxFutureInfaillible;
-use proto::semantics_service_grpc_server::SemanticsServiceGrpcServer;
+use proto::{
+	discovery_server::DiscoveryServer,
+	semantics::semantics_service_grpc_server::SemanticsServiceGrpcServer,
+};
 use tonic::transport::Server;
 use tracing::info;
 
-use crate::{QuesterServices, SemanticsGrpcAdapter};
+use crate::{DiscoveryAdapter, QuesterServices, SemanticsGrpcAdapter};
 
 /// Starts and binds gRPC services to `grpc_listen_addr`.
 pub(crate) async fn start_grpc_server(
@@ -28,10 +31,21 @@ pub(crate) async fn start_grpc_server(
 	let semantics_service_grpc_server = SemanticsServiceGrpcServer::new(grpc_semantic_adapater)
 		.max_decoding_message_size(max_message_size.0 as usize)
 		.max_encoding_message_size(max_message_size.0 as usize);
-
+	let discovery_grpc_service = if services.discovery_service.is_some() {
+		let discovery_service = services.discovery_service.clone().unwrap();
+		let grpc_discovery_adapater = DiscoveryAdapter::from(discovery_service);
+		Some(
+			DiscoveryServer::new(grpc_discovery_adapater)
+				.max_decoding_message_size(max_message_size.0 as usize)
+				.max_encoding_message_size(max_message_size.0 as usize),
+		)
+	} else {
+		None
+	};
 	let server_router = server
 		.add_service(cluster_grpc_service)
-		.add_service(semantics_service_grpc_server);
+		.add_service(semantics_service_grpc_server)
+		.add_optional_service(discovery_grpc_service);
 
 	info!(
 		grpc_listen_addr=?grpc_listen_addr,
