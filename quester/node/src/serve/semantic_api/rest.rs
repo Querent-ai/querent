@@ -12,6 +12,7 @@ use proto::{
 		SemanticPipelineRequest, SemanticPipelineResponse, SlackCollectorConfig, StorageConfig,
 		StorageType,
 	},
+	EngineParams, WorkflowContract,
 };
 
 use querent::{
@@ -67,6 +68,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PostgresConfig,
 		MilvusConfig,
 		Neo4jConfig,
+		WorkflowContract,
+		EngineParams,
 	))
 )]
 pub struct SemanticApi;
