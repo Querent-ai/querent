@@ -52,7 +52,7 @@ pub struct PostgresConfig {
     pub name: ::prost::alloc::string::String,
     /// Type of the storage.
     #[prost(message, optional, tag = "2")]
-    pub storage_type: ::core::option::Option<crate::semantics::StorageType>,
+    pub storage_type: ::core::option::Option<StorageType>,
     /// URL of the Postgres storage.
     #[prost(string, tag = "3")]
     pub url: ::prost::alloc::string::String,
@@ -67,7 +67,7 @@ pub struct MilvusConfig {
     pub name: ::prost::alloc::string::String,
     /// Type of the storage.
     #[prost(message, optional, tag = "2")]
-    pub storage_type: ::core::option::Option<crate::semantics::StorageType>,
+    pub storage_type: ::core::option::Option<StorageType>,
     /// URL of the Milvus storage.
     #[prost(string, tag = "3")]
     pub url: ::prost::alloc::string::String,
@@ -88,7 +88,7 @@ pub struct Neo4jConfig {
     pub name: ::prost::alloc::string::String,
     /// Type of the storage.
     #[prost(message, optional, tag = "2")]
-    pub storage_type: ::core::option::Option<crate::semantics::StorageType>,
+    pub storage_type: ::core::option::Option<StorageType>,
     /// URL of the Neo4j storage.
     #[prost(string, tag = "3")]
     pub url: ::prost::alloc::string::String,
