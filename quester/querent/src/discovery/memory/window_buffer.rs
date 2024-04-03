@@ -2,38 +2,38 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use crate::{BaseMemory, Message};
+use crate::schemas::{memory::BaseMemory, messages::Message};
 
-pub struct BufferMemory {
+pub struct WindowBufferMemory {
 	window_size: usize,
 	messages: Vec<Message>,
 }
 
-impl Default for BufferMemory {
+impl Default for WindowBufferMemory {
 	fn default() -> Self {
 		Self::new(10)
 	}
 }
 
-impl BufferMemory {
+impl WindowBufferMemory {
 	pub fn new(window_size: usize) -> Self {
 		Self { messages: Vec::new(), window_size }
 	}
 }
 
-impl Into<Arc<dyn BaseMemory>> for BufferMemory {
+impl Into<Arc<dyn BaseMemory>> for WindowBufferMemory {
 	fn into(self) -> Arc<dyn BaseMemory> {
 		Arc::new(self)
 	}
 }
 
-impl Into<Arc<Mutex<dyn BaseMemory>>> for BufferMemory {
+impl Into<Arc<Mutex<dyn BaseMemory>>> for WindowBufferMemory {
 	fn into(self) -> Arc<Mutex<dyn BaseMemory>> {
 		Arc::new(Mutex::new(self))
 	}
 }
 
-impl BaseMemory for BufferMemory {
+impl BaseMemory for WindowBufferMemory {
 	fn messages(&self) -> Vec<Message> {
 		self.messages.clone()
 	}

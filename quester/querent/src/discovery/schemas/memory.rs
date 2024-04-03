@@ -1,4 +1,4 @@
-use crate::Message;
+use super::messages::Message;
 
 pub trait BaseMemory: Send + Sync {
 	fn messages(&self) -> Vec<Message>;

@@ -2,16 +2,103 @@ syntax = "proto3";
 
 package querent.discovery;
 
+// Start a discovery agent to query insights from data
+// The agent will respond with insights discovered based on the user's query
+// The agent use vector and graph embeddings to discover insights from data
+message DiscoverySessionRequest {
+  // Name of the discovery agent
+  string agent_name = 1;
+  // Optional storage storage_configs
+  repeated StorageConfig storage_configs = 5;
+  // Max message memory size
+  int32 max_message_memory_size = 6;
+  // Max query tokens size 
+  int32 max_query_tokens_size = 7;
+}
+
+// Session AgentID as a response
+message DiscoverySessionResponse {
+  // The ID of the discovery session
+  string session_id = 1;
+}
+
+// StorageConfig is a message to hold configuration for a storage.
+message StorageConfig {
+  // Postgres configuration.
+  PostgresConfig postgres = 1;
+  // Milvus configuration.
+  MilvusConfig milvus = 2;
+  // Neo4j configuration.
+  Neo4jConfig neo4j = 3;
+}
+
+// The corresponding Rust struct [`crate::types::StorageType`] is defined manually and
+// externally provided during code generation (see `build.rs`).
+//
+// Modify at your own risk.
+message StorageType {
+  bytes storage_type = 1;
+}
+
+
+// PostgresConfig is a message to hold configuration for a Postgres storage.
+message PostgresConfig {
+  // Name of the Postgres storage.
+  string name = 1;
+  // Type of the storage.
+  StorageType storage_type = 2;
+  // URL of the Postgres storage.
+  string url = 3;
+}
+
+// MilvusConfig is a message to hold configuration for a Milvus storage.
+message MilvusConfig {
+  // Name of the Milvus storage.
+  string name = 1;
+  // Type of the storage.
+  StorageType storage_type = 2;
+  // URL of the Milvus storage.
+  string url = 3;
+  // Username for the Milvus storage.
+  string username = 4;
+  // Password for the Milvus storage.
+  string password = 5;
+}
+
+// Neo4jConfig is a message to hold configuration for a Neo4j storage.
+message Neo4jConfig {
+  // Name of the Neo4j storage.
+  string name = 1;
+  // Type of the storage.
+  StorageType storage_type = 2;
+  // URL of the Neo4j storage.
+  string url = 3;
+  // Username for the Neo4j storage.
+  string username = 4;
+  // Password for the Neo4j storage.
+  string password = 5;
+  // Name of the database in the Neo4j storage.
+  string db_name = 6;
+  // Fetch size for the Neo4j storage.
+  int32 fetch_size = 7;
+  // Maximum connection pool size for the Neo4j storage.
+  int32 max_connection_pool_size = 8;
+}
+
 // Request message for querying insights from data
 message DiscoveryRequest {
+  // The ID of the discovery session
+  string session_id = 1;
   // The query or question posed by the user
-  string query = 1;
+  string query = 2;
 }
 
 // Response message containing insights discovered from the data
 message DiscoveryResponse {
+  // The ID of the discovery session
+  string session_id = 1;
   // The insights discovered based on the user's query
-  repeated Insight insights = 1;
+  repeated Insight insights = 2;
 }
 
 // Represents an insight discovered from the data
@@ -25,8 +112,9 @@ message Insight {
 
 // The Discovery service provides a method to query insights from data
 service Discovery {
-  // Discovers insights from data based on the user's query
+  // Start a discovery session to query insights from data
+  rpc StartDiscoverySession(DiscoverySessionRequest) returns (DiscoverySessionResponse) {}
+  
+  // Query insights from data
   rpc DiscoverInsights(DiscoveryRequest) returns (DiscoveryResponse);
 }
-
-

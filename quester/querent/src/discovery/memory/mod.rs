@@ -1,8 +1,7 @@
-pub mod in_memory;
-pub use in_memory::*;
-pub mod memory;
-pub use memory::*;
-pub mod memory_messages;
-pub use memory_messages::*;
-pub mod buffer_memory;
-pub use buffer_memory::*;
+mod dummy_memory;
+mod simple_memory;
+mod window_buffer;
+
+pub use dummy_memory::*;
+pub use simple_memory::*;
+pub use window_buffer::*;

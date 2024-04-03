@@ -1,7 +1,8 @@
 use std::sync::Arc;
+
 use tokio::sync::Mutex;
 
-use crate::{BaseMemory, Message};
+use crate::schemas::{memory::BaseMemory, messages::Message};
 
 pub struct SimpleMemory {
 	messages: Vec<Message>,
