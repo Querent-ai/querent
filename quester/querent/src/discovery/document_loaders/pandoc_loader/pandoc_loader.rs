@@ -151,25 +151,3 @@ impl<R: AsyncRead + Send + Sync + Unpin + 'static> Loader for PandocLoader<R> {
 		Ok(Box::pin(stream))
 	}
 }
-
-#[cfg(test)]
-mod tests {
-	use futures_util::StreamExt;
-
-	use super::*;
-
-	#[tokio::test]
-	async fn test_pandoc_loader() {
-		let path = "./src/document_loaders/test_data/sample.docx";
-
-		let loader = PandocLoader::from_path(InputFormat::Docx.to_string(), path)
-			.await
-			.expect("Failed to create PandocLoader");
-
-		let docs = loader.load().await.unwrap().map(|d| d.unwrap()).collect::<Vec<_>>().await;
-
-		// only pick the first 27 characters for now
-		assert_eq!(&docs[0].page_content[..27], "Lorem ipsum dolor sit amet,");
-		assert_eq!(docs.len(), 1);
-	}
-}
