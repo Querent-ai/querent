@@ -226,9 +226,9 @@ impl StorageType {
 impl From<ByteString> for StorageType {
 	fn from(value: ByteString) -> Self {
 		match &value[..] {
-			"index" => Self::Index,
-			"vector" => Self::Vector,
-			"graph" => Self::Graph,
+			"index" | "Index" => Self::Index,
+			"vector" | "Vector" => Self::Vector,
+			"graph" | "Graph" => Self::Graph,
 			_ => panic!("invalid storage type"),
 		}
 	}

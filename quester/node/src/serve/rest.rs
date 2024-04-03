@@ -187,9 +187,9 @@ fn api_v1_routes(
 				.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
 				.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
 				.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone()))))
-			.or(discover_get_filter(services.discovery_service.clone()))
-			.or(discover_post_filter(services.discovery_service.clone()))
-			.or(start_discovery_session_filter(services.discovery_service.clone())),
+			.or(start_discovery_session_filter(services.discovery_service.clone())
+				.or(discover_get_filter(services.discovery_service.clone())
+					.or(discover_post_filter(services.discovery_service.clone())))),
 	)
 }
 
