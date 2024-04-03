@@ -17,6 +17,17 @@ impl From<Arc<dyn DiscoveryService>> for DiscoveryAdapter {
 #[async_trait]
 impl grpc::Discovery for DiscoveryAdapter {
 	#[instrument(skip(self, request))]
+	async fn start_discovery_session(
+		&self,
+		request: tonic::Request<proto::discovery::DiscoverySessionRequest>,
+	) -> Result<tonic::Response<proto::discovery::DiscoverySessionResponse>, tonic::Status> {
+		let req = request.into_inner();
+		let res: Result<proto::DiscoverySessionResponse, discovery::error::DiscoveryError> =
+			self.0.start_discovery_session(req).await;
+		convert_to_grpc_result(res)
+	}
+
+	#[instrument(skip(self, request))]
 	async fn discover_insights(
 		&self,
 		request: tonic::Request<proto::discovery::DiscoveryRequest>,

@@ -1,11 +1,124 @@
+/// Start a discovery agent to query insights from data
+/// The agent will respond with insights discovered based on the user's query
+/// The agent use vector and graph embeddings to discover insights from data
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DiscoverySessionRequest {
+    /// Name of the discovery agent
+    #[prost(string, tag = "1")]
+    pub agent_name: ::prost::alloc::string::String,
+    /// Optional storage storage_configs
+    #[prost(message, repeated, tag = "5")]
+    pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
+    /// Max message memory size
+    #[prost(int32, tag = "6")]
+    pub max_message_memory_size: i32,
+    /// Max query tokens size
+    #[prost(int32, tag = "7")]
+    pub max_query_tokens_size: i32,
+}
+/// Session AgentID as a response
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct DiscoverySessionResponse {
+    /// The ID of the discovery session
+    #[prost(string, tag = "1")]
+    pub session_id: ::prost::alloc::string::String,
+}
+/// StorageConfig is a message to hold configuration for a storage.
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StorageConfig {
+    /// Postgres configuration.
+    #[prost(message, optional, tag = "1")]
+    pub postgres: ::core::option::Option<PostgresConfig>,
+    /// Milvus configuration.
+    #[prost(message, optional, tag = "2")]
+    pub milvus: ::core::option::Option<MilvusConfig>,
+    /// Neo4j configuration.
+    #[prost(message, optional, tag = "3")]
+    pub neo4j: ::core::option::Option<Neo4jConfig>,
+}
+/// PostgresConfig is a message to hold configuration for a Postgres storage.
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PostgresConfig {
+    /// Name of the Postgres storage.
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Type of the storage.
+    #[prost(message, optional, tag = "2")]
+    pub storage_type: ::core::option::Option<crate::semantics::StorageType>,
+    /// URL of the Postgres storage.
+    #[prost(string, tag = "3")]
+    pub url: ::prost::alloc::string::String,
+}
+/// MilvusConfig is a message to hold configuration for a Milvus storage.
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct MilvusConfig {
+    /// Name of the Milvus storage.
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Type of the storage.
+    #[prost(message, optional, tag = "2")]
+    pub storage_type: ::core::option::Option<crate::semantics::StorageType>,
+    /// URL of the Milvus storage.
+    #[prost(string, tag = "3")]
+    pub url: ::prost::alloc::string::String,
+    /// Username for the Milvus storage.
+    #[prost(string, tag = "4")]
+    pub username: ::prost::alloc::string::String,
+    /// Password for the Milvus storage.
+    #[prost(string, tag = "5")]
+    pub password: ::prost::alloc::string::String,
+}
+/// Neo4jConfig is a message to hold configuration for a Neo4j storage.
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct Neo4jConfig {
+    /// Name of the Neo4j storage.
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// Type of the storage.
+    #[prost(message, optional, tag = "2")]
+    pub storage_type: ::core::option::Option<crate::semantics::StorageType>,
+    /// URL of the Neo4j storage.
+    #[prost(string, tag = "3")]
+    pub url: ::prost::alloc::string::String,
+    /// Username for the Neo4j storage.
+    #[prost(string, tag = "4")]
+    pub username: ::prost::alloc::string::String,
+    /// Password for the Neo4j storage.
+    #[prost(string, tag = "5")]
+    pub password: ::prost::alloc::string::String,
+    /// Name of the database in the Neo4j storage.
+    #[prost(string, tag = "6")]
+    pub db_name: ::prost::alloc::string::String,
+    /// Fetch size for the Neo4j storage.
+    #[prost(int32, tag = "7")]
+    pub fetch_size: i32,
+    /// Maximum connection pool size for the Neo4j storage.
+    #[prost(int32, tag = "8")]
+    pub max_connection_pool_size: i32,
+}
 /// Request message for querying insights from data
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
 #[derive(Eq, Hash)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoveryRequest {
-    /// The query or question posed by the user
+    /// The ID of the discovery session
     #[prost(string, tag = "1")]
+    pub session_id: ::prost::alloc::string::String,
+    /// The query or question posed by the user
+    #[prost(string, tag = "2")]
     pub query: ::prost::alloc::string::String,
 }
 /// Response message containing insights discovered from the data
@@ -13,8 +126,11 @@ pub struct DiscoveryRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoveryResponse {
+    /// The ID of the discovery session
+    #[prost(string, tag = "1")]
+    pub session_id: ::prost::alloc::string::String,
     /// The insights discovered based on the user's query
-    #[prost(message, repeated, tag = "1")]
+    #[prost(message, repeated, tag = "2")]
     pub insights: ::prost::alloc::vec::Vec<Insight>,
 }
 /// Represents an insight discovered from the data
@@ -115,7 +231,38 @@ pub mod discovery_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        /// Discovers insights from data based on the user's query
+        /// Start a discovery session to query insights from data
+        pub async fn start_discovery_session(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DiscoverySessionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DiscoverySessionResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/querent.discovery.Discovery/StartDiscoverySession",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "querent.discovery.Discovery",
+                        "StartDiscoverySession",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
+        /// Query insights from data
         pub async fn discover_insights(
             &mut self,
             request: impl tonic::IntoRequest<super::DiscoveryRequest>,
@@ -152,7 +299,15 @@ pub mod discovery_server {
     /// Generated trait containing gRPC methods that should be implemented for use with DiscoveryServer.
     #[async_trait]
     pub trait Discovery: Send + Sync + 'static {
-        /// Discovers insights from data based on the user's query
+        /// Start a discovery session to query insights from data
+        async fn start_discovery_session(
+            &self,
+            request: tonic::Request<super::DiscoverySessionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DiscoverySessionResponse>,
+            tonic::Status,
+        >;
+        /// Query insights from data
         async fn discover_insights(
             &self,
             request: tonic::Request<super::DiscoveryRequest>,
@@ -241,6 +396,52 @@ pub mod discovery_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
+                "/querent.discovery.Discovery/StartDiscoverySession" => {
+                    #[allow(non_camel_case_types)]
+                    struct StartDiscoverySessionSvc<T: Discovery>(pub Arc<T>);
+                    impl<
+                        T: Discovery,
+                    > tonic::server::UnaryService<super::DiscoverySessionRequest>
+                    for StartDiscoverySessionSvc<T> {
+                        type Response = super::DiscoverySessionResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::DiscoverySessionRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).start_discovery_session(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = StartDiscoverySessionSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
                 "/querent.discovery.Discovery/DiscoverInsights" => {
                     #[allow(non_camel_case_types)]
                     struct DiscoverInsightsSvc<T: Discovery>(pub Arc<T>);
