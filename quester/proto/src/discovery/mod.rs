@@ -1,4 +1,5 @@
 use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
+pub use crate::semantics::StorageType;
 use actors::AskError;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

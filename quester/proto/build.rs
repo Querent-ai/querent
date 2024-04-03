@@ -28,6 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// Discovery service proto code generation
 	let mut prost_config = prost_build::Config::default();
 	prost_config.protoc_arg("--experimental_allow_proto3_optional");
+	prost_config.extern_path(".querent.discovery.StorageType", "StorageType");
 
 	tonic_build::configure()
 		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")

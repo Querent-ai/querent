@@ -1,7 +1,9 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_trait::async_trait;
-use proto::{DiscoveryRequest, DiscoveryResponse};
+use proto::{
+	DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionResponse,
+};
 use querent_synapse::callbacks::EventType;
 use storage::Storage;
 
@@ -12,6 +14,12 @@ pub trait DiscoveryService: 'static + Send + Sync {
 		&self,
 		request: DiscoveryRequest,
 	) -> crate::Result<DiscoveryResponse>;
+
+	/// Start Discovery Session
+	async fn start_discovery_session(
+		&self,
+		request: DiscoverySessionRequest,
+	) -> crate::Result<DiscoverySessionResponse>;
 }
 
 #[derive(Clone)]
@@ -40,5 +48,16 @@ impl DiscoveryService for DiscoveryImpl {
 		// GraphRag essentially is a graph-based recommendation system that can be used to
 		// recommend insights based on the data in the storages
 		Ok(DiscoveryResponse::default())
+	}
+
+	async fn start_discovery_session(
+		&self,
+		_request: DiscoverySessionRequest,
+	) -> crate::Result<DiscoverySessionResponse> {
+		// TODO: Implement this method utilizing the event_storages and index_storages
+		// and return the appropriate response via GraphRag mechanism
+		// GraphRag essentially is a graph-based recommendation system that can be used to
+		// recommend insights based on the data in the storages
+		Ok(DiscoverySessionResponse::default())
 	}
 }

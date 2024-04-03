@@ -25,8 +25,8 @@ use crate::{
 	ingest_token_handler, ingest_tokens_put_handler,
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
-	restart_pipeline_post_handler, start_pipeline_post_handler, stop_pipeline_delete_handler,
-	ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
+	restart_pipeline_post_handler, start_discovery_session_filter, start_pipeline_post_handler,
+	stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -175,18 +175,19 @@ fn api_v1_routes(
 				RuntimeInfo::get(),
 				Arc::new(services.node_config.clone()),
 			))
-			.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone()))
-				.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))
-				.or(start_pipeline_post_handler(
-					Some(services.semantic_service_bus.clone()),
-					services.event_storages.clone(),
-					services.index_storages.clone(),
-				)))
-			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone()))
-				.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))
-				.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
-				.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
-				.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone()))))
+			.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone())))
+			.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))
+			.or(start_pipeline_post_handler(
+				Some(services.semantic_service_bus.clone()),
+				services.event_storages.clone(),
+				services.index_storages.clone(),
+			))
+			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone())))
+			.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))
+			.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
+			.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
+			.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone())))
+			.or(start_discovery_session_filter(services.discovery_service.clone()))
 			.or(discover_get_filter(services.discovery_service.clone()))
 			.or(discover_post_filter(services.discovery_service.clone())),
 	)
