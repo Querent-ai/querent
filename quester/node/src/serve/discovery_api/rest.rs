@@ -14,7 +14,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-	paths(discovery_post_handler, discovery_get_handler,),
+	paths(discovery_post_handler, discovery_get_handler, start_discovery_session_handler),
 	components(schemas(
 		DiscoveryRequest,
 		DiscoveryResponse,
