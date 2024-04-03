@@ -175,21 +175,21 @@ fn api_v1_routes(
 				RuntimeInfo::get(),
 				Arc::new(services.node_config.clone()),
 			))
-			.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone()))
-				.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))
-				.or(start_pipeline_post_handler(
-					Some(services.semantic_service_bus.clone()),
-					services.event_storages.clone(),
-					services.index_storages.clone(),
-				)))
-			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone()))
-				.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))
-				.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
-				.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
-				.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone()))))
-			.or(start_discovery_session_filter(services.discovery_service.clone())
-				.or(discover_get_filter(services.discovery_service.clone())
-					.or(discover_post_filter(services.discovery_service.clone())))),
+			.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone())))
+			.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))
+			.or(start_pipeline_post_handler(
+				Some(services.semantic_service_bus.clone()),
+				services.event_storages.clone(),
+				services.index_storages.clone(),
+			))
+			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone())))
+			.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))
+			.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
+			.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
+			.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone())))
+			.or(start_discovery_session_filter(services.discovery_service.clone()))
+			.or(discover_get_filter(services.discovery_service.clone()))
+			.or(discover_post_filter(services.discovery_service.clone())),
 	)
 }
 

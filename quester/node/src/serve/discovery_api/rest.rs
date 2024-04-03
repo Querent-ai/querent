@@ -56,7 +56,7 @@ pub async fn start_discovery_session_handler(
 pub fn start_discovery_session_filter(
 	discovery_service: Option<Arc<dyn DiscoveryService>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("session")
+	warp::path!("discovery" / "session")
 		.and(warp::body::json())
 		.and(warp::post())
 		.and(require(Some(discovery_service)))
@@ -93,7 +93,7 @@ pub async fn discovery_post_handler(
 pub fn discover_post_filter(
 	discovery_service: Option<Arc<dyn DiscoveryService>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("search")
+	warp::path!("discovery" / "search")
 		.and(warp::body::json())
 		.and(warp::post())
 		.and(require(Some(discovery_service)))
@@ -131,7 +131,7 @@ pub async fn discovery_get_handler(
 pub fn discover_get_filter(
 	discovery_service: Option<Arc<dyn DiscoveryService>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("search")
+	warp::path!("discovery" / "search")
 		.and(warp::query::<DiscoveryRequestParam>())
 		.and(warp::get())
 		.and(require(Some(discovery_service)))
