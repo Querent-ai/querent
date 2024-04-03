@@ -2,7 +2,8 @@ use discovery::{error::DiscoveryError, DiscoveryService};
 use proto::{
 	discovery::{
 		DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionResponse,
-		Insight, MilvusConfig, Neo4jConfig, PostgresConfig, StorageConfig,
+		Insight, MilvusConfig, Neo4jConfig, PostgresConfig, StopDiscoverySessionRequest,
+		StopDiscoverySessionResponse, StorageConfig,
 	},
 	semantics::StorageType,
 };
@@ -14,7 +15,12 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
-	paths(discovery_post_handler, discovery_get_handler, start_discovery_session_handler),
+	paths(
+		discovery_post_handler,
+		discovery_get_handler,
+		start_discovery_session_handler,
+		stop_discovery_session_handler
+	),
 	components(schemas(
 		DiscoveryRequest,
 		DiscoveryResponse,
@@ -26,7 +32,9 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PostgresConfig,
 		Neo4jConfig,
 		MilvusConfig,
-		StorageType
+		StorageType,
+		StopDiscoverySessionRequest,
+		StopDiscoverySessionResponse,
 	),)
 )]
 pub struct DiscoveryApi;
@@ -150,4 +158,38 @@ pub struct DiscoveryRequestParam {
 	pub session_id: String,
 	/// The query to search for.
 	pub query: String,
+}
+
+#[utoipa::path(
+	post,
+	tag = "Discover",
+	path = "/discovery/session/stop",
+	request_body = StopDiscoverySessionRequest,
+	responses(
+		(status = 200, description = "Successfully stopped the discovery session.", body = StopDiscoverySessionResponse)
+	),
+)]
+/// Stop Discovery Session
+/// REST POST insights handler.
+pub async fn stop_discovery_session_handler(
+	request: StopDiscoverySessionRequest,
+	discovery_service: Option<Arc<dyn DiscoveryService>>,
+) -> Result<StopDiscoverySessionResponse, DiscoveryError> {
+	if discovery_service.is_none() {
+		return Err(DiscoveryError::Unavailable("Discovery service is not available".to_string()));
+	}
+	let response = discovery_service.unwrap().stop_discovery_session(request).await?;
+	Ok(response)
+}
+
+pub fn stop_discovery_session_filter(
+	discovery_service: Option<Arc<dyn DiscoveryService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("discovery" / "session" / "stop")
+		.and(warp::body::json())
+		.and(warp::post())
+		.and(require(Some(discovery_service)))
+		.then(stop_discovery_session_handler)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
 }

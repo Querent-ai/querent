@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use async_trait::async_trait;
 use proto::{
 	DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionResponse,
+	StopDiscoverySessionRequest, StopDiscoverySessionResponse,
 };
 use querent_synapse::callbacks::EventType;
 use storage::Storage;
@@ -20,6 +21,12 @@ pub trait DiscoveryService: 'static + Send + Sync {
 		&self,
 		request: DiscoverySessionRequest,
 	) -> crate::Result<DiscoverySessionResponse>;
+
+	/// Stop Discovery Session
+	async fn stop_discovery_session(
+		&self,
+		request: StopDiscoverySessionRequest,
+	) -> crate::Result<StopDiscoverySessionResponse>;
 }
 
 #[derive(Clone)]
@@ -59,5 +66,12 @@ impl DiscoveryService for DiscoveryImpl {
 		// GraphRag essentially is a graph-based recommendation system that can be used to
 		// recommend insights based on the data in the storages
 		Ok(DiscoverySessionResponse::default())
+	}
+
+	async fn stop_discovery_session(
+		&self,
+		_request: StopDiscoverySessionRequest,
+	) -> crate::Result<StopDiscoverySessionResponse> {
+		Ok(StopDiscoverySessionResponse::default())
 	}
 }

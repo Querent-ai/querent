@@ -101,6 +101,18 @@ message DiscoveryResponse {
   repeated Insight insights = 2;
 }
 
+// Request to stop the discovery session
+message StopDiscoverySessionRequest {
+  // The ID of the discovery session
+  string session_id = 1;
+}
+
+// Response to stop the discovery session
+message StopDiscoverySessionResponse {
+  // The ID of the discovery session
+  string session_id = 1;
+}
+
 // Represents an insight discovered from the data
 message Insight {
   // The title or summary of the insight
@@ -117,4 +129,7 @@ service Discovery {
   
   // Query insights from data
   rpc DiscoverInsights(DiscoveryRequest) returns (DiscoveryResponse);
+
+  // Stop the discovery session
+  rpc StopDiscoverySession(StopDiscoverySessionRequest) returns (StopDiscoverySessionResponse);
 }

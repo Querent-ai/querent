@@ -133,6 +133,24 @@ pub struct DiscoveryResponse {
     #[prost(message, repeated, tag = "2")]
     pub insights: ::prost::alloc::vec::Vec<Insight>,
 }
+/// Request to stop the discovery session
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StopDiscoverySessionRequest {
+    /// The ID of the discovery session
+    #[prost(string, tag = "1")]
+    pub session_id: ::prost::alloc::string::String,
+}
+/// Response to stop the discovery session
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StopDiscoverySessionResponse {
+    /// The ID of the discovery session
+    #[prost(string, tag = "1")]
+    pub session_id: ::prost::alloc::string::String,
+}
 /// Represents an insight discovered from the data
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -290,6 +308,37 @@ pub mod discovery_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Stop the discovery session
+        pub async fn stop_discovery_session(
+            &mut self,
+            request: impl tonic::IntoRequest<super::StopDiscoverySessionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::StopDiscoverySessionResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/querent.discovery.Discovery/StopDiscoverySession",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "querent.discovery.Discovery",
+                        "StopDiscoverySession",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -313,6 +362,14 @@ pub mod discovery_server {
             request: tonic::Request<super::DiscoveryRequest>,
         ) -> std::result::Result<
             tonic::Response<super::DiscoveryResponse>,
+            tonic::Status,
+        >;
+        /// Stop the discovery session
+        async fn stop_discovery_session(
+            &self,
+            request: tonic::Request<super::StopDiscoverySessionRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::StopDiscoverySessionResponse>,
             tonic::Status,
         >;
     }
@@ -473,6 +530,52 @@ pub mod discovery_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = DiscoverInsightsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/querent.discovery.Discovery/StopDiscoverySession" => {
+                    #[allow(non_camel_case_types)]
+                    struct StopDiscoverySessionSvc<T: Discovery>(pub Arc<T>);
+                    impl<
+                        T: Discovery,
+                    > tonic::server::UnaryService<super::StopDiscoverySessionRequest>
+                    for StopDiscoverySessionSvc<T> {
+                        type Response = super::StopDiscoverySessionResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::StopDiscoverySessionRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).stop_discovery_session(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = StopDiscoverySessionSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

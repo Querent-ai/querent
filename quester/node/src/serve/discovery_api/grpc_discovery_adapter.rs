@@ -37,4 +37,15 @@ impl grpc::Discovery for DiscoveryAdapter {
 			self.0.discover_insights(req).await;
 		convert_to_grpc_result(res)
 	}
+
+	#[instrument(skip(self, request))]
+	async fn stop_discovery_session(
+		&self,
+		request: tonic::Request<proto::discovery::StopDiscoverySessionRequest>,
+	) -> Result<tonic::Response<proto::discovery::StopDiscoverySessionResponse>, tonic::Status> {
+		let req = request.into_inner();
+		let res: Result<proto::StopDiscoverySessionResponse, discovery::error::DiscoveryError> =
+			self.0.stop_discovery_session(req).await;
+		convert_to_grpc_result(res)
+	}
 }
