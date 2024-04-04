@@ -59,13 +59,6 @@ pub mod semantic_pipeline_request {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WorkflowContract {
-    #[prost(message, optional, tag = "1")]
-    pub engine_params: ::core::option::Option<EngineParams>,
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct EngineParams {
     #[prost(string, tag = "1")]
     pub ner_model_name: ::prost::alloc::string::String,
     #[prost(bool, tag = "2")]

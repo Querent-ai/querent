@@ -266,44 +266,41 @@ pub async fn create_querent_synapose_workflow(
 
 	let mut params_map = HashMap::new();
 
-	if let Some(engine_params) = &request.config.as_ref().and_then(|c| c.engine_params.as_ref()) {
+	if let Some(workflow_contract) = &request.config {
 		// Convert scalar fields to string and insert them into the hashmap
-		params_map.insert("ner_model_name".to_owned(), engine_params.ner_model_name.clone());
+		params_map.insert("ner_model_name".to_owned(), workflow_contract.ner_model_name.clone());
 		params_map
-			.insert("enable_filtering".to_owned(), engine_params.enable_filtering.to_string());
+			.insert("enable_filtering".to_owned(), workflow_contract.enable_filtering.to_string());
+		params_map.insert(
+			"is_confined_search".to_owned(),
+			workflow_contract.is_confined_search.to_string(),
+		);
+		params_map.insert("user_context".to_owned(), workflow_contract.user_context.clone());
 		params_map
-			.insert("is_confined_search".to_owned(), engine_params.is_confined_search.to_string());
-		params_map.insert("user_context".to_owned(), engine_params.user_context.clone());
-		params_map.insert("score_threshold".to_owned(), engine_params.score_threshold.to_string());
+			.insert("score_threshold".to_owned(), workflow_contract.score_threshold.to_string());
 		params_map.insert(
 			"attention_score_threshold".to_owned(),
-			engine_params.attention_score_threshold.to_string(),
+			workflow_contract.attention_score_threshold.to_string(),
 		);
 		params_map.insert(
 			"similarity_threshold".to_owned(),
-			engine_params.similarity_threshold.to_string(),
+			workflow_contract.similarity_threshold.to_string(),
 		);
 		params_map
-			.insert("min_cluster_size".to_owned(), engine_params.min_cluster_size.to_string());
-		params_map.insert("min_samples".to_owned(), engine_params.min_samples.to_string());
+			.insert("min_cluster_size".to_owned(), workflow_contract.min_cluster_size.to_string());
+		params_map.insert("min_samples".to_owned(), workflow_contract.min_samples.to_string());
 		params_map.insert(
 			"cluster_persistence_threshold".to_owned(),
-			engine_params.cluster_persistence_threshold.to_string(),
+			workflow_contract.cluster_persistence_threshold.to_string(),
 		);
 
 		// Convert vector fields to a comma-separated string
-		let fixed_entities = engine_params.fixed_entities.join(",");
+		let fixed_entities = workflow_contract.fixed_entities.join(",");
 		params_map.insert("fixed_entities".to_owned(), fixed_entities);
 
-		let sample_entities = engine_params.sample_entities.join(",");
+		let sample_entities = workflow_contract.sample_entities.join(",");
 		params_map.insert("sample_entities".to_owned(), sample_entities);
 	}
-
-	let params_json =
-		serde_json::to_string(&params_map).expect("Failed to serialize engine params");
-
-	let mut workflow_params_map = HashMap::new();
-	workflow_params_map.insert("engine_params".to_owned(), params_json);
 
 	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {
 		id: id.clone(),
@@ -319,7 +316,7 @@ pub async fn create_querent_synapose_workflow(
 		workflow: WorkflowConfig {
 			name: engine_name.clone(),
 			id: id.to_string(),
-			config: workflow_params_map,
+			config: params_map.clone(),
 			channel: None,
 			inner_channel: None,
 			inner_event_handler: None,

@@ -40,10 +40,6 @@ message SemanticPipelineRequest {
 }
 
 message WorkflowContract {
-  EngineParams engine_params = 1;
-}
-
-message EngineParams {
   string ner_model_name = 1;
   bool enable_filtering = 2;
   repeated string fixed_entities = 3;
