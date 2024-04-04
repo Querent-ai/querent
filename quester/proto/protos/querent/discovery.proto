@@ -14,6 +14,8 @@ message DiscoverySessionRequest {
   int32 max_message_memory_size = 6;
   // Max query tokens size 
   int32 max_query_tokens_size = 7;
+  // Semantic pipeline ID
+  string semantic_pipeline_id = 8;
 }
 
 // Session AgentID as a response

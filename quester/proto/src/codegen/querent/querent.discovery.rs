@@ -17,6 +17,9 @@ pub struct DiscoverySessionRequest {
     /// Max query tokens size
     #[prost(int32, tag = "7")]
     pub max_query_tokens_size: i32,
+    /// Semantic pipeline ID
+    #[prost(string, tag = "8")]
+    pub semantic_pipeline_id: ::prost::alloc::string::String,
 }
 /// Session AgentID as a response
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
