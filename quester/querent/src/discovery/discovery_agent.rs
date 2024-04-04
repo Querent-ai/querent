@@ -4,6 +4,7 @@ use crate::{
 	discovery::chain::chain_trait::Chain,
 	llm::{OpenAI, OpenAIModel},
 	memory::WindowBufferMemory,
+	prompt::{PromptTemplate, TemplateFormat},
 	prompt_args,
 	tools::CommandExecutor,
 };
@@ -26,6 +27,7 @@ pub struct DiscoveryAgent {
 	index_storages: Vec<Arc<dyn Storage>>,
 	discovery_agent_params: DiscoverySessionRequest,
 	discover_agent: Option<AgentExecutor<ConversationalAgent>>,
+	template: Option<PromptTemplate>,
 }
 
 impl DiscoveryAgent {
@@ -43,6 +45,7 @@ impl DiscoveryAgent {
 			index_storages,
 			discovery_agent_params,
 			discover_agent: None,
+			template: None,
 		}
 	}
 
@@ -64,6 +67,24 @@ impl Actor for DiscoveryAgent {
 	type ObservableState = ();
 
 	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
+		let template = PromptTemplate::new(
+            "Given the query: {{query}}
+        
+            You are given the following graph data: {{graph_data}}.
+        
+            Please summarize the key insights and deductions that can be made from the graph data in relation to the query. Your summary should cover:
+        
+            1. The most relevant nodes and their relationships to the query.
+            2. The overall structure and connectivity of the graph as it pertains to the query.
+            3. Any significant patterns, clusters, or communities within the graph that are relevant to the query.
+            4. Potential use cases or applications based on the graph structure in the context of the query.
+            5. Any other important insights or observations related to the query.
+        
+            Provide a concise yet comprehensive summary that captures the essential information and insights that can be derived from the graph data in the context of the given query.".to_string(),
+            vec!["query".to_string(), "graph_data".to_string()],
+            TemplateFormat::Jinja2,
+        );
+
 		let llm = OpenAI::default().with_model(OpenAIModel::Gpt35);
 		let memory =
 			WindowBufferMemory::new(self.discovery_agent_params.max_message_memory_size as usize);
@@ -81,6 +102,7 @@ impl Actor for DiscoveryAgent {
 
 		let executor = AgentExecutor::from_agent(agent).with_memory(memory.into());
 		self.discover_agent = Some(executor);
+		self.template = Some(template);
 		Ok(())
 	}
 
@@ -135,9 +157,93 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 				"Discovery agent is not initialized".to_string(),
 			)));
 		}
+		use serde_json::{json, Value};
+
+		let dummy_graph_data_geologic_deposition: Value = json!({
+			"nodes": [
+				{
+					"id": 1,
+					"label": "Alluvial Fan",
+					"type": "depositional_feature"
+				},
+				{
+					"id": 2,
+					"label": "Delta",
+					"type": "depositional_feature"
+				},
+				{
+					"id": 3,
+					"label": "Fluvial Deposit",
+					"type": "depositional_feature"
+				},
+				{
+					"id": 4,
+					"label": "Glacial Deposit",
+					"type": "depositional_feature"
+				},
+				{
+					"id": 5,
+					"label": "Aeolian Deposit",
+					"type": "depositional_feature"
+				},
+				{
+					"id": 6,
+					"label": "Lacustrine Deposit",
+					"type": "depositional_feature"
+				},
+				{
+					"id": 7,
+					"label": "Arid Climate",
+					"type": "climate"
+				},
+				{
+					"id": 8,
+					"label": "Humid Climate",
+					"type": "climate"
+				},
+				{
+					"id": 9,
+					"label": "Glacial Climate",
+					"type": "climate"
+				}
+			],
+			"edges": [
+				{
+					"source": 1,
+					"target": 7,
+					"type": "forms_in"
+				},
+				{
+					"source": 2,
+					"target": 8,
+					"type": "forms_in"
+				},
+				{
+					"source": 3,
+					"target": 8,
+					"type": "forms_in"
+				},
+				{
+					"source": 4,
+					"target": 9,
+					"type": "forms_in"
+				},
+				{
+					"source": 5,
+					"target": 7,
+					"type": "forms_in"
+				},
+				{
+					"source": 6,
+					"target": 8,
+					"type": "forms_in"
+				}
+			]
+		});
 		let current_agent = self.discover_agent.as_ref().unwrap();
 		let input_variables = prompt_args! {
-			"input" => message.query.clone(),
+			"query" => message.query.clone(),
+			"graph_data" => dummy_graph_data_geologic_deposition,
 		};
 
 		match current_agent.invoke(input_variables).await {
