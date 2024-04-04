@@ -11,6 +11,7 @@ use crate::{
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::RuntimeType;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
@@ -28,6 +29,7 @@ pub struct DiscoveryAgent {
 	discovery_agent_params: DiscoverySessionRequest,
 	discover_agent: Option<AgentExecutor<ConversationalAgent>>,
 	template: Option<PromptTemplate>,
+	embedding_model: Option<TextEmbedding>,
 }
 
 impl DiscoveryAgent {
@@ -46,6 +48,7 @@ impl DiscoveryAgent {
 			discovery_agent_params,
 			discover_agent: None,
 			template: None,
+			embedding_model: None,
 		}
 	}
 
@@ -103,6 +106,13 @@ impl Actor for DiscoveryAgent {
 		let executor = AgentExecutor::from_agent(agent).with_memory(memory.into());
 		self.discover_agent = Some(executor);
 		self.template = Some(template);
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		})?;
+
+		self.embedding_model = Some(embedding_model);
 		Ok(())
 	}
 
