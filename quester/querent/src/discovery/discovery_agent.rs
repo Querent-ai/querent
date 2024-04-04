@@ -167,6 +167,22 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 				"Discovery agent is not initialized".to_string(),
 			)));
 		}
+		if self.template.is_none() {
+			return Ok(Err(DiscoveryError::Unavailable(
+				"Discovery agent template is not initialized".to_string(),
+			)));
+		}
+
+		if self.embedding_model.is_none() {
+			return Ok(Err(DiscoveryError::Unavailable(
+				"Discovery agent embedding model is not initialized".to_string(),
+			)));
+		}
+		let current_agent = self.discover_agent.as_ref().unwrap();
+		let template = self.template.as_ref().unwrap();
+		let embedder = self.embedding_model.as_ref().unwrap();
+		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
+		let current_query_embedding = embeddings[0].clone();
 		use serde_json::{json, Value};
 
 		let dummy_graph_data_geologic_deposition: Value = json!({
@@ -250,7 +266,6 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 				}
 			]
 		});
-		let current_agent = self.discover_agent.as_ref().unwrap();
 		let input_variables = prompt_args! {
 			"query" => message.query.clone(),
 			"graph_data" => dummy_graph_data_geologic_deposition,
