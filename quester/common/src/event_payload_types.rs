@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+pub struct DocumentPayload {
+	pub doc_id: String,
+	pub sentence: String,
+	pub knowledge: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct VectorPayload {
 	pub id: String,
 	pub embeddings: Vec<f32>,

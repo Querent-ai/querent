@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -15,8 +15,12 @@ pub enum StorageErrorKind {
 	CollectionCreation,
 	/// Error in collection building.
 	CollectionBuilding,
+	/// Error in collection retrieval.
+	CollectionRetrieval,
 	/// Insertion error.
 	Insertion,
+	/// Query error.
+	Query,
 	/// PartitionCreation error for vector storage.
 	PartitionCreation,
 	/// Database error.
@@ -91,6 +95,14 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
+
+	/// Similarity search for vectors
+	async fn similarity_search_l2(
+		&self,
+		collection_id: String,
+		payload: &Vec<f32>,
+		max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>>;
 }
 
 impl Debug for dyn Storage {

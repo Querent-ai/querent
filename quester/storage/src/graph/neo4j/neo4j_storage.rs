@@ -1,6 +1,6 @@
 use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
 use proto::semantics::Neo4jConfig;
 use std::sync::Arc;
@@ -66,6 +66,16 @@ impl Storage for Neo4jStorage {
 		_payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
+	}
+
+	async fn similarity_search_l2(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<f32>,
+		_max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		// Implement Neo4j similarity search logic (if needed)
+		Ok(vec![])
 	}
 
 	async fn insert_graph(

@@ -1,9 +1,11 @@
 use std::{sync::Arc, time::Duration};
 
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use milvus::{
-	client::Client as MilvusClient,
+	client::{Client as MilvusClient, ConsistencyLevel},
+	collection::SearchOption,
 	data::FieldColumn,
+	index::MetricType,
 	schema::{CollectionSchemaBuilder, FieldSchema},
 	value::ValueVec,
 };
@@ -62,6 +64,76 @@ impl Storage for MilvusStorage {
 			}
 		}
 		Ok(())
+	}
+
+	async fn similarity_search_l2(
+		&self,
+		collection_id: String,
+		payload: &Vec<f32>,
+		max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		let collection_name = format!("pipeline_{}", collection_id);
+		let collection = self.client.get_collection(collection_name.as_str()).await;
+		let mut s_options = SearchOption::new();
+		let search_options = s_options.set_consistency_level(ConsistencyLevel::Strong);
+
+		match collection {
+			Ok(collection) => {
+				let result = collection
+					.search(
+						vec![payload.clone().into()],
+						"embeddings",
+						max_results,
+						MetricType::L2,
+						vec!["id", "knowledge", "document", "sentence"],
+						search_options,
+					)
+					.await;
+				match result {
+					Ok(result) => {
+						let results = Vec::new();
+						for search_res in result {
+							let mut doc_payload = DocumentPayload::default();
+							for field in search_res.field {
+								match field.name.as_str() {
+									"knowledge" => {
+										let knowledge: Vec<String> =
+											field.value.try_into().unwrap_or_default();
+										doc_payload.knowledge = knowledge.join(" ");
+									},
+									"document" => {
+										let document: Vec<String> =
+											field.value.try_into().unwrap_or_default();
+										doc_payload.doc_id = document.join(" ");
+									},
+									"sentence" => {
+										let sentence: Vec<String> =
+											field.value.try_into().unwrap_or_default();
+										doc_payload.sentence = sentence.join(" ");
+									},
+									_ => {},
+								}
+							}
+						}
+						Ok(results)
+					},
+					Err(err) => {
+						log::error!("Query failed: {:?}", err);
+						Err(StorageError {
+							kind: StorageErrorKind::Query,
+							source: Arc::new(anyhow::Error::from(err)),
+						})
+					},
+				}
+			},
+			Err(err) => {
+				log::error!("Collection retrieval failed: {:?}", err);
+				Err(StorageError {
+					kind: StorageErrorKind::CollectionRetrieval,
+					source: Arc::new(anyhow::Error::from(err)),
+				})
+			},
+		}
 	}
 
 	async fn insert_graph(

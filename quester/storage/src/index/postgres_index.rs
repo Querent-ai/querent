@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult, Error as DieselError, Error::QueryBuilderError},
 	table, Insertable, Queryable, Selectable,
@@ -202,6 +202,15 @@ impl Storage for PostgresStorage {
 		_payload: &Vec<(String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
+	}
+
+	async fn similarity_search_l2(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<f32>,
+		_max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
 	}
 
 	async fn index_knowledge(

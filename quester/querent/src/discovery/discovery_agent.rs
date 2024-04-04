@@ -4,7 +4,7 @@ use crate::{
 	discovery::chain::chain_trait::Chain,
 	llm::{OpenAI, OpenAIModel},
 	memory::WindowBufferMemory,
-	prompt::{PromptTemplate, TemplateFormat},
+	prompt::{PromptFromatter, PromptTemplate, TemplateFormat},
 	prompt_args,
 	tools::CommandExecutor,
 };
@@ -16,7 +16,7 @@ use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use querent_synapse::callbacks::EventType;
+use querent_synapse::{callbacks::EventType, comm::message};
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
@@ -25,7 +25,6 @@ pub struct DiscoveryAgent {
 	agent_id: String,
 	timestamp: u64,
 	event_storages: HashMap<EventType, Arc<dyn Storage>>,
-	index_storages: Vec<Arc<dyn Storage>>,
 	discovery_agent_params: DiscoverySessionRequest,
 	discover_agent: Option<AgentExecutor<ConversationalAgent>>,
 	template: Option<PromptTemplate>,
@@ -37,14 +36,12 @@ impl DiscoveryAgent {
 		agent_id: String,
 		timestamp: u64,
 		event_storages: HashMap<EventType, Arc<dyn Storage>>,
-		index_storages: Vec<Arc<dyn Storage>>,
 		discovery_agent_params: DiscoverySessionRequest,
 	) -> Self {
 		Self {
 			agent_id,
 			timestamp,
 			event_storages,
-			index_storages,
 			discovery_agent_params,
 			discover_agent: None,
 			template: None,
@@ -183,6 +180,27 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
+		let mut documents = Vec::new();
+		// iterate over event storages and for EventType::Vector and collect search results
+		for (event_type, storage) in self.event_storages.iter() {
+			if *event_type == EventType::Vector {
+				let search_results = storage
+					.similarity_search_l2(
+						self.discovery_agent_params.semantic_pipeline_id.clone(),
+						&current_query_embedding.clone(),
+						10,
+					)
+					.await;
+				match search_results {
+					Ok(results) => {
+						documents.extend(results);
+					},
+					Err(e) => {
+						log::error!("Failed to search for similar documents: {}", e);
+					},
+				}
+			}
+		}
 		use serde_json::{json, Value};
 
 		let dummy_graph_data_geologic_deposition: Value = json!({
@@ -270,14 +288,25 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 			"query" => message.query.clone(),
 			"graph_data" => dummy_graph_data_geologic_deposition,
 		};
+		let result = template.format(input_variables).map_err(|e| {
+			log::error!("Failed to format template: {}", e);
+			ActorExitStatus::Failure(Arc::new(anyhow::anyhow!("Failed to format template")))
+		})?;
 
-		match current_agent.invoke(input_variables).await {
+		let input_query = prompt_args! {
+			"input" => result,
+		};
+		match current_agent.invoke(input_query).await {
 			Ok(result) => {
-				println!("Result: {:?}", result);
+				let mut response = DiscoveryResponse::default();
+				response.session_id = message.session_id;
+				response.insights = vec![];
+				let insight =
+					proto::discovery::Insight { title: message.query.clone(), description: result };
+				response.insights.push(insight);
+				Ok(Ok(response))
 			},
 			Err(e) => panic!("Error invoking LLMChain: {:?}", e),
 		}
-
-		Ok(Ok(DiscoveryResponse::default()))
 	}
 }
