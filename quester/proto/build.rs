@@ -29,6 +29,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let mut prost_config = prost_build::Config::default();
 	prost_config.protoc_arg("--experimental_allow_proto3_optional");
 	prost_config.extern_path(".querent.discovery.StorageType", "StorageType");
+	prost_config.extern_path(".querent.discovery.StorageConfig", "StorageConfig");
+	prost_config.extern_path(".querent.discovery.PostgresConfig", "PostgresConfig");
+	prost_config.extern_path(".querent.discovery.Neo4jConfig", "Neo4jConfig");
+	prost_config.extern_path(".querent.discovery.MilvusConfig", "MilvusConfig");
 
 	tonic_build::configure()
 		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")

@@ -1,5 +1,5 @@
 use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
-pub use crate::semantics::StorageType;
+pub use crate::semantics::{MilvusConfig, Neo4jConfig, PostgresConfig, StorageConfig, StorageType};
 use actors::AskError;
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

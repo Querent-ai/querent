@@ -1,9 +1,14 @@
+use actors::Quester;
 use client::DiscoveryServiceClient;
+use cluster::Cluster;
 use common::Pool;
 use error::DiscoveryError;
+use proto::NodeConfig;
+use querent::discovery_service::DiscoveryAgentService;
 use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use storage::Storage;
+use tracing::info;
 
 mod client;
 pub mod error;
@@ -15,9 +20,24 @@ pub type InsightsPool = Pool<SocketAddr, DiscoveryServiceClient>;
 pub type Result<T> = std::result::Result<T, DiscoveryError>;
 
 pub async fn start_discovery_service(
+	node_config: &NodeConfig,
+	quester: &Quester,
+	cluster: &Cluster,
 	event_storages: HashMap<EventType, Arc<dyn Storage>>,
 	index_storages: Vec<Arc<dyn Storage>>,
 ) -> anyhow::Result<Arc<dyn DiscoveryService>> {
-	let discovery_service = Arc::new(service::DiscoveryImpl::new(event_storages, index_storages));
+	let discovery_agent_service = DiscoveryAgentService::new(
+		node_config.node_id.clone(),
+		cluster.clone(),
+		event_storages.clone(),
+	);
+	let (discovery_service_mailbox, _) = quester.spawn_builder().spawn(discovery_agent_service);
+	info!("Starting discovery agent service");
+
+	let discovery_service = Arc::new(service::DiscoveryImpl::new(
+		event_storages,
+		index_storages,
+		discovery_service_mailbox,
+	));
 	Ok(discovery_service)
 }

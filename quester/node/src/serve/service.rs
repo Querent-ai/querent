@@ -4,7 +4,7 @@ use crate::{grpc, rest};
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, Host, PubSubBroker, RuntimesConfig};
-use discovery::DiscoveryService;
+use discovery::{start_discovery_service, DiscoveryService};
 use proto::config::NodeConfig;
 use querent::{start_semantic_service, SemanticService};
 use querent_synapse::callbacks::EventType;
@@ -38,10 +38,21 @@ pub async fn serve_quester(
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Quester::new();
+	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
+
 	let semantic_service_bus: MessageBus<SemanticService> =
 		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
 			.await
 			.expect("Failed to start semantic service");
+
+	let discovery_service = start_discovery_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+	)
+	.await?;
 	let listen_host = node_config.listen_address.parse::<Host>()?;
 	let listen_ip = listen_host.resolve().await?;
 	let grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_config.listen_port);
@@ -61,7 +72,6 @@ pub async fn serve_quester(
 		}
 	});
 
-	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
 		cluster: cluster.clone(),
@@ -69,7 +79,7 @@ pub async fn serve_quester(
 		semantic_service_bus,
 		event_storages,
 		index_storages,
-		discovery_service: None,
+		discovery_service: Some(discovery_service),
 	});
 	let rest_server = rest::start_rest_server(
 		rest_listen_addr,

@@ -10,6 +10,7 @@ use crate::{
 	tools::CommandExecutor,
 };
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
+use async_openai::config::OpenAIConfig;
 use async_trait::async_trait;
 use common::RuntimeType;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
@@ -85,8 +86,9 @@ impl Actor for DiscoveryAgent {
             vec!["query".to_string(), "graph_data".to_string()],
             TemplateFormat::Jinja2,
         );
-
-		let llm = OpenAI::default().with_model(OpenAIModel::Gpt35);
+		let open_ai_config =
+			OpenAIConfig::new().with_api_key(self.discovery_agent_params.openai_api_key.clone());
+		let llm = OpenAI::new(open_ai_config).with_model(OpenAIModel::Gpt35);
 		let memory =
 			WindowBufferMemory::new(self.discovery_agent_params.max_message_memory_size as usize);
 		let command_executor = CommandExecutor::default();
