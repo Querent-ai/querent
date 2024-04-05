@@ -100,6 +100,19 @@ impl Storage for MilvusStorage {
 										let knowledge: Vec<String> =
 											field.value.try_into().unwrap_or_default();
 										doc_payload.knowledge = knowledge.join(" ");
+										// split at _ to get subject, predicate, object
+										let knowledge_parts: Vec<&str> =
+											doc_payload.knowledge.split('_').collect();
+										if knowledge_parts.len() != 3 {
+											log::error!(
+												"Knowledge triple is not in correct format: {:?}",
+												doc_payload.knowledge
+											);
+											continue;
+										}
+										doc_payload.subject = knowledge_parts[0].to_string();
+										doc_payload.predicate = knowledge_parts[1].to_string();
+										doc_payload.object = knowledge_parts[2].to_string();
 									},
 									"document" => {
 										let document: Vec<String> =

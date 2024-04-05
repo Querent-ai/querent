@@ -6,6 +6,7 @@ use crate::{
 	memory::WindowBufferMemory,
 	prompt::{PromptFromatter, PromptTemplate, TemplateFormat},
 	prompt_args,
+	schemas::GraphData,
 	tools::CommandExecutor,
 };
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
@@ -16,7 +17,7 @@ use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use querent_synapse::{callbacks::EventType, comm::message};
+use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
@@ -188,7 +189,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 					.similarity_search_l2(
 						self.discovery_agent_params.semantic_pipeline_id.clone(),
 						&current_query_embedding.clone(),
-						10,
+						50,
 					)
 					.await;
 				match search_results {
@@ -201,92 +202,16 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 				}
 			}
 		}
-		use serde_json::{json, Value};
 
-		let dummy_graph_data_geologic_deposition: Value = json!({
-			"nodes": [
-				{
-					"id": 1,
-					"label": "Alluvial Fan",
-					"type": "depositional_feature"
-				},
-				{
-					"id": 2,
-					"label": "Delta",
-					"type": "depositional_feature"
-				},
-				{
-					"id": 3,
-					"label": "Fluvial Deposit",
-					"type": "depositional_feature"
-				},
-				{
-					"id": 4,
-					"label": "Glacial Deposit",
-					"type": "depositional_feature"
-				},
-				{
-					"id": 5,
-					"label": "Aeolian Deposit",
-					"type": "depositional_feature"
-				},
-				{
-					"id": 6,
-					"label": "Lacustrine Deposit",
-					"type": "depositional_feature"
-				},
-				{
-					"id": 7,
-					"label": "Arid Climate",
-					"type": "climate"
-				},
-				{
-					"id": 8,
-					"label": "Humid Climate",
-					"type": "climate"
-				},
-				{
-					"id": 9,
-					"label": "Glacial Climate",
-					"type": "climate"
-				}
-			],
-			"edges": [
-				{
-					"source": 1,
-					"target": 7,
-					"type": "forms_in"
-				},
-				{
-					"source": 2,
-					"target": 8,
-					"type": "forms_in"
-				},
-				{
-					"source": 3,
-					"target": 8,
-					"type": "forms_in"
-				},
-				{
-					"source": 4,
-					"target": 9,
-					"type": "forms_in"
-				},
-				{
-					"source": 5,
-					"target": 7,
-					"type": "forms_in"
-				},
-				{
-					"source": 6,
-					"target": 8,
-					"type": "forms_in"
-				}
-			]
-		});
+		let document_graph = GraphData::from_documents(documents);
+		let input_graph_data = serde_json::to_string(&document_graph).map_err(|e| {
+			log::error!("Failed to serialize graph data: {}", e);
+			ActorExitStatus::Failure(Arc::new(anyhow::anyhow!("Failed to serialize graph data")))
+		})?;
+
 		let input_variables = prompt_args! {
 			"query" => message.query.clone(),
-			"graph_data" => dummy_graph_data_geologic_deposition,
+			"graph_data" => input_graph_data,
 		};
 		let result = template.format(input_variables).map_err(|e| {
 			log::error!("Failed to format template: {}", e);

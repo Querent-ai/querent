@@ -5,6 +5,9 @@ pub struct DocumentPayload {
 	pub doc_id: String,
 	pub sentence: String,
 	pub knowledge: String,
+	pub subject: String,
+	pub object: String,
+	pub predicate: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
