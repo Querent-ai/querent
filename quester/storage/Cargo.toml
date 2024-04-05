@@ -33,3 +33,4 @@ serde = { workspace = true }
 tokio = { workspace = true }
 futures-util = { workspace = true }
 chrono = { workspace = true }
+pgvector = { workspace = true }

@@ -66,7 +66,7 @@ services:
       - querent
 
   postgres:
-    image: postgres
+    image: pgvector/pgvector:pg16
     environment:
       - POSTGRES_USER=querent
       - POSTGRES_PASSWORD=querent

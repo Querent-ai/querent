@@ -14,6 +14,8 @@ use std::{sync::Arc, time::SystemTime};
 use tracing::error;
 
 use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
+use pgvector::Vector;
+
 use deadpool::Runtime;
 use diesel::{table, Insertable, Queryable, Selectable};
 use diesel_async::AsyncConnection;
@@ -21,21 +23,18 @@ use rustls::{
 	client::{ServerCertVerified, ServerCertVerifier},
 	ServerName,
 };
-use serde::Serialize;
-#[derive(Serialize, Queryable, Insertable, Selectable, Debug, Clone)]
-#[diesel(table_name = semantic_knowledge)]
-pub struct SemanticKnowledge {
-	pub subject: String,
-	pub subject_type: String,
-	pub object: String,
-	pub object_type: String,
-	pub predicate: String,
-	pub predicate_type: String,
-	pub sentence: String,
+
+#[derive(Queryable, Insertable, Selectable, Debug, Clone)]
+#[diesel(table_name = embedded_knowledge)]
+
+pub struct EmbeddedKnowledge {
 	pub document_id: String,
+	pub knowledge: String,
+	pub embeddings: Option<Vector>,
+	pub predicate: String,
 }
 
-pub struct PostgresStorage {
+pub struct PGVector {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
 }
@@ -57,7 +56,7 @@ impl ServerCertVerifier for NoCertVerifier {
 	}
 }
 
-impl PostgresStorage {
+impl PGVector {
 	pub async fn new(config: PostgresConfig) -> StorageResult<Self> {
 		let mut d_config = ManagerConfig::default();
 		let tls_enabled = config.url.contains("sslmode=require");
@@ -84,7 +83,7 @@ impl PostgresStorage {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		Ok(PostgresStorage { pool, config })
+		Ok(PGVector { pool, config })
 	}
 }
 
@@ -110,7 +109,7 @@ fn establish_connection(config: &str) -> BoxFuture<ConnectionResult<AsyncPgConne
 }
 
 #[async_trait]
-impl Storage for PostgresStorage {
+impl Storage for PGVector {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self.pool.get().await?;
 		Ok(())
@@ -119,21 +118,7 @@ impl Storage for PostgresStorage {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, VectorPayload)>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	async fn insert_graph(
-		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	async fn index_knowledge(
-		&self,
-		payload: &Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, VectorPayload)>,
 	) -> StorageResult<()> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -142,17 +127,13 @@ impl Storage for PostgresStorage {
 		conn.transaction::<_, diesel::result::Error, _>(|conn| {
 			async move {
 				for (document_id, item) in payload {
-					let form = SemanticKnowledge {
-						subject: item.subject.clone(),
-						subject_type: item.subject_type.clone(),
-						object: item.object.clone(),
-						object_type: item.object_type.clone(),
-						predicate: item.predicate.clone(),
-						predicate_type: item.predicate_type.clone(),
-						sentence: item.sentence.clone(),
+					let form = EmbeddedKnowledge {
 						document_id: document_id.clone(),
+						embeddings: Some(Vector::from(item.embeddings.clone())),
+						predicate: item.namespace.clone(),
+						knowledge: item.id.clone(),
 					};
-					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
+					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
 						.execute(conn)
 						.await?;
@@ -166,21 +147,35 @@ impl Storage for PostgresStorage {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+
+		Ok(())
+	}
+
+	async fn insert_graph(
+		&self,
+		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
+	async fn index_knowledge(
+		&self,
+		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 }
 
 table! {
-	semantic_knowledge (id) {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	embedded_knowledge (id) {
 		id -> Int4,
-		subject -> Varchar,
-		subject_type -> Varchar,
-		object -> Varchar,
-		object_type -> Varchar,
-		predicate -> Varchar,
-		predicate_type -> Varchar,
-		sentence -> Text,
 		document_id -> Varchar,
+		knowledge -> Text,
+		embeddings -> Nullable<Vector>,
+		predicate -> Text,
 	}
 }
 
@@ -202,7 +197,7 @@ mod test {
 		};
 
 		// Create a PostgresStorage instance with the test database URL
-		let storage_result = PostgresStorage::new(config).await;
+		let storage_result = PGVector::new(config).await;
 
 		// Ensure that the storage is created successfully
 		assert!(storage_result.is_ok());

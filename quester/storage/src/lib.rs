@@ -11,6 +11,19 @@ pub use graph::*;
 pub mod index;
 pub use index::*;
 
+use diesel::result::{Error as DieselError, Error::QueryBuilderError};
+
+use diesel_async::{
+	pg::AsyncPgConnection,
+	pooled_connection::deadpool::{Object as PooledConnection, Pool},
+};
+use std::{
+	ops::{Deref, DerefMut},
+	time::Duration,
+};
+
+pub use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+
 pub async fn create_storages(
 	storage_configs: &[StorageConfig],
 ) -> anyhow::Result<(HashMap<EventType, Arc<dyn Storage>>, Vec<Arc<dyn Storage>>)> {
@@ -20,21 +33,30 @@ pub async fn create_storages(
 	for storage_config in storage_configs {
 		match storage_config {
 			StorageConfig { postgres: Some(config), .. } => {
-				if config.storage_type.is_none() ||
-					config.storage_type.clone().unwrap() != StorageType::Index
-				{
+				if config.storage_type.is_none() {
 					return Err(anyhow::anyhow!(
 						"Invalid storage type: Postgres is only supported for index storage"
 					));
 				}
-				let postgres = PostgresStorage::new(config.clone()).await.map_err(|err| {
-					log::error!("Postgres client creation failed: {:?}", err);
-					err
-				})?;
+				if config.storage_type.clone().unwrap() == StorageType::Index {
+					let postgres = PostgresStorage::new(config.clone()).await.map_err(|err| {
+						log::error!("Postgres client creation failed: {:?}", err);
+						err
+					})?;
 
-				postgres.check_connectivity().await?;
-				let postgres = Arc::new(postgres);
-				index_storages.push(postgres);
+					postgres.check_connectivity().await?;
+					let postgres = Arc::new(postgres);
+					index_storages.push(postgres);
+				} else if config.storage_type.clone().unwrap() == StorageType::Vector {
+					let postgres = PGVector::new(config.clone()).await.map_err(|err| {
+						log::error!("Postgres client creation failed: {:?}", err);
+						err
+					})?;
+
+					postgres.check_connectivity().await?;
+					let postgres = Arc::new(postgres);
+					event_storages.insert(EventType::Vector, postgres);
+				}
 			},
 			StorageConfig { milvus: Some(config), .. } => {
 				let milvus = MilvusStorage::new(config.clone()).await.map_err(|err| {
@@ -64,3 +86,66 @@ pub async fn create_storages(
 	info!("Storages created successfully ✅");
 	Ok((event_storages, index_storages))
 }
+
+pub type ActualDbPool = Pool<AsyncPgConnection>;
+pub enum DbPool<'a> {
+	Pool(&'a ActualDbPool),
+	Conn(&'a mut AsyncPgConnection),
+}
+
+pub enum DbConn<'a> {
+	Pool(PooledConnection<AsyncPgConnection>),
+	Conn(&'a mut AsyncPgConnection),
+}
+
+pub async fn get_conn<'a, 'b: 'a>(pool: &'a mut DbPool<'b>) -> Result<DbConn<'a>, DieselError> {
+	Ok(match pool {
+		DbPool::Pool(pool) =>
+			DbConn::Pool(pool.get().await.map_err(|e| QueryBuilderError(e.into()))?),
+		DbPool::Conn(conn) => DbConn::Conn(conn),
+	})
+}
+
+impl<'a> Deref for DbConn<'a> {
+	type Target = AsyncPgConnection;
+
+	fn deref(&self) -> &Self::Target {
+		match self {
+			DbConn::Pool(conn) => conn.deref(),
+			DbConn::Conn(conn) => conn.deref(),
+		}
+	}
+}
+
+impl<'a> DerefMut for DbConn<'a> {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		match self {
+			DbConn::Pool(conn) => conn.deref_mut(),
+			DbConn::Conn(conn) => conn.deref_mut(),
+		}
+	}
+}
+
+// Allows functions that take `DbPool<'_>` to be called in a transaction by passing `&mut conn.into()`
+impl<'a> From<&'a mut AsyncPgConnection> for DbPool<'a> {
+	fn from(value: &'a mut AsyncPgConnection) -> Self {
+		DbPool::Conn(value)
+	}
+}
+
+impl<'a, 'b: 'a> From<&'a mut DbConn<'b>> for DbPool<'a> {
+	fn from(value: &'a mut DbConn<'b>) -> Self {
+		DbPool::Conn(value.deref_mut())
+	}
+}
+
+impl<'a> From<&'a ActualDbPool> for DbPool<'a> {
+	fn from(value: &'a ActualDbPool) -> Self {
+		DbPool::Pool(value)
+	}
+}
+
+pub const FETCH_LIMIT_MAX: i64 = 50;
+pub const SITEMAP_LIMIT: i64 = 50000;
+pub const SITEMAP_DAYS: i64 = 31;
+const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(5));
