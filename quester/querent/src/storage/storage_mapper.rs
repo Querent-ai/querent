@@ -2,7 +2,7 @@ use super::{ContextualEmbeddings, ContextualTriples};
 use crate::{EventLock, NewEventLock};
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
-use common::{RuntimeType, StorageMapperCounters};
+use common::{RuntimeType, SemanticKnowledgePayload, StorageMapperCounters, VectorPayload};
 use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
@@ -13,14 +13,14 @@ pub struct StorageMapper {
 	timestamp: u64,
 	counters: Arc<StorageMapperCounters>,
 	publish_event_lock: EventLock,
-	event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 }
 
 impl StorageMapper {
 	pub fn new(
 		qflow_id: String,
 		timestamp: u64,
-		event_storages: HashMap<EventType, Arc<dyn Storage>>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	) -> Self {
 		Self {
 			qflow_id,
@@ -90,7 +90,6 @@ impl Actor for StorageMapper {
 		Ok(())
 	}
 }
-
 #[async_trait]
 impl Handler<ContextualTriples> for StorageMapper {
 	type Reply = ();
@@ -103,21 +102,19 @@ impl Handler<ContextualTriples> for StorageMapper {
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
-		let storage: Option<&Arc<dyn Storage>> = self.event_storages.get(&event_type);
-		let storage_items = message.event_payload();
-		if let Some(storage) = storage {
-			let upsert_result = storage.insert_graph(&storage_items).await;
-			match upsert_result {
-				Ok(()) => {
-					self.counters
-						.increment_event_to_storage(message.event_type(), message.len() as u64);
-				},
-				Err(e) => {
-					log::error!("Error while inserting graphs: {:?}", e);
-					return Err(ActorExitStatus::Failure(e.source));
-				},
+
+		// Iterate over all storages in self.event_storages
+		for (stored_event_type, storage) in &self.event_storages {
+			if stored_event_type == &event_type {
+				for storage in storage.iter() {
+					let storage_clone = storage.clone();
+					let storage_items = message.clone().event_payload();
+					// Spawn a task for each storage insertion
+					tokio::spawn(insert_graph_async(storage_clone, storage_items));
+				}
 			}
 		}
+
 		Ok(())
 	}
 }
@@ -134,23 +131,66 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
-		let storage = self.event_storages.get(&event_type);
-		let storage_items = message.event_payload();
 		let qflow_id = message.qflow_id();
-		if let Some(storage) = storage {
-			let upsert_result = storage.insert_vector(qflow_id, &storage_items).await;
-			match upsert_result {
-				Ok(()) => {
-					self.counters
-						.increment_event_to_storage(message.event_type(), message.len() as u64);
-				},
-				Err(e) => {
-					log::error!("Error while inserting vector: {:?}", e);
-					return Err(ActorExitStatus::Failure(e.source));
-				},
+
+		// Iterate over all storages in self.event_storages
+		for (stored_event_type, storage) in &self.event_storages {
+			if stored_event_type == &event_type {
+				for storage in storage.iter() {
+					let storage_clone = storage.clone();
+					let qflow_id_clone = qflow_id.clone();
+					let storage_items = message.clone().event_payload();
+
+					// Spawn a task for each storage insertion
+					tokio::spawn(insert_vector_async(storage_clone, qflow_id_clone, storage_items));
+				}
 			}
 		}
+
 		Ok(())
+	}
+}
+
+async fn insert_graph_async(
+	storage: Arc<dyn Storage>,
+	storage_items: Vec<(String, SemanticKnowledgePayload)>,
+) -> Result<(), ActorExitStatus> {
+	let upsert_result = storage.insert_graph(&storage_items).await;
+	match upsert_result {
+		Ok(()) => {
+			// Increment counters if insertion is successful
+			// Note: Access to self.counters would require synchronization if used here
+			Ok(())
+		},
+		Err(e) => {
+			// Handle error if insertion fails
+			log::error!("Error while inserting graphs: {:?}", e);
+			// Depending on your error handling strategy, you might want to propagate the error
+			// back to the caller or handle it differently
+			Err(ActorExitStatus::Failure(e.source))
+		},
+	}
+}
+
+async fn insert_vector_async(
+	storage: Arc<dyn Storage>,
+	qflow_id: String,
+	storage_items: Vec<(String, VectorPayload)>,
+) -> Result<(), ActorExitStatus> {
+	let upsert_result = storage.insert_vector(qflow_id, &storage_items).await;
+	match upsert_result {
+		Ok(()) => {
+			// Increment counters if insertion is successful
+			// Note: Access to self.counters would require synchronization if used here
+			Ok(())
+		},
+		Err(e) => {
+			// Handle error if insertion fails
+			log::error!("Error while inserting vector: {:?}", e);
+			// Depending on your error handling strategy, you might want to propagate the error
+			// back to the caller or handle it differently
+			Err(ActorExitStatus::Failure(e.source))
+		},
 	}
 }
 

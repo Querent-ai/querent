@@ -26,7 +26,7 @@ pub struct QuesterServices {
 	pub event_broker: PubSubBroker,
 	pub semantic_service_bus: MessageBus<SemanticService>,
 	pub discovery_service: Option<Arc<dyn DiscoveryService>>,
-	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 }
 

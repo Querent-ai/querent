@@ -26,8 +26,8 @@ pub use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
 
 pub async fn create_storages(
 	storage_configs: &[StorageConfig],
-) -> anyhow::Result<(HashMap<EventType, Arc<dyn Storage>>, Vec<Arc<dyn Storage>>)> {
-	let mut event_storages: HashMap<EventType, Arc<dyn Storage>> = HashMap::new();
+) -> anyhow::Result<(HashMap<EventType, Vec<Arc<dyn Storage>>>, Vec<Arc<dyn Storage>>)> {
+	let mut event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
 
 	for storage_config in storage_configs {
@@ -55,7 +55,10 @@ pub async fn create_storages(
 
 					postgres.check_connectivity().await?;
 					let postgres = Arc::new(postgres);
-					event_storages.insert(EventType::Vector, postgres);
+					event_storages
+						.entry(EventType::Vector)
+						.or_insert_with(Vec::new)
+						.push(postgres.clone());
 				}
 			},
 			StorageConfig { milvus: Some(config), .. } => {
@@ -66,7 +69,7 @@ pub async fn create_storages(
 
 				milvus.check_connectivity().await?;
 				let milvus = Arc::new(milvus);
-				event_storages.insert(EventType::Vector, milvus);
+				event_storages.entry(EventType::Vector).or_insert_with(Vec::new).push(milvus);
 			},
 			StorageConfig { neo4j: Some(config), .. } => {
 				let neo4j = Neo4jStorage::new(config.clone()).await.map_err(|err| {
@@ -76,7 +79,7 @@ pub async fn create_storages(
 
 				neo4j.check_connectivity().await?;
 				let neo4j = Arc::new(neo4j);
-				event_storages.insert(EventType::Graph, neo4j);
+				event_storages.entry(EventType::Graph).or_insert_with(Vec::new).push(neo4j);
 			},
 			// Handle other storage types if necessary
 			_ => {}, // Ignore or handle unexpected storage configs
