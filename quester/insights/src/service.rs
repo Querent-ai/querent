@@ -34,14 +34,14 @@ pub trait DiscoveryService: 'static + Send + Sync {
 
 #[derive(Clone)]
 pub struct DiscoveryImpl {
-	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub discovery_agent_service_message_bus: MessageBus<DiscoveryAgentService>,
 }
 
 impl DiscoveryImpl {
 	pub fn new(
-		event_storages: HashMap<EventType, Arc<dyn Storage>>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
 		discovery_agent_service_message_bus: MessageBus<DiscoveryAgentService>,
 	) -> Self {
@@ -79,9 +79,10 @@ impl DiscoveryService for DiscoveryImpl {
 
 		match response {
 			Ok(response) => Ok(response),
-			_ =>
+			_ => {
 				Err(DiscoveryError::Internal("Failed to start discovery session".to_string())
-					.into()),
+					.into())
+			},
 		}
 	}
 
@@ -97,8 +98,9 @@ impl DiscoveryService for DiscoveryImpl {
 
 		match response {
 			Ok(response) => Ok(response),
-			_ =>
-				Err(DiscoveryError::Internal("Failed to stop discovery session".to_string()).into()),
+			_ => {
+				Err(DiscoveryError::Internal("Failed to stop discovery session".to_string()).into())
+			},
 		}
 	}
 }

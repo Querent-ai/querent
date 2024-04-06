@@ -53,7 +53,7 @@ impl ContextualTriples {
 	}
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct ContextualEmbeddings {
 	event_type: EventType,
 	pub qflow_id: String,

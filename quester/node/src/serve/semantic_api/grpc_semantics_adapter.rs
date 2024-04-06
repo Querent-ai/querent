@@ -15,14 +15,14 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct SemanticsGrpcAdapter {
 	semantic_service_mailbox: MessageBus<SemanticService>,
-	event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
 }
 
 impl SemanticsGrpcAdapter {
 	pub fn new(
 		semantic_service_mailbox: MessageBus<SemanticService>,
-		event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 		index_storages: Vec<Arc<dyn storage::Storage>>,
 	) -> Self {
 		Self { semantic_service_mailbox, event_storages, index_storages }

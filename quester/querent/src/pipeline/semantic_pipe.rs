@@ -42,7 +42,7 @@ struct ControlLoop;
 #[derive(Clone, Debug)]
 pub struct PipelineSettings {
 	pub qflow_id: String,
-	pub event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub semantic_service_bus: MessageBus<SemanticService>,
 	pub qflow: Workflow,

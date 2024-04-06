@@ -37,6 +37,10 @@ storage_configs:
       name: querent_test
       storage_type: index
       url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
+  - postgres:
+      name: querent_test
+      storage_type: vector
+      url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
   - milvus:
       name: semantic_milvus_db
       storage_type: vector

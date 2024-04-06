@@ -26,7 +26,7 @@ use tokio::runtime::Handle;
 pub struct DiscoveryAgent {
 	agent_id: String,
 	timestamp: u64,
-	event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	discovery_agent_params: DiscoverySessionRequest,
 	discover_agent: Option<AgentExecutor<ConversationalAgent>>,
 	template: Option<PromptTemplate>,
@@ -37,7 +37,7 @@ impl DiscoveryAgent {
 	pub fn new(
 		agent_id: String,
 		timestamp: u64,
-		event_storages: HashMap<EventType, Arc<dyn Storage>>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		discovery_agent_params: DiscoverySessionRequest,
 	) -> Self {
 		Self {
@@ -186,21 +186,23 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		let mut documents = Vec::new();
 		// iterate over event storages and for EventType::Vector and collect search results
 		for (event_type, storage) in self.event_storages.iter() {
-			if *event_type == EventType::Vector {
-				let search_results = storage
-					.similarity_search_l2(
-						self.discovery_agent_params.semantic_pipeline_id.clone(),
-						&current_query_embedding.clone(),
-						50,
-					)
-					.await;
-				match search_results {
-					Ok(results) => {
-						documents.extend(results);
-					},
-					Err(e) => {
-						log::error!("Failed to search for similar documents: {}", e);
-					},
+			if event_type.clone() == EventType::Vector {
+				for storage in storage.iter() {
+					let search_results = storage
+						.similarity_search_l2(
+							self.discovery_agent_params.semantic_pipeline_id.clone(),
+							&current_query_embedding.clone(),
+							50,
+						)
+						.await;
+					match search_results {
+						Ok(results) => {
+							documents.extend(results);
+						},
+						Err(e) => {
+							log::error!("Failed to search for similar documents: {}", e);
+						},
+					}
 				}
 			}
 		}

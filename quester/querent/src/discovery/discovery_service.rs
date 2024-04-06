@@ -23,7 +23,7 @@ pub struct DiscoveryAgentService {
 	node_id: String,
 	cluster: Cluster,
 	agent_pipelines: HashMap<String, DiscoverAgentHandle>,
-	event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 }
 
 impl Debug for DiscoveryAgentService {
@@ -39,7 +39,7 @@ impl DiscoveryAgentService {
 	pub fn new(
 		node_id: String,
 		cluster: Cluster,
-		event_storages: HashMap<EventType, Arc<dyn Storage>>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	) -> Self {
 		Self { node_id, cluster, agent_pipelines: HashMap::new(), event_storages }
 	}

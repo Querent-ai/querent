@@ -23,7 +23,7 @@ pub async fn start_discovery_service(
 	node_config: &NodeConfig,
 	quester: &Quester,
 	cluster: &Cluster,
-	event_storages: HashMap<EventType, Arc<dyn Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
 ) -> anyhow::Result<Arc<dyn DiscoveryService>> {
 	let discovery_agent_service = DiscoveryAgentService::new(

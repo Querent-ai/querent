@@ -79,9 +79,14 @@ impl Storage for MilvusStorage {
 		match collection {
 			Ok(collection) => {
 				let mut params = HashMap::new();
-				params.insert("nlist".to_string(),"128".to_string());
-				let index_param = IndexParams::new("example_index".to_string(), milvus::index::IndexType::IvfFlat, MetricType::L2, params);
-				match collection.create_index("embeddings", index_param).await{
+				params.insert("nlist".to_string(), "128".to_string());
+				let index_param = IndexParams::new(
+					"example_index".to_string(),
+					milvus::index::IndexType::IvfFlat,
+					MetricType::L2,
+					params,
+				);
+				match collection.create_index("embeddings", index_param).await {
 					Ok(_) => {},
 					Err(err) => {
 						log::error!("Indexingfailed: {:?}", err);
@@ -119,10 +124,12 @@ impl Storage for MilvusStorage {
 							for field in search_res.field {
 								match field.name.as_str() {
 									"knowledge" => {
-										let knowledge: Vec<String> = field.value.try_into().unwrap_or_default();
+										let knowledge: Vec<String> =
+											field.value.try_into().unwrap_or_default();
 										doc_payload.knowledge = knowledge.join(" ");
 										// split at _ to get subject, predicate, object
-										let knowledge_parts: Vec<&str> = doc_payload.knowledge.split('_').collect();
+										let knowledge_parts: Vec<&str> =
+											doc_payload.knowledge.split('_').collect();
 										if knowledge_parts.len() != 3 {
 											log::error!(
 												"Knowledge triple is not in correct format: {:?}",
@@ -133,21 +140,23 @@ impl Storage for MilvusStorage {
 										doc_payload.subject = knowledge_parts[0].to_string();
 										doc_payload.predicate = knowledge_parts[1].to_string();
 										doc_payload.object = knowledge_parts[2].to_string();
-									}
+									},
 									"document" => {
-										let document: Vec<String> = field.value.try_into().unwrap_or_default();
+										let document: Vec<String> =
+											field.value.try_into().unwrap_or_default();
 										doc_payload.doc_id = document.join(" ");
-									}
+									},
 									"sentence" => {
-										let sentence: Vec<String> = field.value.try_into().unwrap_or_default();
+										let sentence: Vec<String> =
+											field.value.try_into().unwrap_or_default();
 										doc_payload.sentence = sentence.join(" ");
-									}
-									_ => {}
-                }
-            }
-            results.push(doc_payload);
-        }
-        Ok(results)
+									},
+									_ => {},
+								}
+							}
+							results.push(doc_payload);
+						}
+						Ok(results)
 					},
 					Err(err) => {
 						log::error!("Query failed: {:?}", err);

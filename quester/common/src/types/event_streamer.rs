@@ -47,11 +47,17 @@ pub struct EventsCounter {
 	pub qflow_id: String,
 	pub total: AtomicU64,
 	pub processed: AtomicU64,
+	pub total_docs: AtomicU64,
 }
 
 impl EventsCounter {
 	pub fn new(qflow_id: String) -> Self {
-		Self { qflow_id, total: AtomicU64::new(0), processed: AtomicU64::new(0) }
+		Self {
+			qflow_id,
+			total: AtomicU64::new(0),
+			processed: AtomicU64::new(0),
+			total_docs: AtomicU64::new(0),
+		}
 	}
 
 	pub fn increment_total(&self) {
@@ -60,6 +66,10 @@ impl EventsCounter {
 
 	pub fn increment_processed(&self, count: u64) {
 		self.processed.fetch_add(count, Ordering::SeqCst);
+	}
+
+	pub fn increment_total_docs(&self) {
+		self.total_docs.fetch_add(1, Ordering::SeqCst);
 	}
 }
 
@@ -83,8 +93,8 @@ impl EventStreamerCounters {
 		self.events_received.fetch_add(count, Ordering::SeqCst);
 	}
 
-	pub fn increment_events_processed(&self) {
-		self.events_processed.fetch_add(1, Ordering::SeqCst);
+	pub fn increment_events_processed(&self, count: u64) {
+		self.events_processed.fetch_add(count, Ordering::SeqCst);
 	}
 
 	pub fn increment_batches_received(&self) {

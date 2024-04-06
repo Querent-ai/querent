@@ -159,7 +159,7 @@ pub fn observe_pipeline_get_handler(
 pub async fn start_pipeline(
 	request: SemanticPipelineRequest,
 	semantic_service_mailbox: MessageBus<SemanticService>,
-	mut event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
+	mut event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	mut index_storages: Vec<Arc<dyn storage::Storage>>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
@@ -205,7 +205,7 @@ pub async fn start_pipeline(
 
 pub fn start_pipeline_post_handler(
 	semantic_service_bus: Option<MessageBus<SemanticService>>,
-	event_storages: HashMap<EventType, Arc<dyn storage::Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics")

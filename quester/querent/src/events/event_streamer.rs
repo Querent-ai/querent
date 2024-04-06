@@ -141,6 +141,7 @@ impl Handler<EventsBatch> for EventStreamer {
 				_ => {},
 			}
 		}
+		self.counters.increment_events_processed(message.events.len() as u64);
 		ctx.record_progress();
 		Ok(())
 	}
