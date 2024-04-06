@@ -224,14 +224,12 @@ export interface IndexingStatistics {
   total_events_received: number;
   total_events_sent: number;
   total_graph_events: number;
-  total_graph_events_sent: number;
   total_objects: number;
   total_predicates: number;
   total_semantic_knowledge: number;
   total_sentences: number;
   total_subjects: number;
   total_vector_events: number;
-  total_vector_events_sent: number;
 }
 
 export interface RestConfig {

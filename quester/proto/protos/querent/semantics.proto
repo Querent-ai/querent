@@ -81,9 +81,6 @@ message IndexingStatistics {
   uint64 total_objects = 10;
   uint64 total_graph_events = 11;
   uint64 total_vector_events = 12;
-  uint64 total_graph_events_sent = 13;
-  uint64 total_vector_events_sent = 14;
-  uint64 total_semantic_knowledge = 15;
 }
 
 message PipelineMetadata {

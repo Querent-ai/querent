@@ -1,7 +1,4 @@
-use std::{
-	collections::{HashMap, VecDeque},
-	sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
@@ -18,7 +15,6 @@ pub struct Indexer {
 	pub counters: Arc<IndexerCounters>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub event_lock: EventLock,
-	pub doc_buffer: VecDeque<String>,
 }
 
 impl Indexer {
@@ -29,7 +25,6 @@ impl Indexer {
 			counters: Arc::new(IndexerCounters::new()),
 			event_lock: EventLock::default(),
 			index_storages,
-			doc_buffer: VecDeque::with_capacity(100),
 		}
 	}
 
@@ -147,22 +142,9 @@ impl Handler<IndexerKnowledge> for Indexer {
 		}
 		// collect statistics
 		let mut doc_map: HashMap<String, Vec<SemanticKnowledgePayload>> = HashMap::new();
-		let mut new_docs: Vec<String> = Vec::new();
-
 		for (doc, payload) in knowledge {
 			doc_map.entry(doc.clone()).or_insert_with(Vec::new).push(payload);
-
-			// Check if the document is already indexed via self.doc_buffer
-			if !self.doc_buffer.contains(&doc) {
-				new_docs.push(doc);
-			}
 		}
-
-		let total_unique_docs = new_docs.len();
-		self.doc_buffer.extend(new_docs);
-
-		self.counters
-			.increment_total_documents_indexed(total_unique_docs.try_into().unwrap_or_default());
 		doc_map.iter().for_each(|(_doc, triples)| {
 			self.counters.increment_total_sentences_indexed(triples.len() as u64);
 

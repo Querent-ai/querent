@@ -32,6 +32,7 @@ pub struct EmbeddedKnowledge {
 	pub knowledge: String,
 	pub embeddings: Option<Vector>,
 	pub predicate: String,
+	pub sentence: Option<String>,
 }
 
 pub struct PGVector {
@@ -132,6 +133,7 @@ impl Storage for PGVector {
 						embeddings: Some(Vector::from(item.embeddings.clone())),
 						predicate: item.namespace.clone(),
 						knowledge: item.id.clone(),
+						sentence: item.sentence.clone(),
 					};
 					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
@@ -176,6 +178,7 @@ table! {
 		knowledge -> Text,
 		embeddings -> Nullable<Vector>,
 		predicate -> Text,
+		sentence -> Nullable<Text>,
 	}
 }
 

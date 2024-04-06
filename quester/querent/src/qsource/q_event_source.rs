@@ -6,7 +6,11 @@ use querent_synapse::{
 	config::{config::WorkflowConfig, Config},
 	querent::{Querent, QuerentError, Workflow, WorkflowBuilder},
 };
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+	collections::{HashMap, VecDeque},
+	sync::Arc,
+	time::Duration,
+};
 use tokio::{
 	sync::mpsc,
 	task::JoinHandle,
@@ -27,6 +31,7 @@ pub struct QSource {
 	event_sender: mpsc::Sender<(EventType, EventState)>,
 	event_receiver: mpsc::Receiver<(EventType, EventState)>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
+	docs_buffer: VecDeque<String>,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 }
@@ -71,6 +76,7 @@ impl QSource {
 			event_receiver,
 			workflow_handle: None,
 			terminate_sig,
+			docs_buffer: VecDeque::with_capacity(1000),
 		}
 	}
 
@@ -189,6 +195,10 @@ impl Source for QSource {
 							break
 						}
 						self.counters.increment_total();
+						if !self.docs_buffer.contains(&event_data.file) {
+							self.counters.increment_total_docs();
+							self.docs_buffer.push_back(event_data.file.clone());
+						}
 						// check if the event type is already in the map
 						if events_collected.contains_key(&event_type) {
 							let event_vec: &mut Vec<EventState> = events_collected.get_mut(&event_type).unwrap();
@@ -205,6 +215,7 @@ impl Source for QSource {
 					ctx.record_progress();
 				}
 				_ = &mut deadline => {
+					self.counters.increment_processed(counter as u64);
 					break;
 				}
 			}

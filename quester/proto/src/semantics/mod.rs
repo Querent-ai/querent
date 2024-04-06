@@ -83,11 +83,6 @@ impl IndexingStatistics {
 		self.total_vector_events += 1;
 	}
 
-	/// Increment the number of semantic knowledge indexed
-	pub fn increment_total_semantic_knowledge(&mut self) {
-		self.total_semantic_knowledge += 1;
-	}
-
 	pub fn add_counters(
 		mut self,
 		qflow_counters: &serde_json::Value,
@@ -103,7 +98,7 @@ impl IndexingStatistics {
 			event_streamer_counters.events_received.load(Ordering::Relaxed) as u64;
 		self.total_events_sent = event_streamer_counters.events_processed.load(Ordering::Relaxed);
 		self.total_batches = event_streamer_counters.batches_received.load(Ordering::Relaxed);
-		self.total_docs = indexer_counters.total_documents_indexed.load(Ordering::Relaxed);
+		self.total_docs = qflow_counters.total_docs.load(Ordering::Relaxed);
 		self.total_sentences = indexer_counters.total_sentences_indexed.load(Ordering::Relaxed);
 		self.total_subjects = indexer_counters.total_subjects_indexed.load(Ordering::Relaxed);
 		self.total_predicates = indexer_counters.total_predicates_indexed.load(Ordering::Relaxed);
@@ -120,18 +115,6 @@ impl IndexingStatistics {
 				_ => {},
 			}
 		}
-		let total_event_to_storage_map = &storage_mapper_counters.event_to_storage_map;
-		for (event_type, counter) in total_event_to_storage_map {
-			match event_type {
-				EventType::Graph => {
-					self.total_graph_events_sent = counter.load(Ordering::Relaxed);
-				},
-				EventType::Vector => {
-					self.total_vector_events_sent = counter.load(Ordering::Relaxed);
-				},
-				_ => {},
-			}
-		}
 		self
 	}
 }
@@ -140,7 +123,7 @@ impl Display for IndexingStatistics {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		write!(
 			f,
-			"total_docs: {}, total_events: {}, total_events_processed: {}, total_events_received: {}, total_events_sent: {}, total_batches: {}, total_sentences: {}, total_subjects: {}, total_predicates: {}, total_objects: {}, total_graph_events: {}, total_vector_events: {}, total_graph_events_sent: {}, total_vector_events_sent: {}, total_semantic_knowledge: {}",
+			"total_docs: {}, total_events: {}, total_events_processed: {}, total_events_received: {}, total_events_sent: {}, total_batches: {}, total_sentences: {}, total_subjects: {}, total_predicates: {}, total_objects: {}, total_graph_events: {}, total_vector_events: {}",
 			self.total_docs,
 			self.total_events,
 			self.total_events_processed,
@@ -153,9 +136,6 @@ impl Display for IndexingStatistics {
 			self.total_objects,
 			self.total_graph_events,
 			self.total_vector_events,
-			self.total_graph_events_sent,
-			self.total_vector_events_sent,
-			self.total_semantic_knowledge,
 		)
 	}
 }
