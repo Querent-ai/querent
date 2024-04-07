@@ -50,10 +50,10 @@ impl Storage for MilvusStorage {
 
 	async fn insert_vector(
 		&self,
-		_collection_id: String,
+		collection_id: String,
 		_payload: &Vec<(String, VectorPayload)>,
 	) -> StorageResult<()> {
-		let collection_name = format!("pipeline_{}", _collection_id);
+		let collection_name = format!("pipeline_{}", collection_id);
 
 		for (id, payload) in _payload {
 			let result =
