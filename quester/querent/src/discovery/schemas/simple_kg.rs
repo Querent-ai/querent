@@ -35,7 +35,9 @@ impl GraphData {
 				label: doc.subject.clone(),
 				node_type: "subject".to_string(),
 			};
-			if node_ids.insert(subject_node.clone()) {nodes.push(subject_node)};
+			if node_ids.insert(subject_node.clone()) {
+				nodes.push(subject_node)
+			};
 
 			// Add object node
 			let object_node = Node {
@@ -43,14 +45,18 @@ impl GraphData {
 				label: doc.object.clone(),
 				node_type: "object".to_string(),
 			};
-			if node_ids.insert(object_node.clone()) {nodes.push(object_node)};
+			if node_ids.insert(object_node.clone()) {
+				nodes.push(object_node)
+			};
 
 			let document_node = Node {
 				id: doc.doc_id.clone(),
 				label: format!("Document: {}", doc.doc_id),
 				node_type: "document".to_string(),
 			};
-			if node_ids.insert(document_node.clone()) {nodes.push(document_node)};
+			if node_ids.insert(document_node.clone()) {
+				nodes.push(document_node)
+			};
 
 			// Add sentence node
 			let sentence_node = Node {
@@ -58,7 +64,9 @@ impl GraphData {
 				label: doc.sentence.clone(),
 				node_type: "sentence".to_string(),
 			};
-			if node_ids.insert(sentence_node.clone()) {nodes.push(sentence_node)};
+			if node_ids.insert(sentence_node.clone()) {
+				nodes.push(sentence_node)
+			};
 
 			// Add edges
 			let subject_to_document_edge = Edge {
