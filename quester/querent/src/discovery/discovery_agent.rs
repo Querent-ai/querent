@@ -70,19 +70,23 @@ impl Actor for DiscoveryAgent {
 
 	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
 		let template = PromptTemplate::new(
-            "Given the query: {{query}}
-        
-            You are given the following graph data: {{graph_data}}.
-        
-            Please summarize the key insights and deductions that can be made from the graph data in relation to the query. Your summary should cover:
-        
-            1. The most relevant nodes and their relationships to the query.
-            2. The overall structure and connectivity of the graph as it pertains to the query.
-            3. Any significant patterns, clusters, or communities within the graph that are relevant to the query.
-            4. Potential use cases or applications based on the graph structure in the context of the query.
-            5. Any other important insights or observations related to the query.
-        
-            Provide a concise yet comprehensive summary that captures the essential information and insights that can be derived from the graph data in the context of the given query.".to_string(),
+            "Given the user query: {{query}}
+
+			And the accompanying graph data structure: {{graph_data}}.
+
+			Analyze the provided graph data to address the user's query with precision. In your analysis, focus on the following areas to construct a comprehensive and insightful summary:
+
+			1. Identification and examination of nodes directly relevant to the query, that directly answer the query, including their attributes. Explicitly highlight any numerical data related to these nodes, such as measurements, values, or statistics mentioned within the graph.
+
+			2. Analysis of the graph's overall architecture—highlighting the nature of connectivity between nodes, especially as it relates to the query's context. Discuss any observed hierarchical structures, network flows, or notable linkage patterns.
+
+			3. Detection of significant patterns, clusters, or distinct communities within the graph. Elucidate how these groupings correlate with the query and what they signify in terms of data relationships or underlying trends.
+
+			4. Exploration of potential real-world applications, use cases, or implications derived from the graph's structure and the insights it reveals in direct response to the query. Consider how these applications could influence decision-making, strategy development, or further research.
+
+			5. Provide additional insights that arise from an in-depth document analysis, such as notable correlations, discrepancies between sources, or emerging trends that have been documented. Highlight any documents that were particularly influential or informative in your analysis.
+
+			Your summary should distill the essential findings and insights from the graph data, offering a clear, detailed, and contextually relevant response to the user's query. Aim to provide actionable knowledge that enhances understanding of the graph data's real-world significance and applications in light of the query.".to_string(),
             vec!["query".to_string(), "graph_data".to_string()],
             TemplateFormat::Jinja2,
         );
