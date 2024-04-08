@@ -1,7 +1,7 @@
 use common::DocumentPayload;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize)]
+use std::collections::HashSet;
+#[derive(Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize)]
 pub struct Node {
 	id: String,
 	label: String,
@@ -27,6 +27,7 @@ impl GraphData {
 	pub fn from_documents(docs_vec: Vec<DocumentPayload>) -> Self {
 		let mut nodes = Vec::new();
 		let mut edges = Vec::new();
+		let mut node_ids = HashSet::new();
 		for doc in docs_vec {
 			// Add subject node
 			let subject_node = Node {
@@ -34,7 +35,7 @@ impl GraphData {
 				label: doc.subject.clone(),
 				node_type: "subject".to_string(),
 			};
-			nodes.push(subject_node);
+			if node_ids.insert(subject_node.clone()) {nodes.push(subject_node)};
 
 			// Add object node
 			let object_node = Node {
@@ -42,15 +43,14 @@ impl GraphData {
 				label: doc.object.clone(),
 				node_type: "object".to_string(),
 			};
-			nodes.push(object_node);
+			if node_ids.insert(object_node.clone()) {nodes.push(object_node)};
 
-			// Add document node
 			let document_node = Node {
 				id: doc.doc_id.clone(),
 				label: format!("Document: {}", doc.doc_id),
 				node_type: "document".to_string(),
 			};
-			nodes.push(document_node);
+			if node_ids.insert(document_node.clone()) {nodes.push(document_node)};
 
 			// Add sentence node
 			let sentence_node = Node {
@@ -58,7 +58,7 @@ impl GraphData {
 				label: doc.sentence.clone(),
 				node_type: "sentence".to_string(),
 			};
-			nodes.push(sentence_node);
+			if node_ids.insert(sentence_node.clone()) {nodes.push(sentence_node)};
 
 			// Add edges
 			let subject_to_document_edge = Edge {
