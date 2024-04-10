@@ -37,6 +37,8 @@ pub enum StorageErrorKind {
 	Timeout,
 	/// Io error.
 	Io,
+	/// A index creation error for pgvector.
+	IndexCreation,
 }
 
 /// Generic StorageError.

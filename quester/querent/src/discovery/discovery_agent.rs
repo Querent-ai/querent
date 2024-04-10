@@ -6,7 +6,7 @@ use crate::{
 	memory::WindowBufferMemory,
 	prompt::{PromptFromatter, PromptTemplate, TemplateFormat},
 	prompt_args,
-	schemas::GraphData,
+	// schemas::GraphData,
 	tools::CommandExecutor,
 };
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
@@ -19,9 +19,16 @@ use proto::{
 	DiscoveryError,
 };
 use querent_synapse::callbacks::EventType;
+use std::collections::HashSet;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
+
+#[derive(Hash, Eq, PartialEq)]
+struct UniqueDocument {
+	doc_id: String,
+	sentence: String,
+}
 
 pub struct DiscoveryAgent {
 	agent_id: String,
@@ -70,23 +77,16 @@ impl Actor for DiscoveryAgent {
 
 	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
 		let template = PromptTemplate::new(
-            "Given the user query: {{query}}
+            "Answer the user query: {{query}}
 
-			And the accompanying graph data structure: {{graph_data}}.
+By summarising the following data where the format of each data item is  {\"doc_id\":\"the document from which sentence is extracted.\",\"sentence\":\"the context relevant to user's query.\"}.
 
-			Analyze the provided graph data to address the user's query with precision. In your analysis, focus on the following areas to construct a comprehensive and insightful summary:
+Data: {{graph_data}}
 
-			1. Identification and examination of nodes directly relevant to the query, that directly answer the query, including their attributes. Explicitly highlight any numerical data related to these nodes, such as measurements, values, or statistics mentioned within the graph.
-
-			2. Analysis of the graph's overall architecture—highlighting the nature of connectivity between nodes, especially as it relates to the query's context. Discuss any observed hierarchical structures, network flows, or notable linkage patterns.
-
-			3. Detection of significant patterns, clusters, or distinct communities within the graph. Elucidate how these groupings correlate with the query and what they signify in terms of data relationships or underlying trends.
-
-			4. Exploration of potential real-world applications, use cases, or implications derived from the graph's structure and the insights it reveals in direct response to the query. Consider how these applications could influence decision-making, strategy development, or further research.
-
-			5. Provide additional insights that arise from an in-depth document analysis, such as notable correlations, discrepancies between sources, or emerging trends that have been documented. Highlight any documents that were particularly influential or informative in your analysis.
-
-			Your summary should distill the essential findings and insights from the graph data, offering a clear, detailed, and contextually relevant response to the user's query. Aim to provide actionable knowledge that enhances understanding of the graph data's real-world significance and applications in light of the query.".to_string(),
+In your analysis, focus on the following areas to construct a comprehensive and insightful summary:
+1. Identification and examination of sentences directly relevant to the query. Examine the data provided, and emphasize any specific information such as numerical data, statistics, or quantitative values mentioned within the sentences.
+2. Provide additional insights from a deep dive into the document analysis. Highlight any notable correlations, inconsistencies between sources, or emerging trends that have been documented. Point out documents that were particularly influential or informative in your analysis.
+Your summary should distill the essential findings and insights from the dataset, offering a clear, detailed, and contextually relevant response to the user's query.".to_string(),
             vec!["query".to_string(), "graph_data".to_string()],
             TemplateFormat::Jinja2,
         );
@@ -145,10 +145,10 @@ impl Actor for DiscoveryAgent {
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed |
-			ActorExitStatus::Killed |
-			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed
+			| ActorExitStatus::Killed
+			| ActorExitStatus::Failure(_)
+			| ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("Discovery agent {} exiting with success", self.agent_id);
 			},
@@ -188,6 +188,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
 		let mut documents = Vec::new();
+		let mut unique_docs = HashSet::new();
 		// iterate over event storages and for EventType::Vector and collect search results
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
@@ -196,12 +197,20 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 						.similarity_search_l2(
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
-							50,
+							10,
 						)
 						.await;
 					match search_results {
 						Ok(results) => {
-							documents.extend(results);
+							for result in results {
+								let doc_tuple = (result.doc_id.clone(), result.sentence.clone());
+								if unique_docs.insert(doc_tuple) {
+									documents.push(serde_json::json!({
+										"doc_id": result.doc_id,
+										"sentence": result.sentence
+									}));
+								}
+							}
 						},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
@@ -210,22 +219,14 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 				}
 			}
 		}
-
-		let document_graph = GraphData::from_documents(documents);
-		let input_graph_data = serde_json::to_string(&document_graph).map_err(|e| {
-			log::error!("Failed to serialize graph data: {}", e);
-			ActorExitStatus::Failure(Arc::new(anyhow::anyhow!("Failed to serialize graph data")))
-		})?;
-
 		let input_variables = prompt_args! {
 			"query" => message.query.clone(),
-			"graph_data" => input_graph_data,
+			"graph_data" => documents,
 		};
 		let result = template.format(input_variables).map_err(|e| {
 			log::error!("Failed to format template: {}", e);
 			ActorExitStatus::Failure(Arc::new(anyhow::anyhow!("Failed to format template")))
 		})?;
-
 		let input_query = prompt_args! {
 			"input" => result,
 		};
