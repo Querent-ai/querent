@@ -26,12 +26,6 @@ use std::{
 use storage::Storage;
 use tokio::runtime::Handle;
 
-#[derive(Hash, Eq, PartialEq)]
-struct UniqueDocument {
-	doc_id: String,
-	sentence: String,
-}
-
 pub struct DiscoveryAgent {
 	agent_id: String,
 	timestamp: u64,
