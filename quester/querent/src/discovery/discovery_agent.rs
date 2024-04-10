@@ -19,8 +19,10 @@ use proto::{
 	DiscoveryError,
 };
 use querent_synapse::callbacks::EventType;
-use std::collections::HashSet;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 use storage::Storage;
 use tokio::runtime::Handle;
 
@@ -145,10 +147,10 @@ Your summary should distill the essential findings and insights from the dataset
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed
-			| ActorExitStatus::Killed
-			| ActorExitStatus::Failure(_)
-			| ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed |
+			ActorExitStatus::Killed |
+			ActorExitStatus::Failure(_) |
+			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("Discovery agent {} exiting with success", self.agent_id);
 			},
@@ -201,7 +203,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 						)
 						.await;
 					match search_results {
-						Ok(results) => {
+						Ok(results) =>
 							for result in results {
 								let doc_tuple = (result.doc_id.clone(), result.sentence.clone());
 								if unique_docs.insert(doc_tuple) {
@@ -210,8 +212,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 										"sentence": result.sentence
 									}));
 								}
-							}
-						},
+							},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
 						},

@@ -20,8 +20,7 @@ use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult
 use pgvector::Vector;
 
 use deadpool::Runtime;
-use diesel::QueryableByName;
-use diesel::{table, Insertable, Queryable, Selectable};
+use diesel::{table, Insertable, Queryable, QueryableByName, Selectable};
 use diesel_async::AsyncConnection;
 use pgvector::VectorExpressionMethods;
 use rustls::{
@@ -273,15 +272,15 @@ table! {
 #[cfg(test)]
 mod test {
 	use super::*;
-	use diesel::sql_types::*;
-	use diesel::QueryableByName;
+	// use diesel::sql_types::*;
+	// use diesel::QueryableByName;
 	use proto::semantics::StorageType;
 
-	#[derive(Debug, QueryableByName)]
-	pub struct ExistsResult {
-		#[sql_type = "Bool"]
-		pub exists: bool,
-	}
+	// #[derive(Debug, QueryableByName)]
+	// pub struct ExistsResult {
+	// 	#[sql_type = "Bool"]
+	// 	pub exists: bool,
+	// }
 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
 
 	// async fn setup_test_environment() -> PGVector {
