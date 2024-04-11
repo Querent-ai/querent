@@ -58,31 +58,45 @@ pub mod semantic_pipeline_request {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FixedEntities {
+    #[prost(string, repeated, tag = "1")]
+    pub entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SampleEntities {
+    #[prost(string, repeated, tag = "1")]
+    pub entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WorkflowContract {
-    #[prost(string, tag = "1")]
-    pub ner_model_name: ::prost::alloc::string::String,
-    #[prost(bool, tag = "2")]
-    pub enable_filtering: bool,
-    #[prost(string, repeated, tag = "3")]
-    pub fixed_entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(string, repeated, tag = "4")]
-    pub sample_entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(bool, tag = "5")]
-    pub is_confined_search: bool,
-    #[prost(string, tag = "6")]
-    pub user_context: ::prost::alloc::string::String,
-    #[prost(float, tag = "7")]
-    pub score_threshold: f32,
-    #[prost(float, tag = "8")]
-    pub attention_score_threshold: f32,
-    #[prost(float, tag = "9")]
-    pub similarity_threshold: f32,
-    #[prost(int32, tag = "10")]
-    pub min_cluster_size: i32,
-    #[prost(int32, tag = "11")]
-    pub min_samples: i32,
-    #[prost(float, tag = "12")]
-    pub cluster_persistence_threshold: f32,
+    #[prost(string, optional, tag = "1")]
+    pub ner_model_name: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(bool, optional, tag = "2")]
+    pub enable_filtering: ::core::option::Option<bool>,
+    #[prost(message, optional, tag = "3")]
+    pub fixed_entities: ::core::option::Option<FixedEntities>,
+    #[prost(message, optional, tag = "4")]
+    pub sample_entities: ::core::option::Option<SampleEntities>,
+    #[prost(bool, optional, tag = "5")]
+    pub is_confined_search: ::core::option::Option<bool>,
+    #[prost(string, optional, tag = "6")]
+    pub user_context: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(float, optional, tag = "7")]
+    pub score_threshold: ::core::option::Option<f32>,
+    #[prost(float, optional, tag = "8")]
+    pub attention_score_threshold: ::core::option::Option<f32>,
+    #[prost(float, optional, tag = "9")]
+    pub similarity_threshold: ::core::option::Option<f32>,
+    #[prost(int32, optional, tag = "10")]
+    pub min_cluster_size: ::core::option::Option<i32>,
+    #[prost(int32, optional, tag = "11")]
+    pub min_samples: ::core::option::Option<i32>,
+    #[prost(float, optional, tag = "12")]
+    pub cluster_persistence_threshold: ::core::option::Option<f32>,
 }
 /// LLamaConfig holds configuration for LLama workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
