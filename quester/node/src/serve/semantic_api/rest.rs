@@ -10,7 +10,7 @@ use proto::{
 		LLamaConfig, MilvusConfig, Name, Neo4jConfig, NewsCollectorConfig, OpenAiConfig,
 		PipelineMetadata, PipelinesMetadata, PostgresConfig, S3CollectorConfig,
 		SemanticPipelineRequest, SemanticPipelineResponse, SlackCollectorConfig, StorageConfig,
-		StorageType,
+		StorageType, WorkflowContract,
 	},
 };
 
@@ -64,6 +64,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PostgresConfig,
 		MilvusConfig,
 		Neo4jConfig,
+		WorkflowContract,
 		AzureCollectorConfig,
 		EmailCollectorConfig,
 		SlackCollectorConfig,

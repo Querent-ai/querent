@@ -37,11 +37,8 @@ pub struct SemanticPipelineRequest {
     pub collectors: ::prost::alloc::vec::Vec<CollectorConfig>,
     #[prost(message, repeated, tag = "5")]
     pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
-    #[prost(map = "string, string", tag = "6")]
-    pub config: ::std::collections::HashMap<
-        ::prost::alloc::string::String,
-        ::prost::alloc::string::String,
-    >,
+    #[prost(message, optional, tag = "6")]
+    pub config: ::core::option::Option<WorkflowContract>,
     #[prost(oneof = "Name", tags = "1, 2")]
     pub name: ::core::option::Option<Name>,
 }
@@ -58,6 +55,35 @@ pub mod semantic_pipeline_request {
         #[prost(message, tag = "2")]
         KnowledgeGraphUsingOpenai(OpenAiConfig),
     }
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct WorkflowContract {
+    #[prost(string, tag = "1")]
+    pub ner_model_name: ::prost::alloc::string::String,
+    #[prost(bool, tag = "2")]
+    pub enable_filtering: bool,
+    #[prost(string, repeated, tag = "3")]
+    pub fixed_entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(string, repeated, tag = "4")]
+    pub sample_entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(bool, tag = "5")]
+    pub is_confined_search: bool,
+    #[prost(string, tag = "6")]
+    pub user_context: ::prost::alloc::string::String,
+    #[prost(float, tag = "7")]
+    pub score_threshold: f32,
+    #[prost(float, tag = "8")]
+    pub attention_score_threshold: f32,
+    #[prost(float, tag = "9")]
+    pub similarity_threshold: f32,
+    #[prost(int32, tag = "10")]
+    pub min_cluster_size: i32,
+    #[prost(int32, tag = "11")]
+    pub min_samples: i32,
+    #[prost(float, tag = "12")]
+    pub cluster_persistence_threshold: f32,
 }
 /// LLamaConfig holds configuration for LLama workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
