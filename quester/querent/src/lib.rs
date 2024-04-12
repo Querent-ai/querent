@@ -264,6 +264,94 @@ pub async fn create_querent_synapose_workflow(
 		_ => (),
 	}
 
+	let mut params_map = HashMap::new();
+
+	if let Some(workflow_contract) = &request.config {
+		// Convert scalar fields to string and insert them into the hashmap
+		if let Some(ner_model_name) = &workflow_contract.ner_model_name {
+			params_map.insert("ner_model_name".to_owned(), ner_model_name.clone());
+		}
+		if workflow_contract.enable_filtering.is_some() {
+			params_map.insert(
+				"enable_filtering".to_owned(),
+				workflow_contract.enable_filtering.unwrap().to_string(),
+			);
+		}
+		if workflow_contract.is_confined_search.is_some() {
+			params_map.insert(
+				"is_confined_search".to_owned(),
+				workflow_contract.is_confined_search.unwrap().to_string(),
+			);
+		}
+		if workflow_contract.user_context.is_some() {
+			params_map.insert(
+				"user_context".to_owned(),
+				<std::option::Option<std::string::String> as Clone>::clone(
+					&workflow_contract.user_context,
+				)
+				.unwrap()
+				.clone(),
+			);
+		}
+
+		if workflow_contract.score_threshold.is_some() {
+			params_map.insert(
+				"score_threshold".to_owned(),
+				workflow_contract.score_threshold.unwrap().to_string(),
+			);
+		}
+
+		if workflow_contract.attention_score_threshold.is_some() {
+			params_map.insert(
+				"attention_score_threshold".to_owned(),
+				workflow_contract.attention_score_threshold.unwrap().to_string(),
+			);
+		}
+
+		if workflow_contract.similarity_threshold.is_some() {
+			params_map.insert(
+				"similarity_threshold".to_owned(),
+				workflow_contract.similarity_threshold.unwrap().to_string(),
+			);
+		}
+
+		if workflow_contract.min_cluster_size.is_some() {
+			params_map.insert(
+				"min_cluster_size".to_owned(),
+				workflow_contract.min_cluster_size.unwrap().to_string(),
+			);
+		}
+
+		if workflow_contract.min_samples.is_some() {
+			params_map.insert(
+				"min_samples".to_owned(),
+				workflow_contract.min_samples.unwrap().to_string(),
+			);
+		}
+
+		if workflow_contract.cluster_persistence_threshold.is_some() {
+			params_map.insert(
+				"cluster_persistence_threshold".to_owned(),
+				workflow_contract.cluster_persistence_threshold.unwrap().to_string(),
+			);
+		}
+
+		if let Some(fixed_entities) = &workflow_contract.fixed_entities {
+			if !fixed_entities.entities.is_empty() {
+				let fixed_entities_str = fixed_entities.entities.join(",");
+				params_map.insert("fixed_entities".to_owned(), fixed_entities_str);
+			}
+		}
+
+		// Similarly, check if sample_entities is present and not empty, then join and insert
+		if let Some(sample_entities) = &workflow_contract.sample_entities {
+			if !sample_entities.entities.is_empty() {
+				let sample_entities_str = sample_entities.entities.join(",");
+				params_map.insert("sample_entities".to_owned(), sample_entities_str);
+			}
+		}
+	}
+
 	let engine_configs: Vec<EngineConfig> = vec![EngineConfig {
 		id: id.clone(),
 		name: engine_name.clone(),
@@ -278,7 +366,7 @@ pub async fn create_querent_synapose_workflow(
 		workflow: WorkflowConfig {
 			name: engine_name.clone(),
 			id: id.to_string(),
-			config: request.config.clone(),
+			config: params_map.clone(),
 			channel: None,
 			inner_channel: None,
 			inner_event_handler: None,
