@@ -23,6 +23,9 @@ pub struct DiscoverySessionRequest {
     /// OpenAI API key
     #[prost(string, tag = "9")]
     pub openai_api_key: ::prost::alloc::string::String,
+    /// Discovery Session Type
+    #[prost(message, optional, tag = "10")]
+    pub session_type: ::core::option::Option<DiscoveryAgentType>,
 }
 /// Session AgentID as a response
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]

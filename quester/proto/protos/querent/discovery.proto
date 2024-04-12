@@ -18,7 +18,15 @@ message DiscoverySessionRequest {
   string semantic_pipeline_id = 8;
   // OpenAI API key
   string openai_api_key = 9;
+  // Discovery Session Type
+  DiscoveryAgentType session_type = 10;
 }
+
+// Enum for DiscoverySessionType, either Retriever or Traverser
+message DiscoveryAgentType {
+  string session_type = 1;
+}
+
 
 // Session AgentID as a response
 message DiscoverySessionResponse {

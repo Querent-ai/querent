@@ -18,10 +18,7 @@ use proto::{
 	DiscoveryError,
 };
 use querent_synapse::callbacks::EventType;
-use std::{
-	collections::HashMap,
-	sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
 
@@ -140,10 +137,10 @@ Your summary should distill the essential findings and insights from the dataset
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed
-			| ActorExitStatus::Killed
-			| ActorExitStatus::Failure(_)
-			| ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed |
+			ActorExitStatus::Killed |
+			ActorExitStatus::Failure(_) |
+			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("Discovery agent {} exiting with success", self.agent_id);
 			},

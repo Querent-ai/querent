@@ -33,6 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	prost_config.extern_path(".querent.discovery.PostgresConfig", "PostgresConfig");
 	prost_config.extern_path(".querent.discovery.Neo4jConfig", "Neo4jConfig");
 	prost_config.extern_path(".querent.discovery.MilvusConfig", "MilvusConfig");
+	prost_config.extern_path(".querent.discovery.DiscoveryAgentType", "DiscoveryAgentType");
 
 	tonic_build::configure()
 		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")
