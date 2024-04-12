@@ -6,7 +6,6 @@ use crate::{
 	memory::WindowBufferMemory,
 	prompt::{PromptFromatter, PromptTemplate, TemplateFormat},
 	prompt_args,
-	// schemas::GraphData,
 	tools::CommandExecutor,
 };
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
@@ -20,7 +19,7 @@ use proto::{
 };
 use querent_synapse::callbacks::EventType;
 use std::{
-	collections::{HashMap, HashSet},
+	collections::HashMap,
 	sync::Arc,
 };
 use storage::Storage;
@@ -141,10 +140,10 @@ Your summary should distill the essential findings and insights from the dataset
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed |
-			ActorExitStatus::Killed |
-			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed
+			| ActorExitStatus::Killed
+			| ActorExitStatus::Failure(_)
+			| ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("Discovery agent {} exiting with success", self.agent_id);
 			},
@@ -184,7 +183,6 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
 		let mut documents = Vec::new();
-		let mut unique_docs = HashSet::new();
 		// iterate over event storages and for EventType::Vector and collect search results
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
@@ -197,16 +195,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 						)
 						.await;
 					match search_results {
-						Ok(results) =>
-							for result in results {
-								let doc_tuple = (result.doc_id.clone(), result.sentence.clone());
-								if unique_docs.insert(doc_tuple) {
-									documents.push(serde_json::json!({
-										"doc_id": result.doc_id,
-										"sentence": result.sentence
-									}));
-								}
-							},
+						Ok(results) => documents.extend(results),
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
 						},
@@ -216,7 +205,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		}
 		let input_variables = prompt_args! {
 			"query" => message.query.clone(),
-			"graph_data" => documents,
+			"graph_data" => documents
 		};
 		let result = template.format(input_variables).map_err(|e| {
 			log::error!("Failed to format template: {}", e);
