@@ -15,10 +15,13 @@ use common::RuntimeType;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
-	DiscoveryError,
+	DiscoveryAgentType, DiscoveryError,
 };
 use querent_synapse::callbacks::EventType;
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 use storage::Storage;
 use tokio::runtime::Handle;
 
@@ -180,7 +183,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
 		let mut documents = Vec::new();
-		// iterate over event storages and for EventType::Vector and collect search results
+		let mut unique_docs = HashSet::new();
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
@@ -192,13 +195,36 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 						)
 						.await;
 					match search_results {
-						Ok(results) => documents.extend(results),
+						Ok(results) =>
+							for result in results {
+								let doc_tuple = (result.doc_id.clone(), result.sentence.clone());
+								if unique_docs.insert(doc_tuple) {
+									let doc_json_string = serde_json::json!({
+										"doc_id": result.doc_id,
+										"sentence": result.sentence
+									})
+									.to_string();
+									documents.push(doc_json_string);
+								}
+							},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
 						},
 					}
 				}
 			}
+		}
+		if let Some(DiscoveryAgentType::Retriever) = self.discovery_agent_params.session_type {
+			return Ok(Ok(DiscoveryResponse {
+				session_id: message.session_id,
+				insights: documents
+					.iter()
+					.map(|doc| proto::discovery::Insight {
+						title: message.query.clone(),
+						description: doc.clone(),
+					})
+					.collect(),
+			}));
 		}
 		let input_variables = prompt_args! {
 			"query" => message.query.clone(),
