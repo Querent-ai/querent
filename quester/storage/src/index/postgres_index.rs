@@ -168,6 +168,22 @@ impl Storage for PostgresStorage {
 		})?;
 		Ok(())
 	}
+
+	/// Store key value pair
+	async fn store_kv(&self, _key: &String, _value: &String) -> StorageResult<()> {
+		Err(StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::anyhow!("Not implemented")),
+		})
+	}
+
+	/// Get value for key
+	async fn get_kv(&self, _key: &String) -> StorageResult<Option<String>> {
+		Err(StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::anyhow!("Not implemented")),
+		})
+	}
 }
 
 table! {

@@ -34,3 +34,5 @@ tokio = { workspace = true }
 futures-util = { workspace = true }
 chrono = { workspace = true }
 pgvector = { workspace = true }
+redb = { workspace = true }
+rmp-serde = { workspace = true }
