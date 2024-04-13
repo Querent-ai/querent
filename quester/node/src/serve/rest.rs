@@ -78,7 +78,6 @@ pub(crate) async fn start_rest_server(
 	readiness_trigger: BoxFutureInfaillible<()>,
 	shutdown_signal: BoxFutureInfaillible<()>,
 ) -> anyhow::Result<()> {
-	info!("Starting REST server 📡: check /api-doc.json for available APIs");
 	let request_counter = warp::log::custom(|_| {
 		crate::SERVE_METRICS.http_requests_total.inc();
 	});
@@ -182,6 +181,7 @@ fn api_v1_routes(
 				Some(services.semantic_service_bus.clone()),
 				services.event_storages.clone(),
 				services.index_storages.clone(),
+				services.secret_store.clone(),
 			))
 			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone())))
 			.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))

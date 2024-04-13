@@ -164,6 +164,7 @@ pub async fn start_pipeline(
 	semantic_service_mailbox: MessageBus<SemanticService>,
 	mut event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	mut index_storages: Vec<Arc<dyn storage::Storage>>,
+	secret_store: Arc<dyn storage::Storage>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 	if request.storage_configs.is_empty() && event_storages.is_empty() && index_storages.is_empty()
@@ -179,12 +180,13 @@ pub async fn start_pipeline(
 			})?;
 	}
 	let qflow: querent_synapse::querent::Workflow =
-		create_querent_synapose_workflow(new_uuid.clone(), &request).await?;
+		create_querent_synapose_workflow(new_uuid.clone(), &request, secret_store.clone()).await?;
 	let pipeline_settings = PipelineSettings {
 		qflow_id: new_uuid.clone(),
 		qflow,
 		event_storages,
 		index_storages,
+		secret_store,
 		semantic_service_bus: semantic_service_mailbox.clone(),
 	};
 
@@ -210,6 +212,7 @@ pub fn start_pipeline_post_handler(
 	semantic_service_bus: Option<MessageBus<SemanticService>>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
+	secret_store: Arc<dyn storage::Storage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics")
 		.and(warp::body::json())
@@ -217,6 +220,7 @@ pub fn start_pipeline_post_handler(
 		.and(require(semantic_service_bus))
 		.and(require(Some(event_storages)))
 		.and(require(Some(index_storages)))
+		.and(require(Some(secret_store)))
 		.then(start_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)

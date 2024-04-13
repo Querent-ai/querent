@@ -17,6 +17,7 @@ pub struct SemanticsGrpcAdapter {
 	semantic_service_mailbox: MessageBus<SemanticService>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
+	secret_store: Arc<dyn Storage>,
 }
 
 impl SemanticsGrpcAdapter {
@@ -24,8 +25,9 @@ impl SemanticsGrpcAdapter {
 		semantic_service_mailbox: MessageBus<SemanticService>,
 		event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 		index_storages: Vec<Arc<dyn storage::Storage>>,
+		secret_store: Arc<dyn storage::Storage>,
 	) -> Self {
-		Self { semantic_service_mailbox, event_storages, index_storages }
+		Self { semantic_service_mailbox, event_storages, index_storages, secret_store }
 	}
 }
 
@@ -44,6 +46,7 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 			self.semantic_service_mailbox.clone(),
 			self.event_storages.clone(),
 			self.index_storages.clone(),
+			self.secret_store.clone(),
 		)
 		.await;
 		match response {
