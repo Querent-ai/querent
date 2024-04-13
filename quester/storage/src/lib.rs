@@ -10,6 +10,8 @@ pub mod graph;
 pub use graph::*;
 pub mod index;
 pub use index::*;
+pub mod secret;
+pub use secret::*;
 
 use diesel::result::{Error as DieselError, Error::QueryBuilderError};
 
@@ -88,6 +90,13 @@ pub async fn create_storages(
 
 	info!("Storages created successfully ✅");
 	Ok((event_storages, index_storages))
+}
+
+pub async fn create_secret_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+	let secret_store = SecretStore::new(path);
+	secret_store.check_connectivity().await?;
+	let secret_store = Arc::new(secret_store);
+	Ok(secret_store)
 }
 
 pub type ActualDbPool = Pool<AsyncPgConnection>;
