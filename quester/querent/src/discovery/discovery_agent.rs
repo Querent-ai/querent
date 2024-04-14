@@ -71,6 +71,19 @@ impl Actor for DiscoveryAgent {
 	type ObservableState = ();
 
 	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		})?;
+
+		self.embedding_model = Some(embedding_model);
+
+		if self.discovery_agent_params.session_type.is_none() ||
+			self.discovery_agent_params.session_type == Some(DiscoveryAgentType::Retriever)
+		{
+			return Ok(());
+		}
 		let template = PromptTemplate::new(
             "Answer the user query: {{query}}
 
@@ -105,13 +118,6 @@ Your summary should distill the essential findings and insights from the dataset
 		let executor = AgentExecutor::from_agent(agent).with_memory(memory.into());
 		self.discover_agent = Some(executor);
 		self.template = Some(template);
-		let embedding_model = TextEmbedding::try_new(InitOptions {
-			model_name: EmbeddingModel::AllMiniLML6V2,
-			show_download_progress: true,
-			..Default::default()
-		})?;
-
-		self.embedding_model = Some(embedding_model);
 		Ok(())
 	}
 
