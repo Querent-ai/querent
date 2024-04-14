@@ -8,7 +8,7 @@ use discovery::{start_discovery_service, DiscoveryService};
 use proto::config::NodeConfig;
 use querent::{start_semantic_service, SemanticService};
 use querent_synapse::callbacks::EventType;
-use storage::{create_storages, Storage};
+use storage::{create_secret_store, create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error};
 
@@ -28,6 +28,7 @@ pub struct QuesterServices {
 	pub discovery_service: Option<Arc<dyn DiscoveryService>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
+	pub secret_store: Arc<dyn Storage>,
 }
 
 pub async fn serve_quester(
@@ -72,6 +73,9 @@ pub async fn serve_quester(
 		}
 	});
 
+	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
+	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
+	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
 		cluster: cluster.clone(),
@@ -80,6 +84,7 @@ pub async fn serve_quester(
 		event_storages,
 		index_storages,
 		discovery_service: Some(discovery_service),
+		secret_store,
 	});
 	let rest_server = rest::start_rest_server(
 		rest_listen_addr,

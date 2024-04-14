@@ -105,6 +105,11 @@ pub trait Storage: Send + Sync + 'static {
 		payload: &Vec<f32>,
 		max_results: i32,
 	) -> StorageResult<Vec<DocumentPayload>>;
+	/// Store key value pair
+	async fn store_kv(&self, key: &String, value: &String) -> StorageResult<()>;
+
+	/// Get value for key
+	async fn get_kv(&self, key: &String) -> StorageResult<Option<String>>;
 }
 
 impl Debug for dyn Storage {
