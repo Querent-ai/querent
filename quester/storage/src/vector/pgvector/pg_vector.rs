@@ -271,7 +271,6 @@ impl Storage for PGVector {
 	}
 }
 
-
 table! {
 	use diesel::sql_types::*;
 	use pgvector::sql_types::*;
