@@ -10,7 +10,7 @@ use querent::{start_semantic_service, SemanticService};
 use querent_synapse::callbacks::EventType;
 use storage::{create_secret_store, create_storages, Storage};
 use tokio::sync::oneshot;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use super::node_readiness;
 
@@ -41,6 +41,9 @@ pub async fn serve_quester(
 	let quester_cloud = Quester::new();
 	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
 
+	info!("Serving Querent Node 🚀");
+	info!("Node ID: {}", node_config.node_id);
+	info!("Starting Querent Base 🏁");
 	let semantic_service_bus: MessageBus<SemanticService> =
 		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
 			.await
@@ -73,6 +76,7 @@ pub async fn serve_quester(
 		}
 	});
 
+	info!("Creating storages 🗄️");
 	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
 	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
 	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
@@ -86,6 +90,8 @@ pub async fn serve_quester(
 		discovery_service: Some(discovery_service),
 		secret_store,
 	});
+	info!("Starting REST server 📡: check /api-doc.json for available APIs");
+	info!("Rest server listening on {}", rest_listen_addr);
 	let rest_server = rest::start_rest_server(
 		rest_listen_addr,
 		services.clone(),
@@ -106,6 +112,8 @@ pub async fn serve_quester(
 		}
 	});
 
+	info!("Starting gRPC server 📡");
+	info!("Starting gRPC server on {}", grpc_listen_addr);
 	let grpc_server = grpc::start_grpc_server(
 		grpc_listen_addr,
 		grpc_config.max_message_size,

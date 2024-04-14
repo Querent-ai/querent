@@ -37,7 +37,10 @@ impl Serve {
 		});
 		info!("Starting Querent node");
 		let serve_result = serve_quester(node_config, runtimes_config, shutdown_signal).await?;
-		info!("Querent node stopped: {:?}", serve_result);
+		match serve_result.is_empty() {
+			true => info!("Querent node has shut down"),
+			false => info!("Querent node has shut down with errors"),
+		}
 		Ok(())
 	}
 }
