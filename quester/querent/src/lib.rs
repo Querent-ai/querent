@@ -1,5 +1,5 @@
 pub mod qsource;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
@@ -19,6 +19,7 @@ use querent_synapse::{
 };
 pub use source::*;
 pub mod storage;
+use ::storage::Storage;
 pub use storage::*;
 pub mod indexer;
 pub mod pipeline;
@@ -69,7 +70,16 @@ async def print_querent(config, text: str):
 pub async fn create_querent_synapose_workflow(
 	id: String,
 	request: &SemanticPipelineRequest,
+	secret_store: Arc<dyn Storage>,
 ) -> Result<Workflow, PipelineErrors> {
+	let request_string = serde_json::to_string(request).unwrap();
+	secret_store.store_kv(&id, &request_string).await.map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!(
+			"Failed to store pipeline request in secret store: {}",
+			e
+		))
+	})?;
+	let mut sources_credential_map = HashMap::new();
 	let collector_configs: Vec<CollectorConfig> = request
 		.collectors
 		.iter()
@@ -78,6 +88,8 @@ pub async fn create_querent_synapose_workflow(
 			let config = match &c.backend {
 				Some(proto::semantics::Backend::Gcs(config)) => {
 					backend = "gcs".to_string();
+					let source = format!("gcs://{}", config.bucket.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					let mut map = HashMap::new();
 					map.insert("bucket".to_string(), config.bucket.clone());
 					map.insert("credentials".to_string(), config.credentials.clone());
@@ -86,6 +98,9 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::S3(config)) => {
 					backend = "s3".to_string();
 					let mut map = HashMap::new();
+					let source =
+						format!("s3://{}/{}", config.bucket.clone(), config.region.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("bucket".to_string(), config.bucket.clone());
 					map.insert("region".to_string(), config.region.clone());
 					map.insert("access_key".to_string(), config.access_key.clone());
@@ -95,6 +110,12 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Azure(config)) => {
 					backend = "azure".to_string();
 					let mut map = HashMap::new();
+					let source = format!(
+						"azure://{}/{}",
+						config.container.clone(),
+						config.account_url.clone()
+					);
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("container".to_string(), config.container.clone());
 					map.insert("connection_string".to_string(), config.connection_string.clone());
 					map.insert("account_url".to_string(), config.account_url.clone());
@@ -105,6 +126,8 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Drive(config)) => {
 					backend = "drive".to_string();
 					let mut map = HashMap::new();
+					let source = format!("drive://{}", config.folder_to_crawl.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert(
 						"drive_refresh_token".to_string(),
 						config.drive_refresh_token.to_string(),
@@ -126,6 +149,8 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Dropbox(config)) => {
 					backend = "dropbox".to_string();
 					let mut map = HashMap::new();
+					let source = format!("dropbox://{}", config.folder_path.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("dropbox_app_key".to_string(), config.dropbox_app_key.to_string());
 					map.insert(
 						"dropbox_app_secret".to_string(),
@@ -141,6 +166,8 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Github(config)) => {
 					backend = "github".to_string();
 					let mut map = HashMap::new();
+					let source = format!("github://{}", config.repository.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("github_username".to_string(), config.github_username.to_string());
 					map.insert(
 						"github_access_token".to_string(),
@@ -152,6 +179,8 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Slack(config)) => {
 					backend = "slack".to_string();
 					let mut map = HashMap::new();
+					let source = format!("slack://{}", config.channel_name.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("access_token".to_string(), config.access_token.to_string());
 					map.insert("channel_name".to_string(), config.channel_name.to_string());
 					map.insert("cursor".to_string(), config.cursor.to_string());
@@ -169,6 +198,12 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Jira(config)) => {
 					backend = "jira".to_string();
 					let mut map = HashMap::new();
+					let source = format!(
+						"jira://{}/{}",
+						config.jira_server.clone(),
+						config.jira_project.clone()
+					);
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("jira_server".to_string(), config.jira_server.to_string());
 					map.insert("jira_username".to_string(), config.jira_username.to_string());
 					map.insert("jira_password".to_string(), config.jira_password.to_string());
@@ -192,6 +227,12 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::Email(config)) => {
 					backend = "email".to_string();
 					let mut map = HashMap::new();
+					let source = format!(
+						"email://{}/{}",
+						config.imap_server.clone(),
+						config.imap_folder.clone()
+					);
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("imap_server".to_string(), config.imap_server.to_string());
 					map.insert("imap_port".to_string(), config.imap_port.to_string());
 					map.insert("imap_username".to_string(), config.imap_username.to_string());
@@ -204,6 +245,8 @@ pub async fn create_querent_synapose_workflow(
 				Some(proto::semantics::Backend::News(config)) => {
 					backend = "news".to_string();
 					let mut map = HashMap::new();
+					let source = format!("news://{}", config.query.clone());
+					sources_credential_map.insert(source.clone(), serde_json::to_string(config));
 					map.insert("query".to_string(), config.query.to_string());
 					map.insert("api_key".to_string(), config.api_key.to_string());
 					if !config.language.is_empty() {
@@ -250,6 +293,20 @@ pub async fn create_querent_synapose_workflow(
 		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 			"Invalid number of workflows: one workflow is supported in current version."
 		)));
+	}
+
+	// Store source credentials in secret store
+	for (source, credential) in sources_credential_map {
+		if credential.is_err() {
+			log::error!("Failed to serialize credential: {}", credential.err().unwrap());
+			continue;
+		}
+		secret_store.store_kv(&source, &credential.unwrap()).await.map_err(|e| {
+			return PipelineErrors::InvalidParams(anyhow::anyhow!(
+				"Failed to store source credentials in secret store: {}",
+				e
+			));
+		})?;
 	}
 
 	let current_workflow = request.name.clone().unwrap();
