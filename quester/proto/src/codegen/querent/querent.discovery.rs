@@ -57,8 +57,11 @@ pub struct DiscoveryResponse {
     /// The ID of the discovery session
     #[prost(string, tag = "1")]
     pub session_id: ::prost::alloc::string::String,
+    /// Query or question posed by the user
+    #[prost(string, tag = "2")]
+    pub query: ::prost::alloc::string::String,
     /// The insights discovered based on the user's query
-    #[prost(message, repeated, tag = "2")]
+    #[prost(message, repeated, tag = "3")]
     pub insights: ::prost::alloc::vec::Vec<Insight>,
 }
 /// Request to stop the discovery session

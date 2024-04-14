@@ -79,11 +79,6 @@ impl Actor for DiscoveryAgent {
 
 		self.embedding_model = Some(embedding_model);
 
-		if self.discovery_agent_params.session_type.is_none() ||
-			self.discovery_agent_params.session_type == Some(DiscoveryAgentType::Retriever)
-		{
-			return Ok(());
-		}
 		let template = PromptTemplate::new(
             "Answer the user query: {{query}}
 
@@ -223,6 +218,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		if let Some(DiscoveryAgentType::Retriever) = self.discovery_agent_params.session_type {
 			return Ok(Ok(DiscoveryResponse {
 				session_id: message.session_id,
+				query: message.query.clone(),
 				insights: documents
 					.iter()
 					.map(|doc| proto::discovery::Insight {

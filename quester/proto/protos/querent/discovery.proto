@@ -109,8 +109,10 @@ message DiscoveryRequest {
 message DiscoveryResponse {
   // The ID of the discovery session
   string session_id = 1;
+  // Query or question posed by the user
+  string query = 2;
   // The insights discovered based on the user's query
-  repeated Insight insights = 2;
+  repeated Insight insights = 3;
 }
 
 // Request to stop the discovery session
