@@ -23,8 +23,6 @@ pub use storage::*;
 pub mod indexer;
 pub mod pipeline;
 pub use pipeline::*;
-pub mod query;
-pub use query::*;
 pub mod discovery;
 pub use discovery::*;
 use tracing::info;

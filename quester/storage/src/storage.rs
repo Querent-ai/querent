@@ -83,19 +83,19 @@ pub trait Storage: Send + Sync + 'static {
 	async fn insert_vector(
 		&self,
 		collection_id: String,
-		payload: &Vec<(String, VectorPayload)>,
+		payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()>;
 
 	/// Insert SemanticKnowledgePayload into storage
 	async fn insert_graph(
 		&self,
-		payload: &Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
-		payload: &Vec<(String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
 	/// Similarity search for vectors

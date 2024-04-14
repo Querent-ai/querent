@@ -51,13 +51,14 @@ impl Storage for MilvusStorage {
 	async fn insert_vector(
 		&self,
 		collection_id: String,
-		_payload: &Vec<(String, VectorPayload)>,
+		_payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()> {
 		let collection_name = format!("pipeline_{}", collection_id);
 
-		for (id, payload) in _payload {
-			let result =
-				self.insert_or_create_collection(collection_name.as_str(), id, payload).await;
+		for (id, source, payload) in _payload {
+			let result = self
+				.insert_or_create_collection(collection_name.as_str(), id, source, payload)
+				.await;
 			if let Err(err) = result {
 				log::error!("Vector insertion failed: {:?}", err);
 				return Err(err);
@@ -179,7 +180,7 @@ impl Storage for MilvusStorage {
 
 	async fn insert_graph(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your insert_graph implementation here
 		Ok(())
@@ -187,7 +188,7 @@ impl Storage for MilvusStorage {
 
 	async fn index_knowledge(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your index_triples implementation here
 		Ok(())
@@ -215,17 +216,18 @@ impl MilvusStorage {
 		&self,
 		collection_name: &str, // this is workflow id
 		id: &str,              // this is document id
+		source: &str,          // this is document source
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let collection = self.client.get_collection(collection_name).await;
 		match collection {
 			Ok(collection) => {
 				log::debug!("Collection found: {:?}", collection);
-				self.insert_into_collection(&collection, id, payload).await
+				self.insert_into_collection(&collection, id, source, payload).await
 			},
 			Err(_err) => {
 				log::error!("Error in milvus client: {:?}", _err);
-				self.create_and_insert_collection(collection_name, id, payload).await
+				self.create_and_insert_collection(collection_name, id, source, payload).await
 			},
 		}
 	}
@@ -234,6 +236,7 @@ impl MilvusStorage {
 		&self,
 		collection: &milvus::collection::Collection,
 		id: &str,
+		source: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let has_partition = collection.has_partition(&payload.namespace).await;
@@ -275,6 +278,10 @@ impl MilvusStorage {
 			collection.schema().get_field("document").unwrap(),
 			ValueVec::String(vec![id.to_string()]),
 		);
+		let document_source_field = FieldColumn::new(
+			collection.schema().get_field("document_source").unwrap(),
+			ValueVec::String(vec![source.to_string()]),
+		);
 		let embeddings_field = FieldColumn::new(
 			collection.schema().get_field("embeddings").unwrap(),
 			payload.embeddings.clone(),
@@ -289,6 +296,7 @@ impl MilvusStorage {
 			knowledge_field,
 			relationship_field,
 			document_field,
+			document_source_field,
 			embeddings_field,
 			sentence_field,
 		];
@@ -325,6 +333,7 @@ impl MilvusStorage {
 		&self,
 		collection_name: &str,
 		id: &str,
+		source: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let description = format!("Semantic collection adhering to s->p->o ={:?}", payload.id);
@@ -341,6 +350,7 @@ impl MilvusStorage {
 				"document associated with embedding",
 				280,
 			))
+			.add_field(FieldSchema::new_varchar("document_source", "source of the document", 280))
 			.add_field(FieldSchema::new_float_vector(
 				"embeddings",
 				"semantic vector embeddings",
@@ -359,7 +369,7 @@ impl MilvusStorage {
 				match collection {
 					Ok(collection) => {
 						log::debug!("Collection created: {:?}", collection);
-						self.insert_into_collection(&collection, id, payload).await
+						self.insert_into_collection(&collection, id, source, payload).await
 					},
 					Err(err) => {
 						log::error!("Collection creation failed: {:?}", err);
@@ -415,7 +425,10 @@ mod tests {
 		// Call the insert_vector function with the test data
 		let _result = storage
 			.unwrap()
-			.insert_vector("qflow_id".to_string(), &vec![("test_id".to_string(), payload)])
+			.insert_vector(
+				"qflow_id".to_string(),
+				&vec![("test_id".to_string(), "test_source".to_string(), payload)],
+			)
 			.await;
 
 		// Assert that the result is Ok indicating successful insertion

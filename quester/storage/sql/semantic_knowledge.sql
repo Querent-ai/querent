@@ -7,5 +7,6 @@ CREATE TABLE semantic_knowledge (
     predicate VARCHAR,
     predicate_type VARCHAR,
     sentence TEXT,
-    document_id VARCHAR
+    document_id VARCHAR,
+    document_source VARCHAR
 );

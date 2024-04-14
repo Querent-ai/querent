@@ -131,6 +131,7 @@ impl Source for QSource {
 								timestamp: chrono::Utc::now().timestamp_millis() as f64,
 								payload: "".to_string(),
 								file: "".to_string(),
+								doc_source: "".to_string(),
 							},
 						))
 						.await
@@ -152,6 +153,7 @@ impl Source for QSource {
 								timestamp: chrono::Utc::now().timestamp_millis() as f64,
 								payload: err.to_string(),
 								file: "".to_string(),
+								doc_source: "".to_string(),
 							},
 						))
 						.await

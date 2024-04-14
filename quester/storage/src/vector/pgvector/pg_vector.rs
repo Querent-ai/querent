@@ -33,6 +33,7 @@ use rustls::{
 
 pub struct EmbeddedKnowledge {
 	pub document_id: String,
+	pub document_source: String,
 	pub knowledge: String,
 	pub embeddings: Option<Vector>,
 	pub predicate: String,
@@ -122,7 +123,7 @@ impl Storage for PGVector {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		payload: &Vec<(String, VectorPayload)>,
+		payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -130,9 +131,10 @@ impl Storage for PGVector {
 		})?;
 		conn.transaction::<_, diesel::result::Error, _>(|conn| {
 			async move {
-				for (document_id, item) in payload {
+				for (document_id, source, item) in payload {
 					let form = EmbeddedKnowledge {
 						document_id: document_id.clone(),
+						document_source: source.clone(),
 						embeddings: Some(Vector::from(item.embeddings.clone())),
 						predicate: item.namespace.clone(),
 						knowledge: item.id.clone(),
@@ -171,6 +173,7 @@ impl Storage for PGVector {
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
 			.select((
 				embedded_knowledge::dsl::document_id,
+				embedded_knowledge::dsl::document_source,
 				embedded_knowledge::dsl::knowledge,
 				embedded_knowledge::dsl::embeddings,
 				embedded_knowledge::dsl::predicate,
@@ -179,15 +182,22 @@ impl Storage for PGVector {
 			))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
-			.load::<(String, String, Option<Vector>, String, Option<String>, Option<f64>)>(
+			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(
 				&mut *conn,
 			)
 			.await;
 		match query_result {
 			Ok(result) => {
 				let mut results = Vec::new();
-				for (doc_id, knowledge, _embeddings, predicate, sentence, _cosine_distance) in
-					result
+				for (
+					doc_id,
+					_doc_source,
+					knowledge,
+					_embeddings,
+					predicate,
+					sentence,
+					_cosine_distance,
+				) in result
 				{
 					let mut doc_payload = DocumentPayload::default();
 					doc_payload.doc_id = doc_id;
@@ -224,14 +234,14 @@ impl Storage for PGVector {
 
 	async fn insert_graph(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	async fn index_knowledge(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -278,6 +288,7 @@ table! {
 	embedded_knowledge (id) {
 		id -> Int4,
 		document_id -> Varchar,
+		document_source -> Varchar,
 		knowledge -> Text,
 		embeddings -> Nullable<Vector>,
 		predicate -> Text,

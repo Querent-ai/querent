@@ -47,21 +47,21 @@ impl Storage for SecretStore {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, VectorPayload)>,
+		_payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(()) // Placeholder, add vector insertion logic here
 	}
 
 	async fn insert_graph(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	async fn index_knowledge(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
