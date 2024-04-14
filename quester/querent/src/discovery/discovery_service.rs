@@ -1,10 +1,11 @@
-use crate::discovery_agent::DiscoveryAgent;
+use crate::{discovery_agent::DiscoveryAgent, discovery_searcher::DiscoverySearch};
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
 use proto::{
-	DiscoveryError, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
-	DiscoverySessionResponse, StopDiscoverySessionRequest, StopDiscoverySessionResponse,
+	DiscoveryAgentType, DiscoveryError, DiscoveryRequest, DiscoveryResponse,
+	DiscoverySessionRequest, DiscoverySessionResponse, StopDiscoverySessionRequest,
+	StopDiscoverySessionResponse,
 };
 use querent_synapse::callbacks::EventType;
 use std::{
@@ -19,10 +20,16 @@ struct DiscoverAgentHandle {
 	handle: ActorHandle<DiscoveryAgent>,
 }
 
+struct DiscoverSearchHandle {
+	mailbox: MessageBus<DiscoverySearch>,
+	handle: ActorHandle<DiscoverySearch>,
+}
+
 pub struct DiscoveryAgentService {
 	node_id: String,
 	cluster: Cluster,
 	agent_pipelines: HashMap<String, DiscoverAgentHandle>,
+	searcher_pipelines: HashMap<String, DiscoverSearchHandle>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 }
 
@@ -41,7 +48,13 @@ impl DiscoveryAgentService {
 		cluster: Cluster,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	) -> Self {
-		Self { node_id, cluster, agent_pipelines: HashMap::new(), event_storages }
+		Self {
+			node_id,
+			cluster,
+			agent_pipelines: HashMap::new(),
+			searcher_pipelines: HashMap::new(),
+			event_storages,
+		}
 	}
 }
 
@@ -78,6 +91,24 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 				})?;
 
 			event_storages.extend(extra_events_storage);
+		}
+		if request.session_type.is_none() ||
+			request.session_type.clone().unwrap() == DiscoveryAgentType::Retriever
+		{
+			let search = DiscoverySearch::new(
+				new_uuid.clone(),
+				current_timestamp as u64,
+				event_storages.clone(),
+				request,
+			);
+
+			let (search_messagebus, search) = ctx.spawn_actor().spawn(search);
+
+			let search_handle = DiscoverSearchHandle { mailbox: search_messagebus, handle: search };
+
+			self.searcher_pipelines.insert(new_uuid.clone(), search_handle);
+
+			return Ok(Ok(DiscoverySessionResponse { session_id: new_uuid }));
 		}
 		let agent = DiscoveryAgent::new(
 			new_uuid.clone(),
@@ -121,10 +152,16 @@ impl Handler<StopDiscoverySessionRequest> for DiscoveryAgentService {
 		let agent_handle = self.agent_pipelines.remove(&request.session_id);
 		if let Some(agent_handle) = agent_handle {
 			let _ = agent_handle.handle.kill().await;
-			Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
-		} else {
-			Err(anyhow::anyhow!("Discovery Agent not found").into())
+			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
 		}
+
+		let search_handle = self.searcher_pipelines.remove(&request.session_id);
+		if let Some(search_handle) = search_handle {
+			let _ = search_handle.handle.kill().await;
+			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
+		}
+
+		Err(anyhow::anyhow!("Discovery Session not found").into())
 	}
 }
 
@@ -150,11 +187,29 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 				.unwrap_or_else(|e| e);
 
 			match response {
-				Ok(response) => Ok(Ok(response)),
-				Err(e) => Ok(Err(e)),
+				Ok(response) => return Ok(Ok(response)),
+				Err(e) => return Ok(Err(e)),
 			}
-		} else {
-			Err(anyhow::anyhow!("Discovery Agent not found").into())
 		}
+
+		let search_handle = self.searcher_pipelines.get(&request.session_id);
+		if let Some(search_handle) = search_handle {
+			let response = search_handle
+				.mailbox
+				.ask(request)
+				.await
+				.map_err(|e| {
+					log::error!("Failed to discover insights: {}", e);
+					Err(DiscoveryError::Internal("Failed to discover insights".to_string()))
+				})
+				.unwrap_or_else(|e| e);
+
+			match response {
+				Ok(response) => return Ok(Ok(response)),
+				Err(e) => return Ok(Err(e)),
+			}
+		}
+
+		Err(anyhow::anyhow!("Discovery Session not found").into())
 	}
 }
