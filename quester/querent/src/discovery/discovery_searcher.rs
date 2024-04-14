@@ -139,7 +139,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			insights: documents
 				.iter()
 				.map(|doc| proto::discovery::Insight {
-					title: format!("{} - {}", doc.doc_id, doc.doc_source),
+					title: format!("{} - {}", doc.doc_source, doc.doc_id),
 					description: serde_json::to_string(doc).unwrap(),
 				})
 				.collect(),
