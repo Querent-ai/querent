@@ -1,7 +1,4 @@
-use crate::{
-	discovery_agent::DiscoveryAgent, discovery_searcher::DiscoverySearch,
-	discovery_traverser::DiscoveryTraverser,
-};
+use crate::{discovery_agent::DiscoveryAgent, discovery_searcher::DiscoverySearch};
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
@@ -28,17 +25,11 @@ struct DiscoverSearchHandle {
 	handle: ActorHandle<DiscoverySearch>,
 }
 
-struct DiscoverTraverserHandle {
-	_mailbox: MessageBus<DiscoveryTraverser>,
-	_handle: ActorHandle<DiscoveryTraverser>,
-}
-
 pub struct DiscoveryAgentService {
 	node_id: String,
 	cluster: Cluster,
 	agent_pipelines: HashMap<String, DiscoverAgentHandle>,
 	searcher_pipelines: HashMap<String, DiscoverSearchHandle>,
-	traverser_pipelines: HashMap<String, DiscoverTraverserHandle>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 }
 
@@ -62,7 +53,6 @@ impl DiscoveryAgentService {
 			cluster,
 			agent_pipelines: HashMap::new(),
 			searcher_pipelines: HashMap::new(),
-			traverser_pipelines: HashMap::new(),
 			event_storages,
 		}
 	}
@@ -115,19 +105,6 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 				let search_handle =
 					DiscoverSearchHandle { mailbox: search_messagebus, handle: search };
 				self.searcher_pipelines.insert(new_uuid.clone(), search_handle);
-			},
-			DiscoveryAgentType::Traverser => {
-				let traverser = DiscoveryTraverser::new(
-					new_uuid.clone(),
-					current_timestamp as u64,
-					event_storages.clone(),
-					request.clone(),
-				);
-
-				let (traverser_messagebus, traverser) = ctx.spawn_actor().spawn(traverser);
-				let traverser_handle =
-					DiscoverTraverserHandle { _mailbox: traverser_messagebus, _handle: traverser };
-				self.traverser_pipelines.insert(new_uuid.clone(), traverser_handle);
 			},
 			_ => return Err(anyhow::anyhow!("Invalid session type").into()),
 		}

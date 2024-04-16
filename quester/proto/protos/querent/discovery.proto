@@ -129,11 +129,17 @@ message StopDiscoverySessionResponse {
 
 // Represents an insight discovered from the data
 message Insight {
-  // The title or summary of the insight
-  string title = 1;
+  // The document id of the search result
+  string document = 1;
+   // The document source
+  string source = 2;
+   // The knowledge retrieved from the search result
+  string knowledge = 3;
+   // The sentence retrieved from the search resulty
+  string sentence = 4;
+   // The tags of the search result, comma separated subject, object , predicate
+  string tags = 5;
 
-  // The detailed description or explanation of the insight
-  string description = 2;
 }
 
 // The Discovery service provides a method to query insights from data

@@ -123,7 +123,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 						)
 						.await;
 					match search_results {
-						Ok(results) => {
+						Ok(results) =>
 							for document in results {
 								let tags = format!(
 									"{}, {}, {}",
@@ -131,21 +131,16 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 									document.object.replace('_', " "),
 									document.predicate.replace('_', " ")
 								);
-								let formatted_similarity_score = match document.cosine_distance {
-									Some(distance) => format!("{:.1}", distance),
-									None => "N/A".to_string(), // Handle None case appropriately
+								let formatted_document = proto::discovery::Insight {
+									document: document.doc_id,
+									source: document.doc_source,
+									knowledge: document.knowledge,
+									sentence: document.sentence,
+									tags,
 								};
-								let formatted_document = serde_json::json!({
-									"filename": document.doc_id,
-									"source": document.doc_source,
-									"sentence": document.sentence,
-									"tags": tags,
-									"similarity_score": formatted_similarity_score
-								});
 
 								documents.push(formatted_document);
-							}
-						},
+							},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
 						},
@@ -156,14 +151,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let response = DiscoveryResponse {
 			session_id: message.session_id,
 			query: message.query.clone(),
-			insights: documents
-				.iter()
-				.enumerate()
-				.map(|(index, doc)| proto::discovery::Insight {
-					title: format!("Search Result {}", index + 1),
-					description: serde_json::to_string(doc).unwrap(),
-				})
-				.collect(),
+			insights: documents,
 		};
 
 		Ok(Ok(response))

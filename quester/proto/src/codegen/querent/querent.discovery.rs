@@ -87,12 +87,21 @@ pub struct StopDiscoverySessionResponse {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Insight {
-    /// The title or summary of the insight
+    /// The document id of the search result
     #[prost(string, tag = "1")]
-    pub title: ::prost::alloc::string::String,
-    /// The detailed description or explanation of the insight
+    pub document: ::prost::alloc::string::String,
+    /// The document source
     #[prost(string, tag = "2")]
-    pub description: ::prost::alloc::string::String,
+    pub source: ::prost::alloc::string::String,
+    /// The knowledge retrieved from the search result
+    #[prost(string, tag = "3")]
+    pub knowledge: ::prost::alloc::string::String,
+    /// The sentence retrieved from the search resulty
+    #[prost(string, tag = "4")]
+    pub sentence: ::prost::alloc::string::String,
+    /// The tags of the search result, comma separated subject, object , predicate
+    #[prost(string, tag = "5")]
+    pub tags: ::prost::alloc::string::String,
 }
 /// Generated client implementations.
 pub mod discovery_client {

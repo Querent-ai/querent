@@ -3,7 +3,6 @@ pub mod chain;
 pub mod discovery_agent;
 pub mod discovery_searcher;
 pub mod discovery_service;
-pub mod discovery_traverser;
 pub mod document_loaders;
 pub mod embedding;
 pub mod language_models;
