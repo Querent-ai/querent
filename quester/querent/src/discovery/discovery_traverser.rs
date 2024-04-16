@@ -28,6 +28,18 @@ impl DiscoveryTraverser {
 	) -> Self {
 		Self { agent_id, timestamp, event_storages, discovery_agent_params, embedding_model: None }
 	}
+
+	pub fn get_timestamp(&self) -> u64 {
+		self.timestamp
+	}
+
+	pub fn set_timestamp(&mut self, timestamp: u64) {
+		self.timestamp = timestamp;
+	}
+
+	pub fn get_agent_id(&self) -> String {
+		self.agent_id.clone()
+	}
 }
 
 #[async_trait]
@@ -71,7 +83,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverser {
 	async fn handle(
 		&mut self,
 		message: DiscoveryRequest,
-		ctx: &ActorContext<Self>,
+		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		// First search in the vector database
 		if self.embedding_model.is_none() {
@@ -79,7 +91,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverser {
 				"Discovery agent embedding model is not initialized".to_string(),
 			)));
 		}
-		println!("---------------------------------INSIDEEEEEEEEEEEEEEE");
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
@@ -107,8 +118,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverser {
 		}
 
 		// Second search function goes here
-		// Example:
-		// let second_search_results = second_search_function(&documents);
 
 		Ok(Ok(DiscoveryResponse {
 			session_id: message.session_id,
