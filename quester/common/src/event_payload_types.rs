@@ -9,6 +9,7 @@ pub struct DocumentPayload {
 	pub subject: String,
 	pub object: String,
 	pub predicate: String,
+	pub cosine_distance: Option<f64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
