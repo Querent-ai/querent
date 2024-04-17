@@ -18,6 +18,7 @@ pub struct VectorPayload {
 	pub size: u64,
 	pub namespace: String,
 	pub sentence: Option<String>,
+	pub document_source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

@@ -420,6 +420,7 @@ mod tests {
 			size: 10,
 			embeddings: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
 			sentence: Some("test_sentence".to_string()),
+			document_source: Some("file://folder".to_string()),
 		};
 
 		// Call the insert_vector function with the test data
