@@ -66,7 +66,6 @@ impl Actor for DiscoveryAgentService {
 		()
 	}
 }
-
 #[async_trait]
 impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 	type Reply = Result<DiscoverySessionResponse, DiscoveryError>;
@@ -92,36 +91,23 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 
 			event_storages.extend(extra_events_storage);
 		}
-		if request.session_type.is_none() ||
-			request.session_type.clone().unwrap() == DiscoveryAgentType::Retriever
-		{
-			let search = DiscoverySearch::new(
-				new_uuid.clone(),
-				current_timestamp as u64,
-				event_storages.clone(),
-				request,
-			);
 
-			let (search_messagebus, search) = ctx.spawn_actor().spawn(search);
+		match request.session_type.clone().unwrap_or(DiscoveryAgentType::Retriever) {
+			DiscoveryAgentType::Retriever => {
+				let search = DiscoverySearch::new(
+					new_uuid.clone(),
+					current_timestamp as u64,
+					event_storages.clone(),
+					request.clone(),
+				);
 
-			let search_handle = DiscoverSearchHandle { mailbox: search_messagebus, handle: search };
-
-			self.searcher_pipelines.insert(new_uuid.clone(), search_handle);
-
-			return Ok(Ok(DiscoverySessionResponse { session_id: new_uuid }));
+				let (search_messagebus, search) = ctx.spawn_actor().spawn(search);
+				let search_handle =
+					DiscoverSearchHandle { mailbox: search_messagebus, handle: search };
+				self.searcher_pipelines.insert(new_uuid.clone(), search_handle);
+			},
+			_ => return Err(anyhow::anyhow!("Invalid session type").into()),
 		}
-		let agent = DiscoveryAgent::new(
-			new_uuid.clone(),
-			current_timestamp as u64,
-			self.event_storages.clone(),
-			request,
-		);
-
-		let (agent_messagebus, agent) = ctx.spawn_actor().spawn(agent);
-
-		let agent_handle = DiscoverAgentHandle { mailbox: agent_messagebus, handle: agent };
-
-		self.agent_pipelines.insert(new_uuid.clone(), agent_handle);
 
 		Ok(Ok(DiscoverySessionResponse { session_id: new_uuid }))
 	}

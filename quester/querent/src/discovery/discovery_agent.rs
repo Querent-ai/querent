@@ -18,10 +18,7 @@ use proto::{
 	DiscoveryAgentType, DiscoveryError,
 };
 use querent_synapse::callbacks::EventType;
-use std::{
-	collections::{HashMap, HashSet},
-	sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
 
@@ -184,7 +181,6 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
 		let mut documents = Vec::new();
-		let mut unique_docs = HashSet::new();
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
@@ -197,16 +193,22 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 						.await;
 					match search_results {
 						Ok(results) =>
-							for result in results {
-								let doc_tuple = (result.doc_id.clone(), result.sentence.clone());
-								if unique_docs.insert(doc_tuple) {
-									let doc_json_string = serde_json::json!({
-										"doc_id": result.doc_id,
-										"sentence": result.sentence
-									})
-									.to_string();
-									documents.push(doc_json_string);
-								}
+							for document in results {
+								let tags = format!(
+									"{}, {}, {}",
+									document.subject.replace('_', " "),
+									document.object.replace('_', " "),
+									document.predicate.replace('_', " ")
+								);
+								let formatted_document = proto::discovery::Insight {
+									document: document.doc_id,
+									source: document.doc_source,
+									knowledge: document.knowledge,
+									sentence: document.sentence,
+									tags,
+								};
+
+								documents.push(formatted_document);
 							},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
@@ -219,13 +221,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 			return Ok(Ok(DiscoveryResponse {
 				session_id: message.session_id,
 				query: message.query.clone(),
-				insights: documents
-					.iter()
-					.map(|doc| proto::discovery::Insight {
-						title: message.query.clone(),
-						description: doc.clone(),
-					})
-					.collect(),
+				insights: documents,
 			}));
 		}
 		let input_variables = prompt_args! {
@@ -240,12 +236,17 @@ impl Handler<DiscoveryRequest> for DiscoveryAgent {
 			"input" => result,
 		};
 		match current_agent.invoke(input_query).await {
-			Ok(result) => {
+			Ok(_result) => {
 				let mut response = DiscoveryResponse::default();
 				response.session_id = message.session_id;
 				response.insights = vec![];
-				let insight =
-					proto::discovery::Insight { title: message.query.clone(), description: result };
+				let insight = proto::discovery::Insight {
+					document: message.query.clone(),
+					source: "".to_string(),
+					knowledge: "".to_string(),
+					sentence: "".to_string(),
+					tags: "".to_string(),
+				};
 				response.insights.push(insight);
 				Ok(Ok(response))
 			},

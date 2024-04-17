@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult},
-	QueryDsl,
+	ExpressionMethods, QueryDsl,
 };
 
 use diesel_async::{
@@ -180,6 +180,7 @@ impl Storage for PGVector {
 				embedded_knowledge::dsl::sentence,
 				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
+			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(
@@ -191,12 +192,12 @@ impl Storage for PGVector {
 				let mut results = Vec::new();
 				for (
 					doc_id,
-					_doc_source,
+					doc_source,
 					knowledge,
 					_embeddings,
 					predicate,
 					sentence,
-					_cosine_distance,
+					cosine_distance,
 				) in result
 				{
 					let mut doc_payload = DocumentPayload::default();
@@ -212,7 +213,9 @@ impl Storage for PGVector {
 							"Knowledge triple not in correct format: {:?}",
 							doc_payload.knowledge
 						);
-					}
+					};
+					doc_payload.doc_source = doc_source;
+					doc_payload.cosine_distance = cosine_distance;
 					doc_payload.predicate = predicate;
 					if let Some(sentence_value) = sentence {
 						doc_payload.sentence = sentence_value;

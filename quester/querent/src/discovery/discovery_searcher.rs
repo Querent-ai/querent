@@ -123,9 +123,24 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 						)
 						.await;
 					match search_results {
-						Ok(results) => {
-							documents.extend(results);
-						},
+						Ok(results) =>
+							for document in results {
+								let tags = format!(
+									"{}, {}, {}",
+									document.subject.replace('_', " "),
+									document.object.replace('_', " "),
+									document.predicate.replace('_', " ")
+								);
+								let formatted_document = proto::discovery::Insight {
+									document: document.doc_id,
+									source: document.doc_source,
+									knowledge: document.knowledge,
+									sentence: document.sentence,
+									tags,
+								};
+
+								documents.push(formatted_document);
+							},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
 						},
@@ -133,16 +148,12 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 				}
 			}
 		}
-		Ok(Ok(DiscoveryResponse {
+		let response = DiscoveryResponse {
 			session_id: message.session_id,
 			query: message.query.clone(),
-			insights: documents
-				.iter()
-				.map(|doc| proto::discovery::Insight {
-					title: format!("{} - {}", doc.doc_source, doc.doc_id),
-					description: serde_json::to_string(doc).unwrap(),
-				})
-				.collect(),
-		}))
+			insights: documents,
+		};
+
+		Ok(Ok(response))
 	}
 }
