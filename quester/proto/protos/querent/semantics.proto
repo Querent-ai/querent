@@ -47,6 +47,14 @@ message SampleEntities {
   repeated string entities = 1;
 }
 
+message FixedRelationship {
+  repeated string relationships = 1;
+}
+
+message SampleRelationship {
+  repeated string relationships = 1;
+}
+
 message WorkflowContract {
   optional string ner_model_name = 1;
   optional bool enable_filtering = 2;
@@ -60,6 +68,8 @@ message WorkflowContract {
   optional int32 min_cluster_size = 10;
   optional int32 min_samples = 11;
   optional float cluster_persistence_threshold = 12;
+  FixedRelationship fixed_relationships = 13;
+  SampleRelationship sample_relationships = 14;
 }
 
 // LLamaConfig holds configuration for LLama workflows.
