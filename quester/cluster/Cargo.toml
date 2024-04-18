@@ -1,6 +1,6 @@
 [package]
 name = "cluster"
-version = "3.0.1"
+version = "3.0.3"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"

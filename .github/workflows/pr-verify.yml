@@ -84,7 +84,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [verify, test, lint, generate-docs]
+    needs: [verify, test, lint]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -107,49 +107,49 @@ jobs:
           target: x86_64-unknown-linux-gnu
       - name: Build
         run: cd quester && make build
-  generate-docs:
-    name: Generate quester rust docs
-    runs-on: ubuntu-latest
-    needs: [verify]
-    permissions:
-      contents: read
-      packages: write
-      pages: write
-      id-token: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Install protoc
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-      - name: Install Rust Toolchain
-        uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
-        with:
-          toolchain: nightly
-          default: true
-          profile: minimal
-          target: x86_64-unknown-linux-gnu
+  # generate-docs:
+  #   name: Generate quester rust docs
+  #   runs-on: ubuntu-latest
+  #   needs: [verify]
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #     pages: write
+  #     id-token: write
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #     - name: Install protoc
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y protobuf-compiler
+  #     - name: Install Rust Toolchain
+  #       uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
+  #       with:
+  #         toolchain: nightly
+  #         default: true
+  #         profile: minimal
+  #         target: x86_64-unknown-linux-gnu
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Build Docs
-        run: |
-          cd quester && RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo +nightly doc --no-deps --all-features
-      - name: Fix file permissions
-        shell: sh
-        run: |
-          chmod -c -R +rX "quester/target/doc" |
-          while read line; do
-              echo "::warning title=Invalid file permissions automatically fixed::$line"
-          done
+  #     - name: Setup Pages
+  #       uses: actions/configure-pages@v3
+  #     - name: Build Docs
+  #       run: |
+  #         cd quester && RUSTDOCFLAGS="--enable-index-page -Zunstable-options" cargo +nightly doc --no-deps --all-features
+  #     - name: Fix file permissions
+  #       shell: sh
+  #       run: |
+  #         chmod -c -R +rX "quester/target/doc" |
+  #         while read line; do
+  #             echo "::warning title=Invalid file permissions automatically fixed::$line"
+  #         done
 
-      - name: Upload Docs
-        uses: actions/upload-pages-artifact@v1
-        with:
-          path: ./quester/target/doc
-      - name: Deploy Docs
-        uses: actions/deploy-pages@v2
-        id: deployment
+  #     - name: Upload Docs
+  #       uses: actions/upload-pages-artifact@v1
+  #       with:
+  #         path: ./quester/target/doc
+  #     - name: Deploy Docs
+  #       uses: actions/deploy-pages@v2
+  #       id: deployment
