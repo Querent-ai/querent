@@ -68,8 +68,18 @@ impl Storage for SecretStore {
 		Ok(())
 	}
 
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		_payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
 	async fn similarity_search_l2(
 		&self,
+		_session_id: String,
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,

@@ -11,6 +11,8 @@ use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
 
+use super::insert_discovered_knowledge_async;
+
 pub struct DiscoverySearch {
 	agent_id: String,
 	timestamp: u64,
@@ -117,13 +119,15 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 				for storage in storage.iter() {
 					let search_results = storage
 						.similarity_search_l2(
+							message.session_id.clone(),
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
 							10,
 						)
 						.await;
 					match search_results {
-						Ok(results) =>
+						Ok(results) => {
+							let res = results.clone();
 							for document in results {
 								let tags = format!(
 									"{}, {}, {}",
@@ -140,7 +144,10 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 								};
 
 								documents.push(formatted_document);
-							},
+							}
+
+							tokio::spawn(insert_discovered_knowledge_async(storage.clone(), res));
+						},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);
 						},
@@ -151,7 +158,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let response = DiscoveryResponse {
 			session_id: message.session_id,
 			query: message.query.clone(),
-			insights: documents,
+			insights: documents.clone(),
 		};
 
 		Ok(Ok(response))

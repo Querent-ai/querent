@@ -86,6 +86,12 @@ pub trait Storage: Send + Sync + 'static {
 		payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()>;
 
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()>;
+
 	/// Insert SemanticKnowledgePayload into storage
 	async fn insert_graph(
 		&self,
@@ -103,6 +109,7 @@ pub trait Storage: Send + Sync + 'static {
 	/// Similarity search for vectors
 	async fn similarity_search_l2(
 		&self,
+		session_id: String,
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,

@@ -69,6 +69,7 @@ impl Storage for MilvusStorage {
 
 	async fn similarity_search_l2(
 		&self,
+		_session_id: String,
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
@@ -193,6 +194,15 @@ impl Storage for MilvusStorage {
 		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your index_triples implementation here
+		Ok(())
+	}
+
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		_payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
 		Ok(())
 	}
 

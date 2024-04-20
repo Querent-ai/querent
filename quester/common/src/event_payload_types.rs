@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct DocumentPayload {
 	pub doc_id: String,
 	pub doc_source: String,
@@ -10,6 +10,8 @@ pub struct DocumentPayload {
 	pub object: String,
 	pub predicate: String,
 	pub cosine_distance: Option<f64>,
+	pub query_embedding: Option<Vec<f32>>,
+	pub session_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

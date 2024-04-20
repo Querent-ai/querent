@@ -40,6 +40,39 @@ pub struct EmbeddedKnowledge {
 	pub sentence: Option<String>,
 	pub collection_id: Option<String>,
 }
+
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[diesel(table_name = discovered_knowledge)]
+pub struct DiscoveredKnowledge {
+	pub doc_id: String,
+	pub doc_source: String,
+	pub sentence: String,
+	pub knowledge: String,
+	pub subject: String,
+	pub object: String,
+	pub predicate: String,
+	pub cosine_distance: Option<f64>,
+	pub query_embedding: Option<Vec<f32>>,
+	pub session_id: Option<String>,
+}
+
+impl DiscoveredKnowledge {
+	pub fn from_document_payload(payload: DocumentPayload) -> Self {
+		DiscoveredKnowledge {
+			doc_id: payload.doc_id,
+			doc_source: payload.doc_source,
+			sentence: payload.sentence,
+			knowledge: payload.knowledge,
+			subject: payload.subject,
+			object: payload.object,
+			predicate: payload.predicate,
+			cosine_distance: payload.cosine_distance,
+			query_embedding: payload.query_embedding,
+			session_id: payload.session_id,
+		}
+	}
+}
+
 pub struct PGVector {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
@@ -160,8 +193,39 @@ impl Storage for PGVector {
 		Ok(())
 	}
 
+	async fn insert_discovered_knowledge(
+		&self,
+		payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		conn.transaction::<_, diesel::result::Error, _>(|conn| {
+			async move {
+				for item in payload {
+					let form = DiscoveredKnowledge::from_document_payload(item.clone());
+					diesel::insert_into(discovered_knowledge::dsl::discovered_knowledge)
+						.values(form)
+						.execute(conn)
+						.await?;
+				}
+				Ok(())
+			}
+			.scope_boxed()
+		})
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		Ok(())
+	}
+
 	async fn similarity_search_l2(
 		&self,
+		session_id: String,
 		_collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
@@ -222,7 +286,8 @@ impl Storage for PGVector {
 					if let Some(sentence_value) = sentence {
 						doc_payload.sentence = sentence_value;
 					}
-
+					doc_payload.session_id = Some(session_id.clone());
+					doc_payload.query_embedding = Some(payload.clone());
 					results.push(doc_payload);
 				}
 				Ok(results)
@@ -283,6 +348,26 @@ table! {
 		predicate -> Text,
 		sentence -> Nullable<Text>,
 		collection_id -> Nullable<Text>,
+	}
+}
+
+table! {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	discovered_knowledge (id) {
+		id -> Int4,
+		doc_id -> Varchar,
+		doc_source -> Varchar,
+		sentence -> Text,
+		knowledge -> Text,
+		subject -> Text,
+		object -> Text,
+		predicate -> Text,
+		cosine_distance -> Nullable<Float8>,
+		query -> Nullable<Text>,
+		query_embedding -> Nullable<Array<Float4>>,
+		session_id -> Nullable<Text>,
 	}
 }
 
