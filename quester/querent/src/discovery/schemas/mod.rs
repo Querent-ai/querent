@@ -21,3 +21,6 @@ pub use tools_openai_like::*;
 
 mod stream;
 pub use stream::*;
+
+mod simple_kg;
+pub use simple_kg::*;

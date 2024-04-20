@@ -135,14 +135,14 @@ impl Handler<IndexerKnowledge> for Indexer {
 	) -> Result<(), ActorExitStatus> {
 		let knowledge = _message.triples;
 		for storage in &self.index_storages {
-			storage.index_knowledge(&knowledge).await.map_err(|e| {
+			storage.index_knowledge(self.qflow_id.clone(), &knowledge).await.map_err(|e| {
 				log::error!("Error indexing knowledge: {:?}", e);
 				ActorExitStatus::Failure(anyhow::anyhow!("Failed to index: {:?}", e).into())
 			})?;
 		}
 		// collect statistics
 		let mut doc_map: HashMap<String, Vec<SemanticKnowledgePayload>> = HashMap::new();
-		for (doc, payload) in knowledge {
+		for (doc, _source, payload) in knowledge {
 			doc_map.entry(doc.clone()).or_insert_with(Vec::new).push(payload);
 		}
 		doc_map.iter().for_each(|(_doc, triples)| {

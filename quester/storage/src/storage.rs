@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -15,8 +15,12 @@ pub enum StorageErrorKind {
 	CollectionCreation,
 	/// Error in collection building.
 	CollectionBuilding,
+	/// Error in collection retrieval.
+	CollectionRetrieval,
 	/// Insertion error.
 	Insertion,
+	/// Query error.
+	Query,
 	/// PartitionCreation error for vector storage.
 	PartitionCreation,
 	/// Database error.
@@ -33,6 +37,8 @@ pub enum StorageErrorKind {
 	Timeout,
 	/// Io error.
 	Io,
+	/// A index creation error for pgvector.
+	IndexCreation,
 }
 
 /// Generic StorageError.
@@ -77,21 +83,37 @@ pub trait Storage: Send + Sync + 'static {
 	async fn insert_vector(
 		&self,
 		collection_id: String,
-		payload: &Vec<(String, VectorPayload)>,
+		payload: &Vec<(String, String, VectorPayload)>,
+	) -> StorageResult<()>;
+
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		payload: &Vec<DocumentPayload>,
 	) -> StorageResult<()>;
 
 	/// Insert SemanticKnowledgePayload into storage
 	async fn insert_graph(
 		&self,
-		payload: &Vec<(String, SemanticKnowledgePayload)>,
+		collection_id: String,
+		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
-		payload: &Vec<(String, SemanticKnowledgePayload)>,
+		collection_id: String,
+		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
+	/// Similarity search for vectors
+	async fn similarity_search_l2(
+		&self,
+		session_id: String,
+		collection_id: String,
+		payload: &Vec<f32>,
+		max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>>;
 	/// Store key value pair
 	async fn store_kv(&self, key: &String, value: &String) -> StorageResult<()>;
 

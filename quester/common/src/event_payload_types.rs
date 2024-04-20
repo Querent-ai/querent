@@ -1,5 +1,19 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
+pub struct DocumentPayload {
+	pub doc_id: String,
+	pub doc_source: String,
+	pub sentence: String,
+	pub knowledge: String,
+	pub subject: String,
+	pub object: String,
+	pub predicate: String,
+	pub cosine_distance: Option<f64>,
+	pub query_embedding: Option<Vec<f32>>,
+	pub session_id: Option<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct VectorPayload {
 	pub id: String,
@@ -7,6 +21,7 @@ pub struct VectorPayload {
 	pub size: u64,
 	pub namespace: String,
 	pub sentence: Option<String>,
+	pub document_source: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -25,7 +40,7 @@ impl SemanticKnowledgePayload {
 		format!(
 			"MERGE (n1:`{entity_type1}` {{name: $entity1}}) \
 			MERGE (n2:`{entity_type2}` {{name: $entity2}}) \
-			MERGE (n1)-[:`{predicate}` {{sentence: $sentence, document_id: $document_id, predicate_type: $predicate_type}}]->(n2)",
+			MERGE (n1)-[:`{predicate}` {{sentence: $sentence, document_id: $document_id, document_source: $document_source, predicate_type: $predicate_type}}]->(n2)",
 			entity_type1 = &self.subject_type,
 			predicate = &self.predicate,
 			entity_type2 = &self.object_type,

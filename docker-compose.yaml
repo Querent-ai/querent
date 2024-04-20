@@ -71,6 +71,8 @@ services:
       - POSTGRES_USER=querent
       - POSTGRES_PASSWORD=querent
       - POSTGRES_DB=querent_test
+    volumes:
+      - ./quester/storage/sql/:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
     networks:

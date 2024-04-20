@@ -1,9 +1,9 @@
 use discovery::{error::DiscoveryError, DiscoveryService};
 use proto::{
 	discovery::{
-		DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionResponse,
-		Insight, MilvusConfig, Neo4jConfig, PostgresConfig, StopDiscoverySessionRequest,
-		StopDiscoverySessionResponse, StorageConfig,
+		DiscoveryAgentType, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
+		DiscoverySessionResponse, Insight, MilvusConfig, Neo4jConfig, PostgresConfig,
+		StopDiscoverySessionRequest, StopDiscoverySessionResponse, StorageConfig,
 	},
 	semantics::StorageType,
 };
@@ -35,6 +35,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		StorageType,
 		StopDiscoverySessionRequest,
 		StopDiscoverySessionResponse,
+		DiscoveryAgentType,
 	),)
 )]
 pub struct DiscoveryApi;

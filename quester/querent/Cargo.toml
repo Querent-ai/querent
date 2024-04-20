@@ -1,6 +1,6 @@
 [package]
 name = "querent"
-version = "3.0.1"
+version = "3.0.3"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -46,6 +46,8 @@ readability = { workspace = true }
 text-splitter = { workspace = true }
 reqwest = { workspace = true }
 urlencoding = { workspace = true }
+tokenizers = { workspace = true }
+fastembed = "3"
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }

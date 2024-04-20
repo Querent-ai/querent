@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use redb::{Database, TableDefinition};
 use std::path::PathBuf;
 
@@ -47,23 +47,45 @@ impl Storage for SecretStore {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, VectorPayload)>,
+		_payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(()) // Placeholder, add vector insertion logic here
 	}
 
 	async fn insert_graph(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_collection_id: String,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	async fn index_knowledge(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_collection_id: String,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
+	}
+
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		_payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
+	async fn similarity_search_l2(
+		&self,
+		_session_id: String,
+		_collection_id: String,
+		_payload: &Vec<f32>,
+		_max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		// Implement Neo4j similarity search logic (if needed)
+		Ok(vec![])
 	}
 
 	/// Store key value pair
