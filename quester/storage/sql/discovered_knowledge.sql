@@ -11,5 +11,5 @@ CREATE TABLE discovered_knowledge(
     predicate TEXT,
     cosine_distance FLOAT8,
     query_embedding FLOAT4[],
-    session_id TEXT
+    session_id VARCHAR
 );

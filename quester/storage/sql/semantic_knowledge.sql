@@ -9,4 +9,5 @@ CREATE TABLE semantic_knowledge (
     sentence TEXT,
     document_id VARCHAR,
     document_source VARCHAR
+    collection_id VARCHAR
 );
