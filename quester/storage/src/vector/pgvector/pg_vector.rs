@@ -38,6 +38,7 @@ pub struct EmbeddedKnowledge {
 	pub embeddings: Option<Vector>,
 	pub predicate: String,
 	pub sentence: Option<String>,
+	pub collection_id: Option<String>,
 }
 pub struct PGVector {
 	pub pool: ActualDbPool,
@@ -139,6 +140,7 @@ impl Storage for PGVector {
 						predicate: item.namespace.clone(),
 						knowledge: item.id.clone(),
 						sentence: item.sentence.clone(),
+						collection_id: Some(_collection_id.clone()),
 					};
 					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
@@ -237,6 +239,7 @@ impl Storage for PGVector {
 
 	async fn insert_graph(
 		&self,
+		_collection_id: String,
 		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
@@ -244,27 +247,10 @@ impl Storage for PGVector {
 
 	async fn index_knowledge(
 		&self,
+		_collection_id: String,
 		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
-		let mut conn = self.pool.get().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-
-		// Directly attempt to create the index
-		let create_index_result = diesel::sql_query(
-			"CREATE INDEX IF NOT EXISTS embeddings_index ON public.embedded_knowledge USING hnsw (embeddings vector_cosine_ops)"
-		)
-		.execute(&mut *conn)
-		.await;
-
-		match create_index_result {
-			Ok(_) => Ok(()),
-			Err(e) => Err(StorageError {
-				kind: StorageErrorKind::IndexCreation,
-				source: Arc::new(anyhow::Error::from(e)),
-			}),
-		}
+		Ok(())
 	}
 
 	/// Store key value pair
@@ -296,6 +282,7 @@ table! {
 		embeddings -> Nullable<Vector>,
 		predicate -> Text,
 		sentence -> Nullable<Text>,
+		collection_id -> Nullable<Text>,
 	}
 }
 

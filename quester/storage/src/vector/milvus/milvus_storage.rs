@@ -180,6 +180,7 @@ impl Storage for MilvusStorage {
 
 	async fn insert_graph(
 		&self,
+		_collection_id: String,
 		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your insert_graph implementation here
@@ -188,6 +189,7 @@ impl Storage for MilvusStorage {
 
 	async fn index_knowledge(
 		&self,
+		_collection_id: String,
 		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your index_triples implementation here

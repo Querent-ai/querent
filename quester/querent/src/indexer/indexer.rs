@@ -135,7 +135,7 @@ impl Handler<IndexerKnowledge> for Indexer {
 	) -> Result<(), ActorExitStatus> {
 		let knowledge = _message.triples;
 		for storage in &self.index_storages {
-			storage.index_knowledge(&knowledge).await.map_err(|e| {
+			storage.index_knowledge(self.qflow_id.clone(), &knowledge).await.map_err(|e| {
 				log::error!("Error indexing knowledge: {:?}", e);
 				ActorExitStatus::Failure(anyhow::anyhow!("Failed to index: {:?}", e).into())
 			})?;

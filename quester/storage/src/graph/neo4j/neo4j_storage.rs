@@ -63,6 +63,7 @@ impl Storage for Neo4jStorage {
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
+		_collection_id: String,
 		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
@@ -80,6 +81,7 @@ impl Storage for Neo4jStorage {
 
 	async fn insert_graph(
 		&self,
+		_collection_id: String,
 		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let mut txn = self.graph.start_txn().await.map_err(|err| {
@@ -101,6 +103,7 @@ impl Storage for Neo4jStorage {
 				("sentence", data.sentence.clone()),
 				("document_id", id.clone()),
 				("document_source", source.clone()),
+				("collection_id", _collection_id.clone()),
 			];
 
 			let parameterized_query = Query::new(cypher_query).params(params);
@@ -199,6 +202,7 @@ mod tests {
 		// 			object_type: "person".to_string(),
 		// 			object: "bob".to_string(),
 		// 			sentence: "alice likes that bob".to_string(),
+		//			collection_id: "test".to_string(),
 		// 		},
 		// 	),
 		// 	// Add more test data as needed

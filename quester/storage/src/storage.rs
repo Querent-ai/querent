@@ -89,12 +89,14 @@ pub trait Storage: Send + Sync + 'static {
 	/// Insert SemanticKnowledgePayload into storage
 	async fn insert_graph(
 		&self,
+		collection_id: String,
 		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
+		collection_id: String,
 		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
