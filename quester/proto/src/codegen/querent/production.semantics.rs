@@ -113,9 +113,9 @@ pub struct WorkflowContract {
     #[prost(float, optional, tag = "12")]
     pub cluster_persistence_threshold: ::core::option::Option<f32>,
     #[prost(message, optional, tag = "13")]
-    pub fixed_relationship: ::core::option::Option<FixedRelationship>,
+    pub fixed_relationships: ::core::option::Option<FixedRelationship>,
     #[prost(message, optional, tag = "14")]
-    pub sample_relationship: ::core::option::Option<SampleRelationship>,
+    pub sample_relationships: ::core::option::Option<SampleRelationship>,
 }
 /// LLamaConfig holds configuration for LLama workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
