@@ -52,7 +52,7 @@ pub struct DiscoveredKnowledge {
 	pub object: String,
 	pub predicate: String,
 	pub cosine_distance: Option<f64>,
-	pub query_embedding: Option<Vec<f32>>,
+	pub query_embedding: Option<Vector>,
 	pub session_id: Option<String>,
 }
 
@@ -67,7 +67,7 @@ impl DiscoveredKnowledge {
 			object: payload.object,
 			predicate: payload.predicate,
 			cosine_distance: payload.cosine_distance,
-			query_embedding: payload.query_embedding,
+			query_embedding: Some(Vector::from(payload.query_embedding.unwrap_or_default())),
 			session_id: payload.session_id,
 		}
 	}
@@ -366,7 +366,7 @@ table! {
 		predicate -> Text,
 		cosine_distance -> Nullable<Float8>,
 		query -> Nullable<Text>,
-		query_embedding -> Nullable<Array<Float4>>,
+		query_embedding -> Nullable<Vector>,
 		session_id -> Nullable<Text>,
 	}
 }
