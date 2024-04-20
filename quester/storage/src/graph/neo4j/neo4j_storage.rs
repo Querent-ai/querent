@@ -1,6 +1,6 @@
 use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
 use proto::semantics::Neo4jConfig;
 use std::sync::Arc;
@@ -54,23 +54,45 @@ impl Storage for Neo4jStorage {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, VectorPayload)>,
+		_payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()> {
 		// Implement Neo4j vector insertion logic (if needed)
+		Ok(())
+	}
+
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		_payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
 		Ok(())
 	}
 
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_collection_id: String,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
 
+	async fn similarity_search_l2(
+		&self,
+		_session_id: String,
+		_collection_id: String,
+		_payload: &Vec<f32>,
+		_max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		// Implement Neo4j similarity search logic (if needed)
+		Ok(vec![])
+	}
+
 	async fn insert_graph(
 		&self,
-		payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_collection_id: String,
+		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let mut txn = self.graph.start_txn().await.map_err(|err| {
 			log::error!("Neo4j transaction creation failed: {:?}", err);
@@ -79,7 +101,7 @@ impl Storage for Neo4jStorage {
 				source: Arc::new(anyhow::Error::from(err)),
 			}
 		})?;
-		for (_id, data) in payload {
+		for (id, source, data) in payload {
 			let cypher_query = data.to_cypher_query();
 			let params: Vec<(&str, String)> = vec![
 				("entity_type1", data.subject_type.clone()),
@@ -89,7 +111,9 @@ impl Storage for Neo4jStorage {
 				("entity_type2", data.object_type.clone()),
 				("entity2", data.object.clone()),
 				("sentence", data.sentence.clone()),
-				("document_id", _id.clone()),
+				("document_id", id.clone()),
+				("document_source", source.clone()),
+				("collection_id", _collection_id.clone()),
 			];
 
 			let parameterized_query = Query::new(cypher_query).params(params);
@@ -188,6 +212,7 @@ mod tests {
 		// 			object_type: "person".to_string(),
 		// 			object: "bob".to_string(),
 		// 			sentence: "alice likes that bob".to_string(),
+		//			collection_id: "test".to_string(),
 		// 		},
 		// 	),
 		// 	// Add more test data as needed

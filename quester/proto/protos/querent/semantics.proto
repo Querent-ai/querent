@@ -84,6 +84,7 @@ message IngestedTokens {
   string file = 1;
   repeated string data = 2;
   bool is_token_stream = 3;
+  string doc_source = 4;
 }
 
 message SendIngestedTokens {

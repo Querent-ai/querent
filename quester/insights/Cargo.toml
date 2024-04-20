@@ -1,6 +1,6 @@
 [package]
 name = "discovery"
-version = "3.0.1"
+version = "3.0.3"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -15,6 +15,7 @@ bytesize = { workspace = true }
 querent-synapse = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }
+actors = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 milvus-sdk-rust= { workspace = true }
@@ -38,3 +39,6 @@ chrono = { workspace = true }
 tonic = { workspace = true }
 tower = { workspace = true }
 storage = { workspace = true }
+querent = { workspace = true }
+uuid = { workspace = true }
+cluster = { workspace = true }

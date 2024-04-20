@@ -110,7 +110,11 @@ impl Handler<ContextualTriples> for StorageMapper {
 					let storage_clone = storage.clone();
 					let storage_items = message.clone().event_payload();
 					// Spawn a task for each storage insertion
-					tokio::spawn(insert_graph_async(storage_clone, storage_items));
+					tokio::spawn(insert_graph_async(
+						self.qflow_id.clone(),
+						storage_clone,
+						storage_items,
+					));
 				}
 			}
 		}
@@ -152,10 +156,11 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 }
 
 async fn insert_graph_async(
+	collection_id: String,
 	storage: Arc<dyn Storage>,
-	storage_items: Vec<(String, SemanticKnowledgePayload)>,
+	storage_items: Vec<(String, String, SemanticKnowledgePayload)>,
 ) -> Result<(), ActorExitStatus> {
-	let upsert_result = storage.insert_graph(&storage_items).await;
+	let upsert_result = storage.insert_graph(collection_id, &storage_items).await;
 	match upsert_result {
 		Ok(()) => {
 			// Increment counters if insertion is successful
@@ -175,7 +180,7 @@ async fn insert_graph_async(
 async fn insert_vector_async(
 	storage: Arc<dyn Storage>,
 	qflow_id: String,
-	storage_items: Vec<(String, VectorPayload)>,
+	storage_items: Vec<(String, String, VectorPayload)>,
 ) -> Result<(), ActorExitStatus> {
 	let upsert_result = storage.insert_vector(qflow_id, &storage_items).await;
 	match upsert_result {

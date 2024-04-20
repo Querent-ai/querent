@@ -41,12 +41,12 @@ storage_configs:
     name: querent_test
     storage_type: vector
     url: postgres://querent:querent@postgres/querent_test?sslmode=prefer
-  milvus:
-    name: semantic_milvus_db
-    storage_type: vector
-    url: http://milvus:19530
-    username: ""
-    password: ""
+  # milvus:
+  #   name: semantic_milvus_db
+  #   storage_type: vector
+  #   url: http://milvus:19530
+  #   username: ""
+  #   password: ""
   neo4j:
     name: semantic_neo4j_db
     storage_type: graph

@@ -14,7 +14,19 @@ message DiscoverySessionRequest {
   int32 max_message_memory_size = 6;
   // Max query tokens size 
   int32 max_query_tokens_size = 7;
+  // Semantic pipeline ID
+  string semantic_pipeline_id = 8;
+  // OpenAI API key
+  string openai_api_key = 9;
+  // Discovery Session Type
+  DiscoveryAgentType session_type = 10;
 }
+
+// Enum for DiscoverySessionType, either Retriever or Traverser
+message DiscoveryAgentType {
+  string session_type = 1;
+}
+
 
 // Session AgentID as a response
 message DiscoverySessionResponse {
@@ -97,8 +109,10 @@ message DiscoveryRequest {
 message DiscoveryResponse {
   // The ID of the discovery session
   string session_id = 1;
+  // Query or question posed by the user
+  string query = 2;
   // The insights discovered based on the user's query
-  repeated Insight insights = 2;
+  repeated Insight insights = 3;
 }
 
 // Request to stop the discovery session
@@ -115,11 +129,17 @@ message StopDiscoverySessionResponse {
 
 // Represents an insight discovered from the data
 message Insight {
-  // The title or summary of the insight
-  string title = 1;
+  // The document id of the search result
+  string document = 1;
+   // The document source
+  string source = 2;
+   // The knowledge retrieved from the search result
+  string knowledge = 3;
+   // The sentence retrieved from the search resulty
+  string sentence = 4;
+   // The tags of the search result, comma separated subject, object , predicate
+  string tags = 5;
 
-  // The detailed description or explanation of the insight
-  string description = 2;
 }
 
 // The Discovery service provides a method to query insights from data

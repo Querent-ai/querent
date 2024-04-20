@@ -1,9 +1,11 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
-use common::{SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use milvus::{
-	client::Client as MilvusClient,
+	client::{Client as MilvusClient, ConsistencyLevel},
+	collection::SearchOption,
 	data::FieldColumn,
+	index::{IndexParams, MetricType},
 	schema::{CollectionSchemaBuilder, FieldSchema},
 	value::ValueVec,
 };
@@ -48,14 +50,15 @@ impl Storage for MilvusStorage {
 
 	async fn insert_vector(
 		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, VectorPayload)>,
+		collection_id: String,
+		_payload: &Vec<(String, String, VectorPayload)>,
 	) -> StorageResult<()> {
-		let collection_name = format!("pipeline_{}", _collection_id);
+		let collection_name = format!("pipeline_{}", collection_id);
 
-		for (id, payload) in _payload {
-			let result =
-				self.insert_or_create_collection(collection_name.as_str(), id, payload).await;
+		for (id, source, payload) in _payload {
+			let result = self
+				.insert_or_create_collection(collection_name.as_str(), id, source, payload)
+				.await;
 			if let Err(err) = result {
 				log::error!("Vector insertion failed: {:?}", err);
 				return Err(err);
@@ -64,9 +67,122 @@ impl Storage for MilvusStorage {
 		Ok(())
 	}
 
+	async fn similarity_search_l2(
+		&self,
+		_session_id: String,
+		collection_id: String,
+		payload: &Vec<f32>,
+		max_results: i32,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		let collection_name = format!("pipeline_{}", collection_id);
+		let collection = self.client.get_collection(collection_name.as_str()).await;
+		let mut s_options = SearchOption::new();
+		let search_options = s_options.set_consistency_level(ConsistencyLevel::Strong);
+		match collection {
+			Ok(collection) => {
+				let mut params = HashMap::new();
+				params.insert("nlist".to_string(), "128".to_string());
+				let index_param = IndexParams::new(
+					"example_index".to_string(),
+					milvus::index::IndexType::IvfFlat,
+					MetricType::L2,
+					params,
+				);
+				match collection.create_index("embeddings", index_param).await {
+					Ok(_) => {},
+					Err(err) => {
+						log::error!("Indexingfailed: {:?}", err);
+						return Err(StorageError {
+							kind: StorageErrorKind::CollectionBuilding,
+							source: Arc::new(anyhow::Error::from(err)),
+						});
+					},
+				}
+				match collection.load(1).await {
+					Ok(_) => {},
+					Err(err) => {
+						log::error!("Collection load failed: {:?}", err);
+						return Err(StorageError {
+							kind: StorageErrorKind::CollectionBuilding,
+							source: Arc::new(anyhow::Error::from(err)),
+						});
+					},
+				}
+				let result = collection
+					.search(
+						vec![payload.clone().into()],
+						"embeddings",
+						max_results,
+						MetricType::L2,
+						vec!["id", "knowledge", "document", "sentence"],
+						search_options,
+					)
+					.await;
+				match result {
+					Ok(result) => {
+						let mut results = Vec::new();
+						for search_res in result {
+							let mut doc_payload = DocumentPayload::default();
+							for field in search_res.field {
+								match field.name.as_str() {
+									"knowledge" => {
+										let knowledge: Vec<String> =
+											field.value.try_into().unwrap_or_default();
+										doc_payload.knowledge = knowledge.join(" ");
+										// split at _ to get subject, predicate, object
+										let knowledge_parts: Vec<&str> =
+											doc_payload.knowledge.split('_').collect();
+										if knowledge_parts.len() != 3 {
+											log::error!(
+												"Knowledge triple is not in correct format: {:?}",
+												doc_payload.knowledge
+											);
+											continue;
+										}
+										doc_payload.subject = knowledge_parts[0].to_string();
+										doc_payload.predicate = knowledge_parts[1].to_string();
+										doc_payload.object = knowledge_parts[2].to_string();
+									},
+									"document" => {
+										let document: Vec<String> =
+											field.value.try_into().unwrap_or_default();
+										doc_payload.doc_id = document.join(" ");
+									},
+									"sentence" => {
+										let sentence: Vec<String> =
+											field.value.try_into().unwrap_or_default();
+										doc_payload.sentence = sentence.join(" ");
+									},
+									_ => {},
+								}
+							}
+							results.push(doc_payload);
+						}
+						Ok(results)
+					},
+					Err(err) => {
+						log::error!("Query failed: {:?}", err);
+						Err(StorageError {
+							kind: StorageErrorKind::Query,
+							source: Arc::new(anyhow::Error::from(err)),
+						})
+					},
+				}
+			},
+			Err(err) => {
+				log::error!("Collection retrieval failed: {:?}", err);
+				Err(StorageError {
+					kind: StorageErrorKind::CollectionRetrieval,
+					source: Arc::new(anyhow::Error::from(err)),
+				})
+			},
+		}
+	}
+
 	async fn insert_graph(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_collection_id: String,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your insert_graph implementation here
 		Ok(())
@@ -74,9 +190,19 @@ impl Storage for MilvusStorage {
 
 	async fn index_knowledge(
 		&self,
-		_payload: &Vec<(String, SemanticKnowledgePayload)>,
+		_collection_id: String,
+		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your index_triples implementation here
+		Ok(())
+	}
+
+	/// Insert DiscoveryPayload into storage
+	async fn insert_discovered_knowledge(
+		&self,
+		_payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
 		Ok(())
 	}
 
@@ -102,17 +228,18 @@ impl MilvusStorage {
 		&self,
 		collection_name: &str, // this is workflow id
 		id: &str,              // this is document id
+		source: &str,          // this is document source
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let collection = self.client.get_collection(collection_name).await;
 		match collection {
 			Ok(collection) => {
 				log::debug!("Collection found: {:?}", collection);
-				self.insert_into_collection(&collection, id, payload).await
+				self.insert_into_collection(&collection, id, source, payload).await
 			},
 			Err(_err) => {
 				log::error!("Error in milvus client: {:?}", _err);
-				self.create_and_insert_collection(collection_name, id, payload).await
+				self.create_and_insert_collection(collection_name, id, source, payload).await
 			},
 		}
 	}
@@ -121,6 +248,7 @@ impl MilvusStorage {
 		&self,
 		collection: &milvus::collection::Collection,
 		id: &str,
+		source: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let has_partition = collection.has_partition(&payload.namespace).await;
@@ -162,6 +290,10 @@ impl MilvusStorage {
 			collection.schema().get_field("document").unwrap(),
 			ValueVec::String(vec![id.to_string()]),
 		);
+		let document_source_field = FieldColumn::new(
+			collection.schema().get_field("document_source").unwrap(),
+			ValueVec::String(vec![source.to_string()]),
+		);
 		let embeddings_field = FieldColumn::new(
 			collection.schema().get_field("embeddings").unwrap(),
 			payload.embeddings.clone(),
@@ -176,6 +308,7 @@ impl MilvusStorage {
 			knowledge_field,
 			relationship_field,
 			document_field,
+			document_source_field,
 			embeddings_field,
 			sentence_field,
 		];
@@ -212,6 +345,7 @@ impl MilvusStorage {
 		&self,
 		collection_name: &str,
 		id: &str,
+		source: &str,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let description = format!("Semantic collection adhering to s->p->o ={:?}", payload.id);
@@ -228,6 +362,7 @@ impl MilvusStorage {
 				"document associated with embedding",
 				280,
 			))
+			.add_field(FieldSchema::new_varchar("document_source", "source of the document", 280))
 			.add_field(FieldSchema::new_float_vector(
 				"embeddings",
 				"semantic vector embeddings",
@@ -246,7 +381,7 @@ impl MilvusStorage {
 				match collection {
 					Ok(collection) => {
 						log::debug!("Collection created: {:?}", collection);
-						self.insert_into_collection(&collection, id, payload).await
+						self.insert_into_collection(&collection, id, source, payload).await
 					},
 					Err(err) => {
 						log::error!("Collection creation failed: {:?}", err);
@@ -297,12 +432,16 @@ mod tests {
 			size: 10,
 			embeddings: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
 			sentence: Some("test_sentence".to_string()),
+			document_source: Some("file://folder".to_string()),
 		};
 
 		// Call the insert_vector function with the test data
 		let _result = storage
 			.unwrap()
-			.insert_vector("qflow_id".to_string(), &vec![("test_id".to_string(), payload)])
+			.insert_vector(
+				"qflow_id".to_string(),
+				&vec![("test_id".to_string(), "test_source".to_string(), payload)],
+			)
 			.await;
 
 		// Assert that the result is Ok indicating successful insertion
