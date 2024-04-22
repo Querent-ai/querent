@@ -321,8 +321,6 @@ pub async fn create_querent_synapose_workflow(
 
 	let mut params_map = HashMap::new();
 
-	print!("{:?}", request.config.clone());
-
 	if let Some(workflow_contract) = &request.config {
 		// Convert scalar fields to string and insert them into the hashmap
 		if let Some(ner_model_name) = &workflow_contract.ner_model_name {
