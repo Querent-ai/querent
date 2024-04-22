@@ -407,14 +407,14 @@ pub async fn create_querent_synapose_workflow(
 			}
 		}
 
-		if let Some(sample_relationships) = &workflow_contract.sample_relationship {
+		if let Some(sample_relationships) = &workflow_contract.sample_relationships {
 			if !sample_relationships.relationships.is_empty() {
 				let sample_relationships_str = sample_relationships.relationships.join(",");
 				params_map.insert("sample_relationships".to_owned(), sample_relationships_str);
 			}
 		}
 
-		if let Some(fixed_relationship) = &workflow_contract.fixed_relationship {
+		if let Some(fixed_relationship) = &workflow_contract.fixed_relationships {
 			if !fixed_relationship.relationships.is_empty() {
 				let fixed_relationship_str = fixed_relationship.relationships.join(",");
 				params_map.insert("fixed_relationships".to_owned(), fixed_relationship_str);

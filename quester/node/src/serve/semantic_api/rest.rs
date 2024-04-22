@@ -6,11 +6,12 @@ use proto::{
 	semantics::{
 		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
-		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
-		JiraCollectorConfig, LLamaConfig, MilvusConfig, Name, Neo4jConfig, NewsCollectorConfig,
-		OpenAiConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig, S3CollectorConfig,
-		SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse, SlackCollectorConfig,
-		StorageConfig, StorageType, WorkflowContract,
+		FixedRelationships, GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig,
+		IndexingStatistics, JiraCollectorConfig, LLamaConfig, MilvusConfig, Name, Neo4jConfig,
+		NewsCollectorConfig, OpenAiConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
+		S3CollectorConfig, SampleEntities, SampleRelationships, SemanticPipelineRequest,
+		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
+		WorkflowContract,
 	},
 };
 
@@ -67,6 +68,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		WorkflowContract,
 		FixedEntities,
 		SampleEntities,
+		FixedRelationships,
+		SampleRelationships,
 		AzureCollectorConfig,
 		EmailCollectorConfig,
 		SlackCollectorConfig,
