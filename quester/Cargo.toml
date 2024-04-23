@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
+members = ["sources", "actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
 
 [profile.dev]
 debug = false
@@ -184,6 +184,7 @@ cluster = { version = "3.0.3", path = "./cluster" }
 codegen = { version = "3.0.3", path = "./codegen" }
 proto = { version = "3.0.3", path = "./proto" }
 discovery = {version = "3.0.3", path = "./insights"}
+sources = { version = "3.0.3", path = "./sources" }
 
 pyo3-asyncio = { version = "0.20.0", features = [
   "attributes",
