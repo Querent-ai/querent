@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use futures_util::Stream;
 use serde::{Deserialize, Serialize};
 use std::{
 	fmt::{self, Debug},
@@ -17,11 +18,13 @@ pub enum SourceErrorKind {
 	Polling,
 	/// Not supported error.
 	NotSupported,
+	/// Io error.
+	Io,
 }
 
-/// Generic StorageError.
+/// Generic SourceError.
 #[derive(Debug, Clone, Error)]
-#[error("storage error(kind={kind:?}, source={source})")]
+#[error("source error(kind={kind:?}, source={source})")]
 #[allow(missing_docs)]
 pub struct SourceError {
 	pub kind: SourceErrorKind,
@@ -48,20 +51,21 @@ impl SourceError {
 		}
 	}
 
-	/// Returns the corresponding `StorageErrorKind` for this error.
+	/// Returns the corresponding `SourceErrorKind` for this error.
 	pub fn kind(&self) -> SourceErrorKind {
 		self.kind
 	}
 }
 
-/// Sources is all possible data sources that can be used to create a `Document`.
-/// These can be blob, local file, remote file, etc.
-/// Such as buckets, jira, git, etc.
+/// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
 pub trait Source: Send + Sync + 'static {
-	async fn connect(&self) -> Result<(), SourceError>;
+	/// Establishes a connection to the source.
+	async fn connect(&self) -> SourceResult<()>;
 
-	async fn poll(&self) -> Result<CollectedBytes, SourceError>;
+	/// Polls the source to collect data. Returns an iterator over collected bytes.
+	async fn poll(&self) -> SourceResult<Box<dyn Stream<Item = CollectedBytes> + Unpin + Send>>;
 
-	async fn disconnect(&self) -> Result<(), SourceError>;
+	/// Disconnects from the source.
+	async fn disconnect(&self) -> SourceResult<()>;
 }
