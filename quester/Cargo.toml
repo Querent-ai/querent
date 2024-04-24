@@ -216,6 +216,7 @@ tokenizers = "0.15.2"
 pgvector = { version = "0.3", features = ["diesel", "postgres"] }
 redb = "2.0.0"
 rmp-serde = "1.1"
+pyembed = { version = "0.24.0", default-features = false }
 
 [profile.release]
 panic = "unwind"
