@@ -53,6 +53,9 @@ fastembed = "3"
 actors = { workspace = true, features = ["testsuite"] }
 common = { workspace = true, features = ["testsuite"] }
 
+[build-dependencies]
+pyoxidizer = "0.24.0"
+
 [features]
 testsuite = []
 

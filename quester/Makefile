@@ -1,5 +1,8 @@
 .DEFAULT_GOAL := all
 
+export PYO3_CONFIG_FILE = $(CURDIR)/querent/build/pyo3-build-config-file-$(target).txt
+$(info PYO3_CONFIG_FILE = $(PYO3_CONFIG_FILE))
+
 PROFILE := release
 
 # Determine the operating system
@@ -45,7 +48,7 @@ format-check:
 .PHONY: build
 build:
 	@echo "Running Cargo build..."
-	@cargo build --release --all-features
+	@env -u PYO3_CONFIG_FILE cargo build --release --all-features
 
 .PHONY: doc
 doc:

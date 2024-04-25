@@ -67,7 +67,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	);
 	let _status = fs::remove_file(&pyo3_config_alias);
 	fs::copy(&pyo3_config_path, &pyo3_config_alias).map_err(|e| {
-		format!("Cannot copy {} to {} ({})", &pyo3_config_path, &pyo3_config_alias, e)
+		format!("Failed to copy {} to {} ({})", &pyo3_config_path, &pyo3_config_alias, e)
 	})?;
 
 	// NOTE: we cannot configure pyo3 from the flameshow build script (sigh)
