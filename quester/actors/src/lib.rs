@@ -69,7 +69,7 @@ fn heartbeat_from_env_or_default() -> Duration {
 		// for a heartbeat.
 		//
 		// We use a shorter heartbeat to reduce the time running unit tests.
-		return Duration::from_millis(500);
+		return Duration::from_millis(30000);
 	}
 	match std::env::var("QW_ACTOR_HEARTBEAT_SECS") {
 		Ok(actor_hearbeat_secs_str) => {

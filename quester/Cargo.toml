@@ -175,7 +175,7 @@ log = { version = "^0.4.17", features = [
   "max_level_debug",
   "release_max_level_debug"
 ] }
-querent-synapse = { version = "3.0.2" }
+querent-synapse = { version = "3.0.3" }
 actors = { version = "3.0.3", path = "./actors" }
 common = { version = "3.0.3", path = "./common" }
 querent = { version = "3.0.3", path = "./querent" }

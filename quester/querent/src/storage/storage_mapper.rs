@@ -7,6 +7,7 @@ use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
+use tracing::error;
 
 pub struct StorageMapper {
 	qflow_id: String,
@@ -169,7 +170,7 @@ async fn insert_graph_async(
 		},
 		Err(e) => {
 			// Handle error if insertion fails
-			log::error!("Error while inserting graphs: {:?}", e);
+			error!("Error while inserting graphs: {:?}", e);
 			// Depending on your error handling strategy, you might want to propagate the error
 			// back to the caller or handle it differently
 			Err(ActorExitStatus::Failure(e.source))
@@ -191,7 +192,7 @@ async fn insert_vector_async(
 		},
 		Err(e) => {
 			// Handle error if insertion fails
-			log::error!("Error while inserting vector: {:?}", e);
+			error!("Error while inserting vector: {:?}", e);
 			// Depending on your error handling strategy, you might want to propagate the error
 			// back to the caller or handle it differently
 			Err(ActorExitStatus::Failure(e.source))
