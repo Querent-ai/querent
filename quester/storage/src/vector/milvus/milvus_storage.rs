@@ -303,6 +303,10 @@ impl MilvusStorage {
 			collection.schema().get_field("sentence").unwrap(),
 			ValueVec::String(vec![payload.sentence.clone().unwrap_or_default()]),
 		);
+		let unique_id_field = FieldColumn::new(
+			collection.schema().get_field("unique_id").unwrap(),
+			ValueVec::Int(vec![payload.unique_id.clone().unwrap_or_default().try_into().unwrap()]),
+		);
 
 		let records = vec![
 			knowledge_field,
@@ -311,6 +315,7 @@ impl MilvusStorage {
 			document_source_field,
 			embeddings_field,
 			sentence_field,
+			unique_id_field,
 		];
 		let insert_result = collection.insert(records, Some(payload.namespace.as_str())).await;
 		match insert_result {
@@ -373,6 +378,7 @@ impl MilvusStorage {
 				"sentence associated with embedding",
 				5000,
 			))
+			.add_field(FieldSchema::new_varchar("unique_id", "Unique id of each image", 10))
 			.build();
 
 		match new_coll {
@@ -433,6 +439,8 @@ mod tests {
 			embeddings: vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0],
 			sentence: Some("test_sentence".to_string()),
 			document_source: Some("file://folder".to_string()),
+			blob: Some("base64encodedimage".to_string()),
+			unique_id: Some(123456),
 		};
 
 		// Call the insert_vector function with the test data

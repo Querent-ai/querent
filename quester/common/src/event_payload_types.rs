@@ -22,6 +22,8 @@ pub struct VectorPayload {
 	pub namespace: String,
 	pub sentence: Option<String>,
 	pub document_source: Option<String>,
+	pub blob: Option<String>,
+	pub unique_id: Option<i32>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -33,6 +35,7 @@ pub struct SemanticKnowledgePayload {
 	pub predicate: String,
 	pub predicate_type: String,
 	pub sentence: String,
+	pub unique_id: Option<i32>,
 }
 
 impl SemanticKnowledgePayload {

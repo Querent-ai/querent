@@ -35,6 +35,7 @@ pub struct SemanticKnowledge {
 	pub document_id: String,
 	pub document_source: String,
 	pub collection_id: Option<String>,
+	pub unique_id: Option<i32>,
 }
 
 pub struct PostgresStorage {
@@ -176,6 +177,7 @@ impl Storage for PostgresStorage {
 						document_id: document_id.clone(),
 						document_source: document_source.clone(),
 						collection_id: Some(collection_id.clone()),
+						unique_id: item.unique_id.clone(),
 					};
 					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
 						.values(form)
@@ -224,6 +226,7 @@ table! {
 		document_id -> Varchar,
 		document_source -> Varchar,
 		collection_id -> Nullable<Varchar>,
+		unique_id -> Nullable<Int4>,
 	}
 }
 
