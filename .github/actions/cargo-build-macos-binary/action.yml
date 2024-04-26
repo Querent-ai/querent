@@ -30,6 +30,9 @@ runs:
     - name: Install protoc
       run: brew install protobuf
       shell: bash
+    - name: Set path for pq
+      run: export PQ_LIB_DIR="$(brew --prefix libpq)/lib"
+      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
@@ -39,6 +42,11 @@ runs:
     - name: Add target aarch64-apple-darwin
       if: "${{ inputs.target == 'aarch64-apple-darwin' }}"
       run: rustup target add aarch64-apple-darwin
+      shell: bash
+      working-directory: ./quester
+    - name: Add target x86_64-apple-darwin
+      if: "${{ inputs.target == 'x86_64-apple-darwin' }}"
+      run: rustup target add x86_64-apple-darwin
       shell: bash
       working-directory: ./quester
     - name: Retrieve and export commit date, hash, and tags
