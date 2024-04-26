@@ -1,6 +1,6 @@
 [package]
 name = "storage"
-version = "3.0.3"
+version = "3.0.4"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
