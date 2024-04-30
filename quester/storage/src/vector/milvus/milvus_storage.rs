@@ -182,7 +182,7 @@ impl Storage for MilvusStorage {
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your insert_graph implementation here
 		Ok(())
@@ -191,7 +191,7 @@ impl Storage for MilvusStorage {
 	async fn index_knowledge(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		// Your index_triples implementation here
 		Ok(())
@@ -303,9 +303,9 @@ impl MilvusStorage {
 			collection.schema().get_field("sentence").unwrap(),
 			ValueVec::String(vec![payload.sentence.clone().unwrap_or_default()]),
 		);
-		let unique_id_field = FieldColumn::new(
-			collection.schema().get_field("unique_id").unwrap(),
-			ValueVec::Int(vec![payload.unique_id.clone().unwrap_or_default().try_into().unwrap()]),
+		let image_id_field = FieldColumn::new(
+			collection.schema().get_field("image_id").unwrap(),
+			ValueVec::String(vec![payload.image_id.clone().unwrap_or_default()]),
 		);
 
 		let records = vec![
@@ -315,7 +315,7 @@ impl MilvusStorage {
 			document_source_field,
 			embeddings_field,
 			sentence_field,
-			unique_id_field,
+			image_id_field,
 		];
 		let insert_result = collection.insert(records, Some(payload.namespace.as_str())).await;
 		match insert_result {
@@ -378,7 +378,7 @@ impl MilvusStorage {
 				"sentence associated with embedding",
 				5000,
 			))
-			.add_field(FieldSchema::new_varchar("unique_id", "Unique id of each image", 10))
+			.add_field(FieldSchema::new_varchar("image_id", "Unique id of each image", 20))
 			.build();
 
 		match new_coll {
@@ -440,7 +440,7 @@ mod tests {
 			sentence: Some("test_sentence".to_string()),
 			document_source: Some("file://folder".to_string()),
 			blob: Some("base64encodedimage".to_string()),
-			unique_id: Some(123456),
+			image_id: Some("123456".to_string()),
 		};
 
 		// Call the insert_vector function with the test data

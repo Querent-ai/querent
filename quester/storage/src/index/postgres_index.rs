@@ -35,7 +35,7 @@ pub struct SemanticKnowledge {
 	pub document_id: String,
 	pub document_source: String,
 	pub collection_id: Option<String>,
-	pub unique_id: Option<i32>,
+	pub image_id: Option<String>,
 }
 
 pub struct PostgresStorage {
@@ -139,7 +139,7 @@ impl Storage for PostgresStorage {
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
@@ -157,7 +157,7 @@ impl Storage for PostgresStorage {
 	async fn index_knowledge(
 		&self,
 		collection_id: String,
-		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -165,7 +165,7 @@ impl Storage for PostgresStorage {
 		})?;
 		conn.transaction::<_, diesel::result::Error, _>(|conn| {
 			async move {
-				for (document_id, document_source, item) in payload {
+				for (document_id, document_source, image_id, item) in payload {
 					let form = SemanticKnowledge {
 						subject: item.subject.clone(),
 						subject_type: item.subject_type.clone(),
@@ -177,7 +177,7 @@ impl Storage for PostgresStorage {
 						document_id: document_id.clone(),
 						document_source: document_source.clone(),
 						collection_id: Some(collection_id.clone()),
-						unique_id: item.unique_id.clone(),
+						image_id: image_id.clone(),
 					};
 					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
 						.values(form)
@@ -226,7 +226,7 @@ table! {
 		document_id -> Varchar,
 		document_source -> Varchar,
 		collection_id -> Nullable<Varchar>,
-		unique_id -> Nullable<Int4>,
+		image_id -> Nullable<VarChar>,
 	}
 }
 

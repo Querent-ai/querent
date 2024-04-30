@@ -73,7 +73,7 @@ impl Storage for Neo4jStorage {
 	async fn index_knowledge(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
@@ -92,7 +92,7 @@ impl Storage for Neo4jStorage {
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
-		payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		let mut txn = self.graph.start_txn().await.map_err(|err| {
 			log::error!("Neo4j transaction creation failed: {:?}", err);
@@ -101,7 +101,17 @@ impl Storage for Neo4jStorage {
 				source: Arc::new(anyhow::Error::from(err)),
 			}
 		})?;
-		for (id, source, data) in payload {
+		for (id, source, image_id, data) in payload {
+			let cloned_image_id = image_id.clone();
+			let image_id_res;
+			match cloned_image_id {
+				Some(id) => {
+					image_id_res = id;
+				},
+				None => {
+					image_id_res = "".to_string();
+				},
+			}
 			let cypher_query = data.to_cypher_query();
 			let params: Vec<(&str, String)> = vec![
 				("entity_type1", data.subject_type.clone()),
@@ -114,6 +124,7 @@ impl Storage for Neo4jStorage {
 				("document_id", id.clone()),
 				("document_source", source.clone()),
 				("collection_id", _collection_id.clone()),
+				("image_id", image_id_res.clone()),
 			];
 
 			let parameterized_query = Query::new(cypher_query).params(params);

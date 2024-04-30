@@ -159,7 +159,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 async fn insert_graph_async(
 	collection_id: String,
 	storage: Arc<dyn Storage>,
-	storage_items: Vec<(String, String, SemanticKnowledgePayload)>,
+	storage_items: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 ) -> Result<(), ActorExitStatus> {
 	let upsert_result = storage.insert_graph(collection_id, &storage_items).await;
 	match upsert_result {

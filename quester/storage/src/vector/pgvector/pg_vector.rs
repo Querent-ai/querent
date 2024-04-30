@@ -305,7 +305,7 @@ impl Storage for PGVector {
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
@@ -313,7 +313,7 @@ impl Storage for PGVector {
 	async fn index_knowledge(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}

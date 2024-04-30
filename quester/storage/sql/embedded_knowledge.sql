@@ -9,6 +9,6 @@ CREATE TABLE embedded_knowledge(
     predicate TEXT,
     embeddings vector(384),
     collection_id VARCHAR,
-    unique_id INT,
+    image_id VARCHAR,
     blob VARCHAR
 );
