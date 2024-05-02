@@ -23,7 +23,6 @@ pub struct VectorPayload {
 	pub sentence: Option<String>,
 	pub document_source: Option<String>,
 	pub blob: Option<String>,
-	pub image_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

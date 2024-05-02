@@ -83,7 +83,7 @@ pub trait Storage: Send + Sync + 'static {
 	async fn insert_vector(
 		&self,
 		collection_id: String,
-		payload: &Vec<(String, String, VectorPayload)>,
+		payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()>;
 
 	/// Insert DiscoveryPayload into storage

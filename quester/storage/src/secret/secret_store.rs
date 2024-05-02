@@ -47,7 +47,7 @@ impl Storage for SecretStore {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, VectorPayload)>,
+		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(()) // Placeholder, add vector insertion logic here
 	}

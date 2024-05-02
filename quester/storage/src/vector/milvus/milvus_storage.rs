@@ -51,13 +51,19 @@ impl Storage for MilvusStorage {
 	async fn insert_vector(
 		&self,
 		collection_id: String,
-		_payload: &Vec<(String, String, VectorPayload)>,
+		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		let collection_name = format!("pipeline_{}", collection_id);
 
-		for (id, source, payload) in _payload {
+		for (id, source, image_id, payload) in _payload {
 			let result = self
-				.insert_or_create_collection(collection_name.as_str(), id, source, payload)
+				.insert_or_create_collection(
+					collection_name.as_str(),
+					id,
+					source,
+					image_id,
+					payload,
+				)
 				.await;
 			if let Err(err) = result {
 				log::error!("Vector insertion failed: {:?}", err);
@@ -229,17 +235,19 @@ impl MilvusStorage {
 		collection_name: &str, // this is workflow id
 		id: &str,              // this is document id
 		source: &str,          // this is document source
+		image_id: &Option<String>,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let collection = self.client.get_collection(collection_name).await;
 		match collection {
 			Ok(collection) => {
 				log::debug!("Collection found: {:?}", collection);
-				self.insert_into_collection(&collection, id, source, payload).await
+				self.insert_into_collection(&collection, id, source, image_id, payload).await
 			},
 			Err(_err) => {
 				log::error!("Error in milvus client: {:?}", _err);
-				self.create_and_insert_collection(collection_name, id, source, payload).await
+				self.create_and_insert_collection(collection_name, id, source, image_id, payload)
+					.await
 			},
 		}
 	}
@@ -249,6 +257,7 @@ impl MilvusStorage {
 		collection: &milvus::collection::Collection,
 		id: &str,
 		source: &str,
+		image_id: &Option<String>,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let has_partition = collection.has_partition(&payload.namespace).await;
@@ -305,7 +314,7 @@ impl MilvusStorage {
 		);
 		let image_id_field = FieldColumn::new(
 			collection.schema().get_field("image_id").unwrap(),
-			ValueVec::String(vec![payload.image_id.clone().unwrap_or_default()]),
+			ValueVec::String(vec![image_id.clone().unwrap_or_default()]),
 		);
 
 		let records = vec![
@@ -351,6 +360,7 @@ impl MilvusStorage {
 		collection_name: &str,
 		id: &str,
 		source: &str,
+		image_id: &Option<String>,
 		payload: &VectorPayload,
 	) -> StorageResult<()> {
 		let description = format!("Semantic collection adhering to s->p->o ={:?}", payload.id);
@@ -387,7 +397,8 @@ impl MilvusStorage {
 				match collection {
 					Ok(collection) => {
 						log::debug!("Collection created: {:?}", collection);
-						self.insert_into_collection(&collection, id, source, payload).await
+						self.insert_into_collection(&collection, id, source, image_id, payload)
+							.await
 					},
 					Err(err) => {
 						log::error!("Collection creation failed: {:?}", err);
@@ -440,7 +451,6 @@ mod tests {
 			sentence: Some("test_sentence".to_string()),
 			document_source: Some("file://folder".to_string()),
 			blob: Some("base64encodedimage".to_string()),
-			image_id: Some("123456".to_string()),
 		};
 
 		// Call the insert_vector function with the test data
@@ -448,7 +458,12 @@ mod tests {
 			.unwrap()
 			.insert_vector(
 				"qflow_id".to_string(),
-				&vec![("test_id".to_string(), "test_source".to_string(), payload)],
+				&vec![(
+					"test_id".to_string(),
+					"test_source".to_string(),
+					Some("123456".to_string()),
+					payload,
+				)],
 			)
 			.await;
 
