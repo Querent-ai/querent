@@ -132,6 +132,7 @@ impl Source for QSource {
 								payload: "".to_string(),
 								file: "".to_string(),
 								doc_source: "".to_string(),
+								image_id: Some("".to_string()),
 							},
 						))
 						.await
@@ -153,6 +154,7 @@ impl Source for QSource {
 								payload: err.to_string(),
 								file: "".to_string(),
 								doc_source: "".to_string(),
+								image_id: Some("".to_string()),
 							},
 						))
 						.await
