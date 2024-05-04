@@ -10,5 +10,4 @@ CREATE TABLE embedded_knowledge(
     embeddings vector(384),
     collection_id VARCHAR,
     image_id VARCHAR,
-    blob VARCHAR
 );
