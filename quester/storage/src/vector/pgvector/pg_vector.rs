@@ -40,7 +40,6 @@ pub struct EmbeddedKnowledge {
 	pub sentence: Option<String>,
 	pub collection_id: Option<String>,
 	pub image_id: Option<String>,
-	pub blob: Option<String>,
 }
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
@@ -177,7 +176,6 @@ impl Storage for PGVector {
 						sentence: item.sentence.clone(),
 						collection_id: Some(_collection_id.clone()),
 						image_id: image_id.clone(),
-						blob: item.blob.clone(),
 					};
 					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
@@ -353,7 +351,6 @@ table! {
 		sentence -> Nullable<Text>,
 		collection_id -> Nullable<Text>,
 		image_id -> Nullable<Text>,
-		blob -> Nullable<Text>
 	}
 }
 
