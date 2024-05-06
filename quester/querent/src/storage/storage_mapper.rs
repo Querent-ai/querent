@@ -7,6 +7,7 @@ use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
+use tracing::error;
 
 pub struct StorageMapper {
 	qflow_id: String,
@@ -158,7 +159,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 async fn insert_graph_async(
 	collection_id: String,
 	storage: Arc<dyn Storage>,
-	storage_items: Vec<(String, String, SemanticKnowledgePayload)>,
+	storage_items: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 ) -> Result<(), ActorExitStatus> {
 	let upsert_result = storage.insert_graph(collection_id, &storage_items).await;
 	match upsert_result {
@@ -169,7 +170,7 @@ async fn insert_graph_async(
 		},
 		Err(e) => {
 			// Handle error if insertion fails
-			log::error!("Error while inserting graphs: {:?}", e);
+			error!("Error while inserting graphs: {:?}", e);
 			// Depending on your error handling strategy, you might want to propagate the error
 			// back to the caller or handle it differently
 			Err(ActorExitStatus::Failure(e.source))
@@ -180,7 +181,7 @@ async fn insert_graph_async(
 async fn insert_vector_async(
 	storage: Arc<dyn Storage>,
 	qflow_id: String,
-	storage_items: Vec<(String, String, VectorPayload)>,
+	storage_items: Vec<(String, String, Option<String>, VectorPayload)>,
 ) -> Result<(), ActorExitStatus> {
 	let upsert_result = storage.insert_vector(qflow_id, &storage_items).await;
 	match upsert_result {
@@ -191,7 +192,7 @@ async fn insert_vector_async(
 		},
 		Err(e) => {
 			// Handle error if insertion fails
-			log::error!("Error while inserting vector: {:?}", e);
+			error!("Error while inserting vector: {:?}", e);
 			// Depending on your error handling strategy, you might want to propagate the error
 			// back to the caller or handle it differently
 			Err(ActorExitStatus::Failure(e.source))

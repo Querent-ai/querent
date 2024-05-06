@@ -329,6 +329,9 @@ impl SemanticPipeline {
 		};
 
 		let check_for_progress = handles.check_for_progress();
+		if !check_for_progress {
+			return Ok(());
+		}
 		let health = self.healthcheck(check_for_progress);
 		match health {
 			Health::Healthy => {},

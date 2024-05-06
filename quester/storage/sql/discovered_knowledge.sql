@@ -10,6 +10,6 @@ CREATE TABLE discovered_knowledge(
     object TEXT,
     predicate TEXT,
     cosine_distance FLOAT8,
-    query_embedding FLOAT4[],
+    query_embedding vector(384),
     session_id VARCHAR
 );

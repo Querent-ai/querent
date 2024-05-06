@@ -22,6 +22,7 @@ pub struct VectorPayload {
 	pub namespace: String,
 	pub sentence: Option<String>,
 	pub document_source: Option<String>,
+	pub blob: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -33,6 +34,7 @@ pub struct SemanticKnowledgePayload {
 	pub predicate: String,
 	pub predicate_type: String,
 	pub sentence: String,
+	pub image_id: Option<String>,
 }
 
 impl SemanticKnowledgePayload {
@@ -40,7 +42,7 @@ impl SemanticKnowledgePayload {
 		format!(
 			"MERGE (n1:`{entity_type1}` {{name: $entity1}}) \
 			MERGE (n2:`{entity_type2}` {{name: $entity2}}) \
-			MERGE (n1)-[:`{predicate}` {{sentence: $sentence, document_id: $document_id, document_source: $document_source, predicate_type: $predicate_type}}]->(n2)",
+			MERGE (n1)-[:`{predicate}` {{sentence: $sentence, document_id: $document_id, document_source: $document_source, predicate_type: $predicate_type, image_id: $image_id}}]->(n2)",
 			entity_type1 = &self.subject_type,
 			predicate = &self.predicate,
 			entity_type2 = &self.object_type,

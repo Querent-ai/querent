@@ -39,6 +39,7 @@ pub struct EmbeddedKnowledge {
 	pub predicate: String,
 	pub sentence: Option<String>,
 	pub collection_id: Option<String>,
+	pub image_id: Option<String>,
 }
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
@@ -52,7 +53,7 @@ pub struct DiscoveredKnowledge {
 	pub object: String,
 	pub predicate: String,
 	pub cosine_distance: Option<f64>,
-	pub query_embedding: Option<Vec<f32>>,
+	pub query_embedding: Option<Vector>,
 	pub session_id: Option<String>,
 }
 
@@ -67,7 +68,7 @@ impl DiscoveredKnowledge {
 			object: payload.object,
 			predicate: payload.predicate,
 			cosine_distance: payload.cosine_distance,
-			query_embedding: payload.query_embedding,
+			query_embedding: Some(Vector::from(payload.query_embedding.unwrap_or_default())),
 			session_id: payload.session_id,
 		}
 	}
@@ -157,7 +158,7 @@ impl Storage for PGVector {
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
-		payload: &Vec<(String, String, VectorPayload)>,
+		payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -165,7 +166,7 @@ impl Storage for PGVector {
 		})?;
 		conn.transaction::<_, diesel::result::Error, _>(|conn| {
 			async move {
-				for (document_id, source, item) in payload {
+				for (document_id, source, image_id, item) in payload {
 					let form = EmbeddedKnowledge {
 						document_id: document_id.clone(),
 						document_source: source.clone(),
@@ -174,6 +175,7 @@ impl Storage for PGVector {
 						knowledge: item.id.clone(),
 						sentence: item.sentence.clone(),
 						collection_id: Some(_collection_id.clone()),
+						image_id: image_id.clone(),
 					};
 					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
@@ -305,7 +307,7 @@ impl Storage for PGVector {
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
@@ -313,7 +315,7 @@ impl Storage for PGVector {
 	async fn index_knowledge(
 		&self,
 		_collection_id: String,
-		_payload: &Vec<(String, String, SemanticKnowledgePayload)>,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
@@ -348,6 +350,7 @@ table! {
 		predicate -> Text,
 		sentence -> Nullable<Text>,
 		collection_id -> Nullable<Text>,
+		image_id -> Nullable<Text>,
 	}
 }
 
@@ -366,7 +369,7 @@ table! {
 		predicate -> Text,
 		cosine_distance -> Nullable<Float8>,
 		query -> Nullable<Text>,
-		query_embedding -> Nullable<Array<Float4>>,
+		query_embedding -> Nullable<Vector>,
 		session_id -> Nullable<Text>,
 	}
 }

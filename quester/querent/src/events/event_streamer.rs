@@ -4,6 +4,7 @@ use common::{EventStreamerCounters, EventsBatch, RuntimeType};
 use querent_synapse::callbacks::EventType;
 use std::sync::Arc;
 use tokio::runtime::Handle;
+use tracing::error;
 
 use crate::{
 	indexer::Indexer,
@@ -67,7 +68,7 @@ impl Actor for EventStreamer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Unbounded
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -119,15 +120,28 @@ impl Handler<EventsBatch> for EventStreamer {
 				EventType::Graph => {
 					let contextual_triples: ContextualTriples =
 						ContextualTriples::new(self.qflow_id.clone(), event_states, self.timestamp);
-					ctx.send_message(&self.storage_mapper_messagebus, contextual_triples.clone())
-						.await?;
-
+					let mapper_res = ctx
+						.send_message(&self.storage_mapper_messagebus, contextual_triples.clone())
+						.await;
+					match mapper_res {
+						Ok(_) => {},
+						Err(e) => {
+							error!("Error sending message to StorageMapper: {:?}", e);
+						},
+					}
 					let indexer_knowledge = IndexerKnowledge::new(
 						self.qflow_id.clone(),
 						self.timestamp,
 						contextual_triples.event_payload(),
 					);
-					ctx.send_message(&self.indexer_messagebus, indexer_knowledge).await?;
+					let indexer_res =
+						ctx.send_message(&self.indexer_messagebus, indexer_knowledge).await;
+					match indexer_res {
+						Ok(_) => {},
+						Err(e) => {
+							error!("Error sending message to Indexer: {:?}", e);
+						},
+					}
 				},
 				EventType::Vector => {
 					let contextual_embeddings = ContextualEmbeddings::new(
@@ -135,8 +149,15 @@ impl Handler<EventsBatch> for EventStreamer {
 						event_states,
 						self.timestamp,
 					);
-					ctx.send_message(&self.storage_mapper_messagebus, contextual_embeddings)
-						.await?;
+					let vec_res = ctx
+						.send_message(&self.storage_mapper_messagebus, contextual_embeddings)
+						.await;
+					match vec_res {
+						Ok(_) => {},
+						Err(e) => {
+							error!("Error sending message to StorageMapper: {:?}", e);
+						},
+					}
 				},
 				_ => {},
 			}

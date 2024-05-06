@@ -40,13 +40,18 @@ impl ContextualTriples {
 		self.event_type.clone()
 	}
 
-	pub fn event_payload(&self) -> Vec<(String, String, SemanticKnowledgePayload)> {
-		let mut triples: Vec<(String, String, SemanticKnowledgePayload)> = Vec::new();
+	pub fn event_payload(&self) -> Vec<(String, String, Option<String>, SemanticKnowledgePayload)> {
+		let mut triples: Vec<(String, String, Option<String>, SemanticKnowledgePayload)> =
+			Vec::new();
 		for triple in &self.triple_states {
 			let payload = serde_json::from_str(&triple.payload);
 			match payload {
-				Ok(payload) =>
-					triples.push((triple.file.clone(), triple.doc_source.clone(), payload)),
+				Ok(payload) => triples.push((
+					triple.file.clone(),
+					triple.doc_source.clone(),
+					triple.image_id.clone(),
+					payload,
+				)),
 				Err(e) => error!("Failed to deserialize payload: {:?}", e),
 			}
 		}
@@ -91,13 +96,14 @@ impl ContextualEmbeddings {
 		self.event_type.clone()
 	}
 
-	pub fn event_payload(&self) -> Vec<(String, String, VectorPayload)> {
+	pub fn event_payload(&self) -> Vec<(String, String, Option<String>, VectorPayload)> {
 		self.vector_states
 			.iter()
 			.map(|x| {
 				(
 					x.file.clone(),
 					x.doc_source.clone(),
+					x.image_id.clone(),
 					serde_json::from_str(&x.payload).unwrap_or_default(),
 				)
 			})
@@ -109,14 +115,14 @@ impl ContextualEmbeddings {
 pub struct IndexerKnowledge {
 	pub qflow_id: String,
 	pub timestamp: u64,
-	pub triples: Vec<(String, String, SemanticKnowledgePayload)>,
+	pub triples: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 }
 
 impl IndexerKnowledge {
 	pub fn new(
 		qflow_id: String,
 		timestamp: u64,
-		triples: Vec<(String, String, SemanticKnowledgePayload)>,
+		triples: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> Self {
 		Self { qflow_id, timestamp, triples }
 	}
@@ -137,7 +143,7 @@ impl IndexerKnowledge {
 		self.qflow_id.clone()
 	}
 
-	pub fn triples(&self) -> &Vec<(String, String, SemanticKnowledgePayload)> {
+	pub fn triples(&self) -> &Vec<(String, String, Option<String>, SemanticKnowledgePayload)> {
 		&self.triples
 	}
 }
