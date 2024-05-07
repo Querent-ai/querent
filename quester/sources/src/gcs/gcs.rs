@@ -3,6 +3,7 @@ use std::{fmt, ops::Range, path::Path};
 use async_trait::async_trait;
 use bytesize::ByteSize;
 use opendal::Operator;
+use proto::semantics::GcsCollectorConfig;
 use tokio::io::{AsyncRead, AsyncWriteExt};
 
 use crate::{BlobPayload, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
@@ -111,4 +112,10 @@ impl From<opendal::Error> for SourceError {
 			),
 		}
 	}
+}
+
+pub fn get_gcs_storage(gcs_config: GcsCollectorConfig) -> Result<OpendalStorage, SourceError> {
+	let mut cfg = opendal::services::Gcs::default();
+	cfg.credential_path(&gcs_config.credentials);
+	OpendalStorage::new_google_cloud_storage(cfg)
 }
