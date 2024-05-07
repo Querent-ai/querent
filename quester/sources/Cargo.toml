@@ -1,6 +1,6 @@
 [package]
 name = "sources"
-version = "3.0.3"
+version = "3.0.4"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -44,3 +44,7 @@ aws-config = { workspace = true }
 aws-credential-types = { workspace = true }
 aws-sdk-s3 = { workspace = true }
 aws-smithy-http = { workspace = true }
+tempfile = { workspace = true }
+base64 = { workspace = true }
+opendal = { workspace = true}
+bytesize = { workspace = true }
