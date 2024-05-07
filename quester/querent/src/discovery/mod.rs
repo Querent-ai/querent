@@ -8,6 +8,7 @@ pub mod agent;
 pub mod chain;
 pub mod discovery_agent;
 pub mod discovery_searcher;
+pub mod discovery_traverser;
 pub mod discovery_service;
 pub mod document_loaders;
 pub mod embedding;

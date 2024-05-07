@@ -92,6 +92,12 @@ pub trait Storage: Send + Sync + 'static {
 		payload: &Vec<DocumentPayload>,
 	) -> StorageResult<()>;
 
+	/// Fetch DiscoveryPayload from storage
+	async fn fetch_discovered_knowledge(
+		&self,
+		session_id: String,
+	) -> StorageResult<()>;
+
 	/// Insert SemanticKnowledgePayload into storage
 	async fn insert_graph(
 		&self,

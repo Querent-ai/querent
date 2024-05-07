@@ -225,6 +225,52 @@ impl Storage for PGVector {
 		Ok(())
 	}
 
+	async fn fetch_discovered_knowledge(
+		&self,
+		session_id: String,
+	) -> StorageResult<()> {
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	
+		// Making sure we are only selecting fields that exist in the DiscoveredKnowledge struct
+		let query_result = discovered_knowledge::dsl::discovered_knowledge
+			.select((
+				discovered_knowledge::dsl::doc_id,
+				discovered_knowledge::dsl::doc_source,
+				discovered_knowledge::dsl::sentence,
+				discovered_knowledge::dsl::knowledge,
+				discovered_knowledge::dsl::subject,
+				discovered_knowledge::dsl::object,
+				discovered_knowledge::dsl::predicate,
+				discovered_knowledge::dsl::cosine_distance,
+				discovered_knowledge::dsl::query_embedding,
+				discovered_knowledge::dsl::session_id,
+			))
+			.filter(discovered_knowledge::dsl::session_id.eq(session_id))
+			.load::<DiscoveredKnowledge>(&mut *conn)
+			.await;
+	
+			match query_result {
+				Ok(_result) => {
+					// Perform any necessary operations with _result
+					Ok(())
+				},
+				Err(err) => {
+					log::error!("Query failed: {:?}", err);
+					Err(StorageError {
+						kind: StorageErrorKind::Query,
+						source: Arc::new(anyhow::Error::from(err)),
+					})
+				}
+			}
+		}
+	
+	
+	
+
+
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,

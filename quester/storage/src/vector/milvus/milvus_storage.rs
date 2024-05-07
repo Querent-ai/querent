@@ -212,6 +212,15 @@ impl Storage for MilvusStorage {
 		Ok(())
 	}
 
+	/// Fetch DiscoveryPayload from storage
+	async fn fetch_discovered_knowledge(
+		&self,
+		session_id: String,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
 	/// Store key value pair
 	async fn store_kv(&self, _key: &String, _value: &String) -> StorageResult<()> {
 		Err(StorageError {

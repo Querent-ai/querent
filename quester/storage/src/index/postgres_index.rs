@@ -136,6 +136,15 @@ impl Storage for PostgresStorage {
 		Ok(())
 	}
 
+	/// Fetch DiscoveryPayload from storage
+	async fn fetch_discovered_knowledge(
+		&self,
+		session_id: String,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
 	async fn insert_graph(
 		&self,
 		_collection_id: String,

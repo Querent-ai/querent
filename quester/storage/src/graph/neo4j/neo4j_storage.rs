@@ -69,6 +69,16 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
+
+	/// Fetch DiscoveryPayload from storage
+	async fn fetch_discovered_knowledge(
+		&self,
+		session_id: String,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,

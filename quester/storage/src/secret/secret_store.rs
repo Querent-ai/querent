@@ -77,6 +77,15 @@ impl Storage for SecretStore {
 		Ok(())
 	}
 
+	/// Fetch DiscoveryPayload from storage
+	async fn fetch_discovered_knowledge(
+		&self,
+		session_id: String,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
