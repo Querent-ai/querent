@@ -61,7 +61,7 @@ async def print_querent(config, text: str):
         return
     except Exception as e:
         querent_started = False
-        print("❌ Failed to import querent: " + str(e))
+        print("❌ Failed to import querent:  " + str(e))
 
 "#;
 
