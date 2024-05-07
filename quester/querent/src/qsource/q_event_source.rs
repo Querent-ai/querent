@@ -121,7 +121,7 @@ impl Source for QSource {
 			match result {
 				Ok(()) => {
 					// Handle the success
-					log::info!("Successfully started the workflow with id: {}", workflow_id);
+					info!("Successfully started the workflow with id: {}", workflow_id);
 					// send yourself a success message to stop
 					event_sender
 						.send((
@@ -132,6 +132,7 @@ impl Source for QSource {
 								payload: "".to_string(),
 								file: "".to_string(),
 								doc_source: "".to_string(),
+								image_id: Some("".to_string()),
 							},
 						))
 						.await
@@ -140,10 +141,9 @@ impl Source for QSource {
 				},
 				Err(err) => {
 					// Handle the error, e.g., log it
-					log::error!(
+					error!(
 						"Failed to run the workflow with id: {} and error: {:?}",
-						workflow_id,
-						err
+						workflow_id, err
 					);
 					event_sender
 						.send((
@@ -154,6 +154,7 @@ impl Source for QSource {
 								payload: err.to_string(),
 								file: "".to_string(),
 								doc_source: "".to_string(),
+								image_id: Some("".to_string()),
 							},
 						))
 						.await
@@ -162,6 +163,7 @@ impl Source for QSource {
 				},
 			}
 		}));
+		info!("Started the engine 🚀🚀 with id: {}", self.id);
 		let event_lock = self.event_lock.clone();
 		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
 		Ok(())
@@ -193,6 +195,7 @@ impl Source for QSource {
 							break
 						}
 						if event_type == EventType::Failure {
+							error!("QSource failed");
 							is_failure = true;
 							break
 						}
@@ -231,7 +234,7 @@ impl Source for QSource {
 			let batches_error =
 				ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
 			if batches_error.is_err() {
-				log::error!("Failed to send events batch: {:?}", batches_error);
+				error!("Failed to send events batch: {:?}", batches_error);
 				//re-trying
 				let retry_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
 				if retry_error.is_err() {
@@ -263,7 +266,14 @@ impl Source for QSource {
 		_exit_status: &ActorExitStatus,
 		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
-		self.workflow_handle.take().unwrap().abort();
+		match self.workflow_handle.take() {
+			Some(handle) => {
+				handle.abort();
+			},
+			None => {
+				info!("QSource is already finished");
+			},
+		}
 		Ok(())
 	}
 }

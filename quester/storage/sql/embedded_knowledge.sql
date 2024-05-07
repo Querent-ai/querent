@@ -8,5 +8,6 @@ CREATE TABLE embedded_knowledge(
     sentence TEXT,
     predicate TEXT,
     embeddings vector(384),
-    collection_id VARCHAR
+    collection_id VARCHAR,
+    image_id VARCHAR,
 );
