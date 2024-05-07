@@ -175,11 +175,8 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
 					let search_results = storage
-						.similarity_search_l2(
+						.fetch_discovered_knowledge(
 							message.session_id.clone(),
-							self.discovery_agent_params.semantic_pipeline_id.clone(),
-							&current_query_embedding.clone(),
-							10,
 						)
 						.await;
 					match search_results {

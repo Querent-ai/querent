@@ -228,13 +228,12 @@ impl Storage for PGVector {
 	async fn fetch_discovered_knowledge(
 		&self,
 		session_id: String,
-	) -> StorageResult<()> {
+	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 	
-		// Making sure we are only selecting fields that exist in the DiscoveredKnowledge struct
 		let query_result = discovered_knowledge::dsl::discovered_knowledge
 			.select((
 				discovered_knowledge::dsl::doc_id,
@@ -245,27 +244,51 @@ impl Storage for PGVector {
 				discovered_knowledge::dsl::object,
 				discovered_knowledge::dsl::predicate,
 				discovered_knowledge::dsl::cosine_distance,
-				discovered_knowledge::dsl::query_embedding,
-				discovered_knowledge::dsl::session_id,
 			))
-			.filter(discovered_knowledge::dsl::session_id.eq(session_id))
-			.load::<DiscoveredKnowledge>(&mut *conn)
+			.filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+			.load::<(
+				String,
+				String,
+				String,
+				String,
+				String,
+				String,
+				String,
+				Option<f64>,
+			)>(&mut *conn)
 			.await;
 	
-			match query_result {
-				Ok(_result) => {
-					// Perform any necessary operations with _result
-					Ok(())
-				},
-				Err(err) => {
-					log::error!("Query failed: {:?}", err);
-					Err(StorageError {
-						kind: StorageErrorKind::Query,
-						source: Arc::new(anyhow::Error::from(err)),
-					})
+		match query_result {
+			Ok(result) => {
+				let mut results = Vec::new();
+				for (doc_id, doc_source, sentence, knowledge, subject, object, predicate, cosine_distance) in result {
+					let doc_payload = DocumentPayload {
+						doc_id,
+						doc_source,
+						sentence,
+						knowledge,
+						subject,
+						object,
+						predicate,
+						cosine_distance,
+						session_id: Some(session_id.clone()),
+						query_embedding: None, // Assuming there's no query_embedding in this context
+					};
+	
+					results.push(doc_payload);
 				}
+				Ok(results)
+			},
+			Err(err) => {
+				log::error!("Query failed: {:?}", err);
+				Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(err)),
+				})
 			}
 		}
+	}
+	
 	
 	
 	
@@ -276,14 +299,15 @@ impl Storage for PGVector {
 		session_id: String,
 		_collection_id: String,
 		payload: &Vec<f32>,
-		max_results: i32,
+		max_results: i32, // Assume this is the total max, e.g., 100
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-
+	
 		let vector = Vector::from(payload.clone());
+		// First, fetch up to a larger limit, say 100
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
 			.select((
 				embedded_knowledge::dsl::document_id,
@@ -294,16 +318,18 @@ impl Storage for PGVector {
 				embedded_knowledge::dsl::sentence,
 				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
-			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
+			.filter(
+				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6)
+			)
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
-			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(
-				&mut *conn,
-			)
+			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(&mut *conn)
 			.await;
+	
 		match query_result {
 			Ok(result) => {
 				let mut results = Vec::new();
+				let mut unique_sentences = std::collections::HashSet::new();
 				for (
 					doc_id,
 					doc_source,
@@ -312,8 +338,13 @@ impl Storage for PGVector {
 					predicate,
 					sentence,
 					cosine_distance,
-				) in result
-				{
+				) in result {
+					if let Some(ref sent) = sentence {
+						if !unique_sentences.insert(sent.clone()) {
+							continue;
+						}
+					}
+	
 					let mut doc_payload = DocumentPayload::default();
 					doc_payload.doc_id = doc_id;
 					doc_payload.knowledge = knowledge;
@@ -322,12 +353,7 @@ impl Storage for PGVector {
 						doc_payload.subject = knowledge_parts[0].to_string();
 						doc_payload.predicate = knowledge_parts[1].to_string();
 						doc_payload.object = knowledge_parts[2].to_string();
-					} else {
-						log::debug!(
-							"Knowledge triple not in correct format: {:?}",
-							doc_payload.knowledge
-						);
-					};
+					}
 					doc_payload.doc_source = doc_source;
 					doc_payload.cosine_distance = cosine_distance;
 					doc_payload.predicate = predicate;
@@ -337,6 +363,10 @@ impl Storage for PGVector {
 					doc_payload.session_id = Some(session_id.clone());
 					doc_payload.query_embedding = Some(payload.clone());
 					results.push(doc_payload);
+	
+					if results.len() == 10 {
+						break;
+					}
 				}
 				Ok(results)
 			},
@@ -349,6 +379,7 @@ impl Storage for PGVector {
 			},
 		}
 	}
+	
 
 	async fn insert_graph(
 		&self,

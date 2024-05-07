@@ -215,10 +215,10 @@ impl Storage for MilvusStorage {
 	/// Fetch DiscoveryPayload from storage
 	async fn fetch_discovered_knowledge(
 		&self,
-		session_id: String,
-	) -> StorageResult<()> {
-		// Your insert_discovered_knowledge implementation here
-		Ok(())
+		_session_id: String,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		// Implement Neo4j similarity search logic (if needed)
+		Ok(vec![])
 	}
 
 	/// Store key value pair

@@ -122,7 +122,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 							message.session_id.clone(),
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
-							10,
+							100,
 						)
 						.await;
 					match search_results {
