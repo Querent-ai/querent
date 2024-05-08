@@ -72,6 +72,20 @@ pub struct SampleEntities {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct FixedRelationships {
+    #[prost(string, repeated, tag = "1")]
+    pub relationships: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SampleRelationships {
+    #[prost(string, repeated, tag = "1")]
+    pub relationships: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WorkflowContract {
     #[prost(string, optional, tag = "1")]
     pub ner_model_name: ::core::option::Option<::prost::alloc::string::String>,
@@ -97,6 +111,10 @@ pub struct WorkflowContract {
     pub min_samples: ::core::option::Option<i32>,
     #[prost(float, optional, tag = "12")]
     pub cluster_persistence_threshold: ::core::option::Option<f32>,
+    #[prost(message, optional, tag = "13")]
+    pub fixed_relationships: ::core::option::Option<FixedRelationships>,
+    #[prost(message, optional, tag = "14")]
+    pub sample_relationships: ::core::option::Option<SampleRelationships>,
 }
 /// LLamaConfig holds configuration for LLama workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
