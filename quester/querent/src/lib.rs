@@ -61,7 +61,7 @@ async def print_querent(config, text: str):
         return
     except Exception as e:
         querent_started = False
-        print("❌ Failed to import querent: " + str(e))
+        print("❌ Failed to import querent:  " + str(e))
 
 "#;
 
@@ -398,11 +398,24 @@ pub async fn create_querent_synapose_workflow(
 			}
 		}
 
-		// Similarly, check if sample_entities is present and not empty, then join and insert
 		if let Some(sample_entities) = &workflow_contract.sample_entities {
 			if !sample_entities.entities.is_empty() {
 				let sample_entities_str = sample_entities.entities.join(",");
 				params_map.insert("sample_entities".to_owned(), sample_entities_str);
+			}
+		}
+
+		if let Some(sample_relationships) = &workflow_contract.sample_relationships {
+			if !sample_relationships.relationships.is_empty() {
+				let sample_relationships_str = sample_relationships.relationships.join(",");
+				params_map.insert("sample_relationships".to_owned(), sample_relationships_str);
+			}
+		}
+
+		if let Some(fixed_relationship) = &workflow_contract.fixed_relationships {
+			if !fixed_relationship.relationships.is_empty() {
+				let fixed_relationship_str = fixed_relationship.relationships.join(",");
+				params_map.insert("fixed_relationships".to_owned(), fixed_relationship_str);
 			}
 		}
 	}
