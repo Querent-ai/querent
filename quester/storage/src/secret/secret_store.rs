@@ -80,7 +80,7 @@ impl Storage for SecretStore {
 	/// Fetch DiscoveryPayload from storage
 	async fn fetch_discovered_knowledge(
 		&self,
-		session_id: String,
+		_session_id: String,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		// Implement Neo4j similarity search logic (if needed)
 		Ok(vec![])

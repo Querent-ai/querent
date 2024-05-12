@@ -174,11 +174,8 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
-					let search_results = storage
-						.fetch_discovered_knowledge(
-							message.session_id.clone(),
-						)
-						.await;
+					let search_results =
+						storage.fetch_discovered_knowledge(message.session_id.clone()).await;
 					match search_results {
 						Ok(results) => {
 							let res = results.clone();

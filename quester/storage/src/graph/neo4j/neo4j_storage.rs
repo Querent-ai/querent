@@ -69,7 +69,6 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
-
 	/// Fetch DiscoveryPayload from storage
 	async fn fetch_discovered_knowledge(
 		&self,

@@ -233,7 +233,7 @@ impl Storage for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	
+
 		let query_result = discovered_knowledge::dsl::discovered_knowledge
 			.select((
 				discovered_knowledge::dsl::doc_id,
@@ -246,22 +246,25 @@ impl Storage for PGVector {
 				discovered_knowledge::dsl::cosine_distance,
 			))
 			.filter(discovered_knowledge::dsl::session_id.eq(&session_id))
-			.load::<(
-				String,
-				String,
-				String,
-				String,
-				String,
-				String,
-				String,
-				Option<f64>,
-			)>(&mut *conn)
+			.load::<(String, String, String, String, String, String, String, Option<f64>)>(
+				&mut *conn,
+			)
 			.await;
-	
+
 		match query_result {
 			Ok(result) => {
 				let mut results = Vec::new();
-				for (doc_id, doc_source, sentence, knowledge, subject, object, predicate, cosine_distance) in result {
+				for (
+					doc_id,
+					doc_source,
+					sentence,
+					knowledge,
+					subject,
+					object,
+					predicate,
+					cosine_distance,
+				) in result
+				{
 					let doc_payload = DocumentPayload {
 						doc_id,
 						doc_source,
@@ -274,7 +277,7 @@ impl Storage for PGVector {
 						session_id: Some(session_id.clone()),
 						query_embedding: None, // Assuming there's no query_embedding in this context
 					};
-	
+
 					results.push(doc_payload);
 				}
 				Ok(results)
@@ -285,14 +288,9 @@ impl Storage for PGVector {
 					kind: StorageErrorKind::Query,
 					source: Arc::new(anyhow::Error::from(err)),
 				})
-			}
+			},
 		}
 	}
-	
-	
-	
-	
-
 
 	async fn similarity_search_l2(
 		&self,
@@ -305,7 +303,7 @@ impl Storage for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	
+
 		let vector = Vector::from(payload.clone());
 		// First, fetch up to a larger limit, say 100
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
@@ -318,14 +316,14 @@ impl Storage for PGVector {
 				embedded_knowledge::dsl::sentence,
 				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
-			.filter(
-				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6)
-			)
+			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
-			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(&mut *conn)
+			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(
+				&mut *conn,
+			)
 			.await;
-	
+
 		match query_result {
 			Ok(result) => {
 				let mut results = Vec::new();
@@ -338,13 +336,14 @@ impl Storage for PGVector {
 					predicate,
 					sentence,
 					cosine_distance,
-				) in result {
+				) in result
+				{
 					if let Some(ref sent) = sentence {
 						if !unique_sentences.insert(sent.clone()) {
 							continue;
 						}
 					}
-	
+
 					let mut doc_payload = DocumentPayload::default();
 					doc_payload.doc_id = doc_id;
 					doc_payload.knowledge = knowledge;
@@ -363,7 +362,7 @@ impl Storage for PGVector {
 					doc_payload.session_id = Some(session_id.clone());
 					doc_payload.query_embedding = Some(payload.clone());
 					results.push(doc_payload);
-	
+
 					if results.len() == 10 {
 						break;
 					}
@@ -379,7 +378,6 @@ impl Storage for PGVector {
 			},
 		}
 	}
-	
 
 	async fn insert_graph(
 		&self,
