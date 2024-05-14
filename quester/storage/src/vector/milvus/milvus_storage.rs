@@ -79,6 +79,7 @@ impl Storage for MilvusStorage {
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
+		_similarity_threshold: f64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let collection_name = format!("pipeline_{}", collection_id);
 		let collection = self.client.get_collection(collection_name.as_str()).await;

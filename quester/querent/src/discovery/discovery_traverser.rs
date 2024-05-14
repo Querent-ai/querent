@@ -33,6 +33,7 @@ pub struct DiscoveryTraverse {
 	discover_agent: Option<AgentExecutor<ConversationalAgent>>,
 	template: Option<PromptTemplate>,
 	embedding_model: Option<TextEmbedding>,
+	local_memory: WindowBufferMemory,
 }
 
 impl DiscoveryTraverse {
@@ -50,6 +51,7 @@ impl DiscoveryTraverse {
 			discover_agent: None,
 			template: None,
 			embedding_model: None,
+			local_memory: WindowBufferMemory::new(10),
 		}
 	}
 
@@ -141,10 +143,10 @@ Your summary should distill the essential findings and insights from the dataset
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed |
-			ActorExitStatus::Killed |
-			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed
+			| ActorExitStatus::Killed
+			| ActorExitStatus::Failure(_)
+			| ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("Discovery agent {} exiting with success", self.agent_id);
 			},
@@ -174,35 +176,15 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
-					let search_results =
-						storage.fetch_discovered_knowledge(message.session_id.clone()).await;
-					match search_results {
-						Ok(results) => {
-							let res = results.clone();
-							for document in results {
-								let tags = format!(
-									"{}, {}, {}",
-									document.subject.replace('_', " "),
-									document.object.replace('_', " "),
-									document.predicate.replace('_', " ")
-								);
-								let formatted_document = proto::discovery::Insight {
-									document: document.doc_id,
-									source: document.doc_source,
-									knowledge: document.knowledge,
-									sentence: document.sentence,
-									tags,
-								};
-
-								documents.push(formatted_document);
-							}
-
-							tokio::spawn(insert_discovered_knowledge_async(storage.clone(), res));
-						},
-						Err(e) => {
-							log::error!("Failed to search for similar documents: {}", e);
-						},
-					}
+					let search_results = storage
+						.similarity_search_l2(
+							message.session_id.clone(),
+							self.discovery_agent_params.semantic_pipeline_id.clone(),
+							&current_query_embedding.clone(),
+							100,
+							0.3,
+						)
+						.await;
 				}
 			}
 		}

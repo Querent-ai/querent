@@ -159,6 +159,7 @@ impl Storage for PostgresStorage {
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,
+		_similarity_threshold: f64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}

@@ -298,6 +298,7 @@ impl Storage for PGVector {
 		_collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32, // Assume this is the total max, e.g., 100
+		similarity_threshold: f64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -316,7 +317,11 @@ impl Storage for PGVector {
 				embedded_knowledge::dsl::sentence,
 				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
-			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
+			.filter(
+				embedded_knowledge::dsl::embeddings
+					.cosine_distance(vector.clone())
+					.le(similarity_threshold),
+			)
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(

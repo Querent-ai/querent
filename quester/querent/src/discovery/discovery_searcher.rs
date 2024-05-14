@@ -123,6 +123,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
 							100,
+							0.6,
 						)
 						.await;
 					match search_results {
