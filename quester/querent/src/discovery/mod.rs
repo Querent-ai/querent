@@ -4,22 +4,9 @@ use actors::ActorExitStatus;
 use common::DocumentPayload;
 use storage::Storage;
 
-pub mod agent;
-pub mod chain;
 pub mod discovery_agent;
 pub mod discovery_searcher;
 pub mod discovery_service;
-pub mod document_loaders;
-pub mod embedding;
-pub mod language_models;
-pub mod llm;
-pub mod memory;
-pub mod prompt;
-pub mod schemas;
-pub mod semantic_router;
-pub mod text_splitter;
-pub mod tools;
-pub mod vectorstore;
 
 async fn insert_discovered_knowledge_async(
 	storage: Arc<dyn Storage>,

@@ -1,7 +1,6 @@
 use crate::{
 	agent::{AgentExecutor, ConversationalAgent, ConversationalAgentBuilder},
-	chain::options::ChainCallOptions,
-	discovery::chain::chain_trait::Chain,
+	chain::{chain_trait::Chain, options::ChainCallOptions},
 	llm::{OpenAI, OpenAIModel},
 	memory::WindowBufferMemory,
 	prompt::{PromptFromatter, PromptTemplate, TemplateFormat},
