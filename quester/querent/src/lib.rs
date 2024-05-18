@@ -340,6 +340,9 @@ pub async fn create_querent_synapose_workflow(
 		if let Some(ner_model_name) = &workflow_contract.ner_model_name {
 			params_map.insert("ner_model_name".to_owned(), ner_model_name.clone());
 		}
+		if let Some(rel_model_name) = &workflow_contract.rel_model_name {
+			params_map.insert("rel_model_name".to_owned(), rel_model_name.clone());
+		}
 		if workflow_contract.enable_filtering.is_some() {
 			params_map.insert(
 				"enable_filtering".to_owned(),

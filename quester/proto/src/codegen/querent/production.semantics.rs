@@ -116,6 +116,8 @@ pub struct WorkflowContract {
     pub fixed_relationships: ::core::option::Option<FixedRelationships>,
     #[prost(message, optional, tag = "14")]
     pub sample_relationships: ::core::option::Option<SampleRelationships>,
+    #[prost(string, optional, tag = "15")]
+    pub rel_model_name: ::core::option::Option<::prost::alloc::string::String>,
 }
 /// LLamaConfig holds configuration for LLama workflows.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

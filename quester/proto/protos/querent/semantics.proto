@@ -70,6 +70,7 @@ message WorkflowContract {
   optional float cluster_persistence_threshold = 12;
   FixedRelationships fixed_relationships = 13;
   SampleRelationships sample_relationships = 14;
+  optional string rel_model_name = 15;
 }
 
 // LLamaConfig holds configuration for LLama workflows.
