@@ -216,7 +216,7 @@ tokenizers = "0.15.2"
 pgvector = { version = "0.3", features = ["diesel", "postgres"] }
 redb = "2.0.0"
 rmp-serde = "1.1"
-llm = { git = "https://github.com/rustformers/llm" , branch = "main" }
+llm = { git = "https://github.com/rustformers/llm" , branch = "gguf" }
 
 [profile.release]
 panic = "unwind"

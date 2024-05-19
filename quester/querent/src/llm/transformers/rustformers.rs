@@ -6,27 +6,22 @@ use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures::Stream;
 use tokio::sync::Mutex;
 
-use llm::{
-	InferenceFeedback, InferenceParameters, InferenceRequest, InferenceResponse, Model,
-	ModelArchitecture,
-};
+use llm::{InferenceFeedback, InferenceParameters, InferenceRequest, InferenceResponse, Model};
 
 use crate::{
 	language_models::{llm::LLM, options::CallOptions, GenerateResult, LLMError, TokenUsage},
 	schemas::{messages::Message, StreamData},
 };
 
-pub struct TransformersLLM {
+pub struct LLama {
 	options: CallOptions,
 	model: Box<dyn Model>,
-	user_name: String,
-	assistant_name: String,
 	session: Mutex<llm::InferenceSession>,
 }
 
-impl TransformersLLM {
-	pub fn new(model_architecture: ModelArchitecture, model_path: PathBuf) -> Self {
-		let embedder_options: InitOptions = InitOptions {
+impl LLama {
+	pub async fn try_new(model_path: PathBuf) -> Self {
+		let embedder_options = InitOptions {
 			model_name: EmbeddingModel::AllMiniLML6V2,
 			show_download_progress: true,
 			..Default::default()
@@ -39,42 +34,16 @@ impl TransformersLLM {
 		let token_model_path = token_model_repo.join(&token_model_info.model_file);
 		let tokenizer_source = llm::TokenizerSource::HuggingFaceTokenizerFile(token_model_path);
 		drop(embedding_model);
-		let model = llm::load_dynamic(
-			Some(model_architecture),
-			&model_path,
+		let model = llm::load(
+			model_path.as_path(),
 			tokenizer_source.clone(),
 			Default::default(),
 			llm::load_progress_callback_stdout,
 		)
 		.expect("Failed to load model");
 
-		let mut session = model.start_session(Default::default());
-
-		let user_name = "### Human";
-		let assistant_name = "### Assistant";
-		let persona = "A chat between a human and an assistant.";
-		let history = String::new();
-		session
-			.feed_prompt(
-				model.as_ref(),
-				format!("{persona}\n{history}").as_str(),
-				&mut Default::default(),
-				llm::feed_prompt_callback(|resp| match resp {
-					InferenceResponse::PromptToken(_t) | InferenceResponse::InferredToken(_t) =>
-						Ok::<llm::InferenceFeedback, Infallible>(llm::InferenceFeedback::Continue),
-					_ => Ok(llm::InferenceFeedback::Continue),
-				}),
-			)
-			.map_err(|e| LLMError::OtherError(e.to_string()))
-			.expect("Failed to feed prompt");
-
-		Self {
-			options: CallOptions::default(),
-			model,
-			user_name: user_name.to_string(),
-			assistant_name: assistant_name.to_string(),
-			session: Mutex::new(session),
-		}
+		let session = model.start_session(Default::default());
+		Self { options: CallOptions::default(), model, session: Mutex::new(session) }
 	}
 
 	pub fn with_options(mut self, options: CallOptions) -> Self {
@@ -84,12 +53,10 @@ impl TransformersLLM {
 }
 
 #[async_trait]
-impl LLM for TransformersLLM {
+impl LLM for LLama {
 	async fn generate(&self, prompt: &[Message]) -> Result<GenerateResult, LLMError> {
 		let mut rng = rand::rngs::StdRng::from_entropy();
 		let inference_parameters = InferenceParameters::default();
-		let user_name = self.user_name.clone();
-		let assistant_name = self.assistant_name.clone();
 		let prompt_text =
 			prompt.iter().map(|m| m.content.clone()).collect::<Vec<String>>().join("\n");
 		let mut text = String::new();
@@ -100,9 +67,7 @@ impl LLM for TransformersLLM {
 					self.model.as_ref(),
 					&mut rng,
 					&InferenceRequest {
-						prompt: format!("{user_name}: {prompt_text}\n{assistant_name}:")
-							.as_str()
-							.into(),
+						prompt: format!("{prompt_text}").as_str().into(),
 						parameters: &inference_parameters,
 						play_back_previous_tokens: false,
 						maximum_token_count: None,
