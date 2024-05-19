@@ -20,7 +20,6 @@ venv
 *.log.1
 content/
 querent-env/
-models/
 querent-*
 model/
 dev-env/

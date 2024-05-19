@@ -48,6 +48,8 @@ reqwest = { workspace = true }
 urlencoding = { workspace = true }
 tokenizers = { workspace = true }
 fastembed = "3"
+llm = { workspace = true }
+rand = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }

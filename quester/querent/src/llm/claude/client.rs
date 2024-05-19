@@ -74,7 +74,7 @@ impl Claude {
 		let client = Client::new();
 		let is_stream = self.options.streaming_func.is_some();
 
-		let payload = self.build_payload(messages, is_stream);
+		let payload: Payload = self.build_payload(messages, is_stream);
 		let res = client
 			.post("https://api.anthropic.com/v1/messages")
 			.header("x-api-key", &self.api_key)

@@ -3,3 +3,6 @@ pub use openai::*;
 
 pub mod claude;
 pub use claude::*;
+
+pub mod transformers;
+pub use transformers::*;

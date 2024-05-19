@@ -89,7 +89,7 @@ impl Default for OpenAI<OpenAIConfig> {
 impl<C: Config + Send + Sync> LLM for OpenAI<C> {
 	async fn generate(&self, prompt: &[Message]) -> Result<GenerateResult, LLMError> {
 		let client = Client::with_config(self.config.clone());
-		let request = self.generate_request(prompt)?;
+		let request: CreateChatCompletionRequest = self.generate_request(prompt)?;
 		match &self.options.streaming_func {
 			Some(func) => {
 				let mut stream = client.chat().create_stream(request).await?;
