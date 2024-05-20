@@ -58,6 +58,9 @@ jobs:
           profile: minimal
           target: x86_64-unknown-linux-gnu
 
+      - name: Check openssl version
+        run: openssl version
+        
       - name: Cargo test
         run: cd quester && make test
 
