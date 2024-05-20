@@ -106,9 +106,19 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 					DiscoverSearchHandle { mailbox: search_messagebus, handle: search };
 				self.searcher_pipelines.insert(new_uuid.clone(), search_handle);
 			},
-			_ => return Err(anyhow::anyhow!("Invalid session type").into()),
-		}
+			DiscoveryAgentType::Traverser => {
+				let agent = DiscoveryAgent::new(
+					new_uuid.clone(),
+					current_timestamp as u64,
+					event_storages.clone(),
+					request.clone(),
+				);
 
+				let (agent_messagebus, agent) = ctx.spawn_actor().spawn(agent);
+				let agent_handle = DiscoverAgentHandle { mailbox: agent_messagebus, handle: agent };
+				self.agent_pipelines.insert(new_uuid.clone(), agent_handle);
+			},
+		}
 		Ok(Ok(DiscoverySessionResponse { session_id: new_uuid }))
 	}
 }
@@ -138,13 +148,13 @@ impl Handler<StopDiscoverySessionRequest> for DiscoveryAgentService {
 		let agent_handle = self.agent_pipelines.remove(&request.session_id);
 		if let Some(agent_handle) = agent_handle {
 			let _ = agent_handle.handle.kill().await;
-			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
+			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }));
 		}
 
 		let search_handle = self.searcher_pipelines.remove(&request.session_id);
 		if let Some(search_handle) = search_handle {
 			let _ = search_handle.handle.kill().await;
-			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
+			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }));
 		}
 
 		Err(anyhow::anyhow!("Discovery Session not found").into())
