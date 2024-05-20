@@ -1,7 +1,7 @@
 use crate::{
 	agent::{AgentExecutor, ConversationalAgent, ConversationalAgentBuilder},
 	chain::{chain_trait::Chain, options::ChainCallOptions},
-	llm::{LLama},
+	llm::LLama,
 	memory::WindowBufferMemory,
 	prompt::{PromptFromatter, PromptTemplate, TemplateFormat},
 	prompt_args,
@@ -142,10 +142,10 @@ Your summary should distill the essential findings and insights from the dataset
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed
-			| ActorExitStatus::Killed
-			| ActorExitStatus::Failure(_)
-			| ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::DownstreamClosed |
+			ActorExitStatus::Killed |
+			ActorExitStatus::Failure(_) |
+			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				log::info!("Discovery agent {} exiting with success", self.agent_id);
 			},
