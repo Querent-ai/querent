@@ -31,8 +31,9 @@ impl LLama {
 			.expect("Failed to initialize TextEmbedding");
 		let token_model_repo = embedder_options.clone().cache_dir;
 		let token_model_info = TextEmbedding::get_model_info(&embedder_options.model_name);
-		let token_model_path = token_model_repo.join(&token_model_info.model_file);
-		let tokenizer_source = llm::TokenizerSource::HuggingFaceTokenizerFile(token_model_path);
+		let token_model_path: PathBuf =
+			token_model_repo.join("models--Qdrant--all-MiniLM-L6-v2-onnx/tokenizer.json");
+		let tokenizer_source = llm::TokenizerSource::HuggingFaceTokenizerFile(PathBuf::from("/home/querent/querent/quester/quester/querent/.fastembed_cache/models--Qdrant--all-MiniLM-L6-v2-onnx/snapshots/cb27c1f221563ca44e58ad2a694965db39c8153d/tokenizer.json"));
 		drop(embedding_model);
 		let model = llm::load(
 			model_path.as_path(),
@@ -75,7 +76,10 @@ impl LLM for LLama {
 					&mut Default::default(),
 					|r| {
 						match r {
-							InferenceResponse::InferredToken(t) => text.push_str(&t),
+							InferenceResponse::InferredToken(t) => {
+								println!("{}", t);
+								text.push_str(&t)
+							},
 							InferenceResponse::EotToken => return Ok(InferenceFeedback::Halt),
 							_ => {},
 						};
@@ -112,5 +116,31 @@ impl LLM for LLama {
 
 	fn add_options(&mut self, options: CallOptions) {
 		self.options.merge_options(options)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use std::path::PathBuf;
+
+	#[tokio::test]
+	async fn test_llama_generate() {
+		let model_path =
+			PathBuf::from("/home/querent/querent/quester/model/llama-2-7b-chat.Q5_K_M.gguf");
+		let llama = LLama::try_new(model_path.clone()).await;
+		let prompt = vec![Message::new_human_message("Hello, world!")];
+		let result = llama.generate(&prompt).await;
+		assert!(result.is_ok());
+	}
+
+	#[tokio::test]
+	async fn test_llama_invoke() {
+		let model_path =
+			PathBuf::from("/home/querent/querent/quester/model/llama-2-7b-chat.Q5_K_M.gguf");
+		let llama = LLama::try_new(model_path).await;
+		let prompt = "Hello, world!";
+		let result = llama.invoke(prompt).await;
+		assert!(result.is_ok());
 	}
 }
