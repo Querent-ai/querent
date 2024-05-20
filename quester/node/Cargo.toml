@@ -30,7 +30,6 @@ indicatif = { workspace = true }
 itertools = { workspace = true }
 numfmt = { workspace = true }
 once_cell = { workspace = true }
-openssl-probe = { workspace = true, optional = true }
 opentelemetry = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 regex = { workspace = true }
@@ -81,6 +80,5 @@ utoipa-swagger-ui = { workspace = true }
 time = { workspace = true }
 
 [features]
-openssl-support = ["openssl-probe"]
-default = ["openssl-support"]
+default = []
 testsuite = []

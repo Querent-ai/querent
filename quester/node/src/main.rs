@@ -40,9 +40,6 @@ fn main() -> Result<(), QuerentError> {
 }
 
 async fn main_impl() -> Result<(), QuerentError> {
-	#[cfg(feature = "openssl-support")]
-	openssl_probe::init_ssl_cert_env_vars();
-
 	let about_text = about_text();
 	let build_info = BuildInfo::get();
 	let version = format!(
