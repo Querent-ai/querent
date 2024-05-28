@@ -8,8 +8,8 @@ use storage::Storage;
 use tracing::instrument;
 
 use crate::{
-	describe_pipeline, get_pipelines_metadata, ingest_tokens, restart_pipeline, start_pipeline,
-	stop_pipeline,
+	add_collector_data, describe_pipeline, get_pipelines_metadata, ingest_tokens, restart_pipeline,
+	start_pipeline, stop_pipeline,
 };
 
 #[derive(Debug, Clone)]
@@ -152,6 +152,24 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 		let req = request.into_inner();
 		let response =
 			restart_pipeline(req.pipeline_id, self.semantic_service_mailbox.clone()).await;
+		match response {
+			Ok(response) => Ok(tonic::Response::new(BooleanResponse { response })),
+			Err(err) => Err(tonic::Status::from(err)),
+		}
+	}
+
+	#[instrument(skip(self, request))]
+	async fn add_collector_data(
+		&self,
+		request: tonic::Request<proto::semantics::CollectorData>,
+	) -> GrpcResult<tonic::Response<proto::semantics::BooleanResponse>, tonic::Status> {
+		let req = request.into_inner();
+		let response = add_collector_data(
+			req,
+			self.semantic_service_mailbox.clone(),
+			self.secret_store.clone(),
+		)
+		.await;
 		match response {
 			Ok(response) => Ok(tonic::Response::new(BooleanResponse { response })),
 			Err(err) => Err(tonic::Status::from(err)),

@@ -4,7 +4,7 @@ use futures_util::StreamExt;
 use proto::{
 	config::StorageConfigs,
 	semantics::{
-		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
+		AzureCollectorConfig, Backend, CollectorConfig, CollectorData, DropBoxCollectorConfig,
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
 		FixedRelationships, GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig,
 		IndexingStatistics, JiraCollectorConfig, LLamaConfig, MilvusConfig, Name, Neo4jConfig,
@@ -150,6 +150,7 @@ pub fn observe_pipeline_get_handler(
 		.map(make_json_api_response)
 }
 
+////------------------
 #[utoipa::path(
     post,
     tag = "Semantic Service",
@@ -211,6 +212,7 @@ pub async fn start_pipeline(
 	Ok(SemanticPipelineResponse { pipeline_id: id })
 }
 
+//-----
 pub fn start_pipeline_post_handler(
 	semantic_service_bus: Option<MessageBus<SemanticService>>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
@@ -422,6 +424,38 @@ pub fn restart_pipeline_post_handler(
 		.and(warp::post())
 		.and(require(semantic_service_bus))
 		.then(restart_pipeline)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+    post,
+    tag = "Collector Service",
+    path = "/collectors/add",
+	request_body = CollectorData,
+    responses(
+        (status = 200, description = "Data successfully added to collector.", body = bool),
+        (status = 500, description = "Internal server error", body = String)
+    ),
+)]
+pub async fn add_collector_data(
+	_request: CollectorData,
+	_semantic_service_mailbox: MessageBus<SemanticService>,
+	_secret_store: Arc<dyn storage::Storage>,
+) -> Result<bool, PipelineErrors> {
+	Ok(true)
+}
+
+pub fn add_collector_data_post_handler(
+	semantic_service_bus: Option<MessageBus<SemanticService>>,
+	secret_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics")
+		.and(warp::body::json())
+		.and(warp::post())
+		.and(require(semantic_service_bus))
+		.and(require(Some(secret_store)))
+		.then(add_collector_data)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }

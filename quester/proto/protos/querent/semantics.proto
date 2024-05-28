@@ -10,6 +10,7 @@ service SemanticsService {
   rpc DescribePipeline(DescribePipelineRequest) returns (IndexingStatistics) {}
   rpc IngestTokens(SendIngestedTokens) returns (BooleanResponse) {}
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
+  rpc AddCollectorData(CollectorData) returns (BooleanResponse) {}
 }
 
 message EmptyObserve{}
@@ -130,6 +131,16 @@ message PipelinesMetadata {
 
 message BooleanResponse {
   bool response = 1;
+}
+
+//Represents CollectorsList from fronted
+message CollectorData {
+  //The unique ID for each collector 
+  string collector_id = 1;
+  //The collector configuration hashmap
+  CollectorConfig config = 2;
+  //Name of the collector
+  string name = 3;
 }
 
 // Collectors 

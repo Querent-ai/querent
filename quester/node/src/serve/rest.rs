@@ -19,6 +19,7 @@ use warp::{
 };
 
 use crate::{
+	add_collector_data_post_handler,
 	cluster_api::cluster_handler,
 	discover_get_filter, discover_post_filter, get_pipelines_metadata_handler,
 	health_check_api::health_check_handlers,
@@ -191,7 +192,11 @@ fn api_v1_routes(
 			.or(start_discovery_session_filter(services.discovery_service.clone()))
 			.or(discover_get_filter(services.discovery_service.clone()))
 			.or(discover_post_filter(services.discovery_service.clone()))
-			.or(stop_discovery_session_filter(services.discovery_service.clone())),
+			.or(stop_discovery_session_filter(services.discovery_service.clone()))
+			.or(add_collector_data_post_handler(
+				Some(services.semantic_service_bus.clone()),
+				services.secret_store.clone(),
+			)),
 	)
 }
 
