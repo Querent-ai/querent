@@ -218,6 +218,7 @@ candle-core = { version = "0.5.0" }
 candle-transformers = { version = "0.5.0" }
 candle-nn = { version = "0.5.0" }
 hf-hub = "0.3.2"
+llm_utils = { git = "https://github.com/ShelbyJenkins/llm_utils.git", branch = "main" }
 
 [profile.release]
 panic = "unwind"

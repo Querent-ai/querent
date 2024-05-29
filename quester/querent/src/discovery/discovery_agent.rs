@@ -17,7 +17,7 @@ use proto::{
 	DiscoveryAgentType, DiscoveryError,
 };
 use querent_synapse::callbacks::EventType;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
 
@@ -91,12 +91,8 @@ Your summary should distill the essential findings and insights from the dataset
             vec!["query".to_string(), "graph_data".to_string()],
             TemplateFormat::Jinja2,
         );
-		// let open_ai_config =
-		// 	OpenAIConfig::new().with_api_key(self.discovery_agent_params.openai_api_key.clone());
-		let model_path = PathBuf::from(
-			"/home/puneet/querent/quester/quester/content/models/llama-2-7b-chat.Q5_K_M.gguf",
-		);
-		let llm = LLama::try_new(model_path).await;
+
+		let llm = LLama::new();
 		let memory =
 			WindowBufferMemory::new(self.discovery_agent_params.max_message_memory_size as usize);
 		let command_executor = CommandExecutor::default();
