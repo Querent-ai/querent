@@ -70,9 +70,8 @@ impl SourceError {
 impl From<io::Error> for SourceError {
 	fn from(err: io::Error) -> SourceError {
 		match err.kind() {
-			io::ErrorKind::NotFound => {
-				SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into()))
-			},
+			io::ErrorKind::NotFound =>
+				SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into())),
 			_ => SourceError::new(SourceErrorKind::Io, Arc::new(err.into())),
 		}
 	}
