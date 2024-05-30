@@ -7,8 +7,6 @@ use tempfile::TempPath;
 use tracing::error;
 
 pub use source::*;
-pub mod payload;
-pub use payload::*;
 use tokio::fs::File;
 pub mod gcs;
 pub mod s3;

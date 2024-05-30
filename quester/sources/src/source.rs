@@ -13,7 +13,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 pub trait SendableAsync: AsyncWrite + Send + Unpin {}
 impl<W: AsyncWrite + Send + Unpin> SendableAsync for W {}
 
-use crate::{default_copy_to_file, BlobPayload};
+use crate::default_copy_to_file;
 
 /// Storage error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -70,8 +70,9 @@ impl SourceError {
 impl From<io::Error> for SourceError {
 	fn from(err: io::Error) -> SourceError {
 		match err.kind() {
-			io::ErrorKind::NotFound =>
-				SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into())),
+			io::ErrorKind::NotFound => {
+				SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into()))
+			},
 			_ => SourceError::new(SourceErrorKind::Io, Arc::new(err.into())),
 		}
 	}
@@ -81,10 +82,6 @@ impl From<io::Error> for SourceError {
 pub trait Source: fmt::Debug + Send + Sync + 'static {
 	/// Establishes a connection to the source.
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
-
-	/// Pulls data from the source.
-	/// Path is of format `bucket_name/path/to/file`.
-	async fn put(&self, path: &Path, payload: Box<dyn BlobPayload>) -> SourceResult<()>;
 
 	/// Pulls data from the source and copies it to a file.
 	async fn copy_to_file(&self, path: &Path, output_path: &Path) -> SourceResult<u64> {

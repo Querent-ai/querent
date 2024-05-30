@@ -1,12 +1,11 @@
 use std::{fmt, ops::Range, path::Path};
 
 use async_trait::async_trait;
-use bytesize::ByteSize;
 use opendal::Operator;
 use proto::semantics::GcsCollectorConfig;
 use tokio::io::{AsyncRead, AsyncWriteExt};
 
-use crate::{BlobPayload, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
 #[derive(Clone)]
 pub struct OpendalStorage {
@@ -34,18 +33,6 @@ impl OpendalStorage {
 impl Source for OpendalStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		self.op.check().await?;
-		Ok(())
-	}
-
-	async fn put(&self, path: &Path, payload: Box<dyn BlobPayload>) -> SourceResult<()> {
-		let path = path.as_os_str().to_string_lossy();
-		let mut payload_reader = payload.byte_stream().await?.into_async_read();
-
-		let mut storage_writer =
-			self.op.writer_with(&path).buffer(ByteSize::mb(8).as_u64() as usize).await?;
-		tokio::io::copy(&mut payload_reader, &mut storage_writer).await?;
-		storage_writer.close().await?;
-
 		Ok(())
 	}
 

@@ -1,8 +1,6 @@
 use std::{io, ops::Range, path::Path};
 
-use crate::{
-	BlobPayload, MultiPartPolicy, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult,
-};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use async_trait::async_trait;
 use aws_sdk_s3::{
 	config::Region,
@@ -31,9 +29,6 @@ pub struct S3Source {
 	pub s3_client: Option<S3Client>,
 }
 
-#[derive(Clone, Debug)]
-struct MultipartUploadId(pub String);
-
 impl S3Source {
 	pub fn new(config: S3CollectorConfig) -> Self {
 		let bucket_name = config.bucket.clone();
@@ -42,7 +37,6 @@ impl S3Source {
 		let access_key = config.access_key.clone();
 		let secret_key = config.secret_key.clone();
 		let chunk_size = 1024 * 1024 * 10; // this is 10MB
-		let _multipart_policy = MultiPartPolicy::default();
 		S3Source { bucket_name, region, access_key, secret_key, chunk_size, s3_client: None }
 	}
 
@@ -71,48 +65,6 @@ impl S3Source {
 		Ok(get_object_output)
 	}
 
-	async fn put_single_part_single_try<'a>(
-		&'a self,
-		bucket: &'a str,
-		key: &'a str,
-		payload: Box<dyn BlobPayload>,
-		len: u64,
-	) -> Result<(), SourceError> {
-		let body = payload.byte_stream().await.map_err(|io_error| SourceError::from(io_error))?;
-
-		self.s3_client
-			.as_ref()
-			.unwrap()
-			.put_object()
-			.bucket(bucket)
-			.key(key)
-			.body(body)
-			.content_length(len as i64)
-			.send()
-			.await
-			.map_err(|sdk_error| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Error putting object to S3: {:?}", sdk_error).into(),
-				)
-			})?;
-		Ok(())
-	}
-
-	async fn put_single_part<'a>(
-		&'a self,
-		key: &'a str,
-		payload: Box<dyn BlobPayload>,
-		len: u64,
-	) -> SourceResult<()> {
-		// split key in bucket and path
-		let mut parts = key.splitn(2, '/');
-		let bucket = parts.next().unwrap();
-		let key = parts.next().unwrap();
-		self.put_single_part_single_try(bucket, key, payload.clone(), len).await?;
-		Ok(())
-	}
-
 	async fn get_to_vec(
 		&self,
 		path: &Path,
@@ -139,18 +91,6 @@ impl Source for S3Source {
 		let _permit = REQUEST_SEMAPHORE.acquire().await;
 
 		self.s3_client.as_ref().unwrap().list_objects_v2().send().await?;
-		Ok(())
-	}
-
-	async fn put(
-		&self,
-		path: &Path,
-		payload: Box<dyn crate::BlobPayload>,
-	) -> crate::SourceResult<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
-		let key = path.to_string_lossy().to_string();
-		let total_len = payload.len();
-		self.put_single_part(&key, payload, total_len).await?;
 		Ok(())
 	}
 
