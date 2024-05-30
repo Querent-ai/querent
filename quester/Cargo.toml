@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
+members = ["sources", "actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
 
 [profile.dev]
 debug = false
@@ -185,6 +185,7 @@ codegen = { version = "3.0.4", path = "./codegen" }
 proto = { version = "3.0.4", path = "./proto" }
 discovery = {version = "3.0.4", path = "./insights"}
 node = { version = "3.0.4", path = "./node" }
+sources = { version = "3.0.4", path = "./sources" }
 
 pyo3-asyncio = { version = "0.20.0", features = [
   "attributes",
@@ -216,6 +217,18 @@ tokenizers = "0.15.2"
 pgvector = { version = "0.3", features = ["diesel", "postgres"] }
 redb = "2.0.0"
 rmp-serde = "1.1"
+
+aws-config = "0.55.0"
+aws-credential-types = { version = "0.55.0", features = [
+  "hardcoded-credentials",
+] }
+aws-sdk-kinesis = "0.28.0"
+aws-sdk-s3 = "0.28.0"
+aws-smithy-async = "0.55.0"
+aws-smithy-client = "0.55.0"
+aws-smithy-http = "0.55.0"
+aws-types = "0.55.0"
+opendal = "0.44"
 
 [profile.release]
 panic = "unwind"
