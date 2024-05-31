@@ -30,6 +30,10 @@ pub enum SourceErrorKind {
 	NotFound,
 	/// Unauthorized error.
 	Unauthorized,
+	/// Service error.
+	Service,
+	/// Internal error.
+	Internal,
 }
 
 /// Generic SourceError.
