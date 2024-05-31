@@ -80,6 +80,18 @@ impl Source for OpendalStorage {
 		let meta = self.op.stat(&path).await?;
 		Ok(meta.content_length())
 	}
+
+	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+		// let mut stream = self.op.scan("/").await?;
+		// while let Some(entry) = stream.next().await {
+		// 	let entry = entry.map_err(SourceError::from)?;
+		// 	let path = entry.path().to_string();
+		// 	let mut storage_reader = self.op.reader(&path).await.map_err(SourceError::from)?;
+		// 	tokio::io::copy(&mut storage_reader, output).await.map_err(SourceError::from)?;
+		// }
+		// output.flush().await.map_err(SourceError::from)?;
+		Ok(())
+	}
 }
 
 impl From<opendal::Error> for SourceError {

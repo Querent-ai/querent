@@ -182,6 +182,10 @@ impl Source for AzureBlobStorage {
 			Err(err) => Err(SourceError::from(AzureErrorWrapper::from(err))),
 		}
 	}
+
+	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+		Ok(())
+	}
 }
 
 #[derive(Error, Debug)]
