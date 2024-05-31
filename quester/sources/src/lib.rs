@@ -9,8 +9,10 @@ use tracing::error;
 pub use source::*;
 use tokio::fs::File;
 pub mod azure;
+pub mod drive;
 pub mod gcs;
 pub mod s3;
+
 async fn default_copy_to_file<S: Source + ?Sized>(
 	storage: &S,
 	path: &Path,

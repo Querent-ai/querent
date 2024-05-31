@@ -1,11 +1,21 @@
 use std::{fmt, ops::Range, path::Path};
 
 use async_trait::async_trait;
-use opendal::Operator;
+use futures::{stream, StreamExt};
+use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
 use tokio::io::{AsyncRead, AsyncWriteExt};
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ObjectMetadata {
+	// Full path
+	pub key: String,
+	// Seconds since unix epoch.
+	pub last_modified: f64,
+	pub total_size: usize,
+}
 
 #[derive(Clone)]
 pub struct OpendalStorage {
@@ -82,14 +92,40 @@ impl Source for OpendalStorage {
 	}
 
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		// let mut stream = self.op.scan("/").await?;
-		// while let Some(entry) = stream.next().await {
-		// 	let entry = entry.map_err(SourceError::from)?;
-		// 	let path = entry.path().to_string();
-		// 	let mut storage_reader = self.op.reader(&path).await.map_err(SourceError::from)?;
-		// 	tokio::io::copy(&mut storage_reader, output).await.map_err(SourceError::from)?;
-		// }
-		// output.flush().await.map_err(SourceError::from)?;
+		let bucket_name = self._bucket.clone().unwrap_or_default();
+		let object_lister = self
+			.op
+			.lister_with(bucket_name.as_str())
+			.recursive(true)
+			.metakey(Metakey::ContentLength)
+			.await?;
+
+		let stream = stream::unfold(object_lister, |mut object_lister| async move {
+			match object_lister.next().await {
+				Some(Ok(object)) => {
+					let key = object.path().to_string();
+					let om = object.metadata();
+					let last_modified = match om.last_modified() {
+						Some(t) => t.timestamp() as f64,
+						None => 0_f64,
+					};
+					let total_size = om.content_length() as usize;
+					let metadata = ObjectMetadata { key, last_modified, total_size };
+					Some((Ok::<_, SourceError>(metadata), object_lister))
+				},
+				Some(Err(err)) => Some((Err(err.into()), object_lister)),
+				None => None,
+			}
+		});
+
+		let mut stream = Box::pin(stream);
+		while let Some(metadata) = stream.next().await {
+			let metadata = metadata?;
+			let key = metadata.key;
+			let mut storage_reader = self.op.reader(&key).await?;
+			tokio::io::copy(&mut storage_reader, output).await?;
+			output.flush().await?;
+		}
 		Ok(())
 	}
 }
@@ -120,5 +156,6 @@ impl From<opendal::Error> for SourceError {
 pub fn get_gcs_storage(gcs_config: GcsCollectorConfig) -> Result<OpendalStorage, SourceError> {
 	let mut cfg = opendal::services::Gcs::default();
 	cfg.credential_path(&gcs_config.credentials);
+	cfg.bucket(&gcs_config.bucket);
 	OpendalStorage::new_google_cloud_storage(cfg, Some(gcs_config.bucket))
 }

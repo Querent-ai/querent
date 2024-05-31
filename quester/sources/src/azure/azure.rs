@@ -20,6 +20,7 @@ use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 /// Azure object storage implementation
 pub struct AzureBlobStorage {
 	container_client: ContainerClient,
+	prefix: String,
 }
 
 impl fmt::Debug for AzureBlobStorage {
@@ -44,12 +45,14 @@ impl AzureBlobStorage {
 		let container_client =
 			blob_service_client.container_client(azure_storage_config.container.clone());
 
-		Self { container_client }
+		Self { container_client, prefix: azure_storage_config.prefix }
 	}
 
 	/// Returns the blob name (a.k.a blob key).
 	fn blob_name(&self, relative_path: &Path) -> String {
-		relative_path.to_string_lossy().to_string()
+		let mut name = self.prefix.clone();
+		name.push_str(relative_path.to_string_lossy().as_ref());
+		name
 	}
 
 	/// Downloads a blob as vector of bytes.
@@ -184,6 +187,25 @@ impl Source for AzureBlobStorage {
 	}
 
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+		let mut blob_stream = self.container_client.list_blobs().into_stream();
+		while let Some(blob_result) = blob_stream.next().await {
+			let blob = blob_result.map_err(AzureErrorWrapper::from)?;
+			let blobs_list = blob.blobs;
+			for blob in blobs_list.blobs() {
+				let name = &blob.name;
+				let mut output_stream = self.container_client.blob_client(name).get().into_stream();
+				while let Some(chunk_result) = output_stream.next().await {
+					let chunk_response = chunk_result.map_err(AzureErrorWrapper::from)?;
+					let chunk_response_body_stream = chunk_response
+						.data
+						.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
+						.into_async_read()
+						.compat();
+					let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
+					tokio::io::copy_buf(&mut body_stream_reader, output).await?;
+				}
+			}
+		}
 		Ok(())
 	}
 }
@@ -199,10 +221,10 @@ impl Retryable for AzureErrorWrapper {
 		match self.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => !matches!(
 				status,
-				StatusCode::NotFound |
-					StatusCode::Unauthorized |
-					StatusCode::BadRequest |
-					StatusCode::Forbidden
+				StatusCode::NotFound
+					| StatusCode::Unauthorized
+					| StatusCode::BadRequest
+					| StatusCode::Forbidden
 			),
 			ErrorKind::Io => true,
 			_ => false,
@@ -226,13 +248,15 @@ impl From<AzureErrorWrapper> for SourceError {
 	fn from(err: AzureErrorWrapper) -> Self {
 		match err.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => match status {
-				StatusCode::NotFound =>
-					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into())),
+				StatusCode::NotFound => {
+					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into()))
+				},
 				_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 			},
 			ErrorKind::Io => SourceError::new(SourceErrorKind::Io, Arc::new(err.into())),
-			ErrorKind::Credential =>
-				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into())),
+			ErrorKind::Credential => {
+				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into()))
+			},
 			_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 		}
 	}
