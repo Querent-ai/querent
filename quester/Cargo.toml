@@ -6,6 +6,13 @@ members = ["sources", "actors", "common", "querent", "storage", "cluster", "node
 debug = false
 
 [workspace.dependencies]
+azure_core = { version = "0.13.0", features = ["enable_reqwest_rustls"] }
+azure_storage = { version = "0.13.0", default-features = false, features = [
+  "enable_reqwest_rustls",
+] }
+azure_storage_blobs = { version = "0.13.0", default-features = false, features = [
+  "enable_reqwest_rustls",
+] }
 anyhow = "1"
 arc-swap = "1.6"
 assert-json-diff = "2"

@@ -10,6 +10,7 @@ use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 #[derive(Clone)]
 pub struct OpendalStorage {
 	op: Operator,
+	_bucket: Option<String>,
 }
 
 impl fmt::Debug for OpendalStorage {
@@ -23,9 +24,12 @@ impl fmt::Debug for OpendalStorage {
 
 impl OpendalStorage {
 	/// Create a new google cloud storage.
-	pub fn new_google_cloud_storage(cfg: opendal::services::Gcs) -> Result<Self, SourceError> {
+	pub fn new_google_cloud_storage(
+		cfg: opendal::services::Gcs,
+		bucket: Option<String>,
+	) -> Result<Self, SourceError> {
 		let op = Operator::new(cfg)?.finish();
-		Ok(Self { op })
+		Ok(Self { op, _bucket: bucket })
 	}
 }
 
@@ -104,5 +108,5 @@ impl From<opendal::Error> for SourceError {
 pub fn get_gcs_storage(gcs_config: GcsCollectorConfig) -> Result<OpendalStorage, SourceError> {
 	let mut cfg = opendal::services::Gcs::default();
 	cfg.credential_path(&gcs_config.credentials);
-	OpendalStorage::new_google_cloud_storage(cfg)
+	OpendalStorage::new_google_cloud_storage(cfg, Some(gcs_config.bucket))
 }

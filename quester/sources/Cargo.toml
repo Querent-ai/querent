@@ -48,3 +48,9 @@ tempfile = { workspace = true }
 base64 = { workspace = true }
 opendal = { workspace = true}
 bytesize = { workspace = true }
+azure_core  = { workspace = true }
+azure_storage = { workspace = true }
+azure_storage_blobs = { workspace = true }
+md5 = { workspace = true }
+tokio-util = { workspace = true }
+bytes = { workspace = true }
