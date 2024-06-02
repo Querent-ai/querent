@@ -132,4 +132,14 @@ pub trait Source: fmt::Debug + Send + Sync + 'static {
 		'life1: 'async_trait,
 		'life2: 'async_trait,
 		Self: 'async_trait;
+
+	// Poll data continuously from the source.
+	// This is useful for sources that have a continuous stream of data.
+	// For example, a source that reads from a Kafka topic.
+	// This function should not return until the source is closed.
+	// The output should be written to the output stream.
+	// The output stream should be closed when the source is closed.
+	// The output stream should be flushed after each write.
+	// The output stream should be closed when the source is closed.
+	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()>;
 }
