@@ -6,6 +6,7 @@ use std::{
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use async_trait::async_trait;
+use common::CollectedBytes;
 use tokio::{
 	fs,
 	io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
@@ -59,16 +60,37 @@ impl LocalFolderSource {
 		file_path: &Path,
 		output: &mut dyn SendableAsync,
 	) -> SourceResult<()> {
-		let file = fs::File::open(file_path).await.map_err(|e| SourceError::from(e))?;
+		let file: fs::File = fs::File::open(file_path).await.map_err(|e| SourceError::from(e))?;
 		let mut reader = BufReader::new(file);
 		let mut buffer = vec![0; self.chunk_size];
 		loop {
 			let bytes_read = reader.read(&mut buffer).await.map_err(|e| SourceError::from(e))?;
 			if bytes_read == 0 {
+				// EOF
+				let collected_bytes = CollectedBytes::new(
+					Some(file_path.to_path_buf()),
+					Some(buffer.clone()),
+					true,
+					Some(file_path.to_string_lossy().to_string()),
+				);
+				let serialized =
+					serde_json::to_string(&collected_bytes).map_err(|e| SourceError::from(e))?;
+				output
+					.write_all(serialized.as_bytes())
+					.await
+					.map_err(|e| SourceError::from(e))?;
 				break;
 			}
+			let collected_bytes = CollectedBytes::new(
+				Some(file_path.to_path_buf()),
+				Some(buffer.clone()),
+				false,
+				Some(file_path.to_string_lossy().to_string()),
+			);
+			let serialized =
+				serde_json::to_string(&collected_bytes).map_err(|e| SourceError::from(e))?;
 			output
-				.write_all(&buffer[..bytes_read])
+				.write_all(serialized.as_bytes())
 				.await
 				.map_err(|e| SourceError::from(e))?;
 		}
