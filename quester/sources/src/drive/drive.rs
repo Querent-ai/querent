@@ -80,17 +80,14 @@ impl GoogleDriveSource {
 		if mime_type.starts_with("application/vnd.google-apps.") {
 			let export_mime_type = match mime_type.as_str() {
 				"application/vnd.google-apps.document" => "application/pdf",
-				"application/vnd.google-apps.spreadsheet" => {
-					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-				},
-				"application/vnd.google-apps.presentation" => {
-					"application/vnd.openxmlformats-officedocument.presentationml.presentation"
-				},
-				_ => {
+				"application/vnd.google-apps.spreadsheet" =>
+					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"application/vnd.google-apps.presentation" =>
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+				_ =>
 					return Err(google_drive3::Error::FieldClash(
 						"Unsupported Google Apps file type",
-					))
-				},
+					)),
 			};
 
 			let resp_obj = self.hub.files().export(file_id, export_mime_type).doit().await?;
