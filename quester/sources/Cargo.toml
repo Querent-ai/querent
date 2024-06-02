@@ -54,3 +54,6 @@ azure_storage_blobs = { workspace = true }
 md5 = { workspace = true }
 tokio-util = { workspace = true }
 bytes = { workspace = true }
+google-drive3 = { workspace = true }
+hyper-rustls = { workspace = true }
+hyper = { workspace = true }
