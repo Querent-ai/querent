@@ -26,6 +26,55 @@ impl LocalFolderSource {
 	fn full_path(&self, path: &Path) -> PathBuf {
 		self.folder_path.join(path)
 	}
+
+	async fn poll_data_recursive(
+		&mut self,
+		folder_path: PathBuf,
+		output: &mut dyn SendableAsync,
+	) -> SourceResult<()> {
+		let mut entries = fs::read_dir(&folder_path).await.map_err(|e| SourceError::from(e))?; // Read the directory.
+		while let Some(entry) = entries.next_entry().await.map_err(|e| SourceError::from(e))? {
+			if let Ok(metadata) = entry.metadata().await {
+				if metadata.is_file() {
+					// If it's a file, read and write it to the output
+					let file_path = entry.path();
+					self.read_file_and_write_to_output(&file_path, output).await?;
+				} else if metadata.is_dir() {
+					let mut this = self.clone(); // Clone self to avoid mutable borrow issues
+					Box::pin(this.poll_data_recursive(entry.path(), output)).await?;
+				}
+			} else {
+				return Err(SourceError::new(
+					SourceErrorKind::NotFound,
+					anyhow::anyhow!("File not found").into(),
+				)
+				.into());
+			}
+		}
+		Ok(())
+	}
+
+	async fn read_file_and_write_to_output(
+		&self,
+		file_path: &Path,
+		output: &mut dyn SendableAsync,
+	) -> SourceResult<()> {
+		let file = fs::File::open(file_path).await.map_err(|e| SourceError::from(e))?;
+		let mut reader = BufReader::new(file);
+		let mut buffer = vec![0; self.chunk_size];
+		loop {
+			let bytes_read = reader.read(&mut buffer).await.map_err(|e| SourceError::from(e))?;
+			if bytes_read == 0 {
+				break;
+			}
+			output
+				.write_all(&buffer[..bytes_read])
+				.await
+				.map_err(|e| SourceError::from(e))?;
+		}
+		output.flush().await.map_err(|e| SourceError::from(e))?;
+		Ok(())
+	}
 }
 
 #[async_trait]
@@ -115,28 +164,7 @@ impl Source for LocalFolderSource {
 			Ok(())
 		})
 	}
-
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let path = self.folder_path.clone();
-		let mut entries = fs::read_dir(&path).await.map_err(|e| SourceError::from(e))?; // Read the directory.
-		while let Some(entry) = entries.next_entry().await.map_err(|e| SourceError::from(e))? {
-			let path = entry.path();
-			let file = fs::File::open(&path).await.map_err(|e| SourceError::from(e))?;
-			let mut reader = BufReader::new(file);
-			let mut buffer = vec![0; self.chunk_size];
-			loop {
-				let bytes_read =
-					reader.read(&mut buffer).await.map_err(|e| SourceError::from(e))?;
-				if bytes_read == 0 {
-					break;
-				}
-				output
-					.write_all(&buffer[..bytes_read])
-					.await
-					.map_err(|e| SourceError::from(e))?;
-			}
-			output.flush().await.map_err(|e| SourceError::from(e))?;
-		}
-		Ok(())
+		self.poll_data_recursive(self.folder_path.clone(), output).await
 	}
 }
