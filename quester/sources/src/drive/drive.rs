@@ -1,39 +1,30 @@
 use async_trait::async_trait;
+use futures::StreamExt;
 use google_drive3::{
 	api::Scope,
-	hyper, hyper_rustls,
+	hyper,
+	hyper::client::HttpConnector,
+	hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
 	oauth2::{ApplicationSecret, InstalledFlowAuthenticator, InstalledFlowReturnMethod},
 };
-use hyper::body;
+use hyper::Body;
 use proto::semantics::GoogleDriveCollectorConfig;
 use std::{io::Cursor, ops::Range, path::Path};
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
-use tracing::{error, instrument};
+use tokio::io::{AsyncRead, AsyncWriteExt};
+use tracing::instrument;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
-type HyperConnector = hyper_rustls::HttpsConnector<hyper::client::HttpConnector>;
-
-type DriveHub = google_drive3::DriveHub<HyperConnector>;
+type DriveHub = google_drive3::DriveHub<HttpsConnector<HttpConnector>>;
 
 pub const FIELDS: &str =
 	"mimeType,id,kind,teamDriveId,name,driveId,description,size,md5Checksum,parents,trashed";
-
-fn hyper_client() -> hyper::Client<HyperConnector> {
-	hyper::Client::builder().build(
-		hyper_rustls::HttpsConnectorBuilder::new()
-			.with_native_roots()
-			.https_or_http()
-			.enable_http1()
-			.enable_http2()
-			.build(),
-	)
-}
 
 #[derive(Clone)]
 pub struct GoogleDriveSource {
 	hub: DriveHub,
 	folder_id: String,
+	page_token: Option<String>,
 }
 
 impl GoogleDriveSource {
@@ -56,16 +47,20 @@ impl GoogleDriveSource {
 				.build()
 				.await
 				.expect("authenticator could not be built");
+		let connector = HttpsConnectorBuilder::new()
+			.with_native_roots()
+			.https_or_http()
+			.enable_http1()
+			.enable_http2()
+			.build();
 
-		let hub = DriveHub::new(hyper_client(), auth);
+		let http_client = hyper::Client::builder().build(connector);
+		let hub = DriveHub::new(http_client, auth);
 
-		GoogleDriveSource { hub, folder_id: config.folder_to_crawl }
+		GoogleDriveSource { hub, folder_id: config.folder_to_crawl, page_token: None }
 	}
 
-	async fn download_file(
-		&self,
-		file_id: &str,
-	) -> Result<impl AsyncRead + Unpin, google_drive3::Error> {
+	async fn download_file(&self, file_id: &str) -> Result<Body, google_drive3::Error> {
 		let (_, file) = self
 			.hub
 			.files()
@@ -85,29 +80,24 @@ impl GoogleDriveSource {
 		if mime_type.starts_with("application/vnd.google-apps.") {
 			let export_mime_type = match mime_type.as_str() {
 				"application/vnd.google-apps.document" => "application/pdf",
-				"application/vnd.google-apps.spreadsheet" =>
-					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-				"application/vnd.google-apps.presentation" =>
-					"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-				_ =>
+				"application/vnd.google-apps.spreadsheet" => {
+					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+				},
+				"application/vnd.google-apps.presentation" => {
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation"
+				},
+				_ => {
 					return Err(google_drive3::Error::FieldClash(
 						"Unsupported Google Apps file type",
-					)),
+					))
+				},
 			};
 
 			let resp_obj = self.hub.files().export(file_id, export_mime_type).doit().await?;
-			let data: body::Bytes = body::to_bytes(resp_obj.into_body()).await.map_err(|err| {
-				error!("Error converting body to bytes: {:?}", err);
-				google_drive3::Error::FieldClash("Error converting body to bytes")
-			})?;
-			Ok(Box::new(Cursor::new(data.to_vec())))
+			Ok(resp_obj.into_body())
 		} else {
 			let resp_obj = self.hub.files().export(file_id, &mime_type).doit().await?;
-			let data: body::Bytes = body::to_bytes(resp_obj.into_body()).await.map_err(|err| {
-				error!("Error converting body to bytes: {:?}", err);
-				google_drive3::Error::FieldClash("Error converting body to bytes")
-			})?;
-			Ok(Box::new(Cursor::new(data.to_vec())))
+			Ok(resp_obj.into_body())
 		}
 	}
 
@@ -140,25 +130,26 @@ impl GoogleDriveSource {
 impl Source for GoogleDriveSource {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let file_id = self.get_file_id_by_path(path).await?;
-		let mut reader = BufReader::new(self.download_file(&file_id).await.map_err(|err| {
+		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error downloading file from Google Drive: {:?}", err).into(),
 			)
-		})?);
-
-		tokio::io::copy_buf(&mut reader, output).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error copying data to output: {:?}", err).into(),
-			)
 		})?;
-		output.flush().await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error flushing output: {:?}", err).into(),
-			)
-		})?;
+		while let Some(chunk) = content_body.next().await {
+			let chunk = chunk.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error reading chunk from Google Drive: {:?}", err).into(),
+				)
+			})?;
+			output.write_all(&chunk).await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error writing chunk to output: {:?}", err).into(),
+				)
+			})?;
+		}
 		Ok(())
 	}
 
@@ -170,19 +161,28 @@ impl Source for GoogleDriveSource {
 	#[instrument(level = "debug", skip(self, range), fields(range.start = range.start, range.end = range.end))]
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
 		let file_id = self.get_file_id_by_path(path).await?;
-		let mut reader = BufReader::new(self.download_file(&file_id).await.map_err(|err| {
+		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error downloading file from Google Drive: {:?}", err).into(),
 			)
-		})?);
-		let mut buffer = vec![0; range.len()];
-		reader.read_exact(&mut buffer).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error reading slice from Google Drive: {:?}", err).into(),
-			)
 		})?;
+		let mut buffer = vec![0; range.len()];
+		while let Some(chunk) = content_body.next().await {
+			let chunk = chunk.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error reading chunk from Google Drive: {:?}", err).into(),
+				)
+			})?;
+			let chunk = chunk.as_ref();
+			if range.start < chunk.len() {
+				let start = range.start;
+				let end = std::cmp::min(range.end, chunk.len());
+				let chunk = &chunk[start..end];
+				buffer[..chunk.len()].copy_from_slice(chunk);
+			}
+		}
 		Ok(buffer)
 	}
 
@@ -193,39 +193,58 @@ impl Source for GoogleDriveSource {
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
 		let file_id = self.get_file_id_by_path(path).await?;
-		let reader = self.download_file(&file_id).await.map_err(|err| {
+		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error downloading file from Google Drive: {:?}", err).into(),
 			)
 		})?;
 
-		let mut reader = BufReader::new(reader);
-		let mut buffer = vec![0; range.len()];
-		reader.read_exact(&mut buffer).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error reading slice from Google Drive: {:?}", err).into(),
-			)
-		})?;
-		Ok(Box::new(reader))
+		let buffer = vec![0; range.len()];
+		let mut cursor = Cursor::new(buffer);
+		while let Some(chunk) = content_body.next().await {
+			let chunk = chunk.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error reading chunk from Google Drive: {:?}", err).into(),
+				)
+			})?;
+			let chunk = chunk.as_ref();
+			if range.start < chunk.len() {
+				let start = range.start;
+				let end = std::cmp::min(range.end, chunk.len());
+				let chunk = &chunk[start..end];
+				cursor.write_all(chunk).await.map_err(|err| {
+					SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Error writing chunk to cursor: {:?}", err).into(),
+					)
+				})?;
+			}
+		}
+
+		cursor.set_position(0);
+		Ok(Box::new(cursor))
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
 		let file_id = self.get_file_id_by_path(path).await?;
-		let mut reader = BufReader::new(self.download_file(&file_id).await.map_err(|err| {
+		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error downloading file from Google Drive: {:?}", err).into(),
 			)
-		})?);
-		let mut buffer = Vec::new();
-		reader.read_to_end(&mut buffer).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error reading file from Google Drive: {:?}", err).into(),
-			)
 		})?;
+		let mut buffer = Vec::new();
+		while let Some(chunk) = content_body.next().await {
+			let chunk = chunk.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error reading chunk from Google Drive: {:?}", err).into(),
+				)
+			})?;
+			buffer.extend_from_slice(&chunk);
+		}
 		Ok(buffer)
 	}
 
@@ -249,7 +268,7 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let mut page_token = None;
+		let mut page_token = self.page_token.clone();
 		loop {
 			let (_, list) = self
 				.hub
@@ -268,8 +287,8 @@ impl Source for GoogleDriveSource {
 			if let Some(files) = list.files {
 				for file in files {
 					if let Some(file_id) = file.id {
-						let mut reader =
-							BufReader::new(self.download_file(&file_id).await.map_err(|err| {
+						let mut content_body =
+							self.download_file(&file_id).await.map_err(|err| {
 								SourceError::new(
 									SourceErrorKind::Io,
 									anyhow::anyhow!(
@@ -278,13 +297,26 @@ impl Source for GoogleDriveSource {
 									)
 									.into(),
 								)
-							})?);
-						tokio::io::copy_buf(&mut reader, output).await.map_err(|err| {
-							SourceError::new(
-								SourceErrorKind::Io,
-								anyhow::anyhow!("Error copying data to output: {:?}", err).into(),
-							)
-						})?;
+							})?;
+						while let Some(chunk) = content_body.next().await {
+							let chunk = chunk.map_err(|err| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!(
+										"Error reading chunk from Google Drive: {:?}",
+										err
+									)
+									.into(),
+								)
+							})?;
+							output.write_all(&chunk).await.map_err(|err| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error writing chunk to output: {:?}", err)
+										.into(),
+								)
+							})?;
+						}
 					}
 				}
 			}
