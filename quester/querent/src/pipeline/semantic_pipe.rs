@@ -328,6 +328,11 @@ impl SemanticPipeline {
 				handles.event_streamer_handler.kill(),
 				handles.indexer_handler.kill(),
 				handles.storage_mapper_handler.kill(),
+				async {
+					for handler in handles.collection_handlers {
+						handler.kill().await;
+					}
+				},
 			);
 		}
 	}

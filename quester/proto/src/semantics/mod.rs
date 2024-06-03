@@ -54,12 +54,10 @@ impl From<AskError<SemanticsError>> for SemanticsError {
 	fn from(error: AskError<SemanticsError>) -> Self {
 		match error {
 			AskError::ErrorReply(error) => error,
-			AskError::MessageNotDelivered => {
-				Self::new_unavailable("request could not be delivered to pipeline".to_string())
-			},
-			AskError::ProcessMessageError => {
-				Self::new_internal("an error occurred while processing the request".to_string())
-			},
+			AskError::MessageNotDelivered =>
+				Self::new_unavailable("request could not be delivered to pipeline".to_string()),
+			AskError::ProcessMessageError =>
+				Self::new_internal("an error occurred while processing the request".to_string()),
 		}
 	}
 }
