@@ -5,7 +5,10 @@ use common::CollectedBytes;
 use futures::StreamExt;
 use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
+use tokio::{
+	io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
+	sync::mpsc,
+};
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
@@ -92,7 +95,7 @@ impl Source for OpendalStorage {
 		Ok(meta.content_length())
 	}
 
-	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
 		let bucket_name = self._bucket.clone().unwrap_or_default();
 		let mut object_lister = self
 			.op
@@ -123,14 +126,15 @@ impl Source for OpendalStorage {
 					Some(buffer[..bytes_read].to_vec()),
 					false,
 					self._bucket.clone(),
+					Some(bytes_read),
 				);
 
-				let serialized =
-					serde_json::to_string(&collected_bytes).map_err(|e| SourceError::from(e))?;
-				output
-					.write_all(serialized.as_bytes())
-					.await
-					.map_err(|e| SourceError::from(e))?;
+				output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
+					SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+					)
+				})?;
 			}
 
 			// Mark the end of file for the current object
@@ -139,22 +143,16 @@ impl Source for OpendalStorage {
 				None,
 				true,
 				self._bucket.clone(),
+				None,
 			);
 
-			let serialized_eof =
-				serde_json::to_string(&eof_collected_bytes).map_err(|e| SourceError::from(e))?;
-			output
-				.write_all(serialized_eof.as_bytes())
-				.await
-				.map_err(|e| SourceError::from(e))?;
+			output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+				)
+			})?;
 		}
-
-		output.flush().await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error flushing output: {:?}", err).into(),
-			)
-		})?;
 		Ok(())
 	}
 }

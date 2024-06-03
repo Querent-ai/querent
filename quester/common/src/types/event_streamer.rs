@@ -5,6 +5,8 @@ use std::{
 	sync::atomic::{AtomicU64, Ordering},
 };
 
+use crate::CollectedBytes;
+
 #[derive(Debug, Default, Clone)]
 pub struct EventsBatch {
 	pub qflow_id: String,
@@ -99,5 +101,60 @@ impl EventStreamerCounters {
 
 	pub fn increment_batches_received(&self) {
 		self.batches_received.fetch_add(1, Ordering::SeqCst);
+	}
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CollectionCounter {
+	pub total_docs: AtomicU64,
+	pub ext_counter_map: HashMap<String, u64>,
+	pub total_bytes: AtomicU64,
+}
+
+impl CollectionCounter {
+	pub fn new() -> Self {
+		Self {
+			total_docs: AtomicU64::new(0),
+			ext_counter_map: HashMap::new(),
+			total_bytes: AtomicU64::new(0),
+		}
+	}
+
+	pub fn increment_total_docs(&self) {
+		self.total_docs.fetch_add(1, Ordering::SeqCst);
+	}
+
+	pub fn increment_total_bytes(&self, count: u64) {
+		self.total_bytes.fetch_add(count, Ordering::SeqCst);
+	}
+
+	pub fn increment_ext_counter(&mut self, ext: &String) {
+		let counter = self.ext_counter_map.entry(ext.clone()).or_insert(0);
+		*counter += 1;
+	}
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct CollectionBatch {
+	pub file: String,
+	pub ext: String,
+	pub events: Vec<CollectedBytes>,
+}
+
+impl CollectionBatch {
+	pub fn new(file: &String, ext: &String, events: &Vec<CollectedBytes>) -> Self {
+		Self { file: file.clone(), events: events.clone(), ext: ext.clone() }
+	}
+
+	pub fn file(&self) -> String {
+		self.file.clone()
+	}
+
+	pub fn events(&self) -> Vec<CollectedBytes> {
+		self.events.clone()
+	}
+
+	pub fn ext(&self) -> String {
+		self.ext.clone()
 	}
 }

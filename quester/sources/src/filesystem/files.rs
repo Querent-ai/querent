@@ -10,6 +10,7 @@ use common::CollectedBytes;
 use tokio::{
 	fs,
 	io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
+	sync::mpsc,
 };
 
 #[derive(Clone)]
@@ -29,9 +30,9 @@ impl LocalFolderSource {
 	}
 
 	async fn poll_data_recursive(
-		&mut self,
+		&self,
 		folder_path: PathBuf,
-		output: &mut dyn SendableAsync,
+		output: mpsc::Sender<CollectedBytes>,
 	) -> SourceResult<()> {
 		let mut entries = fs::read_dir(&folder_path).await.map_err(SourceError::from)?; // Read the directory.
 		while let Some(entry) = entries.next_entry().await.map_err(SourceError::from)? {
@@ -39,10 +40,10 @@ impl LocalFolderSource {
 			if metadata.is_file() {
 				// If it's a file, read and write it to the output
 				let file_path = entry.path();
-				self.read_file_and_write_to_output(&file_path, output).await?;
+				self.read_file_and_write_to_output(&file_path, output.clone()).await?;
 			} else if metadata.is_dir() {
-				let mut this = self.clone(); // Clone self to avoid mutable borrow issues
-				Box::pin(this.poll_data_recursive(entry.path(), output)).await?;
+				let this = self.clone(); // Clone self to avoid mutable borrow issues
+				Box::pin(this.poll_data_recursive(entry.path(), output.clone())).await?;
 			}
 		}
 		Ok(())
@@ -51,7 +52,7 @@ impl LocalFolderSource {
 	async fn read_file_and_write_to_output(
 		&self,
 		file_path: &Path,
-		output: &mut dyn SendableAsync,
+		output: mpsc::Sender<CollectedBytes>,
 	) -> SourceResult<()> {
 		let file: fs::File = fs::File::open(file_path).await.map_err(SourceError::from)?;
 		let mut reader = BufReader::new(file);
@@ -67,9 +68,14 @@ impl LocalFolderSource {
 				Some(buffer[..bytes_read].to_vec()),
 				bytes_read == 0,
 				Some(file_path.to_string_lossy().to_string()),
+				Some(bytes_read),
 			);
-			let serialized = serde_json::to_string(&collected_bytes).map_err(SourceError::from)?;
-			output.write_all(serialized.as_bytes()).await.map_err(SourceError::from)?;
+			output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+				)
+			})?;
 		}
 
 		// Mark the end of file for the current file
@@ -78,11 +84,15 @@ impl LocalFolderSource {
 			None,
 			true,
 			Some(file_path.to_string_lossy().to_string()),
+			None,
 		);
 
-		let serialized_eof =
-			serde_json::to_string(&eof_collected_bytes).map_err(SourceError::from)?;
-		output.write_all(serialized_eof.as_bytes()).await.map_err(SourceError::from)?;
+		output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(|e| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+			)
+		})?;
 
 		Ok(())
 	}
@@ -173,7 +183,7 @@ impl Source for LocalFolderSource {
 		})
 	}
 
-	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
 		self.poll_data_recursive(self.folder_path.clone(), output).await
 	}
 }

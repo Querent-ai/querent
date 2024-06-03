@@ -15,7 +15,7 @@ use once_cell::sync::Lazy;
 use proto::semantics::S3CollectorConfig;
 use tokio::{
 	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
-	sync::Semaphore,
+	sync::{mpsc, Semaphore},
 };
 
 static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10000));
@@ -172,10 +172,10 @@ impl Source for S3Source {
 		Ok(head_object_output.content_length() as u64)
 	}
 
-	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await;
 
-		let continuation_token = self.continuation_token.clone();
+		let mut continuation_token = self.continuation_token.clone();
 		loop {
 			let list_objects_v2 = self
 				.s3_client
@@ -230,14 +230,16 @@ impl Source for S3Source {
 								Some(buffer[..bytes_read].to_vec()),
 								false,
 								Some(self.bucket_name.clone()),
+								Some(bytes_read),
 							);
 
-							let serialized = serde_json::to_string(&collected_bytes)
-								.map_err(|e| SourceError::from(e))?;
-							output
-								.write_all(serialized.as_bytes())
-								.await
-								.map_err(|e| SourceError::from(e))?;
+							output.send(collected_bytes).await.map_err(|e| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+										.into(),
+								)
+							})?;
 						}
 						// Mark the end of file for the current object
 						let eof_collected_bytes = CollectedBytes::new(
@@ -245,14 +247,18 @@ impl Source for S3Source {
 							None,
 							true,
 							Some(self.bucket_name.clone()),
+							None,
 						);
 
-						let serialized_eof = serde_json::to_string(&eof_collected_bytes)
-							.map_err(|e| SourceError::from(e))?;
-						output
-							.write_all(serialized_eof.as_bytes())
-							.await
-							.map_err(|e| SourceError::from(e))?;
+						output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(
+							|e| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+										.into(),
+								)
+							},
+						)?;
 					}
 				}
 			}
@@ -260,9 +266,8 @@ impl Source for S3Source {
 			if list_objects_v2_output.next_continuation_token.is_none() {
 				break;
 			}
-			self.continuation_token = list_objects_v2_output.next_continuation_token;
+			continuation_token = list_objects_v2_output.next_continuation_token;
 		}
-		output.flush().await.map_err(|e| SourceError::from(e))?;
 		Ok(())
 	}
 }

@@ -11,7 +11,10 @@ use futures::{
 };
 use proto::semantics::AzureCollectorConfig;
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::{
+	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
+	sync::mpsc,
+};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
@@ -186,7 +189,7 @@ impl Source for AzureBlobStorage {
 		}
 	}
 
-	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
 		let mut blob_stream = self.container_client.list_blobs().into_stream();
 
 		while let Some(blob_result) = blob_stream.next().await {
@@ -232,14 +235,15 @@ impl Source for AzureBlobStorage {
 							Some(buffer[..bytes_read].to_vec()),
 							false,
 							Some(self.container_client.container_name().to_string()),
+							Some(bytes_read as usize),
 						);
 
-						let serialized = serde_json::to_string(&collected_bytes)
-							.map_err(|e| SourceError::from(e))?;
-						output
-							.write_all(serialized.as_bytes())
-							.await
-							.map_err(|e| SourceError::from(e))?;
+						output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
+							SourceError::new(
+								SourceErrorKind::Io,
+								anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+							)
+						})?;
 					}
 
 					// Create CollectedBytes instance
@@ -248,17 +252,14 @@ impl Source for AzureBlobStorage {
 						None,
 						true,
 						Some(self.container_client.container_name().to_string()),
+						None,
 					);
-
-					// Serialize CollectedBytes to JSON
-					let serialized = serde_json::to_string(&collected_bytes)
-						.map_err(|e| SourceError::from(e))?;
-
-					// Write JSON to output
-					output
-						.write_all(serialized.as_bytes())
-						.await
-						.map_err(|e| SourceError::from(e))?;
+					output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
+						SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+						)
+					})?;
 				}
 			}
 		}

@@ -15,7 +15,10 @@ use std::{
 	ops::Range,
 	path::{Path, PathBuf},
 };
-use tokio::io::{AsyncRead, AsyncWriteExt};
+use tokio::{
+	io::{AsyncRead, AsyncWriteExt},
+	sync::mpsc,
+};
 use tracing::instrument;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
@@ -269,7 +272,7 @@ impl Source for GoogleDriveSource {
 		Ok(metadata.size.unwrap_or(0) as u64)
 	}
 
-	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
 		let mut page_token = self.page_token.clone();
 		loop {
 			let (_, list) = self
@@ -324,14 +327,18 @@ impl Source for GoogleDriveSource {
 								Some(chunk.to_vec()),
 								eof,
 								Some(self.folder_id.clone()),
+								Some(chunk.len()),
 							);
 
-							let serialized = serde_json::to_string(&collected_bytes)
-								.map_err(|e| SourceError::from(e))?;
-							output
-								.write_all(serialized.as_bytes())
-								.await
-								.map_err(|e| SourceError::from(e))?;
+							output.send(CollectedBytes::from(collected_bytes)).await.map_err(
+								|e| {
+									SourceError::new(
+										SourceErrorKind::Io,
+										anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+											.into(),
+									)
+								},
+							)?;
 						}
 
 						// Send EOF for the file
@@ -340,24 +347,21 @@ impl Source for GoogleDriveSource {
 							None,
 							true,
 							Some(self.folder_id.clone()),
+							None,
 						);
 
-						let serialized_eof = serde_json::to_string(&eof_collected_bytes)
-							.map_err(|e| SourceError::from(e))?;
-						output
-							.write_all(serialized_eof.as_bytes())
-							.await
-							.map_err(|e| SourceError::from(e))?;
+						output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(
+							|e| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+										.into(),
+								)
+							},
+						)?;
 					}
 				}
 			}
-
-			output.flush().await.map_err(|err| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Error flushing output: {:?}", err).into(),
-				)
-			})?;
 
 			if list.next_page_token.is_none() {
 				break;
