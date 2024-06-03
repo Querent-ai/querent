@@ -21,7 +21,7 @@ pub struct Collector {
 	file_buffers: HashMap<String, Vec<CollectedBytes>>,
 	file_size: HashMap<String, usize>,
 	pub counters: CollectionCounter,
-	// terimatesignal to kill actors in the pipeline.
+	// terminate signal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 }
 
@@ -69,22 +69,24 @@ impl Source for Collector {
 
 		// Store the JoinHandle with the result in the Collector struct
 		self.workflow_handle = Some(tokio::spawn(async move {
-			let result = { data_poller.poll_data(event_sender.clone()).await };
+			let result = data_poller.poll_data(event_sender.clone()).await;
 			match result {
 				Ok(_) => {
-					event_sender
-						.send(CollectedBytes::new(None, None, true, None, None))
-						.await
-						.unwrap();
+					if let Err(e) =
+						event_sender.send(CollectedBytes::new(None, None, true, None, None)).await
+					{
+						error!("Failed to send EOF signal: {:?}", e);
+					}
 					Ok(())
 				},
 				Err(e) => {
 					error!("Failed to poll data: {:?}", e);
 					let err = Err(QuerentError::internal(format!("Failed to poll data: {:?}", e)));
-					event_sender
-						.send(CollectedBytes::new(None, None, false, None, None))
-						.await
-						.unwrap();
+					if let Err(e) =
+						event_sender.send(CollectedBytes::new(None, None, false, None, None)).await
+					{
+						error!("Failed to send failure signal: {:?}", e);
+					}
 					err
 				},
 			}
@@ -129,30 +131,23 @@ impl Source for Collector {
 						// Update file size in self.file_size
 						if let Some(file_path) = event_data.file.clone() {
 							let file_path_str = file_path.to_string_lossy().to_string();
-							if let Some(file_size) = self.file_size.get_mut(file_path_str.as_str()) {
+							if let Some(file_size) = self.file_size.get_mut(&file_path_str) {
 								*file_size += size;
 							} else {
 								self.file_size.insert(file_path_str.clone(), size);
 							}
 						}
 
-
 						let file_path = event_data.file.clone().unwrap_or_default();
 						let file_path_str = file_path.to_string_lossy().to_string();
 						if event_data.eof {
-							if let Some(buffer) = self.file_buffers.remove(file_path_str.clone().as_str()) {
+							if let Some(buffer) = self.file_buffers.remove(&file_path_str) {
 								self.counters.increment_total_docs();
 								self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
 								events_collected.insert(file_path_str, buffer);
 							}
 						} else {
-							if let Some(buffer) = self.file_buffers.get_mut(file_path_str.as_str()) {
-								buffer.push(event_data);
-							} else {
-								let mut buffer = Vec::new();
-								buffer.push(event_data);
-								self.file_buffers.insert(file_path_str.clone(), buffer);
-							}
+							self.file_buffers.entry(file_path_str.clone()).or_default().push(event_data);
 						}
 						counter += 1;
 					}
@@ -171,11 +166,11 @@ impl Source for Collector {
 				if chunks.is_empty() {
 					continue;
 				}
-				let total_size = self.file_size.get(file).unwrap_or(&0);
-				self.counters.increment_total_bytes(total_size.clone() as u64);
+				let total_size = *self.file_size.get(file).unwrap_or(&0);
+				self.counters.increment_total_bytes(total_size as u64);
 				let events_batch = CollectionBatch::new(
 					file,
-					&chunks[0].clone().extension.unwrap_or_default(),
+					&chunks[0].extension.clone().unwrap_or_default(),
 					chunks,
 				);
 				let batches_error =
