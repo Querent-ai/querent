@@ -1,6 +1,6 @@
 use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
-use common::{CollectedBytes, CollectionBatch, TerimateSignal};
+use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use querent_synapse::querent::QuerentError;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinHandle, time};
@@ -19,6 +19,8 @@ pub struct Collector {
 	event_receiver: mpsc::Receiver<CollectedBytes>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 	file_buffers: HashMap<String, Vec<CollectedBytes>>,
+	file_size: HashMap<String, usize>,
+	pub counters: CollectionCounter,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 }
@@ -40,6 +42,8 @@ impl Collector {
 			terminate_sig,
 			data_poller,
 			file_buffers: HashMap::new(),
+			file_size: HashMap::new(),
+			counters: CollectionCounter::new(),
 		}
 	}
 }
@@ -67,10 +71,21 @@ impl Source for Collector {
 		self.workflow_handle = Some(tokio::spawn(async move {
 			let result = { data_poller.poll_data(event_sender.clone()).await };
 			match result {
-				Ok(_) => Ok(()),
+				Ok(_) => {
+					event_sender
+						.send(CollectedBytes::new(None, None, true, None, None))
+						.await
+						.unwrap();
+					Ok(())
+				},
 				Err(e) => {
 					error!("Failed to poll data: {:?}", e);
-					Err(QuerentError::internal(format!("Failed to poll data: {:?}", e)))
+					let err = Err(QuerentError::internal(format!("Failed to poll data: {:?}", e)));
+					event_sender
+						.send(CollectedBytes::new(None, None, false, None, None))
+						.await
+						.unwrap();
+					err
 				},
 			}
 		}));
@@ -99,10 +114,35 @@ impl Source for Collector {
 			tokio::select! {
 				event_opt = self.event_receiver.recv() => {
 					if let Some(event_data) = event_opt {
+						// If the payload is empty, skip the event
+						if !event_data.eof && event_data.file.is_none() {
+							is_failure = true;
+							break;
+						}
+
+						if event_data.eof && event_data.file.is_none() {
+							is_success = true;
+							break;
+						}
+						let size = event_data.size.unwrap_or_default();
+
+						// Update file size in self.file_size
+						if let Some(file_path) = event_data.file.clone() {
+							let file_path_str = file_path.to_string_lossy().to_string();
+							if let Some(file_size) = self.file_size.get_mut(file_path_str.as_str()) {
+								*file_size += size;
+							} else {
+								self.file_size.insert(file_path_str.clone(), size);
+							}
+						}
+
+
 						let file_path = event_data.file.clone().unwrap_or_default();
 						let file_path_str = file_path.to_string_lossy().to_string();
 						if event_data.eof {
 							if let Some(buffer) = self.file_buffers.remove(file_path_str.clone().as_str()) {
+								self.counters.increment_total_docs();
+								self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
 								events_collected.insert(file_path_str, buffer);
 							}
 						} else {
@@ -114,6 +154,7 @@ impl Source for Collector {
 								self.file_buffers.insert(file_path_str.clone(), buffer);
 							}
 						}
+						counter += 1;
 					}
 					if counter >= BATCH_NUM_EVENTS_LIMIT {
 						break;
@@ -130,6 +171,8 @@ impl Source for Collector {
 				if chunks.is_empty() {
 					continue;
 				}
+				let total_size = self.file_size.get(file).unwrap_or(&0);
+				self.counters.increment_total_bytes(total_size.clone() as u64);
 				let events_batch = CollectionBatch::new(
 					file,
 					&chunks[0].clone().extension.unwrap_or_default(),
@@ -138,13 +181,13 @@ impl Source for Collector {
 				let batches_error =
 					ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
 				if batches_error.is_err() {
-					error!("Failed to send events batch: {:?}", batches_error);
+					error!("Failed to send bytes batch: {:?}", batches_error);
 					// Re-trying
 					let retry_error =
 						ctx.send_message(event_streamer_messagebus, events_batch).await;
 					if retry_error.is_err() {
 						return Err(ActorExitStatus::Failure(
-							anyhow::anyhow!("Failed to send events batch: {:?}", retry_error)
+							anyhow::anyhow!("Failed to send bytes batch: {:?}", retry_error)
 								.into(),
 						));
 					}
@@ -167,8 +210,7 @@ impl Source for Collector {
 	}
 
 	fn observable_state(&self) -> serde_json::Value {
-		// Implement observable state if needed
-		serde_json::Value::Null
+		serde_json::to_value(&self.counters).unwrap()
 	}
 
 	async fn finalize(
@@ -181,7 +223,7 @@ impl Source for Collector {
 				handle.abort();
 			},
 			None => {
-				info!("QSource is already finished");
+				info!("Collector is already finished");
 			},
 		}
 		Ok(())

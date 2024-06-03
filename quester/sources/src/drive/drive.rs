@@ -327,6 +327,7 @@ impl Source for GoogleDriveSource {
 								Some(chunk.to_vec()),
 								eof,
 								Some(self.folder_id.clone()),
+								Some(chunk.len()),
 							);
 
 							output.send(CollectedBytes::from(collected_bytes)).await.map_err(
@@ -346,6 +347,7 @@ impl Source for GoogleDriveSource {
 							None,
 							true,
 							Some(self.folder_id.clone()),
+							None,
 						);
 
 						output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(

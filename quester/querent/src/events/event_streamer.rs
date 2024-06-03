@@ -174,8 +174,8 @@ impl Handler<CollectionBatch> for EventStreamer {
 
 	async fn handle(
 		&mut self,
-		message: CollectionBatch,
-		ctx: &ActorContext<Self>,
+		_message: CollectionBatch,
+		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		Ok(())
 	}

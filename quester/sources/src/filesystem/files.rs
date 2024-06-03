@@ -68,6 +68,7 @@ impl LocalFolderSource {
 				Some(buffer[..bytes_read].to_vec()),
 				bytes_read == 0,
 				Some(file_path.to_string_lossy().to_string()),
+				Some(bytes_read),
 			);
 			output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
 				SourceError::new(
@@ -83,6 +84,7 @@ impl LocalFolderSource {
 			None,
 			true,
 			Some(file_path.to_string_lossy().to_string()),
+			None,
 		);
 
 		output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(|e| {

@@ -230,6 +230,7 @@ impl Source for S3Source {
 								Some(buffer[..bytes_read].to_vec()),
 								false,
 								Some(self.bucket_name.clone()),
+								Some(bytes_read),
 							);
 
 							output.send(collected_bytes).await.map_err(|e| {
@@ -246,6 +247,7 @@ impl Source for S3Source {
 							None,
 							true,
 							Some(self.bucket_name.clone()),
+							None,
 						);
 
 						output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(

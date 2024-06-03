@@ -126,6 +126,7 @@ impl Source for OpendalStorage {
 					Some(buffer[..bytes_read].to_vec()),
 					false,
 					self._bucket.clone(),
+					Some(bytes_read),
 				);
 
 				output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
@@ -142,6 +143,7 @@ impl Source for OpendalStorage {
 				None,
 				true,
 				self._bucket.clone(),
+				None,
 			);
 
 			output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(|e| {

@@ -9,6 +9,7 @@ pub struct CollectedBytes {
 	pub eof: bool,
 	pub doc_source: Option<String>,
 	pub extension: Option<String>,
+	pub size: Option<usize>,
 }
 
 impl CollectedBytes {
@@ -17,15 +18,16 @@ impl CollectedBytes {
 		data: Option<Vec<u8>>,
 		eof: bool,
 		doc_source: Option<String>,
+		size: Option<usize>,
 	) -> Self {
 		let extension = file
 			.as_ref()
 			.and_then(|file| file.extension().and_then(|ext| ext.to_str().map(String::from)));
-		CollectedBytes { data, file, eof, doc_source, extension }
+		CollectedBytes { data, file, eof, doc_source, extension, size }
 	}
 
 	pub fn success(data: Vec<u8>) -> Self {
-		CollectedBytes::new(None, Some(data), false, None)
+		CollectedBytes::new(None, Some(data), false, None, None)
 	}
 
 	pub fn is_eof(&self) -> bool {

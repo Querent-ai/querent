@@ -235,6 +235,7 @@ impl Source for AzureBlobStorage {
 							Some(buffer[..bytes_read].to_vec()),
 							false,
 							Some(self.container_client.container_name().to_string()),
+							Some(bytes_read as usize),
 						);
 
 						output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
@@ -251,6 +252,7 @@ impl Source for AzureBlobStorage {
 						None,
 						true,
 						Some(self.container_client.container_name().to_string()),
+						None,
 					);
 					output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
 						SourceError::new(
