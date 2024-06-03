@@ -187,8 +187,7 @@ impl Source for Collector {
 						ctx.send_message(event_streamer_messagebus, events_batch).await;
 					if retry_error.is_err() {
 						return Err(ActorExitStatus::Failure(
-							anyhow::anyhow!("Failed to send bytes batch: {:?}", retry_error)
-								.into(),
+							anyhow::anyhow!("Failed to send bytes batch: {:?}", retry_error).into(),
 						));
 					}
 				}
