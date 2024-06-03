@@ -1,10 +1,11 @@
 use std::{fmt, ops::Range, path::Path};
 
 use async_trait::async_trait;
-use futures::{stream, StreamExt};
+use common::CollectedBytes;
+use futures::StreamExt;
 use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
-use tokio::io::{AsyncRead, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
@@ -93,39 +94,67 @@ impl Source for OpendalStorage {
 
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let bucket_name = self._bucket.clone().unwrap_or_default();
-		let object_lister = self
+		let mut object_lister = self
 			.op
 			.lister_with(bucket_name.as_str())
 			.recursive(true)
 			.metakey(Metakey::ContentLength)
 			.await?;
 
-		let stream = stream::unfold(object_lister, |mut object_lister| async move {
-			match object_lister.next().await {
-				Some(Ok(object)) => {
-					let key = object.path().to_string();
-					let om = object.metadata();
-					let last_modified = match om.last_modified() {
-						Some(t) => t.timestamp() as f64,
-						None => 0_f64,
-					};
-					let total_size = om.content_length() as usize;
-					let metadata = ObjectMetadata { key, last_modified, total_size };
-					Some((Ok::<_, SourceError>(metadata), object_lister))
-				},
-				Some(Err(err)) => Some((Err(err.into()), object_lister)),
-				None => None,
-			}
-		});
+		while let Some(object) = object_lister.next().await {
+			let object = object?;
+			let key = object.path().to_string();
 
-		let mut stream = Box::pin(stream);
-		while let Some(metadata) = stream.next().await {
-			let metadata = metadata?;
-			let key = metadata.key;
+			// Start reading the object in chunks
 			let mut storage_reader = self.op.reader(&key).await?;
-			tokio::io::copy(&mut storage_reader, output).await?;
-			output.flush().await?;
+			let mut buffer = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+
+			loop {
+				let bytes_read = storage_reader.read(&mut buffer).await?;
+
+				// Break the loop if EOF is reached
+				if bytes_read == 0 {
+					break;
+				}
+				// Only process and serialize if bytes were read
+
+				let collected_bytes = CollectedBytes::new(
+					Some(Path::new(&key).to_path_buf()),
+					Some(buffer[..bytes_read].to_vec()),
+					false,
+					self._bucket.clone(),
+				);
+
+				let serialized =
+					serde_json::to_string(&collected_bytes).map_err(|e| SourceError::from(e))?;
+				output
+					.write_all(serialized.as_bytes())
+					.await
+					.map_err(|e| SourceError::from(e))?;
+			}
+
+			// Mark the end of file for the current object
+			let eof_collected_bytes = CollectedBytes::new(
+				Some(Path::new(&key).to_path_buf()),
+				None,
+				true,
+				self._bucket.clone(),
+			);
+
+			let serialized_eof =
+				serde_json::to_string(&eof_collected_bytes).map_err(|e| SourceError::from(e))?;
+			output
+				.write_all(serialized_eof.as_bytes())
+				.await
+				.map_err(|e| SourceError::from(e))?;
 		}
+
+		output.flush().await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error flushing output: {:?}", err).into(),
+			)
+		})?;
 		Ok(())
 	}
 }

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::CollectedBytes;
 use futures::StreamExt;
 use google_drive3::{
 	api::Scope,
@@ -9,7 +10,11 @@ use google_drive3::{
 };
 use hyper::Body;
 use proto::semantics::GoogleDriveCollectorConfig;
-use std::{io::Cursor, ops::Range, path::Path};
+use std::{
+	io::Cursor,
+	ops::Range,
+	path::{Path, PathBuf},
+};
 use tokio::io::{AsyncRead, AsyncWriteExt};
 use tracing::instrument;
 
@@ -281,6 +286,7 @@ impl Source for GoogleDriveSource {
 						anyhow::anyhow!("Error listing files in Google Drive: {:?}", err).into(),
 					)
 				})?;
+
 			if let Some(files) = list.files {
 				for file in files {
 					if let Some(file_id) = file.id {
@@ -295,6 +301,7 @@ impl Source for GoogleDriveSource {
 									.into(),
 								)
 							})?;
+
 						while let Some(chunk) = content_body.next().await {
 							let chunk = chunk.map_err(|err| {
 								SourceError::new(
@@ -306,23 +313,52 @@ impl Source for GoogleDriveSource {
 									.into(),
 								)
 							})?;
-							output.write_all(&chunk).await.map_err(|err| {
-								SourceError::new(
-									SourceErrorKind::Io,
-									anyhow::anyhow!("Error writing chunk to output: {:?}", err)
-										.into(),
-								)
-							})?;
+
+							let eof = chunk.is_empty();
+							if eof {
+								break;
+							}
+
+							let collected_bytes = CollectedBytes::new(
+								Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
+								Some(chunk.to_vec()),
+								eof,
+								Some(self.folder_id.clone()),
+							);
+
+							let serialized = serde_json::to_string(&collected_bytes)
+								.map_err(|e| SourceError::from(e))?;
+							output
+								.write_all(serialized.as_bytes())
+								.await
+								.map_err(|e| SourceError::from(e))?;
 						}
+
+						// Send EOF for the file
+						let eof_collected_bytes = CollectedBytes::new(
+							Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
+							None,
+							true,
+							Some(self.folder_id.clone()),
+						);
+
+						let serialized_eof = serde_json::to_string(&eof_collected_bytes)
+							.map_err(|e| SourceError::from(e))?;
+						output
+							.write_all(serialized_eof.as_bytes())
+							.await
+							.map_err(|e| SourceError::from(e))?;
 					}
 				}
 			}
+
 			output.flush().await.map_err(|err| {
 				SourceError::new(
 					SourceErrorKind::Io,
 					anyhow::anyhow!("Error flushing output: {:?}", err).into(),
 				)
 			})?;
+
 			if list.next_page_token.is_none() {
 				break;
 			}

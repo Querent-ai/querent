@@ -10,10 +10,11 @@ use aws_sdk_s3::{
 	Client as S3Client,
 };
 
+use common::CollectedBytes;
 use once_cell::sync::Lazy;
 use proto::semantics::S3CollectorConfig;
 use tokio::{
-	io::{AsyncRead, AsyncWriteExt, BufReader},
+	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
 	sync::Semaphore,
 };
 
@@ -213,7 +214,43 @@ impl Source for S3Source {
 
 						let mut body_stream_reader =
 							BufReader::new(get_object_output.body.into_async_read());
-						tokio::io::copy_buf(&mut body_stream_reader, output)
+						let mut buffer = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+
+						loop {
+							let bytes_read = body_stream_reader.read(&mut buffer).await?;
+
+							// Break the loop if EOF is reached
+							if bytes_read == 0 {
+								break;
+							}
+							// Only process and serialize if bytes were read
+
+							let collected_bytes = CollectedBytes::new(
+								Some(Path::new(&key).to_path_buf()),
+								Some(buffer[..bytes_read].to_vec()),
+								false,
+								Some(self.bucket_name.clone()),
+							);
+
+							let serialized = serde_json::to_string(&collected_bytes)
+								.map_err(|e| SourceError::from(e))?;
+							output
+								.write_all(serialized.as_bytes())
+								.await
+								.map_err(|e| SourceError::from(e))?;
+						}
+						// Mark the end of file for the current object
+						let eof_collected_bytes = CollectedBytes::new(
+							Some(Path::new(&key).to_path_buf()),
+							None,
+							true,
+							Some(self.bucket_name.clone()),
+						);
+
+						let serialized_eof = serde_json::to_string(&eof_collected_bytes)
+							.map_err(|e| SourceError::from(e))?;
+						output
+							.write_all(serialized_eof.as_bytes())
 							.await
 							.map_err(|e| SourceError::from(e))?;
 					}

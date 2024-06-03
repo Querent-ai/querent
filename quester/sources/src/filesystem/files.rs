@@ -33,23 +33,16 @@ impl LocalFolderSource {
 		folder_path: PathBuf,
 		output: &mut dyn SendableAsync,
 	) -> SourceResult<()> {
-		let mut entries = fs::read_dir(&folder_path).await.map_err(|e| SourceError::from(e))?; // Read the directory.
-		while let Some(entry) = entries.next_entry().await.map_err(|e| SourceError::from(e))? {
-			if let Ok(metadata) = entry.metadata().await {
-				if metadata.is_file() {
-					// If it's a file, read and write it to the output
-					let file_path = entry.path();
-					self.read_file_and_write_to_output(&file_path, output).await?;
-				} else if metadata.is_dir() {
-					let mut this = self.clone(); // Clone self to avoid mutable borrow issues
-					Box::pin(this.poll_data_recursive(entry.path(), output)).await?;
-				}
-			} else {
-				return Err(SourceError::new(
-					SourceErrorKind::NotFound,
-					anyhow::anyhow!("File not found").into(),
-				)
-				.into());
+		let mut entries = fs::read_dir(&folder_path).await.map_err(SourceError::from)?; // Read the directory.
+		while let Some(entry) = entries.next_entry().await.map_err(SourceError::from)? {
+			let metadata = entry.metadata().await.map_err(SourceError::from)?;
+			if metadata.is_file() {
+				// If it's a file, read and write it to the output
+				let file_path = entry.path();
+				self.read_file_and_write_to_output(&file_path, output).await?;
+			} else if metadata.is_dir() {
+				let mut this = self.clone(); // Clone self to avoid mutable borrow issues
+				Box::pin(this.poll_data_recursive(entry.path(), output)).await?;
 			}
 		}
 		Ok(())
@@ -60,41 +53,37 @@ impl LocalFolderSource {
 		file_path: &Path,
 		output: &mut dyn SendableAsync,
 	) -> SourceResult<()> {
-		let file: fs::File = fs::File::open(file_path).await.map_err(|e| SourceError::from(e))?;
+		let file: fs::File = fs::File::open(file_path).await.map_err(SourceError::from)?;
 		let mut reader = BufReader::new(file);
 		let mut buffer = vec![0; self.chunk_size];
 		loop {
-			let bytes_read = reader.read(&mut buffer).await.map_err(|e| SourceError::from(e))?;
+			let bytes_read = reader.read(&mut buffer).await.map_err(SourceError::from)?;
 			if bytes_read == 0 {
-				// EOF
-				let collected_bytes = CollectedBytes::new(
-					Some(file_path.to_path_buf()),
-					Some(buffer.clone()),
-					true,
-					Some(file_path.to_string_lossy().to_string()),
-				);
-				let serialized =
-					serde_json::to_string(&collected_bytes).map_err(|e| SourceError::from(e))?;
-				output
-					.write_all(serialized.as_bytes())
-					.await
-					.map_err(|e| SourceError::from(e))?;
+				// End of file reached
 				break;
 			}
 			let collected_bytes = CollectedBytes::new(
 				Some(file_path.to_path_buf()),
-				Some(buffer.clone()),
-				false,
+				Some(buffer[..bytes_read].to_vec()),
+				bytes_read == 0,
 				Some(file_path.to_string_lossy().to_string()),
 			);
-			let serialized =
-				serde_json::to_string(&collected_bytes).map_err(|e| SourceError::from(e))?;
-			output
-				.write_all(serialized.as_bytes())
-				.await
-				.map_err(|e| SourceError::from(e))?;
+			let serialized = serde_json::to_string(&collected_bytes).map_err(SourceError::from)?;
+			output.write_all(serialized.as_bytes()).await.map_err(SourceError::from)?;
 		}
-		output.flush().await.map_err(|e| SourceError::from(e))?;
+
+		// Mark the end of file for the current file
+		let eof_collected_bytes = CollectedBytes::new(
+			Some(file_path.to_path_buf()),
+			None,
+			true,
+			Some(file_path.to_string_lossy().to_string()),
+		);
+
+		let serialized_eof =
+			serde_json::to_string(&eof_collected_bytes).map_err(SourceError::from)?;
+		output.write_all(serialized_eof.as_bytes()).await.map_err(SourceError::from)?;
+
 		Ok(())
 	}
 }
@@ -110,21 +99,20 @@ impl Source for LocalFolderSource {
 			.into());
 		}
 		// Check if path is a folder and has entries
-		let mut entries =
-			fs::read_dir(&self.folder_path).await.map_err(|e| SourceError::from(e))?;
-		entries.next_entry().await.map_err(|e| SourceError::from(e))?;
+		let mut entries = fs::read_dir(&self.folder_path).await.map_err(SourceError::from)?;
+		entries.next_entry().await.map_err(SourceError::from)?;
 		Ok(())
 	}
 
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
 		let full_path = self.full_path(path);
-		let mut file = fs::File::open(&full_path).await.map_err(|e| SourceError::from(e))?;
+		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 		file.seek(SeekFrom::Start(range.start as u64))
 			.await
-			.map_err(|e| SourceError::from(e))?;
+			.map_err(SourceError::from)?;
 
 		let mut buffer = vec![0; range.len()];
-		file.read_exact(&mut buffer).await.map_err(|e| SourceError::from(e))?;
+		file.read_exact(&mut buffer).await.map_err(SourceError::from)?;
 		Ok(buffer)
 	}
 
@@ -134,10 +122,10 @@ impl Source for LocalFolderSource {
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
 		let full_path = self.full_path(path);
-		let mut file = fs::File::open(&full_path).await.map_err(|e| SourceError::from(e))?;
+		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 		file.seek(SeekFrom::Start(range.start as u64))
 			.await
-			.map_err(|e| SourceError::from(e))?;
+			.map_err(SourceError::from)?;
 
 		let reader = BufReader::new(file.take(range.len() as u64));
 		Ok(Box::new(reader))
@@ -145,16 +133,16 @@ impl Source for LocalFolderSource {
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
 		let full_path = self.full_path(path);
-		let mut file = fs::File::open(&full_path).await.map_err(|e| SourceError::from(e))?;
+		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 
 		let mut buffer = Vec::new();
-		file.read_to_end(&mut buffer).await.map_err(|e| SourceError::from(e))?;
+		file.read_to_end(&mut buffer).await.map_err(SourceError::from)?;
 		Ok(buffer)
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
 		let full_path = self.full_path(path);
-		let metadata = fs::metadata(&full_path).await.map_err(|e| SourceError::from(e))?;
+		let metadata = fs::metadata(&full_path).await.map_err(SourceError::from)?;
 		Ok(metadata.len())
 	}
 
@@ -177,15 +165,14 @@ impl Source for LocalFolderSource {
 	{
 		Box::pin(async move {
 			let full_path = self.full_path(path);
-			let file = fs::File::open(&full_path).await.map_err(|e| SourceError::from(e))?;
+			let file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 			let mut reader = BufReader::new(file);
-			tokio::io::copy_buf(&mut reader, output)
-				.await
-				.map_err(|e| SourceError::from(e))?;
-			output.flush().await.map_err(|e| SourceError::from(e))?;
+			tokio::io::copy_buf(&mut reader, output).await.map_err(SourceError::from)?;
+			output.flush().await.map_err(SourceError::from)?;
 			Ok(())
 		})
 	}
+
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		self.poll_data_recursive(self.folder_path.clone(), output).await
 	}
