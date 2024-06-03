@@ -10,16 +10,17 @@ use aws_sdk_s3::{
 	Client as S3Client,
 };
 
+use common::CollectedBytes;
 use once_cell::sync::Lazy;
 use proto::semantics::S3CollectorConfig;
 use tokio::{
-	io::{AsyncRead, AsyncWriteExt, BufReader},
-	sync::Semaphore,
+	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
+	sync::{mpsc, Semaphore},
 };
 
 static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10000));
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct S3Source {
 	pub bucket_name: String,
 	pub region: Region,
@@ -27,6 +28,7 @@ pub struct S3Source {
 	pub secret_key: String,
 	pub chunk_size: usize,
 	pub s3_client: Option<S3Client>,
+	pub continuation_token: Option<String>,
 }
 
 impl S3Source {
@@ -37,7 +39,15 @@ impl S3Source {
 		let access_key = config.access_key.clone();
 		let secret_key = config.secret_key.clone();
 		let chunk_size = 1024 * 1024 * 10; // this is 10MB
-		S3Source { bucket_name, region, access_key, secret_key, chunk_size, s3_client: None }
+		S3Source {
+			bucket_name,
+			region,
+			access_key,
+			secret_key,
+			chunk_size,
+			s3_client: None,
+			continuation_token: None,
+		}
 	}
 
 	async fn create_get_object_request(
@@ -196,73 +206,105 @@ impl Source for S3Source {
 			})?;
 		Ok(head_object_output.content_length() as u64)
 	}
-	// async fn poll(
-	// 	&self,
-	// ) -> SourceResult<
-	// 	Box<
-	// 		dyn Stream<Item = CollectedBytes<Box<dyn tokio::io::AsyncRead + Send + Unpin>>>
-	// 			+ Unpin
-	// 			+ Send,
-	// 	>,
-	// > {
-	// 	if self.s3_client.is_none() {
-	// 		self.connect().await?;
-	// 	}
 
-	// 	let s3_client = self.s3_client.as_ref().unwrap();
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await;
 
-	// 	let mut object_keys = Vec::new();
+		let mut continuation_token = self.continuation_token.clone();
+		loop {
+			let list_objects_v2 = self
+				.s3_client
+				.as_ref()
+				.unwrap()
+				.list_objects_v2()
+				.bucket(&self.bucket_name)
+				.set_continuation_token(continuation_token.clone());
 
-	// 	match s3_client.list_objects_v2().bucket(self.bucket_name.clone()).send().await {
-	// 		Ok(output) =>
-	// 			if let Some(contents) = output.contents {
-	// 				for obj in contents {
-	// 					if let Some(key) = obj.key {
-	// 						object_keys.push(key);
-	// 					}
-	// 				}
-	// 			},
-	// 		Err(err) => {
-	// 			eprintln!("Error listing S3 objects: {:?}", err);
-	// 			return Err(SourceError::new(
-	// 				SourceErrorKind::Io,
-	// 				anyhow::anyhow!("Error listing S3 objects: {:?}", err).into(),
-	// 			));
-	// 		},
-	// 	};
+			let list_objects_v2_output = list_objects_v2.send().await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error listing objects from S3: {:?}", err).into(),
+				)
+			})?;
 
-	// 	// Create a stream that will read the objects from S3
-	// 	let stream = futures_util::stream::iter(object_keys.into_iter().map(move |key| {
-	// 		let s3_client = self.s3_client.as_ref().unwrap();
-	// 		let bucket_name = self.bucket_name.clone();
-	// 		let chunk_size = self.chunk_size;
-	// 		async move {
-	// 			let object_stream = s3_client
-	// 				.get_object()
-	// 				.bucket(bucket_name.clone())
-	// 				.key(key.clone())
-	// 				.send()
-	// 				.await
-	// 				.map_err(|err| {
-	// 					SourceError::new(
-	// 						SourceErrorKind::Io,
-	// 						anyhow::anyhow!("Error getting object from S3: {:?}", err).into(),
-	// 					)
-	// 				});
-	// 			let bytes_stream = match object_stream {
-	// 				Ok(result) => {
-	// 					let body: aws_sdk_s3::primitives::ByteStream = result.body;
-	// 					let bytes_stream = body.into_async_read();
-	// 					Some(Box::new(bytes_stream))
-	// 				},
-	// 				Err(err) => None,
-	// 			};
-	// 			CollectedBytes::new(key, bytes_stream, None, false, String::new())
-	// 		}
-	// 	}));
+			if let Some(contents) = list_objects_v2_output.contents {
+				for object in contents {
+					if let Some(key) = object.key {
+						let get_object_output = self
+							.s3_client
+							.as_ref()
+							.unwrap()
+							.get_object()
+							.bucket(&self.bucket_name)
+							.key(&key)
+							.send()
+							.await
+							.map_err(|err| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error getting object from S3: {:?}", err)
+										.into(),
+								)
+							})?;
 
-	// 	Ok(Box::new(stream))
-	// }
+						let mut body_stream_reader =
+							BufReader::new(get_object_output.body.into_async_read());
+						let mut buffer = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+
+						loop {
+							let bytes_read = body_stream_reader.read(&mut buffer).await?;
+
+							// Break the loop if EOF is reached
+							if bytes_read == 0 {
+								break;
+							}
+							// Only process and serialize if bytes were read
+
+							let collected_bytes = CollectedBytes::new(
+								Some(Path::new(&key).to_path_buf()),
+								Some(buffer[..bytes_read].to_vec()),
+								false,
+								Some(self.bucket_name.clone()),
+								Some(bytes_read),
+							);
+
+							output.send(collected_bytes).await.map_err(|e| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+										.into(),
+								)
+							})?;
+						}
+						// Mark the end of file for the current object
+						let eof_collected_bytes = CollectedBytes::new(
+							Some(Path::new(&key).to_path_buf()),
+							None,
+							true,
+							Some(self.bucket_name.clone()),
+							None,
+						);
+
+						output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(
+							|e| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+										.into(),
+								)
+							},
+						)?;
+					}
+				}
+			}
+
+			if list_objects_v2_output.next_continuation_token.is_none() {
+				break;
+			}
+			continuation_token = list_objects_v2_output.next_continuation_token;
+		}
+		Ok(())
+	}
 }
 
 async fn download_all(byte_stream: ByteStream, output: &mut Vec<u8>) -> io::Result<()> {

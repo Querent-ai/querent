@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::CollectedBytes;
 use serde::{Deserialize, Serialize};
 use std::{
 	fmt::{self, Debug},
@@ -8,7 +9,10 @@ use std::{
 	sync::Arc,
 };
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::{
+	io::{AsyncRead, AsyncWrite},
+	sync::mpsc,
+};
 
 pub trait SendableAsync: AsyncWrite + Send + Unpin {}
 impl<W: AsyncWrite + Send + Unpin> SendableAsync for W {}
@@ -80,9 +84,16 @@ impl From<io::Error> for SourceError {
 		}
 	}
 }
+
+impl From<serde_json::Error> for SourceError {
+	fn from(err: serde_json::Error) -> SourceError {
+		SourceError::new(SourceErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
-pub trait Source: fmt::Debug + Send + Sync + 'static {
+pub trait Source: Send + Sync + 'static {
 	/// Establishes a connection to the source.
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
 
@@ -135,4 +146,8 @@ pub trait Source: fmt::Debug + Send + Sync + 'static {
 		'life1: 'async_trait,
 		'life2: 'async_trait,
 		Self: 'async_trait;
+
+	/// Polls data from the source and sends it to the output.
+	/// Output is a sender that can be used to send data to the next actor in the pipeline.
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()>;
 }

@@ -1,6 +1,6 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
-use common::{EventStreamerCounters, EventsBatch, RuntimeType};
+use common::{CollectionBatch, EventStreamerCounters, EventsBatch, RuntimeType};
 use querent_synapse::callbacks::EventType;
 use std::sync::Arc;
 use tokio::runtime::Handle;
@@ -164,6 +164,19 @@ impl Handler<EventsBatch> for EventStreamer {
 		}
 		self.counters.increment_events_processed(message.events.len() as u64);
 		ctx.record_progress();
+		Ok(())
+	}
+}
+
+#[async_trait]
+impl Handler<CollectionBatch> for EventStreamer {
+	type Reply = ();
+
+	async fn handle(
+		&mut self,
+		_message: CollectionBatch,
+		_ctx: &ActorContext<Self>,
+	) -> Result<(), ActorExitStatus> {
 		Ok(())
 	}
 }

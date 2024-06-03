@@ -4,14 +4,17 @@ use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
 use azure_storage_blobs::{blob::operations::GetBlobResponse, prelude::*};
-use common::Retryable;
+use common::{CollectedBytes, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
 };
 use proto::semantics::AzureCollectorConfig;
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
+use tokio::{
+	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
+	sync::mpsc,
+};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
@@ -20,6 +23,7 @@ use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 /// Azure object storage implementation
 pub struct AzureBlobStorage {
 	container_client: ContainerClient,
+	prefix: String,
 }
 
 impl fmt::Debug for AzureBlobStorage {
@@ -44,12 +48,14 @@ impl AzureBlobStorage {
 		let container_client =
 			blob_service_client.container_client(azure_storage_config.container.clone());
 
-		Self { container_client }
+		Self { container_client, prefix: azure_storage_config.prefix }
 	}
 
 	/// Returns the blob name (a.k.a blob key).
 	fn blob_name(&self, relative_path: &Path) -> String {
-		relative_path.to_string_lossy().to_string()
+		let mut name = self.prefix.clone();
+		name.push_str(relative_path.to_string_lossy().as_ref());
+		name
 	}
 
 	fn extract_value_from_connection_string(connection_string: &str, key: &str) -> String {
@@ -214,6 +220,84 @@ impl Source for AzureBlobStorage {
 			Ok(response) => Ok(response.blob.properties.content_length),
 			Err(err) => Err(SourceError::from(AzureErrorWrapper::from(err))),
 		}
+	}
+
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
+		let mut blob_stream = self.container_client.list_blobs().into_stream();
+
+		while let Some(blob_result) = blob_stream.next().await {
+			let blob = match blob_result {
+				Ok(blob) => blob,
+				Err(err) => return Err(SourceError::from(AzureErrorWrapper::from(err))),
+			};
+
+			let blobs_list = blob.blobs;
+
+			for blob_info in blobs_list.blobs() {
+				let blob_name = blob_info.name.clone();
+				let blob_path = Path::new(&blob_name);
+
+				let mut output_stream =
+					self.container_client.blob_client(&blob_name).get().into_stream();
+
+				while let Some(chunk_result) = output_stream.next().await {
+					let chunk_response = match chunk_result {
+						Ok(response) => response,
+						Err(err) => return Err(SourceError::from(AzureErrorWrapper::from(err))),
+					};
+
+					let chunk_response_body_stream = chunk_response
+						.data
+						.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
+						.into_async_read()
+						.compat();
+
+					let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
+
+					let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+					loop {
+						let bytes_read = body_stream_reader.read(&mut buffer).await?;
+
+						// Break the loop if EOF is reached
+						if bytes_read == 0 {
+							break;
+						}
+						// Only process and serialize if bytes were read
+						let collected_bytes = CollectedBytes::new(
+							Some(blob_path.to_path_buf()),
+							Some(buffer[..bytes_read].to_vec()),
+							false,
+							Some(self.container_client.container_name().to_string()),
+							Some(bytes_read as usize),
+						);
+
+						output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
+							SourceError::new(
+								SourceErrorKind::Io,
+								anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+							)
+						})?;
+					}
+
+					// Create CollectedBytes instance
+					let collected_bytes = CollectedBytes::new(
+						Some(blob_path.to_path_buf()),
+						None,
+						true,
+						Some(self.container_client.container_name().to_string()),
+						None,
+					);
+					output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
+						SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
+						)
+					})?;
+				}
+			}
+		}
+
+		Ok(())
 	}
 }
 
