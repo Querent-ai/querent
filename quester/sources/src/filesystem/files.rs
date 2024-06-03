@@ -20,7 +20,7 @@ pub struct LocalFolderSource {
 
 impl LocalFolderSource {
 	pub fn new(folder_path: PathBuf, chunk_size: Option<usize>) -> Self {
-		let chunk_size = chunk_size.unwrap_or(64000);
+		let chunk_size = chunk_size.unwrap_or(1024 * 1024 * 10); // Default chunk size is 10MB
 		Self { folder_path, chunk_size }
 	}
 
