@@ -4,14 +4,14 @@ use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
 use azure_storage_blobs::{blob::operations::GetBlobResponse, prelude::*};
-use common::Retryable;
+use common::{CollectedBytes, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
 };
 use proto::semantics::AzureCollectorConfig;
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
@@ -188,24 +188,81 @@ impl Source for AzureBlobStorage {
 
 	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let mut blob_stream = self.container_client.list_blobs().into_stream();
+
 		while let Some(blob_result) = blob_stream.next().await {
-			let blob = blob_result.map_err(AzureErrorWrapper::from)?;
+			let blob = match blob_result {
+				Ok(blob) => blob,
+				Err(err) => return Err(SourceError::from(AzureErrorWrapper::from(err))),
+			};
+
 			let blobs_list = blob.blobs;
-			for blob in blobs_list.blobs() {
-				let name = &blob.name;
-				let mut output_stream = self.container_client.blob_client(name).get().into_stream();
+
+			for blob_info in blobs_list.blobs() {
+				let blob_name = blob_info.name.clone();
+				let blob_path = Path::new(&blob_name);
+
+				let mut output_stream =
+					self.container_client.blob_client(&blob_name).get().into_stream();
+
 				while let Some(chunk_result) = output_stream.next().await {
-					let chunk_response = chunk_result.map_err(AzureErrorWrapper::from)?;
+					let chunk_response = match chunk_result {
+						Ok(response) => response,
+						Err(err) => return Err(SourceError::from(AzureErrorWrapper::from(err))),
+					};
+
 					let chunk_response_body_stream = chunk_response
 						.data
 						.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
 						.into_async_read()
 						.compat();
+
 					let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
-					tokio::io::copy_buf(&mut body_stream_reader, output).await?;
+
+					let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+					loop {
+						let bytes_read = body_stream_reader.read(&mut buffer).await?;
+
+						// Break the loop if EOF is reached
+						if bytes_read == 0 {
+							break;
+						}
+						// Only process and serialize if bytes were read
+						let collected_bytes = CollectedBytes::new(
+							Some(blob_path.to_path_buf()),
+							Some(buffer[..bytes_read].to_vec()),
+							false,
+							Some(self.container_client.container_name().to_string()),
+						);
+
+						let serialized = serde_json::to_string(&collected_bytes)
+							.map_err(|e| SourceError::from(e))?;
+						output
+							.write_all(serialized.as_bytes())
+							.await
+							.map_err(|e| SourceError::from(e))?;
+					}
+
+					// Create CollectedBytes instance
+					let collected_bytes = CollectedBytes::new(
+						Some(blob_path.to_path_buf()),
+						None,
+						true,
+						Some(self.container_client.container_name().to_string()),
+					);
+
+					// Serialize CollectedBytes to JSON
+					let serialized = serde_json::to_string(&collected_bytes)
+						.map_err(|e| SourceError::from(e))?;
+
+					// Write JSON to output
+					output
+						.write_all(serialized.as_bytes())
+						.await
+						.map_err(|e| SourceError::from(e))?;
 				}
 			}
 		}
+
 		Ok(())
 	}
 }
@@ -221,10 +278,10 @@ impl Retryable for AzureErrorWrapper {
 		match self.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => !matches!(
 				status,
-				StatusCode::NotFound |
-					StatusCode::Unauthorized |
-					StatusCode::BadRequest |
-					StatusCode::Forbidden
+				StatusCode::NotFound
+					| StatusCode::Unauthorized
+					| StatusCode::BadRequest
+					| StatusCode::Forbidden
 			),
 			ErrorKind::Io => true,
 			_ => false,
@@ -248,13 +305,15 @@ impl From<AzureErrorWrapper> for SourceError {
 	fn from(err: AzureErrorWrapper) -> Self {
 		match err.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => match status {
-				StatusCode::NotFound =>
-					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into())),
+				StatusCode::NotFound => {
+					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into()))
+				},
 				_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 			},
 			ErrorKind::Io => SourceError::new(SourceErrorKind::Io, Arc::new(err.into())),
-			ErrorKind::Credential =>
-				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into())),
+			ErrorKind::Credential => {
+				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into()))
+			},
 			_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 		}
 	}

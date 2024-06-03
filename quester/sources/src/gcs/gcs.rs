@@ -107,7 +107,7 @@ impl Source for OpendalStorage {
 
 			// Start reading the object in chunks
 			let mut storage_reader = self.op.reader(&key).await?;
-			let mut buffer = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+			let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
 
 			loop {
 				let bytes_read = storage_reader.read(&mut buffer).await?;
