@@ -31,14 +31,14 @@ impl fmt::Debug for AzureBlobStorage {
 impl AzureBlobStorage {
 	/// Creates a new [`AzureBlobStorage`] instance.
 	pub fn new(azure_storage_config: AzureCollectorConfig) -> Self {
-		// Parse the connection string to extract account name and key
-		let account = azure_storage_config.account_url;
-		// TODOI dont think we need credentials once we move to rust side
-		let _credentials = azure_storage_config.credentials;
-		let access_key = azure_storage_config.access_key;
-		let storage_credentials = StorageCredentials::access_key(account.clone(), access_key);
+		let connection_string = &azure_storage_config.connection_string;
+		let account_name =
+			Self::extract_value_from_connection_string(connection_string, "AccountName");
+		let account_key =  azure_storage_config.credentials;
+
+		let storage_credentials = StorageCredentials::access_key(account_name.clone(), account_key);
 		// Create the BlobServiceClient
-		let blob_service_client = BlobServiceClient::new(account.clone(), storage_credentials);
+		let blob_service_client = ClientBuilder::new(account_name, storage_credentials);
 
 		// Create the ContainerClient
 		let container_client =
@@ -50,6 +50,15 @@ impl AzureBlobStorage {
 	/// Returns the blob name (a.k.a blob key).
 	fn blob_name(&self, relative_path: &Path) -> String {
 		relative_path.to_string_lossy().to_string()
+	}
+
+	fn extract_value_from_connection_string(connection_string: &str, key: &str) -> String {
+		connection_string
+			.split(';')
+			.find(|part| part.starts_with(key))
+			.and_then(|part| part.split('=').nth(1))
+			.unwrap_or_default()
+			.to_string()
 	}
 
 	/// Downloads a blob as vector of bytes.
@@ -100,6 +109,20 @@ async fn download_all(
 
 #[async_trait]
 impl Source for AzureBlobStorage {
+	async fn list_files(&self, _path: &Path) -> SourceResult<Vec<String>> {
+		let mut blob_names = Vec::new();
+		let mut stream = self.container_client.list_blobs().into_stream();
+
+		while let Some(result) = stream.next().await {
+			let segment = result.map_err(|e| SourceError::from(AzureErrorWrapper::from(e)))?;
+			for blob in segment.blobs.blobs() {
+				blob_names.push(blob.name.clone());
+			}
+		}
+
+		Ok(blob_names)
+	}
+
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let name = self.blob_name(path);
 		let mut output_stream = self.container_client.blob_client(name).get().into_stream();
@@ -126,9 +149,19 @@ impl Source for AzureBlobStorage {
 			.next()
 			.await
 		{
-			let _ = first_blob_result?;
+			match first_blob_result {
+				Ok(_) => {
+					Ok(())
+				},
+				Err(e) => {
+					println!("Error connecting to Azure Blob Storage: {}", e);
+					Err(e.into())
+				},
+			}
+		} else {
+			println!("Failed to get first blob result");
+			Err(anyhow::anyhow!("Failed to connect to Azure Blob Storage"))
 		}
-		Ok(())
 	}
 
 	#[instrument(level = "debug", skip(self, range), fields(range.start = range.start, range.end = range.end))]
@@ -230,6 +263,61 @@ impl From<AzureErrorWrapper> for SourceError {
 			ErrorKind::Credential =>
 				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into())),
 			_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+
+	use super::*;
+	use tokio::io::AsyncReadExt;
+
+	#[tokio::test]
+	async fn test_azure_collector() {
+		// Configure the GCS collector config with a mock credential
+		let azure_config = AzureCollectorConfig {
+		    account_url: "".to_string(),
+			connection_string: "DefaultEndpointsProtocol=https;AccountName=querent;AccountKey=AB6gsGVuwGDs3OoFzJc0eQ4OtRj35wYgHGt3PPLafCHye3Ze9xw6t4cZfUNIXM5pNoBMGeehGUDo+AStQSTTnQ==;EndpointSuffix=core.windows.net".to_string(),
+			credentials: "AB6gsGVuwGDs3OoFzJc0eQ4OtRj35wYgHGt3PPLafCHye3Ze9xw6t4cZfUNIXM5pNoBMGeehGUDo+AStQSTTnQ==".to_string(),
+			container: "testfiles".to_string(),
+			chunk_size: 1024,
+			prefix: "".to_string(),
+        };
+
+		let azure_storage = AzureBlobStorage::new(azure_config);
+
+
+		assert!(
+			azure_storage.check_connectivity().await.is_ok(),
+			"Failed to connect to azure storage"
+		);
+
+		let files_list = azure_storage.list_files(Path::new("")).await;
+
+		// Initialize the azure storage
+		match  files_list{
+			Ok(file_names) =>
+				for file_name in file_names {
+					let path = Path::new(&file_name);
+					let mut stream = match azure_storage.get_slice_stream(path, 0..usize::MAX).await
+					{
+						Ok(stream) => stream,
+						Err(e) => {
+							eprintln!("Failed to get stream for {}: {:?}", file_name, e);
+							continue;
+						},
+					};
+
+					let mut contents = Vec::new();
+					if let Err(e) = stream.read_to_end(&mut contents).await {
+						eprintln!("Failed to read contents of {}: {:?}", file_name, e);
+					}
+				},
+			Err(e) => {
+				println!("Failed to initialize Azure storage: {:?}", e);
+				assert!(false, "Storage initialization failed with error: {:?}", e);
+			},
 		}
 	}
 }

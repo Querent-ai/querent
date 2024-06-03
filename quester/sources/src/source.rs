@@ -116,6 +116,9 @@ pub trait Source: fmt::Debug + Send + Sync + 'static {
 	/// Returns a file size.
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64>;
 
+	/// Returns list of files
+	async fn list_files(&self, path: &Path) -> SourceResult<Vec<String>>;
+
 	fn copy_to<'life0, 'life1, 'life2, 'async_trait>(
 		&'life0 self,
 		path: &'life1 Path,

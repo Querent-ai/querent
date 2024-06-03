@@ -86,11 +86,46 @@ impl S3Source {
 
 #[async_trait]
 impl Source for S3Source {
+	async fn list_files(&self, path: &Path) -> SourceResult<Vec<String>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await;
+
+        let mut files = Vec::new();
+		let mut continuation_token: Option<String> = None;
+		loop {
+            let resp = self
+                .s3_client
+                .as_ref()
+                .unwrap()
+                .list_objects_v2()
+                .bucket(&self.bucket_name)
+                .prefix(path.to_str().unwrap_or(""))
+                .set_max_keys(Some(1000))
+                .send()
+                .await
+                .map_err(|err| {
+                    SourceError::new(
+                        SourceErrorKind::Io,
+                        anyhow::anyhow!("Error listing objects from S3: {:?}", err).into(),
+                    )
+                })?;
+
+            for obj in resp.contents().unwrap_or_default() {
+                files.push(obj.key().unwrap().to_string());
+            }
+
+            continuation_token = resp.next_continuation_token().map(|s| s.to_string());
+            if continuation_token.is_none() {
+                break;
+            }
+        }
+
+        Ok(files)
+	}
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		// we ignore error as we never close the semaphore
 		let _permit = REQUEST_SEMAPHORE.acquire().await;
 
-		self.s3_client.as_ref().unwrap().list_objects_v2().send().await?;
+		let _ = self.s3_client.as_ref().unwrap().list_objects_v2().bucket(self.bucket_name.clone()).send().await;
 		Ok(())
 	}
 
@@ -236,4 +271,36 @@ async fn download_all(byte_stream: ByteStream, output: &mut Vec<u8>) -> io::Resu
 	tokio::io::copy_buf(&mut body_stream_reader, output).await?;
 	output.shrink_to_fit();
 	Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use aws_credential_types::Credentials;
+
+	#[tokio::test]
+	async fn test_aws_collector() {
+		let aws_config = S3CollectorConfig {
+			access_key: "AKIAU6GDY2RDMGC2RNTK".to_string(),
+			secret_key: "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".to_string(),
+			region: "ap-south-1".to_string(),
+			bucket: "querentbucket1".to_string(),
+		};
+
+		let credentials = Credentials::new(aws_config.access_key.clone(), aws_config.secret_key.clone(), None, None, "manual");
+
+		let mut s3_storage = S3Source::new(aws_config);
+
+		let config = aws_config::from_env().credentials_provider(credentials).region(s3_storage.region.clone()).load().await;
+
+		s3_storage.s3_client = Some(S3Client::new(&config));
+
+		let result = s3_storage.check_connectivity().await;
+    	assert!(result.is_ok());
+
+		let path = Path::new("");
+		let files = s3_storage.list_files(path).await.unwrap();
+
+		println!("Total files {:?}", files);
+	}
 }

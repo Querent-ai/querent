@@ -54,3 +54,4 @@ azure_storage_blobs = { workspace = true }
 md5 = { workspace = true }
 tokio-util = { workspace = true }
 bytes = { workspace = true }
+serde_json = "1.0"
