@@ -80,6 +80,13 @@ impl From<io::Error> for SourceError {
 		}
 	}
 }
+
+impl From<serde_json::Error> for SourceError {
+	fn from(err: serde_json::Error) -> SourceError {
+		SourceError::new(SourceErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
 pub trait Source: Send + Sync + 'static {
