@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use common::CollectedBytes;
 use serde::{Deserialize, Serialize};
 use std::{
 	fmt::{self, Debug},
@@ -8,7 +9,10 @@ use std::{
 	sync::Arc,
 };
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::{
+	io::{AsyncRead, AsyncWrite},
+	sync::mpsc,
+};
 
 pub trait SendableAsync: AsyncWrite + Send + Unpin {}
 impl<W: AsyncWrite + Send + Unpin> SendableAsync for W {}
@@ -140,13 +144,7 @@ pub trait Source: Send + Sync + 'static {
 		'life2: 'async_trait,
 		Self: 'async_trait;
 
-	// Poll data continuously from the source.
-	// This is useful for sources that have a continuous stream of data.
-	// For example, a source that reads from a Kafka topic.
-	// This function should not return until the source is closed.
-	// The output should be written to the output stream.
-	// The output stream should be closed when the source is closed.
-	// The output stream should be flushed after each write.
-	// The output stream should be closed when the source is closed.
-	async fn poll_data(&mut self, output: &mut dyn SendableAsync) -> SourceResult<()>;
+	/// Polls data from the source and sends it to the output.
+	/// Output is a sender that can be used to send data to the next actor in the pipeline.
+	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()>;
 }

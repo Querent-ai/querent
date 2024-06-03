@@ -5,6 +5,8 @@ use std::{
 	sync::atomic::{AtomicU64, Ordering},
 };
 
+use crate::CollectedBytes;
+
 #[derive(Debug, Default, Clone)]
 pub struct EventsBatch {
 	pub qflow_id: String,
@@ -99,5 +101,29 @@ impl EventStreamerCounters {
 
 	pub fn increment_batches_received(&self) {
 		self.batches_received.fetch_add(1, Ordering::SeqCst);
+	}
+}
+#[derive(Debug, Default, Clone)]
+pub struct CollectionBatch {
+	pub file: String,
+	pub ext: String,
+	pub events: Vec<CollectedBytes>,
+}
+
+impl CollectionBatch {
+	pub fn new(file: &String, ext: &String, events: &Vec<CollectedBytes>) -> Self {
+		Self { file: file.clone(), events: events.clone(), ext: ext.clone() }
+	}
+
+	pub fn file(&self) -> String {
+		self.file.clone()
+	}
+
+	pub fn events(&self) -> Vec<CollectedBytes> {
+		self.events.clone()
+	}
+
+	pub fn ext(&self) -> String {
+		self.ext.clone()
 	}
 }
