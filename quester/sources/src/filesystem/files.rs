@@ -13,7 +13,7 @@ use tokio::{
 	sync::mpsc,
 };
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct LocalFolderSource {
 	folder_path: PathBuf,
 	chunk_size: usize,

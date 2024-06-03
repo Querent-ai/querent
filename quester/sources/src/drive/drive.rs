@@ -35,6 +35,12 @@ pub struct GoogleDriveSource {
 	page_token: Option<String>,
 }
 
+impl std::fmt::Debug for GoogleDriveSource {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("GoogleDriveSource").field("folder_id", &self.folder_id).finish()
+	}
+}
+
 impl GoogleDriveSource {
 	pub async fn new(config: GoogleDriveCollectorConfig) -> Self {
 		let secret = ApplicationSecret {
