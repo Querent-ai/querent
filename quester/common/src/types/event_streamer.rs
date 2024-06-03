@@ -104,7 +104,7 @@ impl EventStreamerCounters {
 	}
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct CollectionCounter {
 	pub total_docs: AtomicU64,
 	pub ext_counter_map: HashMap<String, u64>,

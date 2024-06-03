@@ -93,7 +93,7 @@ impl From<serde_json::Error> for SourceError {
 
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
-pub trait Source: Send + Sync + 'static {
+pub trait Source: fmt::Debug + Send + Sync + 'static {
 	/// Establishes a connection to the source.
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
 

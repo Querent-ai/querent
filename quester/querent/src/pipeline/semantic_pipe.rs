@@ -42,6 +42,7 @@ struct ControlLoop;
 #[derive(Clone, Debug)]
 pub struct PipelineSettings {
 	pub qflow_id: String,
+	pub data_sources: Vec<Arc<dyn sources::Source>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn Storage>,
@@ -50,11 +51,11 @@ pub struct PipelineSettings {
 }
 
 struct PipelineHandlers {
-	pub _qflow_message_bus: MessageBus<SourceActor>,
 	pub qflow_handler: ActorHandle<SourceActor>,
 	pub event_streamer_handler: ActorHandle<EventStreamer>,
 	pub indexer_handler: ActorHandle<Indexer>,
 	pub storage_mapper_handler: ActorHandle<StorageMapper>,
+	pub collection_handlers: Vec<ActorHandle<SourceActor>>,
 	pub next_progress_check: Instant,
 }
 
@@ -124,13 +125,19 @@ impl SemanticPipeline {
 
 	fn actor_handlers(&self) -> Vec<&dyn Supervisable> {
 		if let Some(handles) = &self.handlers {
+			let mut all_handles: Vec<&dyn Supervisable> = handles
+				.collection_handlers
+				.iter()
+				.map(|handler| handler as &dyn Supervisable)
+				.collect();
 			let supervisables: Vec<&dyn Supervisable> = vec![
 				&handles.qflow_handler,
 				&handles.event_streamer_handler,
 				&handles.indexer_handler,
 				&handles.storage_mapper_handler,
 			];
-			supervisables
+			all_handles.extend(supervisables);
+			all_handles
 		} else {
 			Vec::new()
 		}
@@ -192,6 +199,8 @@ impl SemanticPipeline {
 		handles.event_streamer_handler.refresh_observe();
 		handles.indexer_handler.refresh_observe();
 		handles.storage_mapper_handler.refresh_observe();
+		handles.collection_handlers.iter().for_each(|handler| handler.refresh_observe());
+		// TODO collect collection stats once ready
 		self.statistics = self.statistics.clone().add_counters(
 			&handles.qflow_handler.last_observation(),
 			&handles.event_streamer_handler.last_observation(),
@@ -282,18 +291,18 @@ impl SemanticPipeline {
 		);
 		let qflow_source_actor =
 			SourceActor { source: Box::new(qflow_source), event_streamer_messagebus };
-		let (qflow_message_bus, qflow_inbox) = ctx
+		let (_, qflow_inbox) = ctx
 			.spawn_actor()
 			.set_messagebuses(source_message_bus, source_inbox)
 			.set_terminate_sig(self.terminate_sig.clone())
 			.spawn(qflow_source_actor);
 		self.handlers = Some(PipelineHandlers {
-			_qflow_message_bus: qflow_message_bus,
 			qflow_handler: qflow_inbox,
 			event_streamer_handler: event_streamer_inbox,
 			indexer_handler: indexer_inbox,
 			storage_mapper_handler: storage_mapper_inbox,
 			next_progress_check: Instant::now() + *HEARTBEAT,
+			collection_handlers: Vec::new(),
 		});
 		Ok(())
 	}

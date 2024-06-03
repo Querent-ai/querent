@@ -191,6 +191,7 @@ pub async fn start_pipeline(
 		index_storages,
 		secret_store,
 		semantic_service_bus: semantic_service_mailbox.clone(),
+		data_sources: Vec::new(), //TODO send data sources
 	};
 
 	let pipeline_rest = semantic_service_mailbox
