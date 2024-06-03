@@ -278,10 +278,10 @@ impl Retryable for AzureErrorWrapper {
 		match self.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => !matches!(
 				status,
-				StatusCode::NotFound
-					| StatusCode::Unauthorized
-					| StatusCode::BadRequest
-					| StatusCode::Forbidden
+				StatusCode::NotFound |
+					StatusCode::Unauthorized |
+					StatusCode::BadRequest |
+					StatusCode::Forbidden
 			),
 			ErrorKind::Io => true,
 			_ => false,
@@ -305,15 +305,13 @@ impl From<AzureErrorWrapper> for SourceError {
 	fn from(err: AzureErrorWrapper) -> Self {
 		match err.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => match status {
-				StatusCode::NotFound => {
-					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into()))
-				},
+				StatusCode::NotFound =>
+					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into())),
 				_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 			},
 			ErrorKind::Io => SourceError::new(SourceErrorKind::Io, Arc::new(err.into())),
-			ErrorKind::Credential => {
-				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into()))
-			},
+			ErrorKind::Credential =>
+				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into())),
 			_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 		}
 	}
