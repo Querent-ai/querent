@@ -1,5 +1,6 @@
-use std::{fmt, io, num::NonZeroU32, ops::Range, path::Path, sync::Arc};
+use std::{fmt, io, num::NonZeroU32, ops::Range, path::Path, pin::Pin, sync::Arc};
 
+use async_stream::stream;
 use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
@@ -8,13 +9,11 @@ use common::{CollectedBytes, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
+	Stream,
 };
 use proto::semantics::AzureCollectorConfig;
 use thiserror::Error;
-use tokio::{
-	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
-	sync::mpsc,
-};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
@@ -189,82 +188,83 @@ impl Source for AzureBlobStorage {
 		}
 	}
 
-	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let mut blob_stream = self.container_client.list_blobs().into_stream();
+		let container_client = self.container_client.clone();
 
-		while let Some(blob_result) = blob_stream.next().await {
-			let blob = match blob_result {
-				Ok(blob) => blob,
-				Err(err) => return Err(SourceError::from(AzureErrorWrapper::from(err))),
-			};
+		let stream = stream! {
+			while let Some(blob_result) = blob_stream.next().await {
+				let blob = match blob_result {
+					Ok(blob) => blob,
+					Err(err) => {
+						yield Err(SourceError::from(AzureErrorWrapper::from(err)));
+						continue;
+					},
+				};
 
-			let blobs_list = blob.blobs;
+				let blobs_list = blob.blobs;
 
-			for blob_info in blobs_list.blobs() {
-				let blob_name = blob_info.name.clone();
-				let blob_path = Path::new(&blob_name);
+				for blob_info in blobs_list.blobs() {
+					let blob_name = blob_info.name.clone();
+					let blob_path = Path::new(&blob_name);
 
-				let mut output_stream =
-					self.container_client.blob_client(&blob_name).get().into_stream();
+					let mut output_stream =
+						container_client.blob_client(&blob_name).get().into_stream();
 
-				while let Some(chunk_result) = output_stream.next().await {
-					let chunk_response = match chunk_result {
-						Ok(response) => response,
-						Err(err) => return Err(SourceError::from(AzureErrorWrapper::from(err))),
-					};
+					while let Some(chunk_result) = output_stream.next().await {
+						let chunk_response = match chunk_result {
+							Ok(response) => response,
+							Err(err) => {
+								yield Err(SourceError::from(AzureErrorWrapper::from(err)));
+								continue;
+							},
+						};
 
-					let chunk_response_body_stream = chunk_response
-						.data
-						.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
-						.into_async_read()
-						.compat();
+						let chunk_response_body_stream = chunk_response
+							.data
+							.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
+							.into_async_read()
+							.compat();
 
-					let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
+						let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
 
-					let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
-					loop {
-						let bytes_read = body_stream_reader.read(&mut buffer).await?;
+						let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+						loop {
+							let bytes_read = body_stream_reader.read(&mut buffer).await?;
 
-						// Break the loop if EOF is reached
-						if bytes_read == 0 {
-							break;
+							// Break the loop if EOF is reached
+							if bytes_read == 0 {
+								break;
+							}
+							// Only process and serialize if bytes were read
+							let collected_bytes = CollectedBytes::new(
+								Some(blob_path.to_path_buf()),
+								Some(buffer[..bytes_read].to_vec()),
+								false,
+								Some(container_client.container_name().to_string()),
+								Some(bytes_read as usize),
+							);
+
+							yield Ok(collected_bytes);
 						}
-						// Only process and serialize if bytes were read
+
+						// Create CollectedBytes instance
 						let collected_bytes = CollectedBytes::new(
 							Some(blob_path.to_path_buf()),
-							Some(buffer[..bytes_read].to_vec()),
-							false,
-							Some(self.container_client.container_name().to_string()),
-							Some(bytes_read as usize),
+							None,
+							true,
+							Some(container_client.container_name().to_string()),
+							None,
 						);
-
-						output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
-							SourceError::new(
-								SourceErrorKind::Io,
-								anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
-							)
-						})?;
+						yield Ok(collected_bytes);
 					}
-
-					// Create CollectedBytes instance
-					let collected_bytes = CollectedBytes::new(
-						Some(blob_path.to_path_buf()),
-						None,
-						true,
-						Some(self.container_client.container_name().to_string()),
-						None,
-					);
-					output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
-						SourceError::new(
-							SourceErrorKind::Io,
-							anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
-						)
-					})?;
 				}
 			}
-		}
+		};
 
-		Ok(())
+		Ok(Box::pin(stream))
 	}
 }
 

@@ -138,12 +138,12 @@ impl CollectionCounter {
 pub struct CollectionBatch {
 	pub file: String,
 	pub ext: String,
-	pub events: Vec<CollectedBytes>,
+	pub bytes: Vec<CollectedBytes>,
 }
 
 impl CollectionBatch {
-	pub fn new(file: &String, ext: &String, events: &Vec<CollectedBytes>) -> Self {
-		Self { file: file.clone(), events: events.clone(), ext: ext.clone() }
+	pub fn new(file: &String, ext: &String, bytes: &Vec<CollectedBytes>) -> Self {
+		Self { file: file.clone(), bytes: bytes.clone(), ext: ext.clone() }
 	}
 
 	pub fn file(&self) -> String {
@@ -151,7 +151,7 @@ impl CollectionBatch {
 	}
 
 	pub fn events(&self) -> Vec<CollectedBytes> {
-		self.events.clone()
+		self.bytes.clone()
 	}
 
 	pub fn ext(&self) -> String {
