@@ -62,8 +62,9 @@ impl IngestorError {
 impl From<io::Error> for IngestorError {
 	fn from(err: io::Error) -> IngestorError {
 		match err.kind() {
-			io::ErrorKind::NotFound =>
-				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into())),
+			io::ErrorKind::NotFound => {
+				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into()))
+			},
 			_ => IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 		}
 	}
@@ -96,8 +97,8 @@ pub trait BaseIngestor: Send + Sync {
 pub async fn process_ingested_tokens_stream(
 	ingested_tokens_stream: Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send>>,
 	processors: Vec<Arc<dyn AsyncProcessor>>,
-) -> impl Stream<Item = IngestorResult<IngestedTokens>> {
-	stream! {
+) -> Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send>> {
+	let stream = stream! {
 		pin_mut!(ingested_tokens_stream);
 		while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 			match ingested_tokens_result {
@@ -120,5 +121,7 @@ pub async fn process_ingested_tokens_stream(
 				}
 			}
 		}
-	}
+	};
+
+	Box::pin(stream)
 }
