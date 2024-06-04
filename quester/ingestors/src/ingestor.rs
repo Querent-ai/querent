@@ -1,6 +1,7 @@
+use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::Stream;
+use futures::{pin_mut, Stream, StreamExt};
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
@@ -61,8 +62,9 @@ impl IngestorError {
 impl From<io::Error> for IngestorError {
 	fn from(err: io::Error) -> IngestorError {
 		match err.kind() {
-			io::ErrorKind::NotFound =>
-				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into())),
+			io::ErrorKind::NotFound => {
+				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into()))
+			},
 			_ => IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 		}
 	}
@@ -77,8 +79,7 @@ impl From<serde_json::Error> for IngestorError {
 // Define the trait for async processor
 #[async_trait]
 pub trait AsyncProcessor: Send + Sync {
-	async fn process_text(&self, data: &str) -> IngestorResult<IngestedTokens>;
-	async fn process_media(&self, image: Vec<u8>) -> IngestorResult<IngestedTokens>;
+	async fn process_text(&self, data: IngestedTokens) -> IngestorResult<IngestedTokens>;
 }
 
 // Define the trait for BaseIngestor
@@ -90,4 +91,35 @@ pub trait BaseIngestor: Send + Sync {
 		&self,
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>;
+}
+
+// apply processors to stream of IngestedTokens and return a stream of IngestedTokens
+pub async fn process_ingested_tokens_stream(
+	ingested_tokens_stream: Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send>>,
+	processors: Vec<Arc<dyn AsyncProcessor>>,
+) -> impl Stream<Item = IngestorResult<IngestedTokens>> {
+	stream! {
+		pin_mut!(ingested_tokens_stream);
+		while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
+			match ingested_tokens_result {
+				Ok(ingested_tokens) => {
+					let mut ingested_tokens = ingested_tokens;
+					for processor in processors.iter() {
+						match processor.process_text(ingested_tokens.clone()).await {
+							Ok(processed_tokens) => {
+								ingested_tokens = processed_tokens;
+							},
+							Err(e) => {
+								yield Err(e);
+							}
+						}
+					}
+					yield Ok(ingested_tokens);
+				},
+				Err(e) => {
+					yield Err(e);
+				}
+			}
+		}
+	}
 }
