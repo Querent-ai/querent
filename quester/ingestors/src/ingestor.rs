@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
+use crate::pdf::pdfv1::PdfIngestor;
+
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IngestorErrorKind {
@@ -123,4 +125,16 @@ pub async fn process_ingested_tokens_stream(
 	};
 
 	Box::pin(stream)
+}
+
+pub async fn resolve_ingestor_with_extension(
+	extension: &str,
+) -> IngestorResult<Arc<dyn BaseIngestor>> {
+	match extension {
+		"pdf" => Ok(Arc::new(PdfIngestor::new())),
+		_ => Err(IngestorError::new(
+			IngestorErrorKind::NotSupported,
+			Arc::new(anyhow::anyhow!("Extension not supported")),
+		)),
+	}
 }
