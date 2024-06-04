@@ -75,11 +75,10 @@ impl Source for Collector {
 				Ok(mut stream) => {
 					while let Some(data) = stream.next().await {
 						match data {
-							Ok(bytes) => {
+							Ok(bytes) =>
 								if let Err(e) = event_sender.send(bytes).await {
 									error!("Failed to send data: {:?}", e);
-								}
-							},
+								},
 							Err(e) => {
 								error!("Failed to poll data: {:?}", e);
 								let err = Err(QuerentError::internal(format!(
