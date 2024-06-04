@@ -93,6 +93,12 @@ impl Source for Collector {
 							},
 						}
 					}
+
+					if let Err(e) =
+						event_sender.send(CollectedBytes::new(None, None, true, None, None)).await
+					{
+						error!("Failed to send EOF signal: {:?}", e);
+					}
 					Ok(())
 				},
 				Err(e) => {
@@ -139,7 +145,7 @@ impl Source for Collector {
 							break;
 						}
 
-						if event_data.eof && !event_data.file.is_none() {
+						if event_data.eof && event_data.file.is_none() {
 							is_success = true;
 							break;
 						}
