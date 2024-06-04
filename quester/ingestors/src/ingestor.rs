@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use common::CollectedBytes;
+use futures::Stream;
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
-use std::{fmt, io, sync::Arc};
+use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
-use tokio::sync::mpsc::Receiver;
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -61,9 +61,8 @@ impl IngestorError {
 impl From<io::Error> for IngestorError {
 	fn from(err: io::Error) -> IngestorError {
 		match err.kind() {
-			io::ErrorKind::NotFound => {
-				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into()))
-			},
+			io::ErrorKind::NotFound =>
+				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into())),
 			_ => IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 		}
 	}
@@ -90,9 +89,5 @@ pub trait BaseIngestor: Send + Sync {
 	async fn ingest(
 		&self,
 		all_collected_bytes: Vec<CollectedBytes>,
-	) -> IngestorResult<Receiver<IngestedTokens>>;
-
-	async fn process_text(&self, data: &str) -> IngestorResult<IngestedTokens>;
-
-	async fn process_media(&self, image: Vec<u8>) -> IngestorResult<IngestedTokens>;
+	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>;
 }

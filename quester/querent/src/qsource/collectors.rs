@@ -1,6 +1,7 @@
 use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
+use futures::StreamExt;
 use querent_synapse::querent::QuerentError;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinHandle, time};
@@ -69,13 +70,31 @@ impl Source for Collector {
 
 		// Store the JoinHandle with the result in the Collector struct
 		self.workflow_handle = Some(tokio::spawn(async move {
-			let result = data_poller.poll_data(event_sender.clone()).await;
+			let result = data_poller.poll_data().await;
 			match result {
-				Ok(_) => {
-					if let Err(e) =
-						event_sender.send(CollectedBytes::new(None, None, true, None, None)).await
-					{
-						error!("Failed to send EOF signal: {:?}", e);
+				Ok(mut stream) => {
+					while let Some(data) = stream.next().await {
+						match data {
+							Ok(bytes) => {
+								if let Err(e) = event_sender.send(bytes).await {
+									error!("Failed to send data: {:?}", e);
+								}
+							},
+							Err(e) => {
+								error!("Failed to poll data: {:?}", e);
+								let err = Err(QuerentError::internal(format!(
+									"Failed to poll data: {:?}",
+									e
+								)));
+								if let Err(e) = event_sender
+									.send(CollectedBytes::new(None, None, false, None, None))
+									.await
+								{
+									error!("Failed to send failure signal: {:?}", e);
+								}
+								return err;
+							},
+						}
 					}
 					Ok(())
 				},

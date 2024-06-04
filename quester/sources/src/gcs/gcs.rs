@@ -1,14 +1,12 @@
-use std::{fmt, ops::Range, path::Path};
+use std::{fmt, ops::Range, path::Path, pin::Pin};
 
+use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
-use tokio::{
-	io::{AsyncRead, AsyncReadExt, AsyncWriteExt},
-	sync::mpsc,
-};
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
@@ -95,65 +93,81 @@ impl Source for OpendalStorage {
 		Ok(meta.content_length())
 	}
 
-	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let bucket_name = self._bucket.clone().unwrap_or_default();
-		let mut object_lister = self
-			.op
-			.lister_with(bucket_name.as_str())
-			.recursive(true)
-			.metakey(Metakey::ContentLength)
-			.await?;
+		let op = self.op.clone();
+		let stream = stream! {
+			let mut object_lister = op.lister_with(bucket_name.as_str())
+				.recursive(true)
+				.metakey(Metakey::ContentLength)
+				.await?;
 
-		while let Some(object) = object_lister.next().await {
-			let object = object?;
-			let key = object.path().to_string();
+			while let Some(object) = object_lister.next().await {
+				match object {
+					Ok(object) => {
+						let key = object.path().to_string();
 
-			// Start reading the object in chunks
-			let mut storage_reader = self.op.reader(&key).await?;
-			let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+						let mut storage_reader = match op.reader(&key).await {
+							Ok(reader) => reader,
+							Err(e) => {
+								yield Err(SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error getting reader: {:?}", e).into()
+								));
+								continue;
+							}
+						};
+						let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
 
-			loop {
-				let bytes_read = storage_reader.read(&mut buffer).await?;
+						loop {
+							let bytes_read = match storage_reader.read(&mut buffer).await {
+								Ok(bytes) => bytes,
+								Err(e) => {
+									yield Err(SourceError::new(
+										SourceErrorKind::Io,
+										anyhow::anyhow!("Error reading from storage: {:?}", e).into()
+									));
+									break;
+								}
+							};
 
-				// Break the loop if EOF is reached
-				if bytes_read == 0 {
-					break;
+							if bytes_read == 0 {
+								break;
+							}
+
+							let collected_bytes = CollectedBytes::new(
+								Some(Path::new(&key).to_path_buf()),
+								Some(buffer[..bytes_read].to_vec()),
+								false,
+								Some(bucket_name.clone()),
+								Some(bytes_read),
+							);
+
+							yield Ok(collected_bytes);
+						}
+
+						let eof_collected_bytes = CollectedBytes::new(
+							Some(Path::new(&key).to_path_buf()),
+							None,
+							true,
+							Some(bucket_name.clone()),
+							None,
+						);
+
+						yield Ok(eof_collected_bytes);
+					}
+					Err(e) => {
+						yield Err(SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error listing object: {:?}", e).into()
+						));
+					}
 				}
-				// Only process and serialize if bytes were read
-
-				let collected_bytes = CollectedBytes::new(
-					Some(Path::new(&key).to_path_buf()),
-					Some(buffer[..bytes_read].to_vec()),
-					false,
-					self._bucket.clone(),
-					Some(bytes_read),
-				);
-
-				output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
-					SourceError::new(
-						SourceErrorKind::Io,
-						anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
-					)
-				})?;
 			}
-
-			// Mark the end of file for the current object
-			let eof_collected_bytes = CollectedBytes::new(
-				Some(Path::new(&key).to_path_buf()),
-				None,
-				true,
-				self._bucket.clone(),
-				None,
-			);
-
-			output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(|e| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
-				)
-			})?;
-		}
-		Ok(())
+		};
+		Ok(Box::pin(stream))
 	}
 }
 

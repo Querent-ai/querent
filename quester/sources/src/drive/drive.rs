@@ -1,6 +1,7 @@
+use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use google_drive3::{
 	api::Scope,
 	hyper,
@@ -14,11 +15,9 @@ use std::{
 	io::Cursor,
 	ops::Range,
 	path::{Path, PathBuf},
+	pin::Pin,
 };
-use tokio::{
-	io::{AsyncRead, AsyncWriteExt},
-	sync::mpsc,
-};
+use tokio::io::{AsyncRead, AsyncWriteExt};
 use tracing::instrument;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
@@ -278,102 +277,126 @@ impl Source for GoogleDriveSource {
 		Ok(metadata.size.unwrap_or(0) as u64)
 	}
 
-	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let mut page_token = self.page_token.clone();
-		loop {
-			let (_, list) = self
-				.hub
-				.files()
-				.list()
-				.q(&format!("'{}' in parents", self.folder_id))
-				.page_token(page_token.as_deref().unwrap_or_default())
-				.doit()
-				.await
-				.map_err(|err| {
-					SourceError::new(
-						SourceErrorKind::Io,
-						anyhow::anyhow!("Error listing files in Google Drive: {:?}", err).into(),
-					)
-				})?;
+		let folder_id = self.folder_id.clone();
+		let hub = self.hub.clone();
+		let stream = stream! {
+			loop {
+				let (_, list) =hub
+					.files()
+					.list()
+					.q(&format!("'{}' in parents", folder_id))
+					.page_token(page_token.as_deref().unwrap_or_default())
+					.doit()
+					.await
+					.map_err(|err| {
+						SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error listing files in Google Drive: {:?}", err).into(),
+						)
+					})?;
 
-			if let Some(files) = list.files {
-				for file in files {
-					if let Some(file_id) = file.id {
-						let mut content_body =
-							self.download_file(&file_id).await.map_err(|err| {
-								SourceError::new(
-									SourceErrorKind::Io,
-									anyhow::anyhow!(
-										"Error downloading file from Google Drive: {:?}",
-										err
-									)
-									.into(),
-								)
-							})?;
-
-						while let Some(chunk) = content_body.next().await {
-							let chunk = chunk.map_err(|err| {
-								SourceError::new(
-									SourceErrorKind::Io,
-									anyhow::anyhow!(
-										"Error reading chunk from Google Drive: {:?}",
-										err
-									)
-									.into(),
-								)
-							})?;
-
-							let eof = chunk.is_empty();
-							if eof {
-								break;
-							}
-
-							let collected_bytes = CollectedBytes::new(
-								Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-								Some(chunk.to_vec()),
-								eof,
-								Some(self.folder_id.clone()),
-								Some(chunk.len()),
-							);
-
-							output.send(CollectedBytes::from(collected_bytes)).await.map_err(
-								|e| {
+				if let Some(files) = list.files {
+					for file in files {
+						if let Some(file_id) = file.id {
+							let mut content_body =
+								download_file(&hub, &file_id).await.map_err(|err| {
 									SourceError::new(
 										SourceErrorKind::Io,
-										anyhow::anyhow!("Error sending collected bytes: {:?}", e)
-											.into(),
-									)
-								},
-							)?;
-						}
-
-						// Send EOF for the file
-						let eof_collected_bytes = CollectedBytes::new(
-							Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-							None,
-							true,
-							Some(self.folder_id.clone()),
-							None,
-						);
-
-						output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(
-							|e| {
-								SourceError::new(
-									SourceErrorKind::Io,
-									anyhow::anyhow!("Error sending collected bytes: {:?}", e)
+										anyhow::anyhow!(
+											"Error downloading file from Google Drive: {:?}",
+											err
+										)
 										.into(),
-								)
-							},
-						)?;
+									)
+								})?;
+
+							while let Some(chunk) = content_body.next().await {
+								let chunk = chunk.map_err(|err| {
+									SourceError::new(
+										SourceErrorKind::Io,
+										anyhow::anyhow!(
+											"Error reading chunk from Google Drive: {:?}",
+											err
+										)
+										.into(),
+									)
+								})?;
+
+								let eof = chunk.is_empty();
+								if eof {
+									break;
+								}
+
+								let collected_bytes = CollectedBytes::new(
+									Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
+									Some(chunk.to_vec()),
+									eof,
+									Some(folder_id.clone()),
+									Some(chunk.len()),
+								);
+
+								yield Ok(collected_bytes);
+							}
+
+							// Send EOF for the file
+							let eof_collected_bytes = CollectedBytes::new(
+								Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
+								None,
+								true,
+								Some(folder_id.clone()),
+								None,
+							);
+
+							yield Ok(eof_collected_bytes);
+						}
 					}
 				}
-			}
 
-			if list.next_page_token.is_none() {
-				break;
+				if list.next_page_token.is_none() {
+					break;
+				}
+				page_token = list.next_page_token;
 			}
-			page_token = list.next_page_token;
-		}
-		Ok(())
+		};
+
+		Ok(Box::pin(stream))
+	}
+}
+
+async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_drive3::Error> {
+	let (_, file) = hub
+		.files()
+		.get(file_id)
+		.supports_all_drives(true)
+		.acknowledge_abuse(false)
+		.param("fields", FIELDS)
+		.add_scope(Scope::Full)
+		.doit()
+		.await?;
+
+	let mime_type = file.mime_type.unwrap_or_default();
+	if mime_type == "application/vnd.google-apps.folder" {
+		return Err(google_drive3::Error::FieldClash("Cannot download a folder"));
+	}
+
+	if mime_type.starts_with("application/vnd.google-apps.") {
+		let export_mime_type = match mime_type.as_str() {
+			"application/vnd.google-apps.document" => "application/pdf",
+			"application/vnd.google-apps.spreadsheet" =>
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			"application/vnd.google-apps.presentation" =>
+				"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+			_ => return Err(google_drive3::Error::FieldClash("Unsupported Google Apps file type")),
+		};
+
+		let resp_obj = hub.files().export(file_id, export_mime_type).doit().await?;
+		Ok(resp_obj.into_body())
+	} else {
+		let resp_obj = hub.files().export(file_id, &mime_type).doit().await?;
+		Ok(resp_obj.into_body())
 	}
 }

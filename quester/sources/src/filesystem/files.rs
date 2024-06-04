@@ -2,15 +2,16 @@ use std::{
 	io::SeekFrom,
 	ops::Range,
 	path::{Path, PathBuf},
+	pin::Pin,
 };
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use async_trait::async_trait;
 use common::CollectedBytes;
+use futures::{stream, Stream};
 use tokio::{
 	fs,
 	io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
-	sync::mpsc,
 };
 
 #[derive(Clone, Debug)]
@@ -32,69 +33,91 @@ impl LocalFolderSource {
 	async fn poll_data_recursive(
 		&self,
 		folder_path: PathBuf,
-		output: mpsc::Sender<CollectedBytes>,
-	) -> SourceResult<()> {
-		let mut entries = fs::read_dir(&folder_path).await.map_err(SourceError::from)?; // Read the directory.
-		while let Some(entry) = entries.next_entry().await.map_err(SourceError::from)? {
-			let metadata = entry.metadata().await.map_err(SourceError::from)?;
-			if metadata.is_file() {
-				// If it's a file, read and write it to the output
-				let file_path = entry.path();
-				self.read_file_and_write_to_output(&file_path, output.clone()).await?;
-			} else if metadata.is_dir() {
-				let this = self.clone(); // Clone self to avoid mutable borrow issues
-				Box::pin(this.poll_data_recursive(entry.path(), output.clone())).await?;
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+		let mut streams: Vec<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> =
+			Vec::new();
+
+		let mut stack: Vec<PathBuf> = vec![folder_path];
+		while let Some(current_path) = stack.pop() {
+			let mut entries = match fs::read_dir(&current_path).await {
+				Ok(entries) => entries,
+				Err(e) => {
+					return Err(SourceError::from(e));
+				},
+			};
+
+			while let Ok(Some(entry)) = entries.next_entry().await {
+				let metadata = match entry.metadata().await {
+					Ok(metadata) => metadata,
+					Err(e) => {
+						return Err(SourceError::from(e));
+					},
+				};
+
+				if metadata.is_file() {
+					let file_path = entry.path();
+					let file_stream = self.read_file_and_stream_output(file_path.clone()).await?;
+					streams.push(file_stream);
+				} else if metadata.is_dir() {
+					stack.push(entry.path());
+				}
 			}
 		}
-		Ok(())
+
+		let combined_stream = stream::select_all(streams);
+		Ok(Box::pin(combined_stream))
 	}
 
-	async fn read_file_and_write_to_output(
+	async fn read_file_and_stream_output(
 		&self,
-		file_path: &Path,
-		output: mpsc::Sender<CollectedBytes>,
-	) -> SourceResult<()> {
-		let file: fs::File = fs::File::open(file_path).await.map_err(SourceError::from)?;
-		let mut reader = BufReader::new(file);
-		let mut buffer = vec![0; self.chunk_size];
-		loop {
-			let bytes_read = reader.read(&mut buffer).await.map_err(SourceError::from)?;
-			if bytes_read == 0 {
-				// End of file reached
-				break;
-			}
-			let collected_bytes = CollectedBytes::new(
-				Some(file_path.to_path_buf()),
-				Some(buffer[..bytes_read].to_vec()),
-				bytes_read == 0,
-				Some(file_path.to_string_lossy().to_string()),
-				Some(bytes_read),
-			);
-			output.send(CollectedBytes::from(collected_bytes)).await.map_err(|e| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
-				)
-			})?;
-		}
+		file_path: PathBuf,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
+		let chunk_size = self.chunk_size;
+		let stream = stream::unfold(
+			(file_path, chunk_size, 0),
+			move |(file_path, chunk_size, offset)| async move {
+				let file = match fs::File::open(&file_path).await {
+					Ok(f) => f,
+					Err(e) =>
+						return Some((Err(SourceError::from(e)), (file_path, chunk_size, offset))),
+				};
+				let mut reader = BufReader::new(file);
+				let mut buffer = vec![0; chunk_size];
+				if let Err(e) = reader.seek(SeekFrom::Start(offset as u64)).await {
+					return Some((Err(SourceError::from(e)), (file_path, chunk_size, offset)));
+				}
 
-		// Mark the end of file for the current file
-		let eof_collected_bytes = CollectedBytes::new(
-			Some(file_path.to_path_buf()),
-			None,
-			true,
-			Some(file_path.to_string_lossy().to_string()),
-			None,
+				let bytes_read = match reader.read(&mut buffer).await {
+					Ok(br) => br,
+					Err(e) =>
+						return Some((Err(SourceError::from(e)), (file_path, chunk_size, offset))),
+				};
+
+				if bytes_read == 0 {
+					// End of file reached
+					let eof_collected_bytes = CollectedBytes::new(
+						Some(file_path.clone()),
+						None,
+						true,
+						Some(file_path.to_string_lossy().to_string()),
+						None,
+					);
+					return Some((Ok(eof_collected_bytes), (file_path, chunk_size, offset)));
+				}
+
+				let collected_bytes = CollectedBytes::new(
+					Some(file_path.clone()),
+					Some(buffer[..bytes_read].to_vec()),
+					false,
+					Some(file_path.to_string_lossy().to_string()),
+					Some(bytes_read),
+				);
+
+				Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read)))
+			},
 		);
 
-		output.send(CollectedBytes::from(eof_collected_bytes)).await.map_err(|e| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error sending collected bytes: {:?}", e).into(),
-			)
-		})?;
-
-		Ok(())
+		Ok(Box::pin(stream))
 	}
 }
 
@@ -183,7 +206,9 @@ impl Source for LocalFolderSource {
 		})
 	}
 
-	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
-		self.poll_data_recursive(self.folder_path.clone(), output).await
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+		self.poll_data_recursive(self.folder_path.clone()).await
 	}
 }
