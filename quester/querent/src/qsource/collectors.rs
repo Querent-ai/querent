@@ -15,9 +15,8 @@ use crate::{
 pub struct Collector {
 	pub id: String,
 	pub event_lock: EventLock,
+	pub event_receiver: Option<mpsc::Receiver<CollectedBytes>>,
 	data_poller: Arc<dyn sources::Source>,
-	event_sender: mpsc::Sender<CollectedBytes>,
-	event_receiver: mpsc::Receiver<CollectedBytes>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 	file_buffers: HashMap<String, Vec<CollectedBytes>>,
 	file_size: HashMap<String, usize>,
@@ -30,21 +29,18 @@ impl Collector {
 	pub fn new(
 		id: String,
 		data_poller: Arc<dyn sources::Source>,
-		event_sender: mpsc::Sender<CollectedBytes>,
-		event_receiver: mpsc::Receiver<CollectedBytes>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
 		Self {
 			id: id.clone(),
 			event_lock: EventLock::default(),
-			event_sender,
-			event_receiver,
 			workflow_handle: None,
 			terminate_sig,
 			data_poller,
 			file_buffers: HashMap::new(),
 			file_size: HashMap::new(),
 			counters: CollectionCounter::new(),
+			event_receiver: None,
 		}
 	}
 }
@@ -65,7 +61,9 @@ impl Source for Collector {
 		}
 
 		info!("Starting data source collection for {}", self.id);
-		let event_sender = self.event_sender.clone();
+		let (event_sender, event_receiver) = mpsc::channel(1000);
+		self.event_receiver = Some(event_receiver);
+		let event_sender = event_sender.clone();
 		let data_poller = self.data_poller.clone();
 
 		// Store the JoinHandle with the result in the Collector struct
@@ -130,9 +128,10 @@ impl Source for Collector {
 		let mut counter = 0;
 		let mut is_success = false;
 		let mut is_failure = false;
+		let event_receiver = self.event_receiver.as_mut().unwrap();
 		loop {
 			tokio::select! {
-				event_opt = self.event_receiver.recv() => {
+				event_opt = event_receiver.recv() => {
 					if let Some(event_data) = event_opt {
 						// If the payload is empty, skip the event
 						if !event_data.eof && event_data.file.is_none() {
@@ -140,7 +139,7 @@ impl Source for Collector {
 							break;
 						}
 
-						if event_data.eof && event_data.file.is_none() {
+						if event_data.eof && !event_data.file.is_none() {
 							is_success = true;
 							break;
 						}
