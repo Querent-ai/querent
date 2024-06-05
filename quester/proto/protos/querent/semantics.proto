@@ -115,6 +115,7 @@ message IndexingStatistics {
   uint64 total_objects = 10;
   uint64 total_graph_events = 11;
   uint64 total_vector_events = 12;
+  uint64 total_data_processed_size = 13;
 }
 
 message PipelineMetadata {

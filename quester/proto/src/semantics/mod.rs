@@ -2,7 +2,9 @@ use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
 use actors::AskError;
 use bytes::Bytes;
 use bytestring::ByteString;
-use common::{EventStreamerCounters, EventsCounter, IndexerCounters, StorageMapperCounters};
+use common::{
+	EventStreamerCounters, EventsCounter, IndexerCounters, IngestorCounters, StorageMapperCounters,
+};
 use prost::DecodeError;
 use querent_synapse::callbacks::EventType;
 use serde::{Deserialize, Serialize};
@@ -89,6 +91,7 @@ impl IndexingStatistics {
 		event_streamer_counters: &EventStreamerCounters,
 		indexer_counters: &IndexerCounters,
 		storage_mapper_counters: &StorageMapperCounters,
+		ingestor_counters: &IngestorCounters,
 	) -> Self {
 		let qflow_counters: EventsCounter =
 			serde_json::from_value(qflow_counters.clone()).unwrap_or_default();
@@ -115,6 +118,7 @@ impl IndexingStatistics {
 				_ => {},
 			}
 		}
+		self.total_data_processed_size += ingestor_counters.total_megabytes.load(Ordering::Relaxed);
 		self
 	}
 }

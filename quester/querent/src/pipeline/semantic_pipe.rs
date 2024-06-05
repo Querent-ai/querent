@@ -210,6 +210,7 @@ impl SemanticPipeline {
 			&handles.event_streamer_handler.last_observation(),
 			&handles.indexer_handler.last_observation(),
 			&handles.storage_mapper_handler.last_observation(),
+			&handles.ingestor_handler.last_observation(),
 		);
 		// check any new messages received from receive_channel
 		let mut message_state_batches = HashMap::new();
