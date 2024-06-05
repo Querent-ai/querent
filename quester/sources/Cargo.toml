@@ -58,3 +58,5 @@ google-drive3 = { workspace = true }
 hyper-rustls = { workspace = true }
 hyper = { workspace = true }
 serde_json = { workspace = true }
+yup-oauth2 = { workspace = true }
+reqwest = { workspace = true }

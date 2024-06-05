@@ -6,10 +6,10 @@ use google_drive3::{
 	hyper,
 	hyper::client::HttpConnector,
 	hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
-	oauth2::{ApplicationSecret, InstalledFlowAuthenticator, InstalledFlowReturnMethod},
 };
 use hyper::Body;
 use proto::semantics::GoogleDriveCollectorConfig;
+use yup_oauth2::{authorized_user::AuthorizedUserSecret, AuthorizedUserAuthenticator};
 use std::{
 	io::Cursor,
 	ops::Range,
@@ -37,24 +37,15 @@ pub struct GoogleDriveSource {
 
 impl GoogleDriveSource {
 	pub async fn new(config: GoogleDriveCollectorConfig) -> Self {
-		let secret = ApplicationSecret {
+		tracing::info!("Entered atleast once");
+
+		let auth = AuthorizedUserAuthenticator::builder(AuthorizedUserSecret {
 			client_id: config.drive_client_id.clone(),
 			client_secret: config.drive_client_secret.clone(),
-			auth_uri: "https://accounts.google.com/o/oauth2/auth".to_string(),
-			token_uri: "https://oauth2.googleapis.com/token".to_string(),
-			redirect_uris: vec![],
-			project_id: None,
-			auth_provider_x509_cert_url: None,
-			client_email: None,
-			client_x509_cert_url: None,
-		};
+			refresh_token: config.drive_refresh_token.clone(),
+			key_type: "service_account".to_string(),
+		}).build().await.unwrap();
 
-		let auth =
-			InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-				.persist_tokens_to_disk("tokencache.json")
-				.build()
-				.await
-				.expect("authenticator could not be built");
 		let connector = HttpsConnectorBuilder::new()
 			.with_native_roots()
 			.https_or_http()
@@ -76,6 +67,7 @@ impl GoogleDriveSource {
 			.supports_all_drives(true)
 			.acknowledge_abuse(false)
 			.param("fields", FIELDS)
+			.param("alt", "media")
 			.add_scope(Scope::Full)
 			.doit()
 			.await?;
@@ -106,6 +98,34 @@ impl GoogleDriveSource {
 		}
 	}
 
+	// async fn download_from_url(&self, url: &str) -> Result<Vec<u8>, hyper::Error> {
+	// 	let response = reqwest::get(url)
+	// 		.await;
+	// 	match response {
+	// 		Ok(res) => {
+	// 			let bytes_res = res
+	// 				.bytes()
+	// 				.await;
+	// 			match bytes_res {
+	// 				Ok(bytes) => {
+	// 					Ok(bytes.to_vec())
+	// 				},
+	// 				Err(e) => {
+	// 					eprintln!("Got error: {:?}", e);
+	// 					let temp_res: Vec<u8> = [].to_vec();
+	// 					Ok(temp_res)
+	// 				},
+	// 			}
+	// 		},
+	// 		Err(e) => {
+	// 			eprintln!("Got an error: {:?}", e);
+	// 			let temp_res: Vec<u8> = [].to_vec();
+	// 			Ok(temp_res)
+	// 		}
+	// 	}
+		
+	// }
+
 	async fn get_file_id_by_path(&self, path: &Path) -> Result<String, SourceError> {
 		let mut query: String = format!("'{}' in parents", self.folder_id);
 		for component in path.iter() {
@@ -133,6 +153,47 @@ impl GoogleDriveSource {
 
 #[async_trait]
 impl Source for GoogleDriveSource {
+	async fn list_files(&self, _path: &Path) -> SourceResult<Vec<String>> {
+		let mut files_list = Vec::new();
+		let mut page_token: Option<String> = None;
+
+		loop {
+			let mut results = self.hub
+			.files()
+			.list()
+			.q(&format!("'{}' in parents and trashed = false", self.folder_id))
+			.param("fields", "nextPageToken, files(id, name)")
+			.add_scope(Scope::Full);
+
+			if let Some(ref token) = page_token {
+				results = results.page_token(&token);
+			}
+
+			let results_final = results.doit().await;
+
+			match results_final {
+				Ok((_, file_list)) => {
+					if let Some(files) = file_list.files {
+						for file in files {
+							if let Some(name) = file.name  {
+								files_list.push(name)
+							}
+						}
+					}
+					page_token = file_list.next_page_token;
+                    if page_token.is_none() {
+                        break;
+                    }
+				},
+				Err(e) => {
+					eprintln!("Got error: {:?}", e);
+				}
+			}
+		}
+
+		Ok(files_list)
+
+	}
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
@@ -370,4 +431,52 @@ impl Source for GoogleDriveSource {
 		}
 		Ok(())
 	}
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use proto::semantics::GoogleDriveCollectorConfig;
+
+    use crate::Source;
+
+    use super::GoogleDriveSource;
+
+
+	#[tokio::test]
+	async fn test_drive_collector() {
+		let google_config = GoogleDriveCollectorConfig {
+			drive_client_secret: "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".to_string(),
+			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
+			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
+			drive_scopes: "https://www.googleapis.com/auth/drive".to_string(),
+			drive_token: "ya29.a0AfB_byAMnws17-UAYR2hU29zC83Rw4bxn2LsF5i_sWQ5xDMI00li205pXlA-JrwVmBh0kNBK7sKP33urPZ9-DM9DDKMv6EQsaqJsy57aHQYUwddT42SwuZAVINyTwp340Qiy_hSaVG5ezT9PIYRO5Qd1Yn9wm5rd7Aq-".to_string(),
+			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+			specific_file_type: "application/pdf".to_string()
+		};
+
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
+
+		println!("Connectivity: {:?}", connectivity);
+
+		let files_list = drive_storage.list_files(Path::new("")).await;
+		match files_list {
+			Ok(files) => {
+				for file in files {
+					println!("Files in folder are - {:?}", file);
+				}
+
+				// let temp_path = Path::new("");
+				// let file_content = drive_storage.get_all(Path::new(&temp_path)).await;
+				// println!("Final file content: {:?}", file_content.unwrap());
+			},
+			//17eOjb3PXngJWA2DlEYCvLS7ez-5S-kEA
+			Err(e) => {
+				println!("Error : {:?}", e);
+			}
+		}
+	}
+
 }

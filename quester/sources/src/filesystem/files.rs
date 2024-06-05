@@ -100,6 +100,30 @@ impl LocalFolderSource {
 
 #[async_trait]
 impl Source for LocalFolderSource {
+	async fn list_files(&self, path: &Path) -> SourceResult<Vec<String>> {
+		let full_path = self.full_path(path);
+
+        let mut files_list = Vec::new();
+
+        let mut entries = fs::read_dir(full_path).await.map_err(SourceError::from)?;
+
+        while let Some(entry) = entries.next_entry().await.map_err(SourceError::from)? {
+            let path = entry.path();
+            let metadata = entry.metadata().await.map_err(SourceError::from)?;
+
+            if metadata.is_file() {
+                if let Some(file_name) = path.file_name().and_then(|name| name.to_str()) {
+                    files_list.push(file_name.to_owned());
+                }
+            } else if metadata.is_dir() {
+                let mut sub_files = self.list_files(&path).await?;
+                files_list.append(&mut sub_files);
+            }
+        }
+
+        // Return the list of files found.
+        Ok(files_list)
+	}
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		if !self.folder_path.exists() {
 			return Err(SourceError::new(
@@ -185,5 +209,50 @@ impl Source for LocalFolderSource {
 
 	async fn poll_data(&self, output: mpsc::Sender<CollectedBytes>) -> SourceResult<()> {
 		self.poll_data_recursive(self.folder_path.clone(), output).await
+	}
+}
+
+
+#[cfg(test)]
+mod tests {
+
+    use std::path::{Path, PathBuf};
+	use crate::Source;
+
+use super::LocalFolderSource;
+
+
+	#[tokio::test]
+	async fn test_local_file_collector() {
+		let directory_path = "/home/ansh/querent/quester/quester/storage/sql".to_string();
+		let root_path = PathBuf::from(directory_path);
+
+		let local_storage = LocalFolderSource::new(root_path, None);
+
+		println!("Connectivity :- {:?}", local_storage.check_connectivity().await);
+
+		let files = local_storage.list_files(Path::new("")).await;
+
+		println!("Total files : {:?}", files.clone().unwrap());
+
+		match files {
+			Ok(files_list) =>
+				for file in files_list {
+					let temp_path = Path::new(&file);
+					let bytes_file_result = local_storage.get_all(temp_path).await;
+					match bytes_file_result {
+						Ok(bytes_file) => 
+							println!("Bytes len- {:?}", bytes_file.len()),
+
+						Err(e) => {
+						eprintln!("Got error: {:?}", e);
+					}
+					}
+			}
+			Err(e) => {
+				eprintln!("Received error: {}", e);
+			}
+			
+		}
 	}
 }

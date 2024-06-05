@@ -237,6 +237,7 @@ aws-smithy-http = "0.55.0"
 aws-types = "0.55.0"
 opendal = "0.44"
 google-drive3 = "5.0.4+20240227"
+yup-oauth2 = "9.0.0"
 
 [profile.release]
 panic = "unwind"
