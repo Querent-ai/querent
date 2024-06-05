@@ -17,6 +17,7 @@ common = { workspace = true }
 storage = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
+ingestors = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 tokio = { workspace =true }

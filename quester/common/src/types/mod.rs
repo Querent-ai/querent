@@ -9,3 +9,5 @@ pub use storage_mapper::*;
 pub mod semantic_api;
 pub mod sources;
 pub use sources::*;
+pub mod ingestors;
+pub use ingestors::*;
