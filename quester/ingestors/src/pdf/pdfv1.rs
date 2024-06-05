@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use proto::semantics::IngestedTokens;
+use querent_synapse::comm::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
 
 use crate::{
@@ -60,10 +60,10 @@ impl BaseIngestor for PdfIngestor {
 					|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 				)?;
 				let ingested_tokens = IngestedTokens {
-					data: vec![text],
+					data: Some(vec![text]),
 					file: file.clone(),
 					doc_source: doc_source.clone(),
-					is_token_stream: false,
+					is_token_stream: Some(false),
 				};
 				yield Ok(ingested_tokens);
 			}

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
-use proto::semantics::IngestedTokens;
+use querent_synapse::comm::IngestedTokens;
 use tokio::runtime::Handle;
 use tracing::error;
 
@@ -99,22 +99,30 @@ impl Handler<CollectionBatch> for IngestorService {
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		log::debug!("Received CollectionBatch: {:?}", message.file);
-		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
-			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
-		})?;
+		let file_ingestor =
+			resolve_ingestor_with_extension(&message.clone().ext).await.map_err(|e| {
+				ActorExitStatus::Failure(
+					anyhow::anyhow!("Failed to resolve ingestor: {}", e).into(),
+				)
+			})?;
 		// spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		let counters = self.get_counters();
 		let collector_id = self.get_collector_id();
+		let message_copy = message.clone();
 		tokio::spawn(async move {
-			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
+			let ingested_token_stream = file_ingestor.ingest(message.clone().bytes).await;
 			match ingested_token_stream {
 				Ok(mut ingested_tokens_stream) => {
 					// send IngestedTokens to the token_sender and trace the errors
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
-								let _ = token_sender.send(ingested_tokens);
+								let sent = token_sender.send(ingested_tokens);
+								if let Err(e) = sent {
+									error!("Failed to send IngestedTokens: {}", e);
+									break;
+								}
 								counters.increment_total_ingested_tokens(1);
 							},
 							Err(e) => {
@@ -129,6 +137,13 @@ impl Handler<CollectionBatch> for IngestorService {
 				},
 			}
 		});
+		// get total bytes ingested
+		let mut total_mbs = 0;
+		for bytes in message_copy.bytes.iter() {
+			total_mbs += bytes.size.unwrap_or(0);
+		}
+		total_mbs = total_mbs.div_ceil(1024).div_ceil(1024);
+		self.counters.increment_total_megabytes(total_mbs as u64);
 		Ok(())
 	}
 }
