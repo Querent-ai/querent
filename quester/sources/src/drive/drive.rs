@@ -74,13 +74,14 @@ impl GoogleDriveSource {
 	}
 
 	async fn download_file(&self, file_id: &str) -> Result<Body, google_drive3::Error> {
-		let (_, file) = self
+		let (resp_obj, file) = self
 			.hub
 			.files()
 			.get(file_id)
 			.supports_all_drives(true)
 			.acknowledge_abuse(false)
 			.param("fields", FIELDS)
+			.param("alt", "media")
 			.add_scope(Scope::Full)
 			.doit()
 			.await?;
@@ -91,22 +92,20 @@ impl GoogleDriveSource {
 		}
 
 		if mime_type.starts_with("application/vnd.google-apps.") {
-			let export_mime_type = match mime_type.as_str() {
+			match mime_type.as_str() {
 				"application/vnd.google-apps.document" => "application/pdf",
 				"application/vnd.google-apps.spreadsheet" =>
 					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 				"application/vnd.google-apps.presentation" =>
 					"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-				_ =>
+				_ => {
 					return Err(google_drive3::Error::FieldClash(
 						"Unsupported Google Apps file type",
-					)),
+					));
+				},
 			};
-
-			let resp_obj = self.hub.files().export(file_id, export_mime_type).doit().await?;
 			Ok(resp_obj.into_body())
 		} else {
-			let resp_obj = self.hub.files().export(file_id, &mime_type).doit().await?;
 			Ok(resp_obj.into_body())
 		}
 	}
@@ -302,7 +301,7 @@ impl Source for GoogleDriveSource {
 				if let Some(files) = list.files {
 					for file in files {
 						if let Some(file_id) = file.id {
-							let mut content_body =
+							let mut content_body_file =
 								download_file(&hub, &file_id).await.map_err(|err| {
 									SourceError::new(
 										SourceErrorKind::Io,
@@ -313,7 +312,7 @@ impl Source for GoogleDriveSource {
 										.into(),
 									)
 								})?;
-
+							let content_body = content_body_file.as_mut();
 							while let Some(chunk) = content_body.next().await {
 								let chunk = chunk.map_err(|err| {
 									SourceError::new(
@@ -368,12 +367,13 @@ impl Source for GoogleDriveSource {
 }
 
 async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_drive3::Error> {
-	let (_, file) = hub
+	let (resp_obj, file) = hub
 		.files()
 		.get(file_id)
 		.supports_all_drives(true)
 		.acknowledge_abuse(false)
 		.param("fields", FIELDS)
+		.param("alt", "media")
 		.add_scope(Scope::Full)
 		.doit()
 		.await?;
@@ -384,7 +384,7 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 	}
 
 	if mime_type.starts_with("application/vnd.google-apps.") {
-		let export_mime_type = match mime_type.as_str() {
+		let _export_mime_type = match mime_type.as_str() {
 			"application/vnd.google-apps.document" => "application/pdf",
 			"application/vnd.google-apps.spreadsheet" =>
 				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -393,10 +393,8 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 			_ => return Err(google_drive3::Error::FieldClash("Unsupported Google Apps file type")),
 		};
 
-		let resp_obj = hub.files().export(file_id, export_mime_type).doit().await?;
 		Ok(resp_obj.into_body())
 	} else {
-		let resp_obj = hub.files().export(file_id, &mime_type).doit().await?;
 		Ok(resp_obj.into_body())
 	}
 }
