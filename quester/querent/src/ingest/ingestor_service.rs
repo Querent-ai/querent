@@ -7,7 +7,7 @@ use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use querent_synapse::comm::IngestedTokens;
 use tokio::runtime::Handle;
-use tracing::error;
+use tracing::{debug, error, info};
 
 pub struct IngestorService {
 	pub collector_id: String,
@@ -80,12 +80,12 @@ impl Actor for IngestorService {
 			ActorExitStatus::DownstreamClosed |
 			ActorExitStatus::Killed |
 			ActorExitStatus::Failure(_) |
-			ActorExitStatus::Panicked => return Ok(()),
+			ActorExitStatus::Panicked => Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
-				log::info!("IngestorService exiting with success");
+				info!("IngestorService exiting with success");
+				Ok(())
 			},
 		}
-		Ok(())
 	}
 }
 
@@ -98,28 +98,34 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		log::debug!("Received CollectionBatch: {:?}", message.file);
+		debug!("Received CollectionBatch: {:?}", message.file);
 		let file_ingestor =
 			resolve_ingestor_with_extension(&message.clone().ext).await.map_err(|e| {
 				ActorExitStatus::Failure(
 					anyhow::anyhow!("Failed to resolve ingestor: {}", e).into(),
 				)
 			})?;
-		// spawn a new task to ingest the file
+
+		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		let counters = self.get_counters();
 		let collector_id = self.get_collector_id();
-		let message_copy = message.clone();
+		// Calculate and update total megabytes ingested
+		let total_bytes: usize =
+			message.clone().bytes.iter().map(|bytes| bytes.size.unwrap_or(0)).sum();
+		let total_mbs = (total_bytes + 1023) / 1024 / 1024; // Ceiling division for bytes to MB
+		self.counters.increment_total_megabytes(total_mbs as u64);
+		self.counters.increment_total_docs(1);
+
 		tokio::spawn(async move {
 			let ingested_token_stream = file_ingestor.ingest(message.clone().bytes).await;
 			match ingested_token_stream {
 				Ok(mut ingested_tokens_stream) => {
-					// send IngestedTokens to the token_sender and trace the errors
+					// Send IngestedTokens to the token_sender and trace the errors
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
-								let sent = token_sender.send(ingested_tokens);
-								if let Err(e) = sent {
+								if let Err(e) = token_sender.send(ingested_tokens) {
 									error!("Failed to send IngestedTokens: {}", e);
 									break;
 								}
@@ -132,18 +138,11 @@ impl Handler<CollectionBatch> for IngestorService {
 					}
 				},
 				Err(e) => {
-					log::error!("Failed to ingest file: {}", e);
 					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
 				},
 			}
 		});
-		// get total bytes ingested
-		let mut total_mbs = 0;
-		for bytes in message_copy.bytes.iter() {
-			total_mbs += bytes.size.unwrap_or(0);
-		}
-		total_mbs = total_mbs.div_ceil(1024).div_ceil(1024);
-		self.counters.increment_total_megabytes(total_mbs as u64);
+
 		Ok(())
 	}
 }
