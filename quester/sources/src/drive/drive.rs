@@ -301,7 +301,7 @@ impl Source for GoogleDriveSource {
 				if let Some(files) = list.files {
 					for file in files {
 						if let Some(file_id) = file.id {
-							let mut content_body_file =
+							let mut content_body =
 								download_file(&hub, &file_id).await.map_err(|err| {
 									SourceError::new(
 										SourceErrorKind::Io,
@@ -312,7 +312,6 @@ impl Source for GoogleDriveSource {
 										.into(),
 									)
 								})?;
-							let content_body = content_body_file.as_mut();
 							while let Some(chunk) = content_body.next().await {
 								let chunk = chunk.map_err(|err| {
 									SourceError::new(
