@@ -1,5 +1,5 @@
 use crate::{
-	indexer::Indexer, ingest::ingestor_service::IngestorService, EventStreamer, QSource,
+	indexer::Indexer, ingest::ingestor_service::IngestorService, Collector, EventStreamer, QSource,
 	SemanticService, SourceActor, StorageMapper,
 };
 use actors::{
@@ -279,6 +279,20 @@ impl SemanticPipeline {
 			.spawn(event_streamer);
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 
+		// Start various source actors
+		let mut collection_handlers = Vec::new();
+		for source in self.settings.data_sources.iter() {
+			let collector_source =
+				Collector::new(qflow_id.clone(), source.clone(), self.terminate_sig.clone());
+			let (_source_mailbox, source_inbox) = ctx
+				.spawn_actor()
+				.set_terminate_sig(self.terminate_sig.clone())
+				.spawn(SourceActor {
+					source: Box::new(collector_source),
+					event_streamer_messagebus: event_streamer_messagebus.clone(),
+				});
+			collection_handlers.push(source_inbox);
+		}
 		info!("Starting the collector actor 📚");
 		info!("Starting the engine actor 🧠");
 		info!("Starting the event streamer actor ⇵");
@@ -320,8 +334,8 @@ impl SemanticPipeline {
 			indexer_handler: indexer_inbox,
 			storage_mapper_handler: storage_mapper_inbox,
 			next_progress_check: Instant::now() + *HEARTBEAT,
-			collection_handlers: Vec::new(),
 			ingestor_handler: ingestor_inbox,
+			collection_handlers,
 		});
 		Ok(())
 	}
@@ -352,6 +366,7 @@ impl SemanticPipeline {
 						handler.kill().await;
 					}
 				},
+				handles.ingestor_handler.kill(),
 			);
 		}
 	}
