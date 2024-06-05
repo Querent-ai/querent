@@ -1,5 +1,6 @@
 use crate::{
-	indexer::Indexer, EventStreamer, QSource, SemanticService, SourceActor, StorageMapper,
+	indexer::Indexer, ingest::ingestor_service::IngestorService, EventStreamer, QSource,
+	SemanticService, SourceActor, StorageMapper,
 };
 use actors::{
 	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, MessageBus, QueueCapacity,
@@ -56,6 +57,7 @@ struct PipelineHandlers {
 	pub indexer_handler: ActorHandle<Indexer>,
 	pub storage_mapper_handler: ActorHandle<StorageMapper>,
 	pub collection_handlers: Vec<ActorHandle<SourceActor>>,
+	pub ingestor_handler: ActorHandle<IngestorService>,
 	pub next_progress_check: Instant,
 }
 
@@ -135,6 +137,7 @@ impl SemanticPipeline {
 				&handles.event_streamer_handler,
 				&handles.indexer_handler,
 				&handles.storage_mapper_handler,
+				&handles.ingestor_handler,
 			];
 			all_handles.extend(supervisables);
 			all_handles
@@ -200,7 +203,8 @@ impl SemanticPipeline {
 		handles.indexer_handler.refresh_observe();
 		handles.storage_mapper_handler.refresh_observe();
 		handles.collection_handlers.iter().for_each(|handler| handler.refresh_observe());
-		// TODO collect collection stats once ready
+		handles.ingestor_handler.refresh_observe();
+		// TODO collect collection and ingestion stats once ready
 		self.statistics = self.statistics.clone().add_counters(
 			&handles.qflow_handler.last_observation(),
 			&handles.event_streamer_handler.last_observation(),
@@ -227,6 +231,7 @@ impl SemanticPipeline {
 		}
 		ctx.observe(self);
 	}
+
 	async fn start_qflow(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
 		let _spawn_pipeline_permit = ctx
 			.protect_future(SPAWN_PIPELINE_SEMAPHORE.acquire())
@@ -280,6 +285,19 @@ impl SemanticPipeline {
 		info!("Starting the indexer actor 📦");
 		info!("Starting the storage mapper actor 📦");
 		info!("Starting the source actor 🔗");
+		info!("Starting the Ingestor actor 📦");
+
+		// Ingestor actor
+		let ingestor_service = IngestorService::new(
+			qflow_id.clone(),
+			self.token_sender.clone().unwrap(),
+			current_timestamp,
+		);
+
+		let (_ingestor_mailbox, ingestor_inbox) = ctx
+			.spawn_actor()
+			.set_terminate_sig(self.terminate_sig.clone())
+			.spawn(ingestor_service);
 
 		// QSource actor
 		let qflow_source = QSource::new(
@@ -303,6 +321,7 @@ impl SemanticPipeline {
 			storage_mapper_handler: storage_mapper_inbox,
 			next_progress_check: Instant::now() + *HEARTBEAT,
 			collection_handlers: Vec::new(),
+			ingestor_handler: ingestor_inbox,
 		});
 		Ok(())
 	}
