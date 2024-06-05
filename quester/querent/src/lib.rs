@@ -131,7 +131,7 @@ pub async fn create_querent_synapose_workflow(
 		))
 	})?;
 	let mut sources_credential_map = HashMap::new();
-	let collector_configs: Vec<CollectorConfig> = request
+	let _collector_configs: Vec<CollectorConfig> = request
 		.collectors
 		.iter()
 		.map(|c| {
