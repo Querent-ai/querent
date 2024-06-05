@@ -16,8 +16,9 @@ use proto::{
 };
 
 use querent::{
-	create_querent_synapose_workflow, ObservePipeline, PipelineErrors, PipelineSettings,
-	RestartPipeline, SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
+	create_dynamic_sources, create_querent_synapose_workflow, ObservePipeline, PipelineErrors,
+	PipelineSettings, RestartPipeline, SemanticService, SemanticServiceCounters, ShutdownPipeline,
+	SpawnPipeline,
 };
 use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
@@ -184,6 +185,8 @@ pub async fn start_pipeline(
 	}
 	let qflow: querent_synapse::querent::Workflow =
 		create_querent_synapose_workflow(new_uuid.clone(), &request, secret_store.clone()).await?;
+	let data_sources = create_dynamic_sources(&request).await?;
+
 	let pipeline_settings = PipelineSettings {
 		qflow_id: new_uuid.clone(),
 		qflow,
@@ -191,7 +194,7 @@ pub async fn start_pipeline(
 		index_storages,
 		secret_store,
 		semantic_service_bus: semantic_service_mailbox.clone(),
-		data_sources: Vec::new(), //TODO send data sources
+		data_sources,
 	};
 
 	let pipeline_rest = semantic_service_mailbox

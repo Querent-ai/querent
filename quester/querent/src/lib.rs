@@ -1,5 +1,5 @@
 pub mod qsource;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
@@ -79,6 +79,44 @@ async def print_querent(config, text: str):
         print("❌ Failed to import querent:  " + str(e))
 
 "#;
+
+pub async fn create_dynamic_sources(
+	request: &SemanticPipelineRequest,
+) -> Result<Vec<Arc<dyn sources::Source>>, PipelineErrors> {
+	let collectors_configs = request.collectors.clone();
+	let mut sources: Vec<Arc<dyn sources::Source>> = vec![];
+	for collector in collectors_configs {
+		match &collector.backend {
+			Some(proto::semantics::Backend::Files(config)) => {
+				let file_source = sources::filesystem::files::LocalFolderSource::new(
+					PathBuf::from(config.root_path.clone()),
+					None,
+				);
+				sources.push(Arc::new(file_source));
+			},
+			Some(proto::semantics::Backend::Gcs(config)) => {
+				let gcs_source = sources::gcs::get_gcs_storage(config.clone()).map_err(|e| {
+					PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Failed to create GCS source: {}",
+						e
+					))
+				})?;
+				sources.push(Arc::new(gcs_source));
+			},
+			Some(proto::semantics::Backend::S3(config)) => {
+				let s3_source = sources::s3::S3Source::new(config.clone());
+				sources.push(Arc::new(s3_source));
+			},
+			_ => {
+				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+					"Invalid source type: {}",
+					collector.name.clone(),
+				)))
+			},
+		};
+	}
+	Ok(sources)
+}
 
 pub async fn create_querent_synapose_workflow(
 	id: String,
@@ -457,7 +495,7 @@ pub async fn create_querent_synapose_workflow(
 			inner_tokens_feader: None,
 			tokens_feader: None,
 		},
-		collectors: collector_configs,
+		collectors: Vec::new(),
 		engines: engine_configs,
 		resource: None,
 	};
