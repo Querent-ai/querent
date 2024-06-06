@@ -107,6 +107,10 @@ pub async fn create_dynamic_sources(
 				let s3_source = sources::s3::S3Source::new(config.clone());
 				sources.push(Arc::new(s3_source));
 			},
+			Some(proto::semantics::Backend::Azure(config)) => {
+				let azure_source = sources::azure::AzureBlobStorage::new(config.clone());
+				sources.push(Arc::new(azure_source));
+			},
 			_ =>
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Invalid source type: {}",

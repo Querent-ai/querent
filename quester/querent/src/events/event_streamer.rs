@@ -8,6 +8,7 @@ use tracing::error;
 
 use crate::{
 	indexer::Indexer,
+	ingest::ingestor_service::IngestorService,
 	storage::{ContextualEmbeddings, ContextualTriples, StorageMapper},
 	EventLock, IndexerKnowledge, NewEventLock,
 };
@@ -16,6 +17,7 @@ pub struct EventStreamer {
 	qflow_id: String,
 	storage_mapper_messagebus: MessageBus<StorageMapper>,
 	indexer_messagebus: MessageBus<Indexer>,
+	ingestor_messagebus: MessageBus<IngestorService>,
 	timestamp: u64,
 	counters: Arc<EventStreamerCounters>,
 	publish_event_lock: EventLock,
@@ -26,6 +28,7 @@ impl EventStreamer {
 		qflow_id: String,
 		storage_mapper_messagebus: MessageBus<StorageMapper>,
 		indexer_messagebus: MessageBus<Indexer>,
+		ingestor_messagebus: MessageBus<IngestorService>,
 		timestamp: u64,
 	) -> Self {
 		Self {
@@ -35,6 +38,7 @@ impl EventStreamer {
 			timestamp,
 			counters: Arc::new(EventStreamerCounters::new()),
 			publish_event_lock: EventLock::default(),
+			ingestor_messagebus,
 		}
 	}
 
@@ -174,9 +178,19 @@ impl Handler<CollectionBatch> for EventStreamer {
 
 	async fn handle(
 		&mut self,
-		_message: CollectionBatch,
-		_ctx: &ActorContext<Self>,
+		message: CollectionBatch,
+		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
+		let indexer_res = ctx.send_message(&self.ingestor_messagebus, message).await;
+		match indexer_res {
+			Ok(_) => {},
+			Err(e) => {
+				error!("Error sending message to Indexer: {:?}", e);
+				return Err(ActorExitStatus::Failure(
+					anyhow::anyhow!("Failed to send CollectionBatch: {:?}", e).into(),
+				));
+			},
+		};
 		Ok(())
 	}
 }

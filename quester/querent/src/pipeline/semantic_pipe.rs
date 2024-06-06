@@ -267,11 +267,23 @@ impl SemanticPipeline {
 		let (indexer_messagebus, indexer_inbox) =
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(indexer);
 
+		// Ingestor actor
+		let ingestor_service = IngestorService::new(
+			qflow_id.clone(),
+			self.token_sender.clone().unwrap(),
+			current_timestamp,
+		);
+
+		let (ingestor_mailbox, ingestor_inbox) = ctx
+			.spawn_actor()
+			.set_terminate_sig(self.terminate_sig.clone())
+			.spawn(ingestor_service);
 		// Event streamer actor
 		let event_streamer = EventStreamer::new(
 			qflow_id.clone(),
 			storage_mapper_mailbox,
 			indexer_messagebus,
+			ingestor_mailbox,
 			current_timestamp,
 		);
 		let (event_streamer_messagebus, event_streamer_inbox) = ctx
@@ -301,18 +313,6 @@ impl SemanticPipeline {
 		info!("Starting the storage mapper actor 📦");
 		info!("Starting the source actor 🔗");
 		info!("Starting the Ingestor actor 📦");
-
-		// Ingestor actor
-		let ingestor_service = IngestorService::new(
-			qflow_id.clone(),
-			self.token_sender.clone().unwrap(),
-			current_timestamp,
-		);
-
-		let (_ingestor_mailbox, ingestor_inbox) = ctx
-			.spawn_actor()
-			.set_terminate_sig(self.terminate_sig.clone())
-			.spawn(ingestor_service);
 
 		// QSource actor
 		let qflow_source = QSource::new(
