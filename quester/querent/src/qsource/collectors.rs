@@ -78,7 +78,7 @@ impl Source for Collector {
 									error!("Failed to send data: {:?}", e);
 								},
 							Err(e) => {
-								error!("Failed to poll data: {:?}", e);
+								error!("Failed to poll data here: {:?}", e);
 								let err = Err(QuerentError::internal(format!(
 									"Failed to poll data: {:?}",
 									e

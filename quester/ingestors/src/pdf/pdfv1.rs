@@ -2,6 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
+use pdf_extract::{output_doc, PlainTextOutput};
 use querent_synapse::comm::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
 
@@ -59,6 +60,7 @@ impl BaseIngestor for PdfIngestor {
 				.map_err(
 					|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 				)?;
+				println!("TExt {:?}", text);
 				let ingested_tokens = IngestedTokens {
 					data: Some(vec![text]),
 					file: file.clone(),
@@ -67,9 +69,49 @@ impl BaseIngestor for PdfIngestor {
 				};
 				yield Ok(ingested_tokens);
 			}
+
+			let mut out = String::new();
+			let mut output = PlainTextOutput::new(&mut out);
+			let _ = output_doc(&doc, &mut output);
+			yield Ok(IngestedTokens {
+				data: Some(vec![out]),
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: Some(false)
+			})
+
 		};
 		let processed_stream =
 			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
 		Ok(Box::pin(processed_stream))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	extern crate pdf_extract;
+
+    use pdf_extract::{output_doc, PlainTextOutput};
+
+
+	#[tokio::test]
+	async fn test_pdf_ingestor() {
+		let bytes = std::fs::read("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf").unwrap();
+		let mut out = String::new();
+		let mut output = PlainTextOutput::new(&mut out);
+
+		//1
+		let doc = lopdf::Document::load_mem(&bytes).unwrap();
+
+		//2
+		// let reader = std::io::Cursor::new(bytes);
+		// let doc = lopdf::Document::load_from(reader).unwrap();
+
+		//3
+		// let doc = lopdf::Document::load(Path::new("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf")).unwrap();
+
+		let _ = output_doc(&doc, &mut output);
+		
+		println!("Output is {:?}", out);
 	}
 }
