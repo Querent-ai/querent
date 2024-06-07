@@ -104,7 +104,7 @@ pub async fn create_dynamic_sources(
 				sources.push(Arc::new(gcs_source));
 			},
 			Some(proto::semantics::Backend::S3(config)) => {
-				let s3_source = sources::s3::S3Source::new(config.clone());
+				let s3_source = sources::s3::S3Source::new(config.clone()).await;
 				sources.push(Arc::new(s3_source));
 			},
 			Some(proto::semantics::Backend::Azure(config)) => {

@@ -34,15 +34,14 @@ impl fmt::Debug for AzureBlobStorage {
 impl AzureBlobStorage {
 	/// Creates a new [`AzureBlobStorage`] instance.
 	pub fn new(azure_storage_config: AzureCollectorConfig) -> Self {
-		// Parse the connection string to extract account name and key
-		let account = azure_storage_config.account_url;
-		// TODOI dont think we need credentials once we move to rust side
-		let _credentials = azure_storage_config.credentials;
-		let access_key = azure_storage_config.access_key;
-		let storage_credentials = StorageCredentials::access_key(account.clone(), access_key);
-		// Create the BlobServiceClient
-		let blob_service_client = BlobServiceClient::new(account.clone(), storage_credentials);
+		let connection_string = &azure_storage_config.connection_string;
+		let account_name =
+			Self::extract_value_from_connection_string(connection_string, "AccountName");
+		let account_key = azure_storage_config.credentials;
 
+		let storage_credentials = StorageCredentials::access_key(account_name.clone(), account_key);
+		// Create the BlobServiceClient
+		let blob_service_client = ClientBuilder::new(account_name, storage_credentials);
 		// Create the ContainerClient
 		let container_client =
 			blob_service_client.container_client(azure_storage_config.container.clone());
@@ -55,6 +54,15 @@ impl AzureBlobStorage {
 		let mut name = self.prefix.clone();
 		name.push_str(relative_path.to_string_lossy().as_ref());
 		name
+	}
+
+	fn extract_value_from_connection_string(connection_string: &str, key: &str) -> String {
+		connection_string
+			.split(';')
+			.find(|part| part.starts_with(key))
+			.and_then(|part| part.split('=').nth(1))
+			.unwrap_or_default()
+			.to_string()
 	}
 
 	/// Downloads a blob as vector of bytes.

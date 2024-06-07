@@ -61,3 +61,4 @@ hyper-rustls = { workspace = true }
 hyper = { workspace = true }
 serde_json = { workspace = true }
 lopdf = { workspace = true }
+pdf-extract = { workspace = true }
