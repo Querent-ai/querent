@@ -77,7 +77,7 @@ impl BaseIngestor for PdfIngestor {
 				data: Some(vec![out]),
 				file: file.clone(),
 				doc_source: doc_source.clone(),
-				is_token_stream: Some(false)
+				is_token_stream: Some(true)
 			})
 
 		};
@@ -91,8 +91,7 @@ impl BaseIngestor for PdfIngestor {
 mod tests {
 	extern crate pdf_extract;
 
-    use pdf_extract::{output_doc, PlainTextOutput};
-
+	use pdf_extract::{output_doc, PlainTextOutput};
 
 	#[tokio::test]
 	async fn test_pdf_ingestor() {
@@ -111,7 +110,7 @@ mod tests {
 		// let doc = lopdf::Document::load(Path::new("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf")).unwrap();
 
 		let _ = output_doc(&doc, &mut output);
-		
+
 		println!("Output is {:?}", out);
 	}
 }
