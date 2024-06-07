@@ -73,11 +73,22 @@ impl BaseIngestor for PdfIngestor {
 			let mut out = String::new();
 			let mut output = PlainTextOutput::new(&mut out);
 			let _ = output_doc(&doc, &mut output);
+
+			//remove this once text processors are in place
+			out = out.replace("\n", " ");
+
 			yield Ok(IngestedTokens {
 				data: Some(vec![out]),
 				file: file.clone(),
 				doc_source: doc_source.clone(),
-				is_token_stream: Some(true)
+				is_token_stream: Some(false)
+			});
+
+			yield Ok(IngestedTokens {
+				data: None,
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: Some(false),
 			})
 
 		};
