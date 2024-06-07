@@ -37,7 +37,7 @@ impl AzureBlobStorage {
 		let connection_string = &azure_storage_config.connection_string;
 		let account_name =
 			Self::extract_value_from_connection_string(connection_string, "AccountName");
-		let account_key =  azure_storage_config.credentials;
+		let account_key = azure_storage_config.credentials;
 
 		let storage_credentials = StorageCredentials::access_key(account_name.clone(), account_key);
 		// Create the BlobServiceClient

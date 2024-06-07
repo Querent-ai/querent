@@ -52,13 +52,21 @@ impl S3Source {
 			continuation_token: None,
 		};
 
-		let credentials = Credentials::new(config.access_key.clone(), config.secret_key.clone(), None, None, "manual");
-		let config = aws_config::from_env().credentials_provider(credentials).region(Region::new(static_region_str)).load().await;
+		let credentials = Credentials::new(
+			config.access_key.clone(),
+			config.secret_key.clone(),
+			None,
+			None,
+			"manual",
+		);
+		let config = aws_config::from_env()
+			.credentials_provider(credentials)
+			.region(Region::new(static_region_str))
+			.load()
+			.await;
 
 		s3.s3_client = Some(S3Client::new(&config));
 		s3
-
-
 	}
 
 	async fn create_get_object_request(
@@ -110,7 +118,14 @@ impl Source for S3Source {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await;
 
-		let _ = self.s3_client.as_ref().unwrap().list_objects_v2().bucket(self.bucket_name.clone()).send().await;
+		let _ = self
+			.s3_client
+			.as_ref()
+			.unwrap()
+			.list_objects_v2()
+			.bucket(self.bucket_name.clone())
+			.send()
+			.await;
 		Ok(())
 	}
 
@@ -299,9 +314,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_aws_collector() {
-
 		let aws_config = S3CollectorConfig {
-
 			access_key: "AKIAU6GDY2RDMGC2RNTK".to_string(),
 
 			secret_key: "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".to_string(),
@@ -309,26 +322,28 @@ mod tests {
 			region: "ap-south-1".to_string(),
 
 			bucket: "querentbucket1".to_string(),
-
 		};
 
-
-		let credentials = Credentials::new(aws_config.access_key.clone(), aws_config.secret_key.clone(), None, None, "manual");
-
+		let credentials = Credentials::new(
+			aws_config.access_key.clone(),
+			aws_config.secret_key.clone(),
+			None,
+			None,
+			"manual",
+		);
 
 		let mut s3_storage = S3Source::new(aws_config).await;
 
-
-		let config = aws_config::from_env().credentials_provider(credentials).region(s3_storage.region.clone()).load().await;
-
+		let config = aws_config::from_env()
+			.credentials_provider(credentials)
+			.region(s3_storage.region.clone())
+			.load()
+			.await;
 
 		s3_storage.s3_client = Some(S3Client::new(&config));
 
-
 		let result = s3_storage.check_connectivity().await;
 
-    	assert!(result.is_ok());
-
+		assert!(result.is_ok());
 	}
-
 }
