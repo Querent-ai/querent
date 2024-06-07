@@ -87,30 +87,30 @@ impl BaseIngestor for PdfIngestor {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	extern crate pdf_extract;
+// #[cfg(test)]
+// mod tests {
+// 	extern crate pdf_extract;
 
-	use pdf_extract::{output_doc, PlainTextOutput};
+// 	use pdf_extract::{output_doc, PlainTextOutput};
 
-	#[tokio::test]
-	async fn test_pdf_ingestor() {
-		let bytes = std::fs::read("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf").unwrap();
-		let mut out = String::new();
-		let mut output = PlainTextOutput::new(&mut out);
+// 	#[tokio::test]
+// 	async fn test_pdf_ingestor() {
+// 		let bytes = std::fs::read("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf").unwrap();
+// 		let mut out = String::new();
+// 		let mut output = PlainTextOutput::new(&mut out);
 
-		//1
-		let doc = lopdf::Document::load_mem(&bytes).unwrap();
+// 		//1
+// 		let doc = lopdf::Document::load_mem(&bytes).unwrap();
 
-		//2
-		// let reader = std::io::Cursor::new(bytes);
-		// let doc = lopdf::Document::load_from(reader).unwrap();
+// 		//2
+// 		// let reader = std::io::Cursor::new(bytes);
+// 		// let doc = lopdf::Document::load_from(reader).unwrap();
 
-		//3
-		// let doc = lopdf::Document::load(Path::new("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf")).unwrap();
+// 		//3
+// 		// let doc = lopdf::Document::load(Path::new("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf")).unwrap();
 
-		let _ = output_doc(&doc, &mut output);
+// 		let _ = output_doc(&doc, &mut output);
 
-		println!("Output is {:?}", out);
-	}
-}
+// 		println!("Output is {:?}", out);
+// 	}
+// }

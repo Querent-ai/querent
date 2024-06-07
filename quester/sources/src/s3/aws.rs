@@ -185,8 +185,6 @@ impl Source for S3Source {
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
-		let t = self.s3_client.as_ref().unwrap().list_objects_v2().bucket(self.bucket_name.clone()).send().await.unwrap();
-		println!("Results: {:?}", t);
 		let s3_client = self.s3_client.clone().unwrap();
 		let bucket_name = self.bucket_name.clone();
 		let continuation_token_start = self.continuation_token.clone();

@@ -88,7 +88,6 @@ pub async fn create_dynamic_sources(
 	for collector in collectors_configs {
 		match &collector.backend {
 			Some(proto::semantics::Backend::Files(config)) => {
-				println!("About to initialize file storage");
 				let file_source = sources::filesystem::files::LocalFolderSource::new(
 					PathBuf::from(config.root_path.clone()),
 					None,

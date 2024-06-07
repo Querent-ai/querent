@@ -37,8 +37,6 @@ impl LocalFolderSource {
 		let mut streams: Vec<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> =
 			Vec::new();
 
-		println!("Inside collector --------------------------------");
-
 		let mut stack: Vec<PathBuf> = vec![folder_path];
 		while let Some(current_path) = stack.pop() {
 			let mut entries = match fs::read_dir(&current_path).await {
