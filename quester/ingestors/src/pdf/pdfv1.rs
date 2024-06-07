@@ -53,22 +53,22 @@ impl BaseIngestor for PdfIngestor {
 			.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
 
 		let stream = stream! {
-			let pages = doc.get_pages();
-			for (i, _) in pages.iter().enumerate() {
-				let page_number = (i + 1) as u32;
-				let text = doc.extract_text(&[page_number])
-				.map_err(
-					|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
-				)?;
-				println!("TExt {:?}", text);
-				let ingested_tokens = IngestedTokens {
-					data: Some(vec![text]),
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: Some(false),
-				};
-				yield Ok(ingested_tokens);
-			}
+			// let pages = doc.get_pages();
+			// for (i, _) in pages.iter().enumerate() {
+			// 	let page_number = (i + 1) as u32;
+			// 	let text = doc.extract_text(&[page_number])
+			// 	.map_err(
+			// 		|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
+			// 	)?;
+			// 	println!("TExt {:?}", text);
+			// 	let ingested_tokens = IngestedTokens {
+			// 		data: Some(vec![text]),
+			// 		file: file.clone(),
+			// 		doc_source: doc_source.clone(),
+			// 		is_token_stream: Some(false),
+			// 	};
+			// 	yield Ok(ingested_tokens);
+			// }
 
 			let mut out = String::new();
 			let mut output = PlainTextOutput::new(&mut out);
