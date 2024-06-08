@@ -198,6 +198,8 @@ pub struct IndexingStatistics {
     pub total_graph_events: u64,
     #[prost(uint64, tag = "12")]
     pub total_vector_events: u64,
+    #[prost(uint64, tag = "13")]
+    pub total_data_processed_size: u64,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -303,9 +305,6 @@ pub struct AzureCollectorConfig {
     /// Chunk size of the Azure collector.
     #[prost(int64, tag = "6")]
     pub chunk_size: i64,
-    /// Access key of the Azure collector.
-    #[prost(string, tag = "7")]
-    pub access_key: ::prost::alloc::string::String,
 }
 /// GCSCollectorConfig is a message to hold configuration for a GCS collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

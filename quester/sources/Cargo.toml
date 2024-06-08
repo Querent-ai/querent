@@ -59,3 +59,5 @@ google-drive3 = { workspace = true }
 hyper-rustls = { workspace = true }
 hyper = { workspace = true }
 serde_json = { workspace = true }
+ingestors = { workspace = true }
+lopdf = { workspace = true }

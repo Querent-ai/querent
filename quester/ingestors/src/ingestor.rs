@@ -7,7 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
-use crate::pdf::pdfv1::PdfIngestor;
+use crate::{
+	csv::csv::CsvIngestor, html::html::HtmlIngestor, pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor,
+};
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -24,6 +26,8 @@ pub enum IngestorErrorKind {
 	Unauthorized,
 	/// Internal error.
 	Internal,
+	/// Csv error,
+	Csv,
 }
 
 /// Generic IngestorError.
@@ -74,6 +78,12 @@ impl From<io::Error> for IngestorError {
 impl From<serde_json::Error> for IngestorError {
 	fn from(err: serde_json::Error) -> IngestorError {
 		IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
+impl From<csv::Error> for IngestorError {
+	fn from(err: csv::Error) -> IngestorError {
+		IngestorError::new(IngestorErrorKind::Csv, Arc::new(err.into()))
 	}
 }
 
@@ -132,6 +142,10 @@ pub async fn resolve_ingestor_with_extension(
 ) -> IngestorResult<Arc<dyn BaseIngestor>> {
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new())),
+		"txt" => Ok(Arc::new(TxtIngestor::new())),
+		"html" => Ok(Arc::new(HtmlIngestor::new())),
+		"csv" => Ok(Arc::new(CsvIngestor::new())),
+		"xml" => Ok(Arc::new(HtmlIngestor::new())),
 		_ => Err(IngestorError::new(
 			IngestorErrorKind::NotSupported,
 			Arc::new(anyhow::anyhow!("Extension not supported")),

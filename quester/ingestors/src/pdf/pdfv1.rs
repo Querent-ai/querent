@@ -2,8 +2,14 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
+use pdf_extract::{output_doc, ConvertToFmt, OutputDev, OutputError, PlainTextOutput};
 use querent_synapse::comm::IngestedTokens;
-use std::{pin::Pin, sync::Arc};
+use std::{
+	collections::HashMap,
+	fmt,
+	pin::Pin,
+	sync::{Arc, Mutex},
+};
 
 use crate::{
 	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind,
@@ -52,13 +58,9 @@ impl BaseIngestor for PdfIngestor {
 			.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
 
 		let stream = stream! {
-			let pages = doc.get_pages();
-			for (i, _) in pages.iter().enumerate() {
-				let page_number = (i + 1) as u32;
-				let text = doc.extract_text(&[page_number])
-				.map_err(
-					|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
-				)?;
+			let mut output = PagePlainTextOutput::new();
+			output_doc(&doc, &mut output).unwrap();
+			for (_, text) in output.pages {
 				let ingested_tokens = IngestedTokens {
 					data: Some(vec![text]),
 					file: file.clone(),
@@ -67,9 +69,100 @@ impl BaseIngestor for PdfIngestor {
 				};
 				yield Ok(ingested_tokens);
 			}
+
+			yield Ok(IngestedTokens {
+				data: None,
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: Some(false),
+			})
 		};
+
 		let processed_stream =
 			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
 		Ok(Box::pin(processed_stream))
+	}
+}
+
+struct PagePlainTextOutput {
+	inner: PlainTextOutput<OutputWrapper>,
+	pages: HashMap<u32, String>,
+	current_page: u32,
+	reader: Arc<Mutex<String>>,
+}
+
+struct OutputWrapper(Arc<Mutex<String>>);
+
+impl std::fmt::Write for OutputWrapper {
+	fn write_str(&mut self, s: &str) -> std::fmt::Result {
+		let mut reader = self.0.lock().unwrap();
+		reader.write_str(s).map_err(|_| fmt::Error)
+	}
+}
+
+impl ConvertToFmt for OutputWrapper {
+	type Writer = OutputWrapper;
+
+	fn convert(self) -> Self::Writer {
+		self
+	}
+}
+
+impl PagePlainTextOutput {
+	fn new() -> Self {
+		let s = Arc::new(Mutex::new(String::new()));
+		let writer = Arc::clone(&s);
+		Self {
+			pages: HashMap::new(),
+			current_page: 0,
+			reader: s,
+			inner: PlainTextOutput::new(OutputWrapper(writer)),
+		}
+	}
+}
+
+impl OutputDev for PagePlainTextOutput {
+	fn begin_page(
+		&mut self,
+		page_num: u32,
+		media_box: &pdf_extract::MediaBox,
+		art_box: Option<(f64, f64, f64, f64)>,
+	) -> Result<(), OutputError> {
+		self.current_page = page_num;
+		self.reader.lock().unwrap().clear(); // Ensure the buffer is clear at the start of each page
+		self.inner.begin_page(page_num, media_box, art_box)
+	}
+
+	fn end_page(&mut self) -> Result<(), OutputError> {
+		self.inner.end_page()?;
+
+		let buf = self.reader.lock().unwrap().clone();
+		self.pages.insert(self.current_page, buf);
+		self.reader.lock().unwrap().clear();
+
+		Ok(())
+	}
+
+	fn output_character(
+		&mut self,
+		trm: &pdf_extract::Transform,
+		width: f64,
+		spacing: f64,
+		font_size: f64,
+		char: &str,
+	) -> Result<(), OutputError> {
+		self.inner.output_character(trm, width, spacing, font_size, char)
+	}
+
+	fn begin_word(&mut self) -> Result<(), OutputError> {
+		self.inner.begin_word()
+	}
+
+	fn end_word(&mut self) -> Result<(), OutputError> {
+		self.inner.end_word()
+	}
+
+	fn end_line(&mut self) -> Result<(), OutputError> {
+		self.inner.end_line()
 	}
 }

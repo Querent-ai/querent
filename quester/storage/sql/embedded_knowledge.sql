@@ -9,5 +9,5 @@ CREATE TABLE embedded_knowledge(
     predicate TEXT,
     embeddings vector(384),
     collection_id VARCHAR,
-    image_id VARCHAR,
+    image_id VARCHAR
 );
