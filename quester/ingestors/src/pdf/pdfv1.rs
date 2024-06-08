@@ -2,9 +2,14 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use pdf_extract::{output_doc, PlainTextOutput};
+use pdf_extract::{output_doc, ConvertToFmt, OutputDev, OutputError, PlainTextOutput};
 use querent_synapse::comm::IngestedTokens;
-use std::{pin::Pin, sync::Arc};
+use std::{
+	collections::HashMap,
+	fmt,
+	pin::Pin,
+	sync::{Arc, Mutex},
+};
 
 use crate::{
 	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind,
@@ -53,36 +58,17 @@ impl BaseIngestor for PdfIngestor {
 			.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
 
 		let stream = stream! {
-			// let pages = doc.get_pages();
-			// for (i, _) in pages.iter().enumerate() {
-			// 	let page_number = (i + 1) as u32;
-			// 	let text = doc.extract_text(&[page_number])
-			// 	.map_err(
-			// 		|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
-			// 	)?;
-			// 	println!("TExt {:?}", text);
-			// 	let ingested_tokens = IngestedTokens {
-			// 		data: Some(vec![text]),
-			// 		file: file.clone(),
-			// 		doc_source: doc_source.clone(),
-			// 		is_token_stream: Some(false),
-			// 	};
-			// 	yield Ok(ingested_tokens);
-			// }
-
-			let mut out = String::new();
-			let mut output = PlainTextOutput::new(&mut out);
-			let _ = output_doc(&doc, &mut output);
-
-			//remove this once text processors are in place
-			out = out.replace("\n", " ");
-
-			yield Ok(IngestedTokens {
-				data: Some(vec![out]),
-				file: file.clone(),
-				doc_source: doc_source.clone(),
-				is_token_stream: Some(false)
-			});
+			let mut output = PagePlainTextOutput::new();
+			output_doc(&doc, &mut output).unwrap();
+			for (_, text) in output.pages {
+				let ingested_tokens = IngestedTokens {
+					data: Some(vec![text]),
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: Some(false),
+				};
+				yield Ok(ingested_tokens);
+			}
 
 			yield Ok(IngestedTokens {
 				data: None,
@@ -90,38 +76,93 @@ impl BaseIngestor for PdfIngestor {
 				doc_source: doc_source.clone(),
 				is_token_stream: Some(false),
 			})
-
 		};
+
 		let processed_stream =
 			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
 		Ok(Box::pin(processed_stream))
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	extern crate pdf_extract;
+struct PagePlainTextOutput {
+	inner: PlainTextOutput<OutputWrapper>,
+	pages: HashMap<u32, String>,
+	current_page: u32,
+	reader: Arc<Mutex<String>>,
+}
 
-// 	use pdf_extract::{output_doc, PlainTextOutput};
+struct OutputWrapper(Arc<Mutex<String>>);
 
-// 	#[tokio::test]
-// 	async fn test_pdf_ingestor() {
-// 		let bytes = std::fs::read("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf").unwrap();
-// 		let mut out = String::new();
-// 		let mut output = PlainTextOutput::new(&mut out);
+impl std::fmt::Write for OutputWrapper {
+	fn write_str(&mut self, s: &str) -> std::fmt::Result {
+		let mut reader = self.0.lock().unwrap();
+		reader.write_str(s).map_err(|_| fmt::Error)
+	}
+}
 
-// 		//1
-// 		let doc = lopdf::Document::load_mem(&bytes).unwrap();
+impl ConvertToFmt for OutputWrapper {
+	type Writer = OutputWrapper;
 
-// 		//2
-// 		// let reader = std::io::Cursor::new(bytes);
-// 		// let doc = lopdf::Document::load_from(reader).unwrap();
+	fn convert(self) -> Self::Writer {
+		self
+	}
+}
 
-// 		//3
-// 		// let doc = lopdf::Document::load(Path::new("/home/ansh/pyg-trail/Eagle Ford Shale, USA/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf")).unwrap();
+impl PagePlainTextOutput {
+	fn new() -> Self {
+		let s = Arc::new(Mutex::new(String::new()));
+		let writer = Arc::clone(&s);
+		Self {
+			pages: HashMap::new(),
+			current_page: 0,
+			reader: s,
+			inner: PlainTextOutput::new(OutputWrapper(writer)),
+		}
+	}
+}
 
-// 		let _ = output_doc(&doc, &mut output);
+impl OutputDev for PagePlainTextOutput {
+	fn begin_page(
+		&mut self,
+		page_num: u32,
+		media_box: &pdf_extract::MediaBox,
+		art_box: Option<(f64, f64, f64, f64)>,
+	) -> Result<(), OutputError> {
+		self.current_page = page_num;
+		self.reader.lock().unwrap().clear(); // Ensure the buffer is clear at the start of each page
+		self.inner.begin_page(page_num, media_box, art_box)
+	}
 
-// 		println!("Output is {:?}", out);
-// 	}
-// }
+	fn end_page(&mut self) -> Result<(), OutputError> {
+		self.inner.end_page()?;
+
+		let buf = self.reader.lock().unwrap().clone();
+		self.pages.insert(self.current_page, buf);
+		self.reader.lock().unwrap().clear();
+
+		Ok(())
+	}
+
+	fn output_character(
+		&mut self,
+		trm: &pdf_extract::Transform,
+		width: f64,
+		spacing: f64,
+		font_size: f64,
+		char: &str,
+	) -> Result<(), OutputError> {
+		self.inner.output_character(trm, width, spacing, font_size, char)
+	}
+
+	fn begin_word(&mut self) -> Result<(), OutputError> {
+		self.inner.begin_word()
+	}
+
+	fn end_word(&mut self) -> Result<(), OutputError> {
+		self.inner.end_word()
+	}
+
+	fn end_line(&mut self) -> Result<(), OutputError> {
+		self.inner.end_line()
+	}
+}

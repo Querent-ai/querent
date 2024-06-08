@@ -7,10 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
-use crate::csv::csv::CsvIngestor;
-use crate::pdf::pdfv1::PdfIngestor;
-use crate::txt::txt::TxtIngestor;
-use crate::html::html::HtmlIngestor;
+use crate::{
+	csv::csv::CsvIngestor, html::html::HtmlIngestor, pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor,
+};
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -83,9 +82,9 @@ impl From<serde_json::Error> for IngestorError {
 }
 
 impl From<csv::Error> for IngestorError {
-    fn from(err: csv::Error) -> IngestorError {
-        IngestorError::new(IngestorErrorKind::Csv, Arc::new(err.into()))
-    }
+	fn from(err: csv::Error) -> IngestorError {
+		IngestorError::new(IngestorErrorKind::Csv, Arc::new(err.into()))
+	}
 }
 
 // Define the trait for async processor

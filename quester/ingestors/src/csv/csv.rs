@@ -5,95 +5,92 @@ use futures::Stream;
 use querent_synapse::comm::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
 
-
-use crate::{
-    process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
-    IngestorResult,
-};
+use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
 
 // Define the TxtIngestor
 pub struct CsvIngestor {
-    processors: Vec<Arc<dyn AsyncProcessor>>,
+	processors: Vec<Arc<dyn AsyncProcessor>>,
 }
 
 impl CsvIngestor {
-    pub fn new() -> Self {
-        Self { processors: Vec::new() }
-    }
+	pub fn new() -> Self {
+		Self { processors: Vec::new() }
+	}
 }
 
 #[async_trait]
 impl BaseIngestor for CsvIngestor {
-    fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
-        self.processors = processors;
-    }
+	fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
+		self.processors = processors;
+	}
 
-    async fn ingest(
-        &self,
-        all_collected_bytes: Vec<CollectedBytes>,
-    ) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
-    {
-        let mut buffer = Vec::new();
-        let mut file = String::new();
-        let mut doc_source = String::new();
-        for collected_bytes in all_collected_bytes.iter() {
-            if file.is_empty() {
-                file = collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
-            }
-            if doc_source.is_empty() {
-                doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-            }
-            buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
-        }
+	async fn ingest(
+		&self,
+		all_collected_bytes: Vec<CollectedBytes>,
+	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
+	{
+		let mut buffer = Vec::new();
+		let mut file = String::new();
+		let mut doc_source = String::new();
+		for collected_bytes in all_collected_bytes.iter() {
+			if file.is_empty() {
+				file =
+					collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
+			}
+			if doc_source.is_empty() {
+				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+			}
+			buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+		}
 
-        let buffer = Arc::new(buffer);
-        let stream = {
-            let buffer = Arc::clone(&buffer);
-            stream! {
+		let buffer = Arc::new(buffer);
+		let stream = {
+			let buffer = Arc::clone(&buffer);
+			stream! {
 
-                let cursor = Cursor::new(buffer.as_ref());
-                let mut reader = csv::Reader::from_reader(cursor);
-                let headers = reader.headers()?.clone();
+				let cursor = Cursor::new(buffer.as_ref());
+				let mut reader = csv::Reader::from_reader(cursor);
+				let headers = reader.headers()?.clone();
 
-                for result in reader.records() {
-                    let record = result?;
-                    let mut content = String::new();
+				for result in reader.records() {
+					let record = result?;
+					let mut content = String::new();
 
-                    for (i, field) in record.iter().enumerate() {
-                        let header = &headers[i];
+					for (i, field) in record.iter().enumerate() {
+						let header = &headers[i];
 
-                        let line = format!("{}: {}", header, field);
-                        content.push_str(&line);
-                        content.push('\n');
-                    }
+						let line = format!("{}: {}", header, field);
+						content.push_str(&line);
+						content.push('\n');
+					}
 
-                    let ingested_tokens = IngestedTokens {
-                        data: Some(vec![content]),
-                        file: file.clone(),
-                        doc_source: doc_source.clone(),
-                        is_token_stream: Some(false),
-                    };
+					let ingested_tokens = IngestedTokens {
+						data: Some(vec![content]),
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: Some(false),
+					};
 
-                    yield Ok(ingested_tokens);
+					yield Ok(ingested_tokens);
 
-                }
+				}
 
-                let ingested_tokens = IngestedTokens {
-                    data: None,
-                    file: file.clone(),
-                    doc_source: doc_source.clone(),
-                    is_token_stream: Some(false),
-                };
+				let ingested_tokens = IngestedTokens {
+					data: None,
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: Some(false),
+				};
 
-                yield Ok(ingested_tokens);
+				yield Ok(ingested_tokens);
 
-            }
-        };
+			}
+		};
 
-        let processed_stream =
-            process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
-        Ok(Box::pin(processed_stream))
-    }
+		let processed_stream =
+			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
+		Ok(Box::pin(processed_stream))
+	}
 }
 
 // #[cfg(test)]
