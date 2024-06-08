@@ -8,6 +8,7 @@ use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::pdf::pdfv1::PdfIngestor;
+use crate::txt::txt::TxtIngestor;
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -132,6 +133,7 @@ pub async fn resolve_ingestor_with_extension(
 ) -> IngestorResult<Arc<dyn BaseIngestor>> {
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new())),
+		"txt"=> Ok(Arc::new(TxtIngestor::new())),
 		_ => Err(IngestorError::new(
 			IngestorErrorKind::NotSupported,
 			Arc::new(anyhow::anyhow!("Extension not supported")),
