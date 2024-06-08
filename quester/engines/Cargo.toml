@@ -1,0 +1,68 @@
+[package]
+name = "engines"
+version = "3.0.4"
+authors = ["Querent AI LLC <contact@querent.xyz>"]
+edition = "2021"
+license = "BSL-1.1"
+description = "Ingestors for Querent"
+repository = "https://github.com/querent-ai/querent"
+homepage = "https://querent.xyz/"
+documentation = "https:/querent.xyz/docs/"
+
+[dependencies]
+querent-synapse = { workspace = true }
+common = { workspace = true }
+proto = { workspace = true }
+actors = { workspace = true }
+async-trait = { workspace = true }
+async-stream = { workspace = true }
+anyhow = { workspace = true }
+milvus-sdk-rust= { workspace = true }
+neo4rs = { workspace = true }
+tokio-postgres = { workspace = true }
+tokio-postgres-rustls = { workspace = true }
+diesel-async = { workspace = true, features = [
+  "postgres",
+  "deadpool",
+]}
+diesel  = { workspace = true }
+deadpool = { workspace = true }
+rustls = { workspace = true }
+tracing = { workspace = true }
+log = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
+chrono = { workspace = true }
+pgvector = { workspace = true }
+redb = { workspace = true }
+rmp-serde = { workspace = true }
+once_cell = { workspace = true }
+regex = { workspace = true }
+home = { workspace = true }
+aws-config = { workspace = true }
+aws-credential-types = { workspace = true }
+aws-sdk-s3 = { workspace = true }
+aws-smithy-http = { workspace = true }
+tempfile = { workspace = true }
+base64 = { workspace = true }
+opendal = { workspace = true}
+bytesize = { workspace = true }
+azure_core  = { workspace = true }
+azure_storage = { workspace = true }
+azure_storage_blobs = { workspace = true }
+md5 = { workspace = true }
+tokio-util = { workspace = true }
+bytes = { workspace = true }
+google-drive3 = { workspace = true }
+hyper-rustls = { workspace = true }
+hyper = { workspace = true }
+serde_json = { workspace = true }
+lopdf = { workspace = true }
+pdf-extract = { workspace = true }
+url = { workspace = true }
+readability = { workspace = true }
+tl = { workspace = true }
+csv = { workspace = true }
