@@ -62,3 +62,6 @@ hyper = { workspace = true }
 serde_json = { workspace = true }
 lopdf = { workspace = true }
 pdf-extract = { workspace = true }
+url = { workspace = true }
+readability = { workspace = true }
+tl = { workspace = true }
