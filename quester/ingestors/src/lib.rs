@@ -3,3 +3,4 @@ pub use ingestor::*;
 pub mod pdf;
 pub mod txt;
 pub mod html;
+pub mod  csv;

@@ -1,0 +1,130 @@
+use async_stream::stream;
+use async_trait::async_trait;
+use common::CollectedBytes;
+use futures::Stream;
+use querent_synapse::comm::IngestedTokens;
+use std::{io::Cursor, pin::Pin, sync::Arc};
+
+
+use crate::{
+    process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
+    IngestorResult,
+};
+
+// Define the TxtIngestor
+pub struct CsvIngestor {
+    processors: Vec<Arc<dyn AsyncProcessor>>,
+}
+
+impl CsvIngestor {
+    pub fn new() -> Self {
+        Self { processors: Vec::new() }
+    }
+}
+
+#[async_trait]
+impl BaseIngestor for CsvIngestor {
+    fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
+        self.processors = processors;
+    }
+
+    async fn ingest(
+        &self,
+        all_collected_bytes: Vec<CollectedBytes>,
+    ) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
+    {
+        let mut buffer = Vec::new();
+        let mut file = String::new();
+        let mut doc_source = String::new();
+        for collected_bytes in all_collected_bytes.iter() {
+            if file.is_empty() {
+                file = collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
+            }
+            if doc_source.is_empty() {
+                doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+            }
+            buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+        }
+
+        let buffer = Arc::new(buffer);
+        let stream = {
+            let buffer = Arc::clone(&buffer);
+            stream! {
+
+                let cursor = Cursor::new(buffer.as_ref());
+                let mut reader = csv::Reader::from_reader(cursor);
+                let headers = reader.headers()?.clone();
+
+                for result in reader.records() {
+                    let record = result?;
+                    let mut content = String::new();
+
+                    for (i, field) in record.iter().enumerate() {
+                        let header = &headers[i];
+
+                        let line = format!("{}: {}", header, field);
+                        content.push_str(&line);
+                        content.push('\n');
+                    }
+
+                    let ingested_tokens = IngestedTokens {
+                        data: Some(vec![content]),
+                        file: file.clone(),
+                        doc_source: doc_source.clone(),
+                        is_token_stream: Some(false),
+                    };
+
+                    yield Ok(ingested_tokens);
+
+                }
+
+                let ingested_tokens = IngestedTokens {
+                    data: None,
+                    file: file.clone(),
+                    doc_source: doc_source.clone(),
+                    is_token_stream: Some(false),
+                };
+
+                yield Ok(ingested_tokens);
+
+            }
+        };
+
+        let processed_stream =
+            process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
+        Ok(Box::pin(processed_stream))
+    }
+}
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use std::path::Path;
+// 	use futures::StreamExt;
+
+//     #[tokio::test]
+//     async fn test_csv_ingestor() {
+
+//         let bytes = std::fs::read("/home/ansh/pyg-trail/sample-csv.csv").unwrap();
+
+//         // Create a CollectedBytes instance
+//         let collected_bytes = CollectedBytes {
+//             data: Some(bytes),
+//             file: Some(Path::new("sample-csv.csv").to_path_buf()),
+//             doc_source: Some("test_source".to_string()),
+// 			eof: false,
+// 			extension: Some("csv".to_string()),
+// 			size: Some(10),
+//         };
+
+//         let ingestor = CsvIngestor::new();
+
+//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+// 		let mut stream = result_stream;
+//         while let Some(tokens) = stream.next().await {
+// 			let tokens = tokens.unwrap();
+// 			println!("These are the tokens in file --------------{:?}", tokens);
+// 		}
+// 	}
+// }

@@ -65,3 +65,4 @@ pdf-extract = { workspace = true }
 url = { workspace = true }
 readability = { workspace = true }
 tl = { workspace = true }
+csv = { workspace = true }
