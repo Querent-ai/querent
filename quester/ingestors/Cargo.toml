@@ -66,3 +66,5 @@ url = { workspace = true }
 readability = { workspace = true }
 tl = { workspace = true }
 csv = { workspace = true }
+docx-rust = { workspace = true }
+xlsx_reader = { workspace = true }
