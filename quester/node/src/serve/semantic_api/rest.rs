@@ -1,5 +1,6 @@
 use actors::{AskError, MessageBus, Observe};
 use common::semantic_api::SendIngestedTokens;
+use engines::mock::MockEngine;
 use futures_util::StreamExt;
 use proto::{
 	config::StorageConfigs,
@@ -184,9 +185,11 @@ pub async fn start_pipeline(
 	}
 
 	let data_sources = create_dynamic_sources(&request).await?;
+	// TODO REPLACE WITH CORRECT AGN engine
+	let engine = Arc::new(MockEngine::new());
 
 	let pipeline_settings =
-		PipelineSettings { event_storages, index_storages, secret_store, data_sources };
+		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };
 
 	let pipeline_rest = semantic_service_mailbox
 		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.clone() })
@@ -317,7 +320,7 @@ async fn ingest_token_ws(
 	let (_tx, mut rx) = socket.split();
 	while let Some(result) = rx.next().await {
 		match result {
-			Ok(msg) =>
+			Ok(msg) => {
 				if msg.is_text() {
 					if let Ok(text) = msg.to_str() {
 						if let Ok(tokens_vec) = serde_json::from_str::<Vec<IngestedTokens>>(text) {
@@ -338,7 +341,8 @@ async fn ingest_token_ws(
 					}
 				} else {
 					warn!("Received non-text message: {:?}", msg);
-				},
+				}
+			},
 			Err(e) => {
 				error!("Error receiving message: {:?}", e);
 				break;

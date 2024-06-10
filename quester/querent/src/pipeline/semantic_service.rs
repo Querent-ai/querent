@@ -7,7 +7,6 @@ use async_trait::async_trait;
 use cluster::Cluster;
 use common::{semantic_api::SendIngestedTokens, MessageStateBatches, PubSubBroker};
 use proto::semantics::{EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata};
-use querent_synapse::comm::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -27,8 +26,6 @@ struct PipelineHandle {
 	handle: ActorHandle<SemanticPipeline>,
 	pipeline_id: String,
 	settings: PipelineSettings,
-	_token_sender: crossbeam_channel::Sender<IngestedTokens>,
-	_token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 }
 
 pub struct SemanticService {
@@ -129,7 +126,6 @@ impl SemanticService {
 		if self.semantic_pipelines.contains_key(&pipeline_id) {
 			return Err(PipelineErrors::PipelineAlreadyExists { pipeline_id });
 		}
-		let (token_sender, token_receiver) = crossbeam_channel::unbounded();
 		let semantic_pipe = SemanticPipeline::new(
 			pipeline_id.clone(),
 			settings.engine.clone(),
@@ -137,16 +133,14 @@ impl SemanticService {
 			settings.event_storages.clone(),
 			settings.index_storages.clone(),
 			self.pubsub_broker.clone(),
-			token_sender.clone(),
 		);
+
 		let (pipeline_mailbox, pipeline_handle) = ctx.spawn_actor().spawn(semantic_pipe);
 		let pipeline_handle = PipelineHandle {
 			mailbox: pipeline_mailbox,
 			handle: pipeline_handle,
 			settings,
 			pipeline_id: pipeline_id.clone(),
-			_token_sender: token_sender,
-			_token_receiver: token_receiver,
 		};
 		self.semantic_pipelines.insert(pipeline_id, pipeline_handle);
 		self.counters.num_running_pipelines += 1;

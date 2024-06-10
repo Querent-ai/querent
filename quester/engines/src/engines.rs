@@ -67,22 +67,13 @@ impl From<serde_json::Error> for EngineError {
 	}
 }
 
+/// Engine trait.
 #[async_trait]
 pub trait Engine: Send + Sync + 'static {
-	/// Initialize the engine with token stream.
-	async fn initialize(
-		&mut self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
-	) -> EngineResult<()>;
-
-	async fn set_token_channel(
-		&mut self,
-		token_channel: tokio::sync::mpsc::Sender<IngestedTokens>,
-	) -> EngineResult<()>;
-
 	/// Process the ingested tokens.
 	async fn process_ingested_tokens(
 		&self,
+		token_channel: crossbeam_channel::Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
 }
 

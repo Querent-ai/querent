@@ -5,6 +5,7 @@ use engines::{Engine, EngineErrorKind};
 use futures::StreamExt;
 use querent_synapse::{
 	callbacks::{EventState, EventType},
+	comm::IngestedTokens,
 	querent::QuerentError,
 };
 use std::{
@@ -27,6 +28,7 @@ use crate::{
 pub struct EngineRunner {
 	pub id: String,
 	pub engine: Arc<dyn Engine>,
+	pub token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 	pub event_lock: EventLock,
 	pub counters: Arc<EventsCounter>,
 	event_sender: mpsc::Sender<(EventType, EventState)>,
@@ -41,13 +43,14 @@ impl EngineRunner {
 	pub fn new(
 		id: String,
 		engine: Arc<dyn Engine>,
-		event_sender: mpsc::Sender<(EventType, EventState)>,
-		event_receiver: mpsc::Receiver<(EventType, EventState)>,
+		token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
+		let (event_sender, event_receiver) = mpsc::channel(100);
 		Self {
 			id: id.clone(),
 			engine,
+			token_receiver,
 			event_lock: EventLock::default(),
 			counters: Arc::new(EventsCounter::new(id.clone())),
 			event_sender,
@@ -80,11 +83,14 @@ impl Source for EngineRunner {
 
 		info!("Starting the engine 🚀");
 		let event_runner = self.engine.clone();
-		let mut engine_op = event_runner.process_ingested_tokens().await.map_err(|e| {
-			ActorExitStatus::Failure(
-				anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
-			)
-		})?;
+		let mut engine_op = event_runner
+			.process_ingested_tokens(self.token_receiver.clone())
+			.await
+			.map_err(|e| {
+				ActorExitStatus::Failure(
+					anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
+				)
+			})?;
 		let event_sender = self.event_sender.clone();
 
 		self.workflow_handle = Some(tokio::spawn(async move {

@@ -66,3 +66,4 @@ url = { workspace = true }
 readability = { workspace = true }
 tl = { workspace = true }
 csv = { workspace = true }
+crossbeam-channel = { workspace = true }

@@ -14,10 +14,7 @@ use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use sources::Source;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use storage::Storage;
-use tokio::{
-	sync::{mpsc, Semaphore},
-	time::Instant,
-};
+use tokio::{sync::Semaphore, time::Instant};
 use tracing::{debug, error, info};
 
 static SPAWN_PIPELINE_SEMAPHORE: Semaphore = Semaphore::const_new(10);
@@ -86,7 +83,8 @@ pub struct SemanticPipeline {
 	handlers: Option<PipelineHandlers>,
 	// pubsub broker
 	pub pubsub_broker: PubSubBroker,
-	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
+	token_sender: crossbeam_channel::Sender<IngestedTokens>,
+	token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 	retry_count: usize,
 }
 
@@ -98,8 +96,8 @@ impl SemanticPipeline {
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
 		pubsub_broker: PubSubBroker,
-		token_sender: crossbeam_channel::Sender<IngestedTokens>,
 	) -> Self {
+		let (token_sender, token_receiver) = crossbeam_channel::unbounded();
 		Self {
 			id,
 			engine,
@@ -110,7 +108,8 @@ impl SemanticPipeline {
 			statistics: IndexingStatistics::default(),
 			handlers: None,
 			pubsub_broker,
-			token_sender: Some(token_sender),
+			token_sender,
+			token_receiver,
 			retry_count: 0,
 		}
 	}
@@ -237,11 +236,8 @@ impl SemanticPipeline {
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(indexer);
 
 		// Ingestor actor
-		let ingestor_service = IngestorService::new(
-			qflow_id.clone(),
-			self.token_sender.clone().unwrap(),
-			current_timestamp,
-		);
+		let ingestor_service =
+			IngestorService::new(qflow_id.clone(), self.token_sender.clone(), current_timestamp);
 
 		let (ingestor_mailbox, ingestor_inbox) = ctx
 			.spawn_actor()
@@ -259,7 +255,6 @@ impl SemanticPipeline {
 			.spawn_actor()
 			.set_terminate_sig(self.terminate_sig.clone())
 			.spawn(event_streamer);
-		let (event_sender, event_receiver) = mpsc::channel(1000);
 
 		// Start various source actors
 		let mut collection_handlers = Vec::new();
@@ -287,8 +282,7 @@ impl SemanticPipeline {
 		let qflow_source = EngineRunner::new(
 			self.id.clone(),
 			self.engine.clone(),
-			event_sender,
-			event_receiver,
+			self.token_receiver.clone(),
 			self.terminate_sig.clone(),
 		);
 		let qflow_source_actor =
@@ -455,9 +449,8 @@ impl Handler<IngestedTokens> for SemanticPipeline {
 		ingested_tokens: IngestedTokens,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		if let Some(sender) = self.token_sender.as_ref() {
-			sender.send(ingested_tokens).unwrap();
-		}
+		self.token_sender.send(ingested_tokens).unwrap();
+
 		Ok(())
 	}
 }
