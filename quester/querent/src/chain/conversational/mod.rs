@@ -62,7 +62,7 @@ impl ConversationalChain {
 			"input"
 		));
 		let llm_chain = LLMChainBuilder::new().prompt(prompt).llm(llm).build()?; //Using the llm
-																		 //chian whitout memroy, because the conversational chain will take care of the history
+																		   //chian whitout memroy, because the conversational chain will take care of the history
 		Ok(Self { llm: llm_chain, memory: Arc::new(Mutex::new(SimpleMemory::new())) })
 	}
 
