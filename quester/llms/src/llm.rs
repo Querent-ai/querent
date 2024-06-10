@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use candle_core::Tensor;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
@@ -10,6 +11,10 @@ pub enum LLMErrorKind {
 	Io,
 	/// Not found error.
 	NotFound,
+	/// PyTorch error.
+	PyTorch,
+	/// Safetensors error.
+	SafeTensors,
 }
 
 /// Generic IngestorError.
@@ -70,11 +75,11 @@ pub trait LLM: Send + Sync {
 	async fn model_input(
 		&self,
 		tokenized_sequence: Vec<i32>,
-	) -> std::collections::HashMap<String, Vec<i32>>;
+	) -> std::collections::HashMap<String, Tensor>;
 	async fn tokenize(&self, word: &str) -> Vec<i32>;
 	async fn inference_attention(
 		&self,
-		model_input: std::collections::HashMap<String, Vec<i32>>,
+		model_input: std::collections::HashMap<String, Tensor>,
 	) -> Vec<Vec<f32>>;
 	async fn maximum_tokens(&self) -> usize;
 }
