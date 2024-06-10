@@ -1,11 +1,11 @@
-pub mod qsource;
 use std::{path::PathBuf, sync::Arc};
 
 use actors::{MessageBus, Quester};
 use cluster::Cluster;
 use common::PubSubBroker;
+pub mod core;
+pub use core::*;
 use proto::{semantics::SemanticPipelineRequest, NodeConfig};
-pub use qsource::*;
 pub mod events;
 pub use events::*;
 pub mod source;
