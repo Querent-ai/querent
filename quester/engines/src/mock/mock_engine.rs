@@ -112,4 +112,3 @@ impl MockEngine {
 //         assert_eq!(results[0].doc_source, "test_source");
 //     }
 // }
-
