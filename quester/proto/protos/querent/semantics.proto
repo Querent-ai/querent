@@ -120,9 +120,6 @@ message IndexingStatistics {
 
 message PipelineMetadata {
   string pipeline_id = 1;
-  string name = 2;
-  string import = 3;
-  string attr = 4;
 }
 
 message PipelinesMetadata {

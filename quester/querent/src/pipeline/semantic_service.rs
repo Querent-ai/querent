@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use cluster::Cluster;
 use common::{semantic_api::SendIngestedTokens, MessageStateBatches, PubSubBroker};
 use proto::semantics::{EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata};
-use querent_synapse::comm::{ChannelHandler, IngestedTokens, MessageState, MessageType};
+use querent_synapse::comm::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -29,11 +29,6 @@ struct PipelineHandle {
 	settings: PipelineSettings,
 	_token_sender: crossbeam_channel::Sender<IngestedTokens>,
 	_token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
-	_channel_sender: crossbeam_channel::Sender<(MessageType, MessageState)>,
-	_channel_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
-	_py_loop_side_sender: crossbeam_channel::Sender<(MessageType, MessageState)>,
-	_rust_loop_side_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
-	_channel_communicator: ChannelHandler,
 }
 
 pub struct SemanticService {
@@ -135,21 +130,14 @@ impl SemanticService {
 			return Err(PipelineErrors::PipelineAlreadyExists { pipeline_id });
 		}
 		let (token_sender, token_receiver) = crossbeam_channel::unbounded();
-		let (channel_sender, channel_receiver) = crossbeam_channel::unbounded();
-		let (py_loop_side_sender, rust_loop_side_receiver) = crossbeam_channel::unbounded();
-		let channel_communicator: ChannelHandler = ChannelHandler::new(
-			Some(token_sender.clone()),
-			Some(token_receiver.clone()),
-			Some(channel_receiver.clone()),
-			Some(py_loop_side_sender.clone()),
-		);
 		let semantic_pipe = SemanticPipeline::new(
-			settings.clone(),
+			pipeline_id.clone(),
+			settings.engine.clone(),
+			settings.data_sources.clone(),
+			settings.event_storages.clone(),
+			settings.index_storages.clone(),
 			self.pubsub_broker.clone(),
 			token_sender.clone(),
-			channel_sender.clone(),
-			rust_loop_side_receiver.clone(),
-			channel_communicator.clone(),
 		);
 		let (pipeline_mailbox, pipeline_handle) = ctx.spawn_actor().spawn(semantic_pipe);
 		let pipeline_handle = PipelineHandle {
@@ -159,11 +147,6 @@ impl SemanticService {
 			pipeline_id: pipeline_id.clone(),
 			_token_sender: token_sender,
 			_token_receiver: token_receiver,
-			_channel_sender: channel_sender,
-			_channel_receiver: channel_receiver,
-			_py_loop_side_sender: py_loop_side_sender,
-			_rust_loop_side_receiver: rust_loop_side_receiver,
-			_channel_communicator: channel_communicator,
 		};
 		self.semantic_pipelines.insert(pipeline_id, pipeline_handle);
 		self.counters.num_running_pipelines += 1;
@@ -332,9 +315,6 @@ impl Handler<EmptyGetPipelinesMetadata> for SemanticService {
 			.values()
 			.map(|pipeline_handle| PipelineMetadata {
 				pipeline_id: pipeline_handle.pipeline_id.clone(),
-				name: pipeline_handle.settings.qflow.name.clone(),
-				import: pipeline_handle.settings.qflow.import.clone(),
-				attr: pipeline_handle.settings.qflow.attr.clone(),
 			})
 			.collect();
 		Ok(pipelines_metadata)

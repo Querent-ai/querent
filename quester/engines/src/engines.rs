@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use futures::Stream;
-use querent_synapse::comm::IngestedTokens;
+use querent_synapse::{callbacks::EventState, comm::IngestedTokens};
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
@@ -8,6 +8,8 @@ use thiserror::Error;
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum EngineErrorKind {
+	/// Event streaming failed
+	EventStream,
 	/// Io error.
 	Io,
 	/// Not found error.
@@ -66,9 +68,27 @@ impl From<serde_json::Error> for EngineError {
 }
 
 #[async_trait]
-pub trait Engine: Send + Sync {
-	async fn process_ingested_tokens(
+pub trait Engine: Send + Sync + 'static {
+	/// Initialize the engine with token stream.
+	async fn initialize(
 		&mut self,
-		tokens: Pin<Box<dyn Stream<Item = IngestedTokens> + Send>>,
-	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<IngestedTokens>> + Send + 'static>>>;
+		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
+	) -> EngineResult<()>;
+
+	async fn set_token_channel(
+		&mut self,
+		token_channel: tokio::sync::mpsc::Sender<IngestedTokens>,
+	) -> EngineResult<()>;
+
+	/// Process the ingested tokens.
+	async fn process_ingested_tokens(
+		&self,
+	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
+}
+
+/// Debugging trait for Engine.
+impl std::fmt::Debug for dyn Engine {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "Engine")
+	}
 }

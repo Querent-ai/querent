@@ -1,10 +1,11 @@
 use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{EventsBatch, EventsCounter, TerimateSignal};
+use engines::{Engine, EngineErrorKind};
+use futures::StreamExt;
 use querent_synapse::{
-	callbacks::{interface::EventHandler, EventState, EventType},
-	config::{config::WorkflowConfig, Config},
-	querent::{Querent, QuerentError, Workflow, WorkflowBuilder},
+	callbacks::{EventState, EventType},
+	querent::QuerentError,
 };
 use std::{
 	collections::{HashMap, VecDeque},
@@ -23,9 +24,9 @@ use crate::{
 	EMIT_BATCHES_TIMEOUT,
 };
 
-pub struct QSource {
+pub struct EngineRunner {
 	pub id: String,
-	pub workflow: Workflow,
+	pub engine: Arc<dyn Engine>,
 	pub event_lock: EventLock,
 	pub counters: Arc<EventsCounter>,
 	event_sender: mpsc::Sender<(EventType, EventState)>,
@@ -36,40 +37,17 @@ pub struct QSource {
 	pub terminate_sig: TerimateSignal,
 }
 
-impl QSource {
+impl EngineRunner {
 	pub fn new(
 		id: String,
-		workflow: Workflow,
+		engine: Arc<dyn Engine>,
 		event_sender: mpsc::Sender<(EventType, EventState)>,
 		event_receiver: mpsc::Receiver<(EventType, EventState)>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
-		let workflow_event_handler: EventHandler = EventHandler::new(Some(event_sender.clone()));
-		let mut config_copy = workflow.config.unwrap_or(Config::default());
-		let workflow_config = WorkflowConfig {
-			name: config_copy.workflow.name,
-			id: config_copy.workflow.id,
-			config: config_copy.workflow.config,
-			inner_channel: config_copy.workflow.inner_channel,
-			channel: None,
-			inner_event_handler: Some(workflow_event_handler),
-			event_handler: None,
-			inner_tokens_feader: config_copy.workflow.inner_tokens_feader,
-			tokens_feader: None,
-		};
-		config_copy.workflow = workflow_config;
-
-		let workflow = WorkflowBuilder::new(workflow.id.as_str())
-			.name(workflow.name.as_str())
-			.import(Some(workflow.import))
-			.attr(Some(workflow.attr))
-			.code(workflow.code)
-			.config(config_copy)
-			.arguments(workflow.arguments)
-			.build();
 		Self {
 			id: id.clone(),
-			workflow,
+			engine,
 			event_lock: EventLock::default(),
 			counters: Arc::new(EventsCounter::new(id.clone())),
 			event_sender,
@@ -80,13 +58,13 @@ impl QSource {
 		}
 	}
 
-	pub fn get_config(&self) -> Option<Config> {
-		self.workflow.config.clone()
+	pub fn get_engine(&self) -> Arc<dyn Engine> {
+		self.engine.clone()
 	}
 }
 
 #[async_trait]
-impl Source for QSource {
+impl Source for EngineRunner {
 	async fn initialize(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
@@ -94,75 +72,60 @@ impl Source for QSource {
 	) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
 			if self.workflow_handle.as_ref().unwrap().is_finished() {
-				error!("QSource is already finished");
+				error!("EngineRunner is already finished");
 				return Err(ActorExitStatus::Success);
 			}
 			return Ok(());
 		}
 
 		info!("Starting the engine 🚀");
-		let querent = Querent::new().map_err(|e| {
+		let event_runner = self.engine.clone();
+		let mut engine_op = event_runner.process_ingested_tokens().await.map_err(|e| {
 			ActorExitStatus::Failure(
-				anyhow::anyhow!("Failed to initialize collector: {:?}", e).into(),
+				anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
 			)
 		})?;
-
-		querent.add_workflow(self.workflow.clone()).map_err(|e| {
-			error!("Failed to add workflow: {:?}", e);
-			ActorExitStatus::Failure(anyhow::anyhow!("Failed to add workflow: {:?}", e).into())
-		})?;
-
-		let workflow_id = self.workflow.id.clone();
 		let event_sender = self.event_sender.clone();
 
-		// Store the JoinHandle with the result in the QSource struct
 		self.workflow_handle = Some(tokio::spawn(async move {
-			let result = querent.start_workflows().await;
-			match result {
-				Ok(()) => {
-					// Handle the success
-					info!("Successfully started the workflow with id: {}", workflow_id);
-					// send yourself a success message to stop
-					event_sender
-						.send((
-							EventType::Success,
-							EventState {
-								event_type: EventType::Success,
-								timestamp: chrono::Utc::now().timestamp_millis() as f64,
-								payload: "".to_string(),
-								file: "".to_string(),
-								doc_source: "".to_string(),
-								image_id: Some("".to_string()),
-							},
-						))
-						.await
-						.unwrap();
-					Ok(())
-				},
-				Err(err) => {
-					// Handle the error, e.g., log it
-					error!(
-						"Failed to run the workflow with id: {} and error: {:?}",
-						workflow_id, err
-					);
-					event_sender
-						.send((
-							EventType::Failure,
-							EventState {
+			while let Some(data) = engine_op.next().await {
+				match data {
+					Ok(event) => {
+						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
+							error!("Failed to send event: {:?}", e);
+							break;
+						}
+					},
+					Err(e) => match e.kind() {
+						EngineErrorKind::EventStream => {
+							error!("Failed to process ingested tokens: {:?}", e);
+							let fail_event = EventState {
 								event_type: EventType::Failure,
 								timestamp: chrono::Utc::now().timestamp_millis() as f64,
-								payload: err.to_string(),
+								payload: format!("{:?}", e),
 								file: "".to_string(),
 								doc_source: "".to_string(),
-								image_id: Some("".to_string()),
-							},
-						))
-						.await
-						.unwrap();
-					Err(err)
-				},
+								image_id: None,
+							};
+
+							if let Err(e) =
+								event_sender.send((fail_event.clone().event_type, fail_event)).await
+							{
+								error!("Failed to send event: {:?}", e);
+								break;
+							}
+							break;
+						},
+						_ => {
+							error!("Failed to process ingested tokens: {:?}", e);
+							break;
+						},
+					},
+				}
 			}
+			Ok(())
 		}));
+
 		info!("Started the engine 🚀🚀 with id: {}", self.id);
 		let event_lock = self.event_lock.clone();
 		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
@@ -195,7 +158,7 @@ impl Source for QSource {
 							break
 						}
 						if event_type == EventType::Failure {
-							error!("QSource failed");
+							error!("EngineRunner failed");
 							is_failure = true;
 							break
 						}
@@ -248,7 +211,7 @@ impl Source for QSource {
 			return Err(ActorExitStatus::Success);
 		}
 		if is_failure {
-			return Err(ActorExitStatus::Failure(anyhow::anyhow!("QSource failed").into()));
+			return Err(ActorExitStatus::Failure(anyhow::anyhow!("EngineRunner failed").into()));
 		}
 		Ok(Duration::default())
 	}
@@ -271,7 +234,7 @@ impl Source for QSource {
 				handle.abort();
 			},
 			None => {
-				info!("QSource is already finished");
+				info!("EngineRunner is already finished");
 			},
 		}
 		Ok(())
