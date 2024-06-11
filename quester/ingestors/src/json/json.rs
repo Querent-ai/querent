@@ -5,7 +5,10 @@ use futures::{io::BufReader, AsyncReadExt, Stream};
 use querent_synapse::comm::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
 
-use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult};
+use crate::{
+	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind,
+	IngestorResult,
+};
 
 // Define the TxtIngestor
 pub struct JsonIngestor {
@@ -52,21 +55,21 @@ impl BaseIngestor for JsonIngestor {
 			buf_reader.read_to_string(&mut content).await
 				.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
 
-            let json: serde_json::Value = serde_json::from_str(&content).expect("JSON was not well-formatted");
+			let json: serde_json::Value = serde_json::from_str(&content).expect("JSON was not well-formatted");
 
-            for (key, value) in json.as_object().expect("Failed to get object").iter() {
-                let res = format!("{:?}   {:?}", key, value).to_string();
+			for (key, value) in json.as_object().expect("Failed to get object").iter() {
+				let res = format!("{:?}   {:?}", key, value).to_string();
 
-                let ingested_tokens = IngestedTokens {
-                    data: Some(vec![res.to_string()]),
-                    file: file.clone(),
-                    doc_source: doc_source.clone(),
-                    is_token_stream: Some(false),
-                };
+				let ingested_tokens = IngestedTokens {
+					data: Some(vec![res.to_string()]),
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: Some(false),
+				};
 
-                yield Ok(ingested_tokens);
+				yield Ok(ingested_tokens);
 
-            }
+			}
 		};
 
 		let processed_stream =

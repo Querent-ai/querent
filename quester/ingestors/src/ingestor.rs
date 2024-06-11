@@ -8,7 +8,9 @@ use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{
-	csv::csv::CsvIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor, json::json::JsonIngestor, pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor, xml::xml::XmlIngestor
+	csv::csv::CsvIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor,
+	image::image::ImageIngestor, json::json::JsonIngestor, pdf::pdfv1::PdfIngestor,
+	txt::txt::TxtIngestor, xml::xml::XmlIngestor,
 };
 
 /// Ingestor error kind.
