@@ -79,21 +79,21 @@ impl Source for EngineRunner {
 		}
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 		self.event_receiver = Some(event_receiver);
-		let event_sender = event_sender.clone();
 		let event_runner = self.engine.clone();
-
-		info!("Starting the engine 🚀");
-		let mut engine_op = event_runner
-			.process_ingested_tokens(self.token_receiver.clone())
-			.await
-			.map_err(|e| {
-				ActorExitStatus::Failure(
-					anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
-				)
-			})?;
 		let event_sender = event_sender.clone();
-
+		let token_receiver = self.token_receiver.clone();
+		info!("Starting the engine 🚀");
 		self.workflow_handle = Some(tokio::spawn(async move {
+			let mut engine_op = event_runner
+				.process_ingested_tokens(token_receiver)
+				.await
+				.map_err(|e| {
+					ActorExitStatus::Failure(
+						anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
+					)
+				})
+				.expect("Expect engine to run");
+
 			while let Some(data) = engine_op.next().await {
 				match data {
 					Ok(event) => {
@@ -128,6 +128,21 @@ impl Source for EngineRunner {
 						},
 					},
 				}
+			}
+
+			let success_event = EventState {
+				event_type: EventType::Success,
+				timestamp: chrono::Utc::now().timestamp_millis() as f64,
+				payload: "".to_string(),
+				file: "".to_string(),
+				doc_source: "".to_string(),
+				image_id: None,
+			};
+
+			if let Err(e) =
+				event_sender.send((success_event.clone().event_type, success_event)).await
+			{
+				error!("Failed to send event: {:?}", e);
 			}
 			Ok(())
 		}));
@@ -216,6 +231,8 @@ impl Source for EngineRunner {
 			}
 		}
 		if is_successs {
+			// sleep for 10 seconds to allow the engine send remaining events to database
+			time::sleep(Duration::from_secs(10)).await;
 			return Err(ActorExitStatus::Success);
 		}
 		if is_failure {
