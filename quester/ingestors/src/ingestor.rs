@@ -8,9 +8,7 @@ use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{
-	csv::csv::CsvIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor,
-	image::image::ImageIngestor, pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor,
-	xml::xml::XmlIngestor,
+	csv::csv::CsvIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor, json::json::JsonIngestor, pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor, xml::xml::XmlIngestor
 };
 
 /// Ingestor error kind.
@@ -152,6 +150,7 @@ pub async fn resolve_ingestor_with_extension(
 		"jpeg" => Ok(Arc::new(ImageIngestor::new())),
 		"jpg" => Ok(Arc::new(ImageIngestor::new())),
 		"png" => Ok(Arc::new(ImageIngestor::new())),
+		"json" => Ok(Arc::new(JsonIngestor::new())),
 		_ => Err(IngestorError::new(
 			IngestorErrorKind::NotSupported,
 			Arc::new(anyhow::anyhow!("Extension not supported")),
