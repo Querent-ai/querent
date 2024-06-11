@@ -31,8 +31,7 @@ pub struct EngineRunner {
 	pub token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 	pub event_lock: EventLock,
 	pub counters: Arc<EventsCounter>,
-	event_sender: mpsc::Sender<(EventType, EventState)>,
-	event_receiver: mpsc::Receiver<(EventType, EventState)>,
+	event_receiver: Option<mpsc::Receiver<(EventType, EventState)>>,
 	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
 	docs_buffer: VecDeque<String>,
 	// terimatesignal to kill actors in the pipeline.
@@ -46,15 +45,13 @@ impl EngineRunner {
 		token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
-		let (event_sender, event_receiver) = mpsc::channel(100);
 		Self {
 			id: id.clone(),
 			engine,
 			token_receiver,
 			event_lock: EventLock::default(),
 			counters: Arc::new(EventsCounter::new(id.clone())),
-			event_sender,
-			event_receiver,
+			event_receiver: None,
 			workflow_handle: None,
 			terminate_sig,
 			docs_buffer: VecDeque::with_capacity(1000),
@@ -80,9 +77,12 @@ impl Source for EngineRunner {
 			}
 			return Ok(());
 		}
+		let (event_sender, event_receiver) = mpsc::channel(1000);
+		self.event_receiver = Some(event_receiver);
+		let event_sender = event_sender.clone();
+		let event_runner = self.engine.clone();
 
 		info!("Starting the engine 🚀");
-		let event_runner = self.engine.clone();
 		let mut engine_op = event_runner
 			.process_ingested_tokens(self.token_receiver.clone())
 			.await
@@ -91,7 +91,7 @@ impl Source for EngineRunner {
 					anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
 				)
 			})?;
-		let event_sender = self.event_sender.clone();
+		let event_sender = event_sender.clone();
 
 		self.workflow_handle = Some(tokio::spawn(async move {
 			while let Some(data) = engine_op.next().await {
@@ -152,9 +152,11 @@ impl Source for EngineRunner {
 		let mut counter = 0;
 		let mut is_successs = false;
 		let mut is_failure = false;
+		let event_receiver = self.event_receiver.as_mut().unwrap();
+
 		loop {
 			tokio::select! {
-				event_opt = self.event_receiver.recv() => {
+				event_opt = event_receiver.recv() => {
 					if let Some((event_type, event_data)) = event_opt {
 						if event_data.payload.is_empty() {
 							continue;
