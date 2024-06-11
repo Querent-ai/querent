@@ -1,8 +1,11 @@
 pub mod ingestor;
 pub use ingestor::*;
+pub mod audio;
 pub mod csv;
 pub mod docx;
 pub mod html;
+pub mod image;
 pub mod pdf;
 pub mod txt;
 pub mod xlsx;
+pub mod xml;

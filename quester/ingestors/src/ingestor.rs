@@ -9,7 +9,8 @@ use thiserror::Error;
 
 use crate::{
 	csv::csv::CsvIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor,
-	pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor,
+	image::image::ImageIngestor, pdf::pdfv1::PdfIngestor, txt::txt::TxtIngestor,
+	xml::xml::XmlIngestor,
 };
 
 /// Ingestor error kind.
@@ -146,8 +147,11 @@ pub async fn resolve_ingestor_with_extension(
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),
-		"xml" => Ok(Arc::new(HtmlIngestor::new())),
+		"xml" => Ok(Arc::new(XmlIngestor::new())),
 		"docx" => Ok(Arc::new(DocxIngestor::new())),
+		"jpeg" => Ok(Arc::new(ImageIngestor::new())),
+		"jpg" => Ok(Arc::new(ImageIngestor::new())),
+		"png" => Ok(Arc::new(ImageIngestor::new())),
 		_ => Err(IngestorError::new(
 			IngestorErrorKind::NotSupported,
 			Arc::new(anyhow::anyhow!("Extension not supported")),
