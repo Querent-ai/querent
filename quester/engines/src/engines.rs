@@ -4,7 +4,6 @@ use querent_synapse::{callbacks::EventState, comm::IngestedTokens};
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
-use tokio::sync::mpsc::Receiver;
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -74,7 +73,7 @@ pub trait Engine: Send + Sync + 'static {
 	/// Process the ingested tokens.
 	async fn process_ingested_tokens(
 		&self,
-		token_channel: Receiver<IngestedTokens>,
+		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
 }
 

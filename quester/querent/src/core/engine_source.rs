@@ -17,6 +17,7 @@ use tokio::{
 	task::JoinHandle,
 	time::{self},
 };
+use tokio_stream::wrappers::ReceiverStream;
 use tracing::{error, info};
 
 use crate::{
@@ -47,9 +48,10 @@ impl EngineRunner {
 		let event_runner = engine.clone();
 		let event_sender = event_sender.clone();
 		info!("Starting the engine 🚀");
+		let token_stream = Box::pin(ReceiverStream::new(token_receiver));
 		let workflow_handle = Some(tokio::spawn(async move {
 			let mut engine_op = event_runner
-				.process_ingested_tokens(token_receiver)
+				.process_ingested_tokens(token_stream)
 				.await
 				.map_err(|e| {
 					ActorExitStatus::Failure(
