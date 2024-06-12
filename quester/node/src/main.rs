@@ -26,7 +26,7 @@ fn main() -> Result<(), anyhow::Error> {
 	let runtime = tokio_runtime();
 	match runtime {
 		Ok(runtime) => {
-			info!("Python runtime initialized.");
+			info!("⚙️ Querent Runtime initialized.");
 			trace!("Starting main loop");
 			let _ = runtime
 				.block_on(main_impl())
