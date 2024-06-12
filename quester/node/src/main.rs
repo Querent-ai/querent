@@ -1,45 +1,47 @@
 use colored::Colorize;
 use common::RED_COLOR;
 use node::{
-	cli::{build_cli, setup_logging_and_tracing, CliCommand},
+	cli::{build_cli, busy_detector, setup_logging_and_tracing, CliCommand},
 	serve::build_info::BuildInfo,
 };
+use once_cell::sync::OnceCell;
 use opentelemetry::global;
-use querent_synapse::{
-	querent::{py_runtime_init, QuerentError},
-	tokio_runtime,
-};
+use tokio::runtime::{Builder, Runtime};
 use tracing::{error, info, trace};
 
-fn main() -> Result<(), QuerentError> {
+pub fn tokio_runtime() -> Result<&'static Runtime, anyhow::Error> {
+	static RUNTIME: OnceCell<Runtime> = OnceCell::new();
+
+	RUNTIME.get_or_try_init(|| {
+		Builder::new_multi_thread()
+			.enable_all()
+			.on_thread_unpark(busy_detector::thread_unpark)
+			.on_thread_park(busy_detector::thread_park)
+			.build()
+			.map_err(|err| anyhow::anyhow!("Failed to create tokio runtime: {}", err))
+	})
+}
+
+fn main() -> Result<(), anyhow::Error> {
 	let runtime = tokio_runtime();
 	match runtime {
 		Ok(runtime) => {
-			// Initialize the Python runtime
-			let python_runtime_res = py_runtime_init();
-			match python_runtime_res {
-				Ok(_) => {
-					info!("Python runtime initialized.");
-					trace!("Starting main loop");
-					let _ = runtime
-						.block_on(main_impl())
-						.map_err(|e| QuerentError::internal(e.to_string()));
-				},
-				Err(e) => {
-					error!("Failed to initialize Python runtime: {}", e);
-					return Err(QuerentError::internal(format!(
-						"Failed to initialize Python runtime: {}",
-						e
-					)));
-				},
-			}
+			info!("Python runtime initialized.");
+			trace!("Starting main loop");
+			let _ = runtime
+				.block_on(main_impl())
+				.map_err(|e| anyhow::anyhow!("Main loop failed: {:?}", e));
+			info!("Querent node stopped.");
 			Ok(())
 		},
-		Err(err) => Err(err),
+		Err(e) => {
+			error!("Failed to initialize tokio runtime: {:?}", e);
+			Err(e)
+		},
 	}
 }
 
-async fn main_impl() -> Result<(), QuerentError> {
+async fn main_impl() -> Result<(), anyhow::Error> {
 	#[cfg(feature = "openssl-support")]
 	openssl_probe::init_ssl_cert_env_vars();
 
@@ -58,9 +60,8 @@ async fn main_impl() -> Result<(), QuerentError> {
 			std::process::exit(1);
 		},
 	};
-	setup_logging_and_tracing(command.default_log_level(), true, build_info).map_err(|e| {
-		QuerentError::internal(format!("Failed to set up logging and tracing: {}", e))
-	})?;
+	setup_logging_and_tracing(command.default_log_level(), true, build_info)
+		.map_err(|e| anyhow::anyhow!("Failed to set up logging and tracing: {:?}", e))?;
 
 	let return_code: i32 = if let Err(err) = command.execute().await {
 		eprintln!("{} Command failed: {:?}\n", "✘".color(RED_COLOR), err);

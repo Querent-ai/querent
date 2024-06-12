@@ -61,7 +61,6 @@ warp = { workspace = true }
 serde_qs = { workspace = true }
 num_cpus = { workspace = true }
 hyper = { workspace = true }
-querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
 querent = { workspace = true }

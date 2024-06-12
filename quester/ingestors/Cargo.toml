@@ -10,7 +10,6 @@ homepage = "https://querent.xyz/"
 documentation = "https:/querent.xyz/docs/"
 
 [dependencies]
-querent-synapse = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }
 actors = { workspace = true }

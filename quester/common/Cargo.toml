@@ -43,7 +43,6 @@ tokio-stream = { workspace = true }
 tonic = { workspace = true }
 tower = { workspace = true }
 tracing = { workspace = true }
-querent-synapse = { workspace = true }
 utoipa = { workspace = true }
 siphasher = { workspace = true }
 
