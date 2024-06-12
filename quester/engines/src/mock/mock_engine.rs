@@ -1,12 +1,9 @@
 use crate::{Engine, EngineResult};
 use async_stream::stream;
 use async_trait::async_trait;
-use common::SemanticKnowledgePayload;
+use common::{EventState, EventType, SemanticKnowledgePayload};
 use futures::{Stream, StreamExt};
-use querent_synapse::{
-	callbacks::{EventState, EventType},
-	comm::IngestedTokens,
-};
+use proto::semantics::IngestedTokens;
 use std::pin::Pin;
 
 pub struct MockEngine;

@@ -2,12 +2,12 @@ use crate::{discovery_agent::DiscoveryAgent, discovery_searcher::DiscoverySearch
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
+use common::EventType;
 use proto::{
 	DiscoveryAgentType, DiscoveryError, DiscoveryRequest, DiscoveryResponse,
 	DiscoverySessionRequest, DiscoverySessionResponse, StopDiscoverySessionRequest,
 	StopDiscoverySessionResponse,
 };
-use querent_synapse::callbacks::EventType;
 use std::{
 	collections::HashMap,
 	fmt::{Debug, Formatter},

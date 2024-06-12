@@ -1,5 +1,4 @@
-use common::{SemanticKnowledgePayload, VectorPayload};
-use querent_synapse::callbacks::{EventState, EventType};
+use common::{EventState, EventType, SemanticKnowledgePayload, VectorPayload};
 use serde::Serialize;
 use tracing::error;
 

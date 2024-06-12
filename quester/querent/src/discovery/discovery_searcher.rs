@@ -1,12 +1,11 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
-use common::RuntimeType;
+use common::{EventType, RuntimeType};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;

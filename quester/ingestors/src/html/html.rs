@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
 
@@ -57,29 +57,11 @@ impl BaseIngestor for HtmlIngestor {
 				cursor.read_to_string(&mut content).await
 					.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
 
-				println!("{}", content);
-
-				// let dom = tl::parse(&content, tl::ParserOptions::default()).unwrap();
-				// let parser = dom.parser();
-				// let element = dom.get_element_by_id("body")
-				// .expect("Failed to find element")
-				// .get(parser)
-				// .unwrap();
-
-				// println!("body     =================== {}", element.inner_text(parser));
-
-				// let url = Url::parse("http://www.querent.xyz").map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-				// let cleaned_html = extract(&mut cursor, &url).map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-
-				// println!("text     {:?}", cleaned_html.text);
-
-				// let data = format!("{}\n{}", cleaned_html.title, cleaned_html.text);
-
 				let ingested_tokens = IngestedTokens {
-					data: Some(vec![content]),
+					data: vec![content],
 					file: file.clone(),
 					doc_source: doc_source.clone(),
-					is_token_stream: Some(false),
+					is_token_stream: false,
 				};
 
 				yield Ok(ingested_tokens);

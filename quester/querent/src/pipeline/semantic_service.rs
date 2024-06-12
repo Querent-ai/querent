@@ -5,8 +5,10 @@ use actors::{
 };
 use async_trait::async_trait;
 use cluster::Cluster;
-use common::{semantic_api::SendIngestedTokens, MessageStateBatches, PubSubBroker};
-use proto::semantics::{EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata};
+use common::PubSubBroker;
+use proto::semantics::{
+	EmptyGetPipelinesMetadata, IndexingStatistics, PipelineMetadata, SendIngestedTokens,
+};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -253,24 +255,6 @@ impl Handler<ShutdownPipeline> for SemanticService {
 		let pipeline_handle_opt = pipeline_handle_opt.unwrap();
 		let shutdown_message = ShutdownPipe { pipeline_id: message.pipeline_id.clone() };
 		pipeline_handle_opt.mailbox.send_message(shutdown_message).await?;
-		Ok(())
-	}
-}
-
-#[async_trait]
-impl Handler<MessageStateBatches> for SemanticService {
-	type Reply = ();
-
-	async fn handle(
-		&mut self,
-		message: MessageStateBatches,
-		_ctx: &ActorContext<Self>,
-	) -> Result<Self::Reply, ActorExitStatus> {
-		let _pipeline_handle = &self
-			.semantic_pipelines
-			.get(&message.pipeline_id)
-			.ok_or(anyhow::anyhow!("Semantic pipeline `{}` not found.", message.pipeline_id))?;
-		// TODO: periodically this gets triggered and we can send MessageState batches to a logger or something
 		Ok(())
 	}
 }

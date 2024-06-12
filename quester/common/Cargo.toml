@@ -47,7 +47,6 @@ querent-synapse = { workspace = true }
 utoipa = { workspace = true }
 siphasher = { workspace = true }
 
-
 [features]
 testsuite = []
 

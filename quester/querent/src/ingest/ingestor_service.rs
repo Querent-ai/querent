@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender};
 use tracing::{debug, error, info};
 

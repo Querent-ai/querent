@@ -7,10 +7,9 @@ use actors::{
 	Supervisable, HEARTBEAT,
 };
 use async_trait::async_trait;
-use common::{PubSubBroker, TerimateSignal};
+use common::{EventType, PubSubBroker, TerimateSignal};
 use engines::Engine;
-use proto::semantics::IndexingStatistics;
-use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
+use proto::semantics::{IndexingStatistics, IngestedTokens};
 use sources::Source;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use storage::Storage;

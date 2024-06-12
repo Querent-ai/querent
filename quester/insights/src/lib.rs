@@ -1,11 +1,10 @@
 use actors::Quester;
 use client::DiscoveryServiceClient;
 use cluster::Cluster;
-use common::Pool;
+use common::{EventType, Pool};
 use error::DiscoveryError;
 use proto::NodeConfig;
 use querent::discovery_service::DiscoveryAgentService;
-use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use storage::Storage;
 use tracing::info;

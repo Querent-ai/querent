@@ -1,12 +1,9 @@
 use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
-use common::{EventsBatch, EventsCounter, TerimateSignal};
+use common::{EventState, EventType, EventsBatch, EventsCounter, TerimateSignal};
 use engines::{Engine, EngineError, EngineErrorKind};
 use futures::StreamExt;
-use querent_synapse::{
-	callbacks::{EventState, EventType},
-	comm::IngestedTokens,
-};
+use proto::semantics::IngestedTokens;
 use std::{
 	collections::{HashMap, VecDeque},
 	sync::Arc,

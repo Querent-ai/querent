@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use common::EventState;
 use futures::Stream;
-use querent_synapse::{callbacks::EventState, comm::IngestedTokens};
+use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
