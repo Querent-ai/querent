@@ -15,6 +15,8 @@ pub enum LLMErrorKind {
 	PyTorch,
 	/// Safetensors error.
 	SafeTensors,
+	///Model error
+	ModelError,
 }
 
 /// Generic IngestorError.
@@ -67,19 +69,23 @@ impl From<serde_json::Error> for LLMError {
 	}
 }
 
+
 #[async_trait]
 pub trait LLM: Send + Sync {
-	async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
-	async fn num_start_tokens(&self) -> usize;
-	async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
-	async fn model_input(
-		&self,
-		tokenized_sequence: Vec<i32>,
-	) -> std::collections::HashMap<String, Tensor>;
-	async fn tokenize(&self, word: &str) -> Vec<i32>;
-	async fn inference_attention(
-		&self,
-		model_input: std::collections::HashMap<String, Tensor>,
-	) -> Vec<Vec<f32>>;
-	async fn maximum_tokens(&self) -> usize;
+    async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
+    async fn num_start_tokens(&self) -> usize;
+    async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
+    async fn model_input(
+        &self,
+        tokenized_sequence: Vec<i32>,
+    ) -> std::collections::HashMap<String, Tensor>;
+    async fn tokenize(&self, word: &str) -> Vec<i32>;
+    async fn inference_attention(
+        &self,
+        model_input: std::collections::HashMap<String, Tensor>,
+    ) -> Tensor;
+    async fn maximum_tokens(&self) -> usize;
+    async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
+    async fn process_attention_weights(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError>;
 }
+

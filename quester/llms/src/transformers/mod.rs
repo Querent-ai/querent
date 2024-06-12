@@ -1,5 +1,7 @@
 pub mod bert;
 pub use bert::*;
+pub mod bertattention;
+pub use bertattention::*;
 use ordered_float::OrderedFloat;
 
 /// Describes the mean and sigma of distribution of embedding similarity in the embedding space.
