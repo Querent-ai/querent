@@ -1,12 +1,11 @@
 use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{EventsBatch, EventsCounter, TerimateSignal};
-use engines::{Engine, EngineErrorKind};
+use engines::{Engine, EngineError, EngineErrorKind};
 use futures::StreamExt;
 use querent_synapse::{
 	callbacks::{EventState, EventType},
 	comm::IngestedTokens,
-	querent::QuerentError,
 };
 use std::{
 	collections::{HashMap, VecDeque},
@@ -28,11 +27,10 @@ use crate::{
 pub struct EngineRunner {
 	pub id: String,
 	pub engine: Arc<dyn Engine>,
-	pub token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
 	pub event_lock: EventLock,
 	pub counters: Arc<EventsCounter>,
 	event_receiver: Option<mpsc::Receiver<(EventType, EventState)>>,
-	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
+	workflow_handle: Option<JoinHandle<Result<(), EngineError>>>,
 	docs_buffer: VecDeque<String>,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
@@ -42,17 +40,100 @@ impl EngineRunner {
 	pub fn new(
 		id: String,
 		engine: Arc<dyn Engine>,
-		token_receiver: crossbeam_channel::Receiver<IngestedTokens>,
+		mut token_receiver: mpsc::Receiver<IngestedTokens>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
+		let (event_sender, event_receiver) = mpsc::channel(1000);
+		let event_runner = engine.clone();
+		let event_sender = event_sender.clone();
+		info!("Starting the engine 🚀");
+		let workflow_handle = Some(tokio::spawn(async move {
+			while let Some(token) = token_receiver.recv().await {
+				let mut engine_op = event_runner
+					.process_ingested_tokens(vec![token])
+					.await
+					.map_err(|e| {
+						ActorExitStatus::Failure(
+							anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
+						)
+					})
+					.expect("Expect engine to run");
+
+				while let Some(data) = engine_op.next().await {
+					match data {
+						Ok(event) => {
+							if let Err(e) =
+								event_sender.send((event.clone().event_type, event)).await
+							{
+								return Err(EngineError::new(
+									EngineErrorKind::EventStream,
+									Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+								));
+							}
+						},
+						Err(e) => match e.kind() {
+							EngineErrorKind::EventStream => {
+								error!("Failed to process ingested tokens: {:?}", e);
+								let fail_event = EventState {
+									event_type: EventType::Failure,
+									timestamp: chrono::Utc::now().timestamp_millis() as f64,
+									payload: format!("{:?}", e),
+									file: "".to_string(),
+									doc_source: "".to_string(),
+									image_id: None,
+								};
+
+								if let Err(e) = event_sender
+									.send((fail_event.clone().event_type, fail_event))
+									.await
+								{
+									error!("Failed to send event: {:?}", e);
+									return Err(EngineError::new(
+										EngineErrorKind::EventStream,
+										Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+									));
+								}
+								break;
+							},
+							_ => {
+								error!("Failed to process ingested tokens: {:?}", e);
+								return Err(EngineError::new(
+									EngineErrorKind::EventStream,
+									Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+								));
+							},
+						},
+					}
+				}
+
+				let success_event = EventState {
+					event_type: EventType::Success,
+					timestamp: chrono::Utc::now().timestamp_millis() as f64,
+					payload: "".to_string(),
+					file: "".to_string(),
+					doc_source: "".to_string(),
+					image_id: None,
+				};
+
+				if let Err(e) =
+					event_sender.send((success_event.clone().event_type, success_event)).await
+				{
+					error!("Failed to send event: {:?}", e);
+					return Err(EngineError::new(
+						EngineErrorKind::EventStream,
+						Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+					));
+				}
+			}
+			Ok(())
+		}));
 		Self {
 			id: id.clone(),
 			engine,
-			token_receiver,
 			event_lock: EventLock::default(),
 			counters: Arc::new(EventsCounter::new(id.clone())),
-			event_receiver: None,
-			workflow_handle: None,
+			event_receiver: Some(event_receiver),
+			workflow_handle,
 			terminate_sig,
 			docs_buffer: VecDeque::with_capacity(1000),
 		}
@@ -77,75 +158,6 @@ impl Source for EngineRunner {
 			}
 			return Ok(());
 		}
-		let (event_sender, event_receiver) = mpsc::channel(1000);
-		self.event_receiver = Some(event_receiver);
-		let event_runner = self.engine.clone();
-		let event_sender = event_sender.clone();
-		let token_receiver = self.token_receiver.clone();
-		info!("Starting the engine 🚀");
-		self.workflow_handle = Some(tokio::spawn(async move {
-			let mut engine_op = event_runner
-				.process_ingested_tokens(token_receiver)
-				.await
-				.map_err(|e| {
-					ActorExitStatus::Failure(
-						anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
-					)
-				})
-				.expect("Expect engine to run");
-
-			while let Some(data) = engine_op.next().await {
-				match data {
-					Ok(event) => {
-						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
-							error!("Failed to send event: {:?}", e);
-							break;
-						}
-					},
-					Err(e) => match e.kind() {
-						EngineErrorKind::EventStream => {
-							error!("Failed to process ingested tokens: {:?}", e);
-							let fail_event = EventState {
-								event_type: EventType::Failure,
-								timestamp: chrono::Utc::now().timestamp_millis() as f64,
-								payload: format!("{:?}", e),
-								file: "".to_string(),
-								doc_source: "".to_string(),
-								image_id: None,
-							};
-
-							if let Err(e) =
-								event_sender.send((fail_event.clone().event_type, fail_event)).await
-							{
-								error!("Failed to send event: {:?}", e);
-								break;
-							}
-							break;
-						},
-						_ => {
-							error!("Failed to process ingested tokens: {:?}", e);
-							break;
-						},
-					},
-				}
-			}
-
-			let success_event = EventState {
-				event_type: EventType::Success,
-				timestamp: chrono::Utc::now().timestamp_millis() as f64,
-				payload: "".to_string(),
-				file: "".to_string(),
-				doc_source: "".to_string(),
-				image_id: None,
-			};
-
-			if let Err(e) =
-				event_sender.send((success_event.clone().event_type, success_event)).await
-			{
-				error!("Failed to send event: {:?}", e);
-			}
-			Ok(())
-		}));
 
 		info!("Started the engine 🚀🚀 with id: {}", self.id);
 		let event_lock = self.event_lock.clone();

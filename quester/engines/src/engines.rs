@@ -73,7 +73,7 @@ pub trait Engine: Send + Sync + 'static {
 	/// Process the ingested tokens.
 	async fn process_ingested_tokens(
 		&self,
-		token_channel: crossbeam_channel::Receiver<IngestedTokens>,
+		tokens: Vec<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
 }
 

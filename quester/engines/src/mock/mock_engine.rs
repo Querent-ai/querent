@@ -1,7 +1,7 @@
 use crate::{Engine, EngineResult};
 use async_stream::stream;
 use async_trait::async_trait;
-use crossbeam_channel::Receiver;
+use common::SemanticKnowledgePayload;
 use futures::Stream;
 use querent_synapse::{
 	callbacks::{EventState, EventType},
@@ -15,18 +15,30 @@ pub struct MockEngine;
 impl Engine for MockEngine {
 	async fn process_ingested_tokens(
 		&self,
-		token_channel: Receiver<IngestedTokens>,
+		tokens: Vec<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>> {
 		let stream = stream! {
-			for token in token_channel {
-				println!("This is the token i recieved :::::{:?}", token);
+			for token in tokens {
+				// create a payload
+				let payload = SemanticKnowledgePayload {
+					subject: "mock".to_string(),
+					subject_type: "mock".to_string(),
+					predicate: "mock".to_string(),
+					predicate_type: "mock".to_string(),
+					object: "mock".to_string(),
+					object_type: "mock".to_string(),
+					sentence: "mock".to_string(),
+					image_id: None,
+				};
+
+				// create an event
 				let event = EventState {
 					event_type: EventType::Graph,
 					file: token.file,
 					doc_source: token.doc_source,
 					image_id: None,
 					timestamp: 0.0,
-					payload: r#"{"subject": "mock", "predicate": "mock", "object": "mock", "sentence": "mock"}"#.to_string(),
+					payload: serde_json::to_string(&payload).unwrap_or_default(),
 				};
 				yield Ok(event);
 			}
