@@ -40,7 +40,7 @@ impl EngineRunner {
 	pub fn new(
 		id: String,
 		engine: Arc<dyn Engine>,
-		mut token_receiver: mpsc::Receiver<IngestedTokens>,
+		token_receiver: mpsc::Receiver<IngestedTokens>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
 		let (event_sender, event_receiver) = mpsc::channel(1000);
@@ -48,82 +48,77 @@ impl EngineRunner {
 		let event_sender = event_sender.clone();
 		info!("Starting the engine 🚀");
 		let workflow_handle = Some(tokio::spawn(async move {
-			while let Some(token) = token_receiver.recv().await {
-				let mut engine_op = event_runner
-					.process_ingested_tokens(vec![token])
-					.await
-					.map_err(|e| {
-						ActorExitStatus::Failure(
-							anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
-						)
-					})
-					.expect("Expect engine to run");
+			let mut engine_op = event_runner
+				.process_ingested_tokens(token_receiver)
+				.await
+				.map_err(|e| {
+					ActorExitStatus::Failure(
+						anyhow::anyhow!("Failed to process ingested tokens: {:?}", e).into(),
+					)
+				})
+				.expect("Expect engine to run");
 
-				while let Some(data) = engine_op.next().await {
-					match data {
-						Ok(event) => {
+			while let Some(data) = engine_op.next().await {
+				match data {
+					Ok(event) => {
+						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
+							return Err(EngineError::new(
+								EngineErrorKind::EventStream,
+								Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+							));
+						}
+					},
+					Err(e) => match e.kind() {
+						EngineErrorKind::EventStream => {
+							error!("Failed to process ingested tokens: {:?}", e);
+							let fail_event = EventState {
+								event_type: EventType::Failure,
+								timestamp: chrono::Utc::now().timestamp_millis() as f64,
+								payload: format!("{:?}", e),
+								file: "".to_string(),
+								doc_source: "".to_string(),
+								image_id: None,
+							};
+
 							if let Err(e) =
-								event_sender.send((event.clone().event_type, event)).await
+								event_sender.send((fail_event.clone().event_type, fail_event)).await
 							{
+								error!("Failed to send event: {:?}", e);
 								return Err(EngineError::new(
 									EngineErrorKind::EventStream,
 									Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
 								));
 							}
+							break;
 						},
-						Err(e) => match e.kind() {
-							EngineErrorKind::EventStream => {
-								error!("Failed to process ingested tokens: {:?}", e);
-								let fail_event = EventState {
-									event_type: EventType::Failure,
-									timestamp: chrono::Utc::now().timestamp_millis() as f64,
-									payload: format!("{:?}", e),
-									file: "".to_string(),
-									doc_source: "".to_string(),
-									image_id: None,
-								};
-
-								if let Err(e) = event_sender
-									.send((fail_event.clone().event_type, fail_event))
-									.await
-								{
-									error!("Failed to send event: {:?}", e);
-									return Err(EngineError::new(
-										EngineErrorKind::EventStream,
-										Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
-									));
-								}
-								break;
-							},
-							_ => {
-								error!("Failed to process ingested tokens: {:?}", e);
-								return Err(EngineError::new(
-									EngineErrorKind::EventStream,
-									Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
-								));
-							},
+						_ => {
+							error!("Failed to process ingested tokens: {:?}", e);
+							return Err(EngineError::new(
+								EngineErrorKind::EventStream,
+								Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+							));
 						},
-					}
+					},
 				}
+			}
 
-				let success_event = EventState {
-					event_type: EventType::Success,
-					timestamp: chrono::Utc::now().timestamp_millis() as f64,
-					payload: "".to_string(),
-					file: "".to_string(),
-					doc_source: "".to_string(),
-					image_id: None,
-				};
+			let success_event = EventState {
+				event_type: EventType::Success,
+				timestamp: chrono::Utc::now().timestamp_millis() as f64,
+				payload: "".to_string(),
+				file: "".to_string(),
+				doc_source: "".to_string(),
+				image_id: None,
+			};
 
-				if let Err(e) =
-					event_sender.send((success_event.clone().event_type, success_event)).await
-				{
-					error!("Failed to send event: {:?}", e);
-					return Err(EngineError::new(
-						EngineErrorKind::EventStream,
-						Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
-					));
-				}
+			if let Err(e) =
+				event_sender.send((success_event.clone().event_type, success_event)).await
+			{
+				error!("Failed to send event: {:?}", e);
+				return Err(EngineError::new(
+					EngineErrorKind::EventStream,
+					Arc::new(anyhow::anyhow!("Failed to send event: {:?}", e)),
+				));
 			}
 			Ok(())
 		}));
@@ -266,6 +261,7 @@ impl Source for EngineRunner {
 		_exit_status: &ActorExitStatus,
 		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
+		log::info!("Engine Runner with id: {} is finalizing", self.id);
 		match self.workflow_handle.take() {
 			Some(handle) => {
 				handle.abort();

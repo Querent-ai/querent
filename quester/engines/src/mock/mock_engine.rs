@@ -8,6 +8,7 @@ use querent_synapse::{
 	comm::IngestedTokens,
 };
 use std::pin::Pin;
+use tokio::sync::mpsc::Receiver;
 
 pub struct MockEngine;
 
@@ -15,10 +16,10 @@ pub struct MockEngine;
 impl Engine for MockEngine {
 	async fn process_ingested_tokens(
 		&self,
-		tokens: Vec<IngestedTokens>,
+		mut token_channel: Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>> {
 		let stream = stream! {
-			for token in tokens {
+			while let Some(token) = token_channel.recv().await {
 				// create a payload
 				let payload = SemanticKnowledgePayload {
 					subject: "mock".to_string(),

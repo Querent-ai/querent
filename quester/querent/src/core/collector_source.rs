@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
 use querent_synapse::querent::QuerentError;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{any::Any, collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinHandle, time};
 use tracing::{error, info};
 
@@ -235,6 +235,8 @@ impl Source for Collector {
 		_exit_status: &ActorExitStatus,
 		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
+		let data_poller_type = self.data_poller.type_id();
+		log::info!("Finalizing collector of type: {:?} and id: {}", data_poller_type, self.id);
 		match self.workflow_handle.take() {
 			Some(handle) => {
 				handle.abort();
