@@ -8,8 +8,6 @@ pub use core::*;
 use proto::{semantics::SemanticPipelineRequest, NodeConfig};
 pub mod events;
 pub use events::*;
-pub mod source;
-pub use source::*;
 pub mod storage;
 pub use storage::*;
 pub mod indexer;
