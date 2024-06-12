@@ -1,5 +1,5 @@
 use actors::{AskError, MessageBus, Observe};
-use common::semantic_api::SendIngestedTokens;
+use common::EventType;
 use engines::mock::MockEngine;
 use futures_util::StreamExt;
 use proto::{
@@ -11,16 +11,16 @@ use proto::{
 		IndexingStatistics, JiraCollectorConfig, LLamaConfig, MilvusConfig, Name, Neo4jConfig,
 		NewsCollectorConfig, OpenAiConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
 		S3CollectorConfig, SampleEntities, SampleRelationships, SemanticPipelineRequest,
-		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
-		WorkflowContract,
+		SemanticPipelineResponse, SendIngestedTokens, SlackCollectorConfig, StorageConfig,
+		StorageType, WorkflowContract,
 	},
 };
 
+use proto::semantics::IngestedTokens;
 use querent::{
 	create_dynamic_sources, ObservePipeline, PipelineErrors, PipelineSettings, RestartPipeline,
 	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
-use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use storage::create_storages;
 use tracing::{error, warn};

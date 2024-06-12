@@ -24,8 +24,6 @@ anyhow = { workspace = true }
 tokio = { workspace =true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-pyo3-asyncio = { workspace = true }
-pyo3 = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
@@ -60,7 +58,3 @@ common = { workspace = true, features = ["testsuite"] }
 [features]
 testsuite = []
 
-[[test]]
-name = "test_basic"
-path = "pytests/test_basic.rs"
-harness = false

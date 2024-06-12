@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use pdf_extract::{output_doc, ConvertToFmt, OutputDev, OutputError, PlainTextOutput};
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use std::{
 	collections::HashMap,
 	fmt,
@@ -62,19 +62,19 @@ impl BaseIngestor for PdfIngestor {
 			output_doc(&doc, &mut output).unwrap();
 			for (_, text) in output.pages {
 				let ingested_tokens = IngestedTokens {
-					data: Some(vec![text]),
+					data: vec![text],
 					file: file.clone(),
 					doc_source: doc_source.clone(),
-					is_token_stream: Some(false),
+					is_token_stream: false,
 				};
 				yield Ok(ingested_tokens);
 			}
 
 			yield Ok(IngestedTokens {
-				data: None,
+				data: vec![],
 				file: file.clone(),
 				doc_source: doc_source.clone(),
-				is_token_stream: Some(false),
+				is_token_stream: false,
 			})
 		};
 

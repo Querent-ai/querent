@@ -61,8 +61,6 @@ warp = { workspace = true }
 serde_qs = { workspace = true }
 num_cpus = { workspace = true }
 hyper = { workspace = true }
-pyo3-asyncio = { workspace = true }
-pyo3 = { workspace = true }
 querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }

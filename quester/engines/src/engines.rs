@@ -1,6 +1,7 @@
 use async_trait::async_trait;
+use common::EventState;
 use futures::Stream;
-use querent_synapse::{callbacks::EventState, comm::IngestedTokens};
+use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
@@ -73,7 +74,7 @@ pub trait Engine: Send + Sync + 'static {
 	/// Process the ingested tokens.
 	async fn process_ingested_tokens(
 		&self,
-		token_channel: crossbeam_channel::Receiver<IngestedTokens>,
+		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
 }
 

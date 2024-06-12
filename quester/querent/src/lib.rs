@@ -17,21 +17,11 @@ pub mod pipeline;
 pub use pipeline::*;
 pub mod discovery;
 pub use discovery::*;
-pub mod agent;
-pub use agent::*;
-pub mod chain;
-pub mod document_loaders;
-pub mod embedding;
 pub mod ingest;
-pub mod language_models;
-pub mod llm;
 pub mod memory;
 pub mod prompt;
 pub mod schemas;
-pub mod semantic_router;
-pub mod text_splitter;
 pub mod tools;
-pub mod vectorstore;
 use tracing::info;
 
 #[allow(clippy::too_many_arguments)]
