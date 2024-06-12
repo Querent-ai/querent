@@ -46,8 +46,8 @@ enum PositionEmbeddingType {
 // https://github.com/huggingface/transformers/blob/6eedfa6dd15dc1e22a55ae036f681914e5a0d9a1/src/transformers/models/bert/configuration_bert.py#L1
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct Config {
-    vocab_size: usize,
-    hidden_size: usize,
+    pub vocab_size: usize,
+    pub hidden_size: usize,
     num_hidden_layers: usize,
     num_attention_heads: usize,
     intermediate_size: usize,
@@ -62,7 +62,7 @@ pub struct Config {
     position_embedding_type: PositionEmbeddingType,
     #[serde(default)]
     use_cache: bool,
-    classifier_dropout: Option<f64>,
+    pub classifier_dropout: Option<f64>,
     model_type: Option<String>,
 }
 
@@ -494,5 +494,141 @@ impl BertModel {
     pub fn get_last_attention_probs(&self) -> Option<Tensor> {
         // Traverse the encoder to the last layer and get the attention probabilities
         self.encoder.layers.last()?.attention.self_attention.attention_probs.read().unwrap().clone()
+    }
+}
+
+pub struct BertForTokenClassification {
+    bert: BertModel,
+    dropout: Dropout,
+    classifier: Linear,
+    pub device: Device,
+}
+
+impl BertForTokenClassification {
+    pub fn load(vb: VarBuilder, config: &Config, num_labels: usize) -> Result<Self> {
+        let classifier_dropout = config.classifier_dropout;
+
+        let (bert, classifier) = match (
+            BertModel::load(vb.pp("bert"), config),
+            linear(config.hidden_size, num_labels, vb.pp("classifier")),
+        ) {
+            (Ok(bert), Ok(classifier)) => (bert, classifier),
+            (Err(err), _) | (_, Err(err)) => return Err(err),
+        };
+        Ok(Self {
+            bert,
+            dropout: Dropout::new(classifier_dropout.unwrap_or_else(|| 0.2)),
+            classifier,
+            device: vb.device().clone(),
+        })
+    }
+
+    pub fn forward(&self, input_ids: &Tensor, token_type_ids: &Tensor, labels: Option<&Tensor>) -> Result<Tensor> {
+        let outputs = self.bert.forward(input_ids, token_type_ids)?;
+        let outputs = self.dropout.forward(&outputs)?;
+
+        let logits = self.classifier.forward(&outputs)?;
+
+        if let Some(labels) = labels {
+            let loss = candle_nn::loss::cross_entropy(&logits.flatten_to(1)?, &labels.flatten_to(1)?)?;
+            println!("Loss: {:?}", loss);
+        }
+
+        Ok(logits)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candle_core::{Device, Tensor, DType};
+    use candle_nn::VarBuilder;
+    use tokenizers::Tokenizer;
+    use hf_hub::{api::sync::Api, Repo, RepoType};
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn test_token_classification() {
+        // Define the model and tokenizer options
+        let model_name = "bert-base-uncased";
+        let repo = Repo::model(model_name.to_string());
+        let api = Api::new().unwrap();
+        let api = api.repo(repo);
+
+        // Fetch config and tokenizer
+        let config_filename = api.get("config.json").unwrap();
+        let tokenizer_filename = api.get("tokenizer.json").unwrap();
+        let (weights_filename, weight_source) = {
+            api.get("model.safetensors")
+                .map(|filename| (filename, WeightSource::Safetensors))
+                .or_else(|_| {
+                    api.get("pytorch_model.bin")
+                        .map(|filename| (filename, WeightSource::Pytorch))
+                })
+                .unwrap()
+        };
+
+        // Read config file
+        let config = std::fs::read_to_string(&config_filename).unwrap();
+        let config: Config = serde_json::from_str(&config).unwrap();
+
+        // Load tokenizer
+        let mut tokenizer = Tokenizer::from_file(&tokenizer_filename).unwrap();
+        if let Some(pp) = tokenizer.get_padding_mut() {
+            pp.strategy = tokenizers::PaddingStrategy::BatchLongest;
+        } else {
+            let pp = tokenizers::PaddingParams {
+                strategy: tokenizers::PaddingStrategy::BatchLongest,
+                ..Default::default()
+            };
+            tokenizer.with_padding(Some(pp));
+        }
+
+        // Load model weights
+        let device = Device::cuda_if_available(0).unwrap_or(Device::Cpu);
+        let vb = match weight_source {
+            WeightSource::Pytorch => VarBuilder::from_pth(&weights_filename, DTYPE, &device)
+                .map_err(|e| {
+                    anyhow::anyhow!("could not load PyTorch weights: {}", e)
+                })
+                .unwrap(),
+            WeightSource::Safetensors => unsafe {
+                VarBuilder::from_mmaped_safetensors(&[weights_filename], DTYPE, &device)
+                    .map_err(|e| {
+                        anyhow::anyhow!("could not load SafeTensors weights: {}", e)
+                    })
+                    .unwrap()
+            },
+        };
+
+        // Define the number of labels for token classification
+        let num_labels = 2; // Example for binary classification
+
+        // Load the BertForTokenClassification model
+        let token_classifier = BertForTokenClassification::load(vb, &config, num_labels).unwrap();
+
+        // Tokenize input text
+        let input_text = "Joel lives and works in Delhi that is the capital of India.";
+        let encoding = tokenizer.encode(input_text, true).unwrap();
+        let input_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
+        let input_ids = Tensor::from_vec(input_ids, &[1, encoding.len() as usize], &device).unwrap();
+        let token_type_ids = Tensor::zeros(&[1, encoding.len() as usize], DType::I64, &device).unwrap();
+
+        // Forward pass through the model
+        let logits = token_classifier.forward(&input_ids, &token_type_ids, None).unwrap();
+
+        // Print logits for debugging
+        println!("Logits: {:?}", logits);
+
+        // Check logits shape
+        assert_eq!(logits.dims(), &[1, encoding.len() as usize, num_labels]);
+
+        // Optional: Add further checks on the output logits
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    enum WeightSource {
+        Safetensors,
+        Pytorch,
     }
 }

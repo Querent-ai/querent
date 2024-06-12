@@ -18,7 +18,7 @@ use tokio::{
 	task::JoinHandle,
 	time::{self},
 };
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{
 	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
@@ -97,6 +97,9 @@ impl Source for EngineRunner {
 			while let Some(data) = engine_op.next().await {
 				match data {
 					Ok(event) => {
+						debug!(
+							"{:?}",event
+						);
 						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
 							error!("Failed to send event: {:?}", e);
 							break;
@@ -155,6 +158,7 @@ impl Source for EngineRunner {
 		loop {
 			tokio::select! {
 				event_opt = self.event_receiver.recv() => {
+					panic!("{:?}", event_opt);
 					if let Some((event_type, event_data)) = event_opt {
 						if event_data.payload.is_empty() {
 							continue;

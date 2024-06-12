@@ -74,3 +74,4 @@ hf-hub = { workspace = true }
 clap = { workspace = true }
 tokenizers = { workspace = true }
 ordered-float = { workspace = true }
+records = { workspace = true }

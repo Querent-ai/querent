@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use candle_core::{DType, IndexOp, Tensor};
 use candle_core::Module;
 use candle_nn::VarBuilder;
-//use candle_transformers::models::bert::{BertModel as CandleBertModel, Config, DTYPE};
+// use candle_transformers::models::bert::{BertModel as CandleBertModel, Config, DTYPE};
 use crate::transformers::bertattention::{BertModel as CandleBertModel, Config, DTYPE};
 use hf_hub::{api::sync::Api, Repo, RepoType};
 use std::{collections::HashMap, sync::Arc};
@@ -160,6 +160,7 @@ impl BertLLM {
 
 		Ok(this)
 	}
+
 }
 
 #[async_trait]
@@ -290,14 +291,14 @@ mod tests {
     #[test]
     async fn test_process_attention_weights() {
         let options = EmbedderOptions {
-            model: "BAAI/bge-base-en-v1.5".to_string(),
+            model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
             revision: None,
             distribution: None,
         };
         let embedder = BertLLM::new(options).unwrap();
 
         // Tokenize input text
-        let tokens = embedder.tokenize("Joel lives in Delhi").await;
+        let tokens = embedder.tokenize("Joel lives and works in Delhi that is the capital of India").await;
         println!("These are the Tokens: {:?}", tokens);
 
         // Prepare model input
