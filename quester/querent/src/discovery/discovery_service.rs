@@ -1,4 +1,4 @@
-use crate::{discovery_agent::DiscoveryAgent, discovery_searcher::DiscoverySearch};
+use crate::discovery_searcher::DiscoverySearch;
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
@@ -15,9 +15,10 @@ use std::{
 };
 use storage::{create_storages, Storage};
 
+// TODO Discovery Agents rethinking needed
 struct DiscoverAgentHandle {
-	mailbox: MessageBus<DiscoveryAgent>,
-	handle: ActorHandle<DiscoveryAgent>,
+	mailbox: MessageBus<DiscoverySearch>,
+	handle: ActorHandle<DiscoverySearch>,
 }
 
 struct DiscoverSearchHandle {
@@ -138,13 +139,13 @@ impl Handler<StopDiscoverySessionRequest> for DiscoveryAgentService {
 		let agent_handle = self.agent_pipelines.remove(&request.session_id);
 		if let Some(agent_handle) = agent_handle {
 			let _ = agent_handle.handle.kill().await;
-			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
+			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }));
 		}
 
 		let search_handle = self.searcher_pipelines.remove(&request.session_id);
 		if let Some(search_handle) = search_handle {
 			let _ = search_handle.handle.kill().await;
-			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }))
+			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }));
 		}
 
 		Err(anyhow::anyhow!("Discovery Session not found").into())
