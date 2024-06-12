@@ -17,7 +17,6 @@ pub mod discovery;
 pub use discovery::*;
 pub mod ingest;
 pub mod memory;
-pub mod prompt;
 pub mod schemas;
 pub mod tools;
 use tracing::info;
