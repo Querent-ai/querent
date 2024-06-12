@@ -207,12 +207,6 @@ pub struct IndexingStatistics {
 pub struct PipelineMetadata {
     #[prost(string, tag = "1")]
     pub pipeline_id: ::prost::alloc::string::String,
-    #[prost(string, tag = "2")]
-    pub name: ::prost::alloc::string::String,
-    #[prost(string, tag = "3")]
-    pub import: ::prost::alloc::string::String,
-    #[prost(string, tag = "4")]
-    pub attr: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]

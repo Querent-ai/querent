@@ -1,5 +1,6 @@
 use actors::{AskError, MessageBus, Observe};
-use common::semantic_api::SendIngestedTokens;
+use common::EventType;
+use engines::mock::MockEngine;
 use futures_util::StreamExt;
 use proto::{
 	config::StorageConfigs,
@@ -10,17 +11,16 @@ use proto::{
 		IndexingStatistics, JiraCollectorConfig, LLamaConfig, MilvusConfig, Name, Neo4jConfig,
 		NewsCollectorConfig, OpenAiConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
 		S3CollectorConfig, SampleEntities, SampleRelationships, SemanticPipelineRequest,
-		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
-		WorkflowContract,
+		SemanticPipelineResponse, SendIngestedTokens, SlackCollectorConfig, StorageConfig,
+		StorageType, WorkflowContract,
 	},
 };
 
+use proto::semantics::IngestedTokens;
 use querent::{
-	create_dynamic_sources, create_querent_synapose_workflow, ObservePipeline, PipelineErrors,
-	PipelineSettings, RestartPipeline, SemanticService, SemanticServiceCounters, ShutdownPipeline,
-	SpawnPipeline,
+	create_dynamic_sources, ObservePipeline, PipelineErrors, PipelineSettings, RestartPipeline,
+	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
-use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use storage::create_storages;
 use tracing::{error, warn};
@@ -183,19 +183,13 @@ pub async fn start_pipeline(
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
 			})?;
 	}
-	let qflow: querent_synapse::querent::Workflow =
-		create_querent_synapose_workflow(new_uuid.clone(), &request, secret_store.clone()).await?;
-	let data_sources = create_dynamic_sources(&request).await?;
 
-	let pipeline_settings = PipelineSettings {
-		qflow_id: new_uuid.clone(),
-		qflow,
-		event_storages,
-		index_storages,
-		secret_store,
-		semantic_service_bus: semantic_service_mailbox.clone(),
-		data_sources,
-	};
+	let data_sources = create_dynamic_sources(&request).await?;
+	// TODO REPLACE WITH CORRECT AGN engine
+	let engine = Arc::new(MockEngine::new());
+
+	let pipeline_settings =
+		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };
 
 	let pipeline_rest = semantic_service_mailbox
 		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.clone() })

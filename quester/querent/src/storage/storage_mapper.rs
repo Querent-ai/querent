@@ -2,8 +2,9 @@ use super::{ContextualEmbeddings, ContextualTriples};
 use crate::{EventLock, NewEventLock};
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
-use common::{RuntimeType, SemanticKnowledgePayload, StorageMapperCounters, VectorPayload};
-use querent_synapse::callbacks::EventType;
+use common::{
+	EventType, RuntimeType, SemanticKnowledgePayload, StorageMapperCounters, VectorPayload,
+};
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;

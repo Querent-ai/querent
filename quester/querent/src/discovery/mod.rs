@@ -4,7 +4,6 @@ use actors::ActorExitStatus;
 use common::DocumentPayload;
 use storage::Storage;
 
-pub mod discovery_agent;
 pub mod discovery_searcher;
 pub mod discovery_service;
 

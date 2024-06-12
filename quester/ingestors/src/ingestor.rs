@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{pin_mut, Stream, StreamExt};
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;

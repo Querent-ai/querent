@@ -21,7 +21,6 @@ tracing = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sync_wrapper = { workspace = true }
-pyo3 = { workspace = true }
 common = { workspace = true }
 
 [dev-dependencies]

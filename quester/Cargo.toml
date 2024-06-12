@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sources", "ingestors", "actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
+members = ["sources", "ingestors", "engines", "llms", "actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "insights"]
 
 [profile.dev]
 debug = false
@@ -182,7 +182,6 @@ log = { version = "^0.4.17", features = [
   "max_level_debug",
   "release_max_level_debug"
 ] }
-querent-synapse = { version = "3.0.5" }
 actors = { version = "3.0.4", path = "./actors" }
 common = { version = "3.0.4", path = "./common" }
 querent = { version = "3.0.4", path = "./querent" }
@@ -194,13 +193,8 @@ discovery = {version = "3.0.4", path = "./insights"}
 node = { version = "3.0.4", path = "./node" }
 sources = { version = "3.0.4", path = "./sources" }
 ingestors = { version = "3.0.4", path = "./ingestors" }
-
-pyo3-asyncio = { version = "0.20.0", features = [
-  "attributes",
-  "tokio-runtime",
-  "testing"
-] }
-pyo3 = { version = "0.20.0", features = ["auto-initialize"] }
+engines = { version = "3.0.4", path = "./engines" }
+llms = { version = "3.0.4", path = "./llms" }
 milvus-sdk-rust = "0.1.0"
 neo4rs = "0.7.0"
 diesel-async = "0.4.1"

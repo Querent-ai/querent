@@ -1,5 +1,5 @@
 [package]
-name = "ingestors"
+name = "engines"
 version = "3.0.4"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
@@ -65,3 +65,5 @@ url = { workspace = true }
 readability = { workspace = true }
 tl = { workspace = true }
 csv = { workspace = true }
+crossbeam-channel = { workspace = true }
+ingestors = { workspace = true }
