@@ -53,7 +53,7 @@ impl Source for FileSource {
 mod tests {
 	use actors::Quester;
 
-	use crate::{file_source::FileSource, source::SourceActor};
+	use crate::{file_source::FileSource, SourceActor};
 
 	#[tokio::test]
 	async fn test_file_source() -> anyhow::Result<()> {

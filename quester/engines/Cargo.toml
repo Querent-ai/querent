@@ -10,10 +10,10 @@ homepage = "https://querent.xyz/"
 documentation = "https:/querent.xyz/docs/"
 
 [dependencies]
-querent-synapse = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }
 actors = { workspace = true }
+llms = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 anyhow = { workspace = true }
@@ -68,4 +68,3 @@ tl = { workspace = true }
 csv = { workspace = true }
 crossbeam-channel = { workspace = true }
 ingestors = { workspace = true }
-llms = { workspace = true }

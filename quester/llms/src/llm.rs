@@ -68,8 +68,6 @@ impl From<serde_json::Error> for LLMError {
 		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
 	}
 }
-
-
 #[async_trait]
 pub trait LLM: Send + Sync {
     async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
@@ -88,4 +86,3 @@ pub trait LLM: Send + Sync {
     async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
     async fn process_attention_weights(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError>;
 }
-

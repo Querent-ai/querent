@@ -14,9 +14,9 @@ use tokio::{
 	task::JoinHandle,
 	time::{self},
 };
-
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::{error, info};
+
 use crate::{
 	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
 	EMIT_BATCHES_TIMEOUT,
@@ -60,9 +60,6 @@ impl EngineRunner {
 			while let Some(data) = engine_op.next().await {
 				match data {
 					Ok(event) => {
-						debug!(
-							"{:?}",event
-						);
 						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
 							return Err(EngineError::new(
 								EngineErrorKind::EventStream,

@@ -2,7 +2,7 @@ use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
-use querent_synapse::querent::QuerentError;
+use sources::SourceError;
 use std::{any::Any, collections::HashMap, sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinHandle, time};
 use tracing::{error, info};
@@ -17,7 +17,7 @@ pub struct Collector {
 	pub event_lock: EventLock,
 	pub event_receiver: Option<mpsc::Receiver<CollectedBytes>>,
 	data_poller: Arc<dyn sources::Source>,
-	workflow_handle: Option<JoinHandle<Result<(), QuerentError>>>,
+	workflow_handle: Option<JoinHandle<Result<(), SourceError>>>,
 	file_buffers: HashMap<String, Vec<CollectedBytes>>,
 	file_size: HashMap<String, usize>,
 	pub counters: CollectionCounter,
@@ -79,17 +79,14 @@ impl Source for Collector {
 								},
 							Err(e) => {
 								error!("Failed to poll data here: {:?}", e);
-								let err = Err(QuerentError::internal(format!(
-									"Failed to poll data: {:?}",
-									e
-								)));
 								if let Err(e) = event_sender
 									.send(CollectedBytes::new(None, None, false, None, None))
 									.await
 								{
 									error!("Failed to send failure signal: {:?}", e);
 								}
-								return err;
+								return Err(e);
+
 							},
 						}
 					}
@@ -103,13 +100,12 @@ impl Source for Collector {
 				},
 				Err(e) => {
 					error!("Failed to poll data: {:?}", e);
-					let err = Err(QuerentError::internal(format!("Failed to poll data: {:?}", e)));
 					if let Err(e) =
 						event_sender.send(CollectedBytes::new(None, None, false, None, None)).await
 					{
 						error!("Failed to send failure signal: {:?}", e);
 					}
-					err
+					Err(e)
 				},
 			}
 		}));
