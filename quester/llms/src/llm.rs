@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
 
+use crate::transformers::modelling_outputs::TokenClassifierOutput;
+
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LLMErrorKind {
@@ -76,13 +78,18 @@ pub trait LLM: Send + Sync {
     async fn model_input(
         &self,
         tokenized_sequence: Vec<i32>,
-    ) -> std::collections::HashMap<String, Tensor>;
+    ) -> Result<std::collections::HashMap<String, Tensor>, LLMError>;
     async fn tokenize(&self, word: &str) -> Vec<i32>;
     async fn inference_attention(
         &self,
         model_input: std::collections::HashMap<String, Tensor>,
-    ) -> Tensor;
+    ) -> Result<Tensor,LLMError>;
     async fn maximum_tokens(&self) -> usize;
     async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
-    async fn process_attention_weights(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError>;
+    async fn process_attention_weights(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError>; // tensor_to_2d_vector
+	async fn token_classification(
+        &self,
+        model_input: std::collections::HashMap<String, Tensor>,
+        labels: Option<&Tensor>,
+    ) -> Result<TokenClassifierOutput, LLMError>;
 }

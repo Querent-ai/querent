@@ -4,8 +4,8 @@ use candle_core::{DType, Device, IndexOp, Result, Tensor};
 use candle_nn::{Embedding, Module, VarBuilder};
 
 use crate::transformers::modelling_outputs::{SequenceClassifierOutput, TokenClassifierOutput, QuestionAnsweringModelOutput};
-use crate::transformers::model_utils::{Dropout, HiddenAct, Linear, HiddenActLayer, LayerNorm, PositionEmbeddingType};
-use crate::transformers::model_utils::binary_cross_entropy_with_logit;
+use crate::transformers::roberta::roberta_utils::{Dropout, HiddenAct, Linear, HiddenActLayer, LayerNorm, PositionEmbeddingType};
+use crate::transformers::roberta::roberta_utils::binary_cross_entropy_with_logit;
 use serde::Deserialize;
 
 pub const FLOATING_DTYPE: DType = DType::F32;
@@ -840,7 +840,7 @@ impl RobertaForQuestionAnswering {
 
 #[cfg(test)]
 mod tests {
-    use crate::transformers::roberta::{RobertaConfig, RobertaForTokenClassification};
+    use crate::transformers::roberta::roberta_model_functions::{RobertaConfig, RobertaForTokenClassification};
     use crate::utils::{build_roberta_model_and_tokenizer, ModelType};
     use anyhow::Result;
     use candle_core::{DType, Device, Tensor};

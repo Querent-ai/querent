@@ -1,9 +1,14 @@
-pub mod bert;
+pub mod bert{
+	pub mod bert;
 pub use bert::*;
-pub mod bertattention;
-pub use bertattention::*;
-pub mod roberta;
-pub mod model_utils;
+pub mod bert_model_functions;
+pub use bert_model_functions::*;
+// pub mod bert_tokenclassification;
+}
+pub mod roberta{
+	pub mod roberta_model_functions;
+	pub mod roberta_utils;
+}
 pub mod modelling_outputs;
 use ordered_float::OrderedFloat;
 
