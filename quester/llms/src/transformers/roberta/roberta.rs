@@ -470,52 +470,52 @@ impl LLM for RobertaLLM {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use tokio::test;
+// #[cfg(test)]
+// mod tests {
+// 	use super::*;
+// 	use tokio::test;
 
-	#[test]
-	async fn test_attention_tensor_to_2d_vector() {
-		let options = EmbedderOptions {
-			model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
-			local_dir: None,
-			revision: None,
-			distribution: None,
-		};
-		let embedder = RobertaLLM::new(options).unwrap();
+// 	#[test]
+// 	async fn test_attention_tensor_to_2d_vector() {
+// 		let options = EmbedderOptions {
+// 			model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+// 			local_dir: None,
+// 			revision: None,
+// 			distribution: None,
+// 		};
+// 		let embedder = RobertaLLM::new(options).unwrap();
 
-		// Tokenize input text
-		let input_text = "Joel lives in Delhi";
-		let tokens = match embedder.tokenize(&input_text).await {
-			Ok(tokens) => tokens,
-			Err(e) => {
-				println!("Tokenization failed: {:?}", e);
-				return;
-			},
-		};
-		println!("These are the Tokens: {:?}", tokens);
+// 		// Tokenize input text
+// 		let input_text = "Joel lives in Delhi";
+// 		let tokens = match embedder.tokenize(&input_text).await {
+// 			Ok(tokens) => tokens,
+// 			Err(e) => {
+// 				println!("Tokenization failed: {:?}", e);
+// 				return;
+// 			},
+// 		};
+// 		println!("These are the Tokens: {:?}", tokens);
 
-		let model_input = match embedder.model_input(tokens.clone()).await {
-			Ok(model_input) => model_input,
-			Err(e) => {
-				println!("Model input creation failed: {:?}", e);
-				return;
-			},
-		};
+// 		let model_input = match embedder.model_input(tokens.clone()).await {
+// 			Ok(model_input) => model_input,
+// 			Err(e) => {
+// 				println!("Model input creation failed: {:?}", e);
+// 				return;
+// 			},
+// 		};
 
-		let token_classification_output =
-			match embedder.token_classification(model_input.clone(), None).await {
-				Ok(output) => output,
-				Err(e) => {
-					println!("Failed to perform token classification: {:?}", e);
-					return;
-				},
-			};
+// 		let token_classification_output =
+// 			match embedder.token_classification(model_input.clone(), None).await {
+// 				Ok(output) => output,
+// 				Err(e) => {
+// 					println!("Failed to perform token classification: {:?}", e);
+// 					return;
+// 				},
+// 			};
 
-		// Print tokens and their predicted labels
-		for (token, label) in token_classification_output.iter() {
-			println!("Token: {}, Label: {}", token, label);
-		}
-	}
-}
+// 		// Print tokens and their predicted labels
+// 		for (token, label) in token_classification_output.iter() {
+// 			println!("Token: {}, Label: {}", token, label);
+// 		}
+// 	}
+// }

@@ -37,8 +37,14 @@ pub struct ClassifiedSentenceWithRelations {
 
 /// Removes newline characters from the given text.
 pub fn remove_newlines(text: &str) -> String {
-	let re = Regex::new(r"\n+").unwrap();
-	re.replace_all(text, " ").to_string()
+    let sanitized_text = sanitize_text(text);
+    let re = Regex::new(r"\n+").unwrap();
+    re.replace_all(&sanitized_text, " ").to_string()
+}
+
+/// Remove null bytes and any other invalid UTF-8 sequences
+fn sanitize_text(input: &str) -> String {
+    input.chars().filter(|&c| c != '\0').collect()
 }
 
 /// Splits the provided text into a vector of sentences.

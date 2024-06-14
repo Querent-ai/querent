@@ -178,6 +178,19 @@ pub async fn start_pipeline(
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
 			})?;
 	}
+	println!("This is the config here ----{:?}",request.fixed_entities);
+
+	// Extract entities from request.fixed_entities or use a default
+    let entities = match &request.fixed_entities {
+        Some(fixed_entities) => fixed_entities.entities.clone(),
+        _ => Vec::new(),
+    };
+
+	// Extract entities from request.fixed_entities or use a default
+    let sample_entities = match &request.sample_entities {
+        Some(sample_entities) => sample_entities.entities.clone(),
+        _ => Vec::new(),
+    };
 
 	let data_sources = create_dynamic_sources(&request).await?;
 	// TODO REPLACE WITH CORRECT AGN engine
@@ -198,7 +211,7 @@ pub async fn start_pipeline(
     }).unwrap();
 
 
-	let engine = Arc::new(AttentionTensorsEngine::new(embedder, vec!["oil".to_string(), "gas".to_string(),"porosity".to_string(), "joel".to_string(), "india".to_string(),"microsoft".to_string(), "nitrogen gas".to_string()], Some(embedding_model)));
+	let engine = Arc::new(AttentionTensorsEngine::new(embedder, entities, sample_entities, Some(embedding_model)));
 
 
 	let pipeline_settings =

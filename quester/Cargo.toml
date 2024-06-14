@@ -235,9 +235,6 @@ opendal = "0.44"
 google-drive3 = "5.0.4+20240227"
 pdf-extract = "0.7.7"
 tl = "0.7.8"
-candle-core = { version = "0.5.0" }
-candle-transformers = { version = "0.5.0" }
-candle-nn = { version = "0.5.0" }
 hf-hub = "0.3.2"
 ordered-float = "4.2.0"
 records = "0.2.0"
@@ -252,6 +249,9 @@ mailparse = "0.15.0"
 yup-oauth2 = "10.0.1"
 oauth2 = "4.4.2"
 zip = "0.5.13"
+candle-core = { version = "0.5.0" }
+candle-transformers = { version = "0.5.0" }
+candle-nn = { version = "0.5.0" }
 
 
 [profile.release]
