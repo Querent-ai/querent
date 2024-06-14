@@ -251,10 +251,6 @@ message EmailCollectorConfig {
   string imap_password = 4;
   // Folder of the Email collector.
   string imap_folder = 5;
-  // Key file of the Email collector.
-  string imap_keyfile = 6;
-  // Cert file of the Email collector.
-  string imap_certfile = 7;
 }
 
 // DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.

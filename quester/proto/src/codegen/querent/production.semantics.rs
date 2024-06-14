@@ -422,12 +422,6 @@ pub struct EmailCollectorConfig {
     /// Folder of the Email collector.
     #[prost(string, tag = "5")]
     pub imap_folder: ::prost::alloc::string::String,
-    /// Key file of the Email collector.
-    #[prost(string, tag = "6")]
-    pub imap_keyfile: ::prost::alloc::string::String,
-    /// Cert file of the Email collector.
-    #[prost(string, tag = "7")]
-    pub imap_certfile: ::prost::alloc::string::String,
 }
 /// DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

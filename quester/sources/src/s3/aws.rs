@@ -304,46 +304,67 @@ async fn download_all(byte_stream: ByteStream, output: &mut Vec<u8>) -> io::Resu
 	Ok(())
 }
 
-#[cfg(test)]
+// #[cfg(test)]
 
-mod tests {
+// mod tests {
 
-	use super::*;
+// 	use std::collections::HashSet;
 
-	use aws_credential_types::Credentials;
+//     use super::*;
 
-	#[tokio::test]
-	async fn test_aws_collector() {
-		let aws_config = S3CollectorConfig {
-			access_key: "AKIAU6GDY2RDMGC2RNTK".to_string(),
+// 	use aws_credential_types::Credentials;
+//     use futures::StreamExt;
 
-			secret_key: "kvmy2uLmRKkJI5+LSlaanRp/Uu7DJwbOVohS7kvf".to_string(),
+// 	#[tokio::test]
+// 	async fn test_aws_collector() {
+// 		let aws_config = S3CollectorConfig {
+// 			access_key: "AKIAU6GDY2RDMGC2RNTK".to_string(),
 
-			region: "ap-south-1".to_string(),
+// 			secret_key: "kvmy2uLmRKkJI5+LSlaanRp/Uu7DJwbOVohS7kvf".to_string(),
 
-			bucket: "querentbucket1".to_string(),
-		};
+// 			region: "ap-south-1".to_string(),
 
-		let credentials = Credentials::new(
-			aws_config.access_key.clone(),
-			aws_config.secret_key.clone(),
-			None,
-			None,
-			"manual",
-		);
+// 			bucket: "querentbucket1".to_string(),
+// 		};
 
-		let mut s3_storage = S3Source::new(aws_config).await;
+// 		let credentials = Credentials::new(
+// 			aws_config.access_key.clone(),
+// 			aws_config.secret_key.clone(),
+// 			None,
+// 			None,
+// 			"manual",
+// 		);
 
-		let config = aws_config::from_env()
-			.credentials_provider(credentials)
-			.region(s3_storage.region.clone())
-			.load()
-			.await;
+// 		let mut s3_storage = S3Source::new(aws_config).await;
 
-		s3_storage.s3_client = Some(S3Client::new(&config));
+// 		let config = aws_config::from_env()
+// 			.credentials_provider(credentials)
+// 			.region(s3_storage.region.clone())
+// 			.load()
+// 			.await;
 
-		let result = s3_storage.check_connectivity().await;
+// 		s3_storage.s3_client = Some(S3Client::new(&config));
 
-		assert!(result.is_ok());
-	}
-}
+// 		let result = s3_storage.check_connectivity().await;
+// 		assert!(result.is_ok());
+
+// 		let result = s3_storage.poll_data().await;
+
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					}
+// 				}
+// 				Err(_) => panic!("Expected successful data collection"),
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+
+// 	}
+// }

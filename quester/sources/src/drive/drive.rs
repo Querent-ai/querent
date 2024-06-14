@@ -4,8 +4,7 @@ use common::CollectedBytes;
 use futures::{Stream, StreamExt};
 use google_drive3::{
 	api::Scope,
-	hyper,
-	hyper::client::HttpConnector,
+	hyper::{self, client::HttpConnector},
 	hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
 	oauth2::{ApplicationSecret, InstalledFlowAuthenticator, InstalledFlowReturnMethod},
 };
@@ -47,7 +46,7 @@ impl GoogleDriveSource {
 			client_secret: config.drive_client_secret.clone(),
 			auth_uri: "https://accounts.google.com/o/oauth2/auth".to_string(),
 			token_uri: "https://oauth2.googleapis.com/token".to_string(),
-			redirect_uris: vec![],
+			redirect_uris: vec!["http://localhost".to_string()],
 			project_id: None,
 			auth_provider_x509_cert_url: None,
 			client_email: None,
@@ -397,3 +396,55 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 		Ok(resp_obj.into_body())
 	}
 }
+
+// #[cfg(test)]
+// mod tests {
+
+//     use std::collections::HashSet;
+
+//     use futures::StreamExt;
+//     use proto::semantics::GoogleDriveCollectorConfig;
+
+//     use crate::Source;
+
+//     use super::GoogleDriveSource;
+
+// 	#[tokio::test]
+// 	async fn test_drive_collector() {
+// 		let google_config = GoogleDriveCollectorConfig {
+// 			drive_client_secret: "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".to_string(),
+// 			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
+// 			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
+// 			drive_scopes: "https://www.googleapis.com/auth/drive".to_string(),
+// 			drive_token: "ya29.a0AfB_byAMnws17-UAYR2hU29zC83Rw4bxn2LsF5i_sWQ5xDMI00li205pXlA-JrwVmBh0kNBK7sKP33urPZ9-DM9DDKMv6EQsaqJsy57aHQYUwddT42SwuZAVINyTwp340Qiy_hSaVG5ezT9PIYRO5Qd1Yn9wm5rd7Aq-".to_string(),
+// 			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+// 			specific_file_type: "application/pdf".to_string()
+// 		};
+
+// 		let drive_storage = GoogleDriveSource::new(google_config).await;
+// 		let connectivity = drive_storage.check_connectivity().await;
+
+// 		println!("Connectivity: {:?}", connectivity);
+
+// 		let result = drive_storage.poll_data().await;
+
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					}
+// 				}
+// 				Err(_) => panic!("Expected successful data collection"),
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+
+// 	}
+
+// }

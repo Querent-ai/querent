@@ -292,8 +292,6 @@ pub async fn create_querent_synapose_workflow(
 					map.insert("imap_username".to_string(), config.imap_username.to_string());
 					map.insert("imap_password".to_string(), config.imap_password.to_string());
 					map.insert("imap_folder".to_string(), config.imap_folder.to_string());
-					map.insert("imap_keyfile".to_string(), config.imap_keyfile.to_string());
-					map.insert("imap_certfile".to_string(), config.imap_certfile.to_string());
 					map
 				},
 				Some(proto::semantics::Backend::News(config)) => {
