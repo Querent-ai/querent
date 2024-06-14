@@ -1,7 +1,10 @@
 use async_trait::async_trait;
+use candle_core::Tensor;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
+
+use crate::transformers::modelling_outputs::TokenClassifierOutput;
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -10,6 +13,12 @@ pub enum LLMErrorKind {
 	Io,
 	/// Not found error.
 	NotFound,
+	/// PyTorch error.
+	PyTorch,
+	/// Safetensors error.
+	SafeTensors,
+	///Model error
+	ModelError,
 }
 
 /// Generic IngestorError.
@@ -61,20 +70,26 @@ impl From<serde_json::Error> for LLMError {
 		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
 	}
 }
-
 #[async_trait]
 pub trait LLM: Send + Sync {
-	async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
-	async fn num_start_tokens(&self) -> usize;
-	async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
-	async fn model_input(
-		&self,
-		tokenized_sequence: Vec<i32>,
-	) -> std::collections::HashMap<String, Vec<i32>>;
-	async fn tokenize(&self, word: &str) -> Vec<i32>;
-	async fn inference_attention(
-		&self,
-		model_input: std::collections::HashMap<String, Vec<i32>>,
-	) -> Vec<Vec<f32>>;
-	async fn maximum_tokens(&self) -> usize;
+    async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
+    async fn num_start_tokens(&self) -> usize;
+    async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
+    async fn model_input(
+        &self,
+        tokenized_sequence: Vec<i32>,
+    ) -> Result<std::collections::HashMap<String, Tensor>, LLMError>;
+    async fn tokenize(&self, word: &str) -> Vec<i32>;
+    async fn inference_attention(
+        &self,
+        model_input: std::collections::HashMap<String, Tensor>,
+    ) -> Result<Tensor,LLMError>;
+    async fn maximum_tokens(&self) -> usize;
+    async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
+    async fn process_attention_weights(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError>; // tensor_to_2d_vector
+	async fn token_classification(
+        &self,
+        model_input: std::collections::HashMap<String, Tensor>,
+        labels: Option<&Tensor>,
+    ) -> Result<TokenClassifierOutput, LLMError>;
 }
