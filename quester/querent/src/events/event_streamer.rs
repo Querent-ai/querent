@@ -1,7 +1,6 @@
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
-use common::{CollectionBatch, EventStreamerCounters, EventsBatch, RuntimeType};
-use querent_synapse::callbacks::EventType;
+use common::{CollectionBatch, EventStreamerCounters, EventType, EventsBatch, RuntimeType};
 use std::sync::Arc;
 use tokio::runtime::Handle;
 use tracing::error;

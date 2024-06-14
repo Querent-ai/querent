@@ -6,7 +6,7 @@ use docx_rust::{
 	DocxFile,
 };
 use futures::Stream;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
 
 use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
@@ -96,10 +96,10 @@ impl BaseIngestor for DocxIngestor {
 						continue;
 					}
 					let ingested_tokens = IngestedTokens {
-						data: Some(vec![text]),
+						data: vec![text],
 						file: file.clone(),
 						doc_source: doc_source.clone(),
-						is_token_stream: Some(false),
+						is_token_stream: false,
 					};
 					yield Ok(ingested_tokens);
 

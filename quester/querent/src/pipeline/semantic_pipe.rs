@@ -1,19 +1,16 @@
 use crate::{
-	indexer::Indexer, ingest::ingestor_service::IngestorService, Collector, EventStreamer, QSource,
-	SemanticService, SourceActor, StorageMapper,
+	indexer::Indexer, ingest::ingestor_service::IngestorService, Collector, EngineRunner,
+	EventStreamer, SourceActor, StorageMapper,
 };
 use actors::{
-	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, MessageBus, QueueCapacity,
+	Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Health, QueueCapacity,
 	Supervisable, HEARTBEAT,
 };
 use async_trait::async_trait;
-use common::{MessageStateBatches, PubSubBroker, TerimateSignal};
-use proto::semantics::IndexingStatistics;
-use querent_synapse::{
-	callbacks::EventType,
-	comm::{ChannelHandler, IngestedTokens, MessageState, MessageType},
-	querent::Workflow,
-};
+use common::{EventType, PubSubBroker, TerimateSignal};
+use engines::Engine;
+use proto::semantics::{IndexingStatistics, IngestedTokens};
+use sources::Source;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use storage::Storage;
 use tokio::{
@@ -42,13 +39,11 @@ struct ControlLoop;
 
 #[derive(Clone, Debug)]
 pub struct PipelineSettings {
-	pub qflow_id: String,
 	pub data_sources: Vec<Arc<dyn sources::Source>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn Storage>,
-	pub semantic_service_bus: MessageBus<SemanticService>,
-	pub qflow: Workflow,
+	pub engine: Arc<dyn Engine>,
 }
 
 struct PipelineHandlers {
@@ -72,8 +67,18 @@ impl PipelineHandlers {
 	}
 }
 pub struct SemanticPipeline {
-	// Pipeline settings
-	pub settings: PipelineSettings,
+	// id of the pipeline.
+	pub id: String,
+	// Dynamic enging running the pipeline.
+	pub engine: Arc<dyn Engine>,
+	// Data sources
+	pub data_sources: Vec<Arc<dyn sources::Source>>,
+	// Token sender
+	pub token_sender: Option<mpsc::Sender<IngestedTokens>>,
+	// Event storages
+	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+	// Index storages
+	pub index_storages: Vec<Arc<dyn Storage>>,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
 	// Statistics about the event processing system.
@@ -82,45 +87,29 @@ pub struct SemanticPipeline {
 	handlers: Option<PipelineHandlers>,
 	// pubsub broker
 	pub pubsub_broker: PubSubBroker,
-	token_sender: Option<crossbeam_channel::Sender<IngestedTokens>>,
-	channel_sender: Option<crossbeam_channel::Sender<(MessageType, MessageState)>>,
-	receiver_channel: Option<crossbeam_channel::Receiver<(MessageType, MessageState)>>,
-	_channel_communicator: Option<ChannelHandler>,
 	retry_count: usize,
 }
 
 impl SemanticPipeline {
 	pub fn new(
-		settings: PipelineSettings,
+		id: String,
+		engine: Arc<dyn Engine>,
+		data_sources: Vec<Arc<dyn Source>>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+		index_storages: Vec<Arc<dyn Storage>>,
 		pubsub_broker: PubSubBroker,
-		token_sender: crossbeam_channel::Sender<IngestedTokens>,
-		channel_sender: crossbeam_channel::Sender<(MessageType, MessageState)>,
-		rust_loop_side_receiver: crossbeam_channel::Receiver<(MessageType, MessageState)>,
-		channel_communicator: ChannelHandler,
 	) -> Self {
-		let qflow = settings.qflow.clone();
-		let mut qflow_config = qflow.config.unwrap().clone();
-		qflow_config.workflow.inner_channel = Some(channel_communicator.clone());
-		qflow_config.workflow.inner_tokens_feader = Some(channel_communicator.clone());
-		qflow_config.collectors.iter_mut().for_each(|collector| {
-			collector.inner_channel = Some(channel_communicator.clone());
-		});
-		qflow_config.engines.iter_mut().for_each(|engine| {
-			engine.inner_channel = Some(channel_communicator.clone());
-		});
-
-		let qflow = Workflow { config: Some(qflow_config), ..qflow };
-		let settings = PipelineSettings { qflow, ..settings };
 		Self {
-			settings,
+			id,
+			engine,
+			data_sources,
+			event_storages,
+			index_storages,
 			terminate_sig: TerimateSignal::default(),
 			statistics: IndexingStatistics::default(),
 			handlers: None,
 			pubsub_broker,
-			token_sender: Some(token_sender),
-			channel_sender: Some(channel_sender),
-			receiver_channel: Some(rust_loop_side_receiver),
-			_channel_communicator: Some(channel_communicator),
+			token_sender: None,
 			retry_count: 0,
 		}
 	}
@@ -167,7 +156,7 @@ impl SemanticPipeline {
 
 		if !failure_or_unhealthy_actors.is_empty() {
 			error!(
-				qflow_id=?self.settings.qflow_id,
+				qflow_id=?self.id,
 				healthy_actors=?healthy_actors,
 				failed_or_unhealthy_actors=?failure_or_unhealthy_actors,
 				success_actors=?success_actors,
@@ -178,14 +167,14 @@ impl SemanticPipeline {
 		if healthy_actors.is_empty() {
 			// All the actors finished successfully.
 			info!(
-				qflow_id=?self.settings.qflow_id,
+				qflow_id=?self.id,
 				"Semantic pipeline success."
 			);
 			return Health::Success;
 		}
 		// No error at this point and there are still some actors running.
 		debug!(
-			qflow_id=?self.settings.qflow_id,
+			qflow_id=?self.id,
 			healthy_actors=?healthy_actors,
 			failed_or_unhealthy_actors=?failure_or_unhealthy_actors,
 			success_actors=?success_actors,
@@ -212,33 +201,17 @@ impl SemanticPipeline {
 			&handles.storage_mapper_handler.last_observation(),
 			&handles.ingestor_handler.last_observation(),
 		);
-		// check any new messages received from receive_channel
-		let mut message_state_batches = HashMap::new();
-		if let Some(receiver_channel) = &self.receiver_channel {
-			for (message_type, message_state) in receiver_channel.try_iter() {
-				let message_state_batch =
-					message_state_batches.entry(message_type).or_insert_with(|| Vec::new());
-				message_state_batch.push(message_state);
-			}
-		}
-		if !message_state_batches.is_empty() {
-			let message_state_batches = MessageStateBatches {
-				pipeline_id: self.settings.qflow_id.clone(),
-				message_state_batches,
-			};
-			let _ = ctx
-				.send_message(&self.settings.semantic_service_bus, message_state_batches)
-				.await;
-		}
 		ctx.observe(self);
 	}
 
 	async fn start_qflow(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
+		let (token_sender, token_receiver) = mpsc::channel(1000);
+		self.token_sender = Some(token_sender.clone());
 		let _spawn_pipeline_permit = ctx
 			.protect_future(SPAWN_PIPELINE_SEMAPHORE.acquire())
 			.await
 			.expect("The semaphore should not be closed.");
-		let qflow_id = self.settings.qflow_id.clone();
+		let qflow_id = self.id.clone();
 
 		self.terminate_sig = ctx.terminate_sig().child();
 		info!(
@@ -251,11 +224,8 @@ impl SemanticPipeline {
 		let current_timestamp = chrono::Utc::now().timestamp_millis() as u64;
 
 		// Storage mapper actor
-		let storage_mapper = StorageMapper::new(
-			qflow_id.clone(),
-			current_timestamp,
-			self.settings.event_storages.clone(),
-		);
+		let storage_mapper =
+			StorageMapper::new(qflow_id.clone(), current_timestamp, self.event_storages.clone());
 		let (storage_mapper_mailbox, storage_mapper_inbox) = ctx
 			.spawn_actor()
 			.set_terminate_sig(self.terminate_sig.clone())
@@ -263,16 +233,13 @@ impl SemanticPipeline {
 
 		// Indexer actor
 		let indexer =
-			Indexer::new(qflow_id.clone(), current_timestamp, self.settings.index_storages.clone());
+			Indexer::new(qflow_id.clone(), current_timestamp, self.index_storages.clone());
 		let (indexer_messagebus, indexer_inbox) =
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(indexer);
 
 		// Ingestor actor
-		let ingestor_service = IngestorService::new(
-			qflow_id.clone(),
-			self.token_sender.clone().unwrap(),
-			current_timestamp,
-		);
+		let ingestor_service =
+			IngestorService::new(qflow_id.clone(), token_sender.clone(), current_timestamp);
 
 		let (ingestor_mailbox, ingestor_inbox) = ctx
 			.spawn_actor()
@@ -290,11 +257,10 @@ impl SemanticPipeline {
 			.spawn_actor()
 			.set_terminate_sig(self.terminate_sig.clone())
 			.spawn(event_streamer);
-		let (event_sender, event_receiver) = mpsc::channel(1000);
 
 		// Start various source actors
 		let mut collection_handlers = Vec::new();
-		for source in self.settings.data_sources.iter() {
+		for source in self.data_sources.clone().iter() {
 			let collector_source =
 				Collector::new(qflow_id.clone(), source.clone(), self.terminate_sig.clone());
 			let (_source_mailbox, source_inbox) = ctx
@@ -315,11 +281,10 @@ impl SemanticPipeline {
 		info!("Starting the Ingestor actor 📦");
 
 		// QSource actor
-		let qflow_source = QSource::new(
-			qflow_id.clone(),
-			self.settings.qflow.clone(),
-			event_sender,
-			event_receiver,
+		let qflow_source = EngineRunner::new(
+			self.id.clone(),
+			self.engine.clone(),
+			token_receiver,
 			self.terminate_sig.clone(),
 		);
 		let qflow_source_actor =
@@ -342,19 +307,6 @@ impl SemanticPipeline {
 	}
 
 	async fn terminate(&mut self) {
-		let message_state = MessageState {
-			message_type: MessageType::Stop,
-			timestamp: chrono::Utc::now().timestamp_millis() as f64,
-			payload: "Shutdown signal received".to_string(),
-		};
-		// send 5 times to make sure the message is received
-		for _ in 0..5 {
-			if let Some(sender) = self.channel_sender.as_ref() {
-				sender
-					.send((message_state.clone().message_type, message_state.clone()))
-					.unwrap();
-			}
-		}
 		self.terminate_sig.kill();
 		if let Some(handles) = self.handlers.take() {
 			tokio::join!(
@@ -483,7 +435,7 @@ impl Handler<ShutdownPipe> for SemanticPipeline {
 		_shutdown_pipe: ShutdownPipe,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		if self.settings.qflow_id != _shutdown_pipe.pipeline_id {
+		if self.id != _shutdown_pipe.pipeline_id {
 			return Ok(());
 		}
 		self.terminate().await;
@@ -499,26 +451,13 @@ impl Handler<IngestedTokens> for SemanticPipeline {
 		ingested_tokens: IngestedTokens,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		if let Some(sender) = self.token_sender.as_ref() {
-			sender.send(ingested_tokens).unwrap();
-		}
-		Ok(())
-	}
-}
+		self.token_sender
+			.as_ref()
+			.expect("Token sender should be present.")
+			.send(ingested_tokens)
+			.await
+			.expect("Token sender should not be closed.");
 
-#[async_trait]
-impl Handler<MessageState> for SemanticPipeline {
-	type Reply = ();
-	async fn handle(
-		&mut self,
-		message_state: MessageState,
-		_ctx: &ActorContext<Self>,
-	) -> Result<(), ActorExitStatus> {
-		if let Some(sender) = self.channel_sender.as_ref() {
-			sender
-				.send((message_state.clone().message_type, message_state.clone()))
-				.unwrap();
-		}
 		Ok(())
 	}
 }

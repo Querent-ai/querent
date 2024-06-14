@@ -1,5 +1,3 @@
-pub mod semantic_stats;
-pub use semantic_stats::*;
 pub mod indexer;
 pub use indexer::*;
 pub mod event_streamer;

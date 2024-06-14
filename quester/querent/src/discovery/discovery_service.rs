@@ -1,13 +1,13 @@
-use crate::{discovery_agent::DiscoveryAgent, discovery_searcher::DiscoverySearch};
+use crate::discovery_searcher::DiscoverySearch;
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
+use common::EventType;
 use proto::{
 	DiscoveryAgentType, DiscoveryError, DiscoveryRequest, DiscoveryResponse,
 	DiscoverySessionRequest, DiscoverySessionResponse, StopDiscoverySessionRequest,
 	StopDiscoverySessionResponse,
 };
-use querent_synapse::callbacks::EventType;
 use std::{
 	collections::HashMap,
 	fmt::{Debug, Formatter},
@@ -15,9 +15,10 @@ use std::{
 };
 use storage::{create_storages, Storage};
 
+// TODO Discovery Agents rethinking needed
 struct DiscoverAgentHandle {
-	mailbox: MessageBus<DiscoveryAgent>,
-	handle: ActorHandle<DiscoveryAgent>,
+	mailbox: MessageBus<DiscoverySearch>,
+	handle: ActorHandle<DiscoverySearch>,
 }
 
 struct DiscoverSearchHandle {

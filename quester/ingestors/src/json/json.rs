@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{io::BufReader, AsyncReadExt, Stream};
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
 
 use crate::{
@@ -61,10 +61,10 @@ impl BaseIngestor for JsonIngestor {
 				let res = format!("{:?}   {:?}", key, value).to_string();
 
 				let ingested_tokens = IngestedTokens {
-					data: Some(vec![res.to_string()]),
+					data: vec![res.to_string()],
 					file: file.clone(),
 					doc_source: doc_source.clone(),
-					is_token_stream: Some(false),
+					is_token_stream: false,
 				};
 
 				yield Ok(ingested_tokens);

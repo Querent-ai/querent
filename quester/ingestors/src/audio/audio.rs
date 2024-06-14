@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
 
 use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
@@ -50,10 +50,10 @@ impl BaseIngestor for AudioIngestor {
 			let _cursor = Cursor::new(buffer.as_ref());
 			// TODO: find a library capable of converting audio data to text format
 			let ingested_tokens = IngestedTokens {
-				data: Some(vec!["".to_string()]),
+				data: vec!["".to_string()],
 				file: file.clone(),
 				doc_source: doc_source.clone(),
-				is_token_stream: Some(false),
+				is_token_stream: false,
 			};
 
 			yield Ok(ingested_tokens);

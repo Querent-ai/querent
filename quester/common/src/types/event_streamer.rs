@@ -1,4 +1,3 @@
-use querent_synapse::callbacks::{EventState, EventType};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -157,4 +156,24 @@ impl CollectionBatch {
 	pub fn ext(&self) -> String {
 		self.ext.clone()
 	}
+}
+
+// Define an enumeration for different event types
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub enum EventType {
+	Graph,
+	Vector,
+	QueryResult,
+	Success,
+	Failure,
+}
+// Define a structure to represent the state of an event
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct EventState {
+	pub event_type: EventType,
+	pub timestamp: f64,
+	pub payload: String,
+	pub file: String,
+	pub doc_source: String,
+	pub image_id: Option<String>,
 }

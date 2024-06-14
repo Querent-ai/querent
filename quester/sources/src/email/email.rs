@@ -17,13 +17,12 @@ use futures::{
 };
 use imap::Session;
 use native_tls::TlsStream;
-use once_cell::sync::Lazy;
 use proto::semantics::EmailCollectorConfig;
 use std::result::Result::Ok;
 use tokio::{
 	fs::File,
 	io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt},
-	sync::{Mutex, Semaphore},
+	sync::Mutex,
 };
 
 #[derive(Debug, Clone)]

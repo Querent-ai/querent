@@ -3,10 +3,10 @@ use actors::AskError;
 use bytes::Bytes;
 use bytestring::ByteString;
 use common::{
-	EventStreamerCounters, EventsCounter, IndexerCounters, IngestorCounters, StorageMapperCounters,
+	EventStreamerCounters, EventType, EventsCounter, IndexerCounters, IngestorCounters,
+	StorageMapperCounters,
 };
 use prost::DecodeError;
-use querent_synapse::callbacks::EventType;
 use serde::{Deserialize, Serialize};
 use std::{
 	fmt::{Debug, Display, Formatter},

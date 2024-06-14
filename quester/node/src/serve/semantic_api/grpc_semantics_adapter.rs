@@ -1,8 +1,8 @@
 use actors::{MessageBus, Observe};
 use async_trait::async_trait;
-use proto::semantics::{semantics_service_grpc_server as grpc, BooleanResponse};
+use common::EventType;
+use proto::semantics::{semantics_service_grpc_server as grpc, BooleanResponse, IngestedTokens};
 use querent::{PipelineErrors, SemanticService};
-use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tracing::instrument;
@@ -130,7 +130,7 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 			let synapse_token = IngestedTokens {
 				file: token.file,
 				data: token.data.into(),
-				is_token_stream: Some(token.is_token_stream.into()),
+				is_token_stream: token.is_token_stream,
 				doc_source: token.doc_source.into(),
 			};
 			synapse_tokens.push(synapse_token);

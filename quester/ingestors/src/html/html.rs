@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
 
@@ -65,10 +65,10 @@ impl BaseIngestor for HtmlIngestor {
 						continue;
 					} else {
 						let ingested_tokens = IngestedTokens {
-							data: Some(vec![token.to_string()]),
+							data: vec![token.to_string()],
 							file: file.clone(),
 							doc_source: doc_source.clone(),
-							is_token_stream: Some(false),
+							is_token_stream: false,
 						};
 
 						yield Ok(ingested_tokens);

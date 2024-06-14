@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use rusty_tesseract::{image, Image};
 use std::{pin::Pin, sync::Arc};
 
@@ -57,10 +57,10 @@ impl BaseIngestor for ImageIngestor {
 			let output = rusty_tesseract::image_to_string(&img, &default_args).unwrap();
 
 			let ingested_tokens = IngestedTokens {
-				data: Some(vec![output.to_string()]),
+				data: vec![output.to_string()],
 				file: file.clone(),
 				doc_source: doc_source.clone(),
-				is_token_stream: Some(false),
+				is_token_stream: false,
 			};
 
 			yield Ok(ingested_tokens);

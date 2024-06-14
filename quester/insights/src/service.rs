@@ -1,11 +1,11 @@
 use actors::MessageBus;
 use async_trait::async_trait;
+use common::EventType;
 use proto::{
 	DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionResponse,
 	StopDiscoverySessionRequest, StopDiscoverySessionResponse,
 };
 use querent::discovery_service::DiscoveryAgentService;
-use querent_synapse::callbacks::EventType;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 
