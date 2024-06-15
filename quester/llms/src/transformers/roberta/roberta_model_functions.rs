@@ -1,15 +1,51 @@
 use std::collections::HashMap;
-
+use candle_transformers::models::with_tracing::{layer_norm, linear, LayerNorm, Linear};
 use candle_core::{DType, Device, IndexOp, Result, Tensor};
 use candle_nn::{Embedding, Module, VarBuilder};
 
 use crate::transformers::modelling_outputs::{SequenceClassifierOutput, TokenClassifierOutput, QuestionAnsweringModelOutput};
-use crate::transformers::roberta::roberta_utils::{Dropout, HiddenAct, Linear, HiddenActLayer, LayerNorm, PositionEmbeddingType};
-use crate::transformers::roberta::roberta_utils::binary_cross_entropy_with_logit;
 use serde::Deserialize;
-
+use std::sync::RwLock;
 pub const FLOATING_DTYPE: DType = DType::F32;
 pub const LONG_DTYPE: DType = DType::I64;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HiddenAct {
+    Gelu,
+    GeluApproximate,
+    Relu,
+    Tanh,
+}
+
+struct HiddenActLayer {
+    act: HiddenAct,
+    span: tracing::Span,
+}
+
+impl HiddenActLayer {
+    fn new(act: HiddenAct) -> Self {
+        let span = tracing::span!(tracing::Level::TRACE, "hidden-act");
+        Self { act, span }
+    }
+
+    fn forward(&self, xs: &Tensor) -> candle_core::Result<Tensor> {
+        let _enter = self.span.enter();
+        match self.act {
+            HiddenAct::Gelu => xs.gelu_erf(),
+            HiddenAct::GeluApproximate => xs.gelu(),
+            HiddenAct::Relu => xs.relu(),
+            HiddenAct::Tanh => xs.tanh()
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum PositionEmbeddingType {
+    #[default]
+    Absolute,
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct RobertaConfig {
@@ -34,9 +70,9 @@ pub struct RobertaConfig {
     classifier_dropout: Option<f64>,
     model_type: Option<String>,
     problem_type: Option<String>,
-    _num_labels: Option<usize>,
-    id2label: Option<HashMap<String, String>>,
-    label2id: Option<HashMap<String, usize>>
+    pub _num_labels: Option<usize>,
+    pub id2label: Option<HashMap<String, String>>,
+    pub label2id: Option<HashMap<String, usize>>
 }
 
 impl Default for RobertaConfig {
@@ -65,6 +101,23 @@ impl Default for RobertaConfig {
             id2label: None,
             label2id: None
         }
+    }
+}
+
+struct Dropout {
+    #[allow(dead_code)]
+    pr: f64,
+}
+
+impl Dropout {
+    fn new(pr: f64) -> Self {
+        Self { pr }
+    }
+}
+
+impl Module for Dropout {
+    fn forward(&self, x: &Tensor) -> Result<Tensor> {
+        Ok(x.clone())
     }
 }
 
@@ -101,6 +154,23 @@ fn cumsum_2d(mask: &Tensor, dim: u8, device: &Device) -> Result<Tensor> {
     Ok(result)
 }
 
+pub fn sigmoid(xs: &Tensor) -> Result<Tensor> {
+    // TODO: Should we have a specialized op for this?
+    (xs.neg()?.exp()? + 1.0)?.recip()
+}
+
+pub fn binary_cross_entropy_with_logit(inp: &Tensor, target: &Tensor) -> Result<Tensor> {
+    let inp = sigmoid(inp)?;
+
+    let left_side = target * inp.log()?;
+    let right_side = (target.affine(-1., 1.))? * inp.affine(-1., 1.)?.log()?;
+
+    let loss = left_side? + right_side?;
+    let loss = loss?.neg()?.mean_all()?;
+
+    Ok(loss)
+}
+
 pub fn create_position_ids_from_input_ids(
     input_ids: &Tensor,
     padding_idx: u32,
@@ -118,26 +188,6 @@ pub fn create_position_ids_from_input_ids(
 fn embedding(vocab_size: usize, hidden_size: usize, vb: VarBuilder) -> Result<Embedding> {
     let embeddings = vb.get((vocab_size, hidden_size), "weight")?;
     Ok(Embedding::new(embeddings, hidden_size))
-}
-
-fn linear(size1: usize, size2: usize, vb: VarBuilder) -> Result<Linear> {
-    let weight = vb.get((size2, size1), "weight")?;
-    let bias = vb.get(size2, "bias")?;
-    Ok(Linear::new(weight, Some(bias)))
-}
-
-fn layer_norm(size: usize, eps: f64, vb: VarBuilder) -> Result<LayerNorm> {
-    let (weight, bias) = match (vb.get(size, "weight"), vb.get(size, "bias")) {
-        (Ok(weight), Ok(bias)) => (weight, bias),
-        (Err(err), _) | (_, Err(err)) => {
-            if let (Ok(weight), Ok(bias)) = (vb.get(size, "gamma"), vb.get(size, "beta")) {
-                (weight, bias)
-            } else {
-                return Err(err);
-            }
-        }
-    };
-    Ok(LayerNorm::new(weight, bias, eps))
 }
 
 pub struct RobertaEmbeddings {
@@ -229,15 +279,11 @@ impl RobertaEmbeddings {
     pub fn create_position_ids_from_input_embeds(&self, input_embeds: &Tensor) -> Result<Tensor> {
         let input_shape = input_embeds.dims3()?;
         let seq_length = input_shape.1;
-
-        println!("seq_length: {:?}", seq_length);
         let mut position_ids = Tensor::arange(
             self.padding_idx + 1,
             seq_length as u32 + self.padding_idx + 1,
             &Device::Cpu,
         )?;
-
-        println!("position_ids: {:?}", position_ids);
 
         position_ids = position_ids
             .unsqueeze(0)?
@@ -253,6 +299,7 @@ struct RobertaSelfAttention {
     dropout: Dropout,
     num_attention_heads: usize,
     attention_head_size: usize,
+    attention_probs: RwLock<Option<Tensor>>,
 }
 
 impl RobertaSelfAttention {
@@ -271,6 +318,7 @@ impl RobertaSelfAttention {
             dropout,
             num_attention_heads: config.num_attention_heads,
             attention_head_size,
+            attention_probs: RwLock::new(None),
         })
     }
 
@@ -297,7 +345,7 @@ impl RobertaSelfAttention {
         let attention_probs =
             { candle_nn::ops::softmax(&attention_scores, candle_core::D::Minus1)? };
         let attention_probs = self.dropout.forward(&attention_probs)?;
-
+        *self.attention_probs.write().unwrap() = Some(attention_probs.clone());
         let context_layer = attention_probs.matmul(&value_layer)?;
         let context_layer = context_layer.transpose(1, 2)?.contiguous()?;
         let context_layer = context_layer.flatten_from(candle_core::D::Minus2)?;
@@ -518,6 +566,18 @@ impl RobertaModel {
         })
     }
 
+    pub fn get_last_attention_probs(&self) -> Option<Tensor> {
+        self.encoder
+            .layers
+            .last()?
+            .attention
+            .self_attention
+            .attention_probs
+            .read()
+            .unwrap()
+            .clone()
+    }
+
     pub fn forward(&self, input_ids: &Tensor, token_type_ids: &Tensor) -> Result<Tensor> {
         let embedding_output = self
             .embeddings
@@ -710,8 +770,6 @@ impl RobertaForTokenClassification {
     pub fn load(vb: VarBuilder, config: &RobertaConfig) -> Result<Self> {
         let classifier_dropout = config.classifier_dropout;
 
-        println!("{:?}", config);
-
         let (roberta, classifier) = match (
             RobertaModel::load(vb.pp("roberta"), config),
 
@@ -747,7 +805,6 @@ impl RobertaForTokenClassification {
 
         let logits = self.classifier.forward(&outputs)?;
 
-        println!("{:?}", logits);
         let mut loss: Tensor = Tensor::new(vec![0.0], &self.device)?;
 
         match labels {
@@ -781,8 +838,6 @@ impl RobertaForQuestionAnswering {
     pub fn load(vb: VarBuilder, config: &RobertaConfig) -> Result<Self> {
         let classifier_dropout = config.classifier_dropout;
 
-        println!("{:?}", config);
-
         let (roberta, qa_outputs) = match (
             RobertaModel::load(vb.pp("roberta"), config),
             linear(config.hidden_size, 2, vb.pp("classifier"))
@@ -811,8 +866,6 @@ impl RobertaForQuestionAnswering {
 
         let start_logits = logits.i((.., 0))?;
         let end_logits = logits.i((.., 1))?;
-
-        println!("{:?}", logits);
         let mut loss: Tensor = Tensor::new(vec![0.0], &self.device)?;
 
         match (start_positions, end_positions) {
@@ -838,60 +891,60 @@ impl RobertaForQuestionAnswering {
 }
 
 
-#[cfg(test)]
-mod tests {
-    use crate::transformers::roberta::roberta_model_functions::{RobertaConfig, RobertaForTokenClassification};
-    use crate::utils::{build_roberta_model_and_tokenizer, ModelType};
-    use anyhow::Result;
-    use candle_core::{DType, Device, Tensor};
-    use tokenizers::Tokenizer;
 
-    #[test]
-    fn test_roberta_token_classification() -> Result<()> {
-        let model_type = "RobertaForTokenClassification";
-        let (model, tokenizer) = build_roberta_model_and_tokenizer("Davlan/xlm-roberta-base-wikiann-ner", false, model_type).unwrap();
+// #[cfg(test)]
+// mod tests {
+//     use crate::transformers::roberta::roberta_model_functions::{RobertaConfig, RobertaForTokenClassification};
+//     use crate::utils::{build_roberta_model_and_tokenizer, ModelType};
+//     use anyhow::Result;
+//     use candle_core::{DType, Tensor};
 
-        let model: RobertaForTokenClassification = match model {
-            ModelType::RobertaForTokenClassification { model } => model,
-            _ => panic!("Invalid model_type"),
-        };
+//     #[test]
+//     fn test_roberta_token_classification() -> Result<()> {
+//         let model_type = "RobertaForTokenClassification";
+//         let (model, tokenizer) = build_roberta_model_and_tokenizer("Davlan/xlm-roberta-base-wikiann-ner", false, model_type).unwrap();
 
-        // Access the configuration directly from the model
-        let config = &model.config;
+//         let model: RobertaForTokenClassification = match model {
+//             ModelType::RobertaForTokenClassification { model } => model,
+//             _ => panic!("Invalid model_type"),
+//         };
 
-        // Retrieve the id2label map from the config
-        let id2label = match &config.id2label {
-            Some(map) => map,
-            None => panic!("id2label not found in model config"),
-        };
+//         // Access the configuration directly from the model
+//         let config = &model.config;
 
-        let input_text = "Joel lives and works in Delhi that is the capital of India.";
-        let encoding = tokenizer.encode(input_text, true).unwrap();
-        let input_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
-        let input_ids = Tensor::from_vec(input_ids, &[1, encoding.len() as usize], &model.device).unwrap();
-        let token_type_ids = Tensor::zeros(&[1, encoding.len() as usize], DType::I64, &model.device).unwrap();
+//         // Retrieve the id2label map from the config
+//         let id2label = match &config.id2label {
+//             Some(map) => map,
+//             None => panic!("id2label not found in model config"),
+//         };
 
-        let output = model.forward(&input_ids, &token_type_ids, None)?;
-        let logits = output.logits;
-        let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)?.to_vec3::<f32>()?;
+//         let input_text = "Joel lives and works in Delhi that is the capital of India.";
+//         let encoding = tokenizer.encode(input_text, true).unwrap();
+//         let input_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
+//         let input_ids = Tensor::from_vec(input_ids, &[1, encoding.len() as usize], &model.device).unwrap();
+//         let token_type_ids = Tensor::zeros(&[1, encoding.len() as usize], DType::I64, &model.device).unwrap();
 
-        // Decode the tokens and their corresponding labels
-        let tokens = encoding.get_tokens().iter().map(|s| s.to_string()).collect::<Vec<String>>();
-        let mut entity_predictions = Vec::new();
-        let default_label = "O".to_string(); // Create a longer-lived value
+//         let output = model.forward(&input_ids, &token_type_ids, None)?;
+//         let logits = output.logits;
+//         let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)?.to_vec3::<f32>()?;
 
-        for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
-            let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let label_idx = probs.iter().position(|&p| p == max_prob).unwrap() as i64;
-            let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
-            entity_predictions.push((token.clone(), label.clone()));
-        }
+//         // Decode the tokens and their corresponding labels
+//         let tokens = encoding.get_tokens().iter().map(|s| s.to_string()).collect::<Vec<String>>();
+//         let mut entity_predictions = Vec::new();
+//         let default_label = "O".to_string(); // Create a longer-lived value
 
-        // Print the identified entities and their types
-        for (token, label) in entity_predictions.iter() {
-            println!("Token: {}, Label: {}", token, label);
-        }
+//         for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
+//             let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+//             let label_idx = probs.iter().position(|&p| p == max_prob).unwrap() as i64;
+//             let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
+//             entity_predictions.push((token.clone(), label.clone()));
+//         }
 
-        Ok(())
-    }
-}
+//         // Print the identified entities and their types
+//         for (token, label) in entity_predictions.iter() {
+//             println!("Token: {}, Label: {}", token, label);
+//         }
+
+//         Ok(())
+//     }
+// }

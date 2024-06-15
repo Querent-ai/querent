@@ -7,7 +7,7 @@ pub use bert_model_functions::*;
 }
 pub mod roberta{
 	pub mod roberta_model_functions;
-	pub mod roberta_utils;
+	pub mod roberta;
 }
 pub mod modelling_outputs;
 use ordered_float::OrderedFloat;

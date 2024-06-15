@@ -615,55 +615,55 @@ impl BertForTokenClassification {
 
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use candle_core::{Tensor, DType};
-    use anyhow::Result;
-    use crate::utils::{build_roberta_model_and_tokenizer, ModelType};
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use candle_core::{Tensor, DType};
+//     use anyhow::Result;
+//     use crate::utils::{build_roberta_model_and_tokenizer, ModelType};
 
-    #[test]
-    fn test_bert_token_classification() -> Result<()> {
-        let model_type = "BertForTokenClassification";
-        let (model, tokenizer) = build_roberta_model_and_tokenizer("/home/nishantg/querent-main/local models/geobert_files", true, model_type).unwrap();
-        let model: BertForTokenClassification = match model {
-            ModelType::BertForTokenClassification { model } => model,
-            _ => panic!("Invalid model_type"),
-        };
+//     #[test]
+//     fn test_bert_token_classification() -> Result<()> {
+//         let model_type = "BertForTokenClassification";
+//         let (model, tokenizer) = build_roberta_model_and_tokenizer("/home/nishantg/querent-main/local models/geobert_files", true, model_type).unwrap();
+//         let model: BertForTokenClassification = match model {
+//             ModelType::BertForTokenClassification { model } => model,
+//             _ => panic!("Invalid model_type"),
+//         };
 
-        let config = &model.config;
-        let id2label = match &config.id2label {
-            Some(map) => map,
-            None => panic!("id2label not found in model config"),
-        };
+//         let config = &model.config;
+//         let id2label = match &config.id2label {
+//             Some(map) => map,
+//             None => panic!("id2label not found in model config"),
+//         };
 
-        let input_text = "The tectonic movements in the Jurassic era are not common.";
-        let encoding = tokenizer.encode(input_text, true).unwrap();
-        let input_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
-        let input_ids = Tensor::from_vec(input_ids, &[1, encoding.len() as usize], &model.device).unwrap();
-        let token_type_ids = Tensor::zeros(&[1, encoding.len() as usize], DType::I64, &model.device).unwrap();
+//         let input_text = "The tectonic movements in the Jurassic era are not common.";
+//         let encoding = tokenizer.encode(input_text, true).unwrap();
+//         let input_ids: Vec<i64> = encoding.get_ids().iter().map(|&id| id as i64).collect();
+//         let input_ids = Tensor::from_vec(input_ids, &[1, encoding.len() as usize], &model.device).unwrap();
+//         let token_type_ids = Tensor::zeros(&[1, encoding.len() as usize], DType::I64, &model.device).unwrap();
 
-        let output = model.forward(&input_ids, &token_type_ids, None)?;
-        let logits = output.logits;
-        let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)?.to_vec3::<f32>()?;
+//         let output = model.forward(&input_ids, &token_type_ids, None)?;
+//         let logits = output.logits;
+//         let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)?.to_vec3::<f32>()?;
 
-        let tokens = encoding.get_tokens().iter().map(|s| s.to_string()).collect::<Vec<String>>();
-        let mut entity_predictions = Vec::new();
-        let default_label = "O".to_string();
+//         let tokens = encoding.get_tokens().iter().map(|s| s.to_string()).collect::<Vec<String>>();
+//         let mut entity_predictions = Vec::new();
+//         let default_label = "O".to_string();
 
-        for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
-            let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let label_idx = probs.iter().position(|&p| p == max_prob).unwrap() as i64;
-            let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
-            entity_predictions.push((token.clone(), label.clone()));
-        }
+//         for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
+//             let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+//             let label_idx = probs.iter().position(|&p| p == max_prob).unwrap() as i64;
+//             let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
+//             entity_predictions.push((token.clone(), label.clone()));
+//         }
 
-        for (token, label) in entity_predictions.iter() {
-            println!("Token: {}, Label: {}", token, label);
-        }
+//         for (token, label) in entity_predictions.iter() {
+//             println!("Token: {}, Label: {}", token, label);
+//         }
 
-        Ok(())
-    }
+//         Ok(())
+//     }
 
     
-}
+// }

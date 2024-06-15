@@ -1,9 +1,7 @@
 use async_trait::async_trait;
 use candle_core::{DType, Tensor};
 use candle_nn::VarBuilder;
-// use candle_transformers::models::bert::{BertModel as CandleBertModel, Config, DTYPE};
 use crate::transformers::bert::bert_model_functions::{BertModel as CandleBertModel, BertConfig, DTYPE};
-use crate::transformers::modelling_outputs::TokenClassifierOutput;
 use hf_hub::{api::sync::Api, Repo, RepoType};
 use std::path::PathBuf;
 use std::{collections::HashMap, sync::Arc};
@@ -164,8 +162,6 @@ impl BertLLM {
 				)?
 			},
 		};
-		println!("BERT Config......{:?}", config);
-	
 		let model = if config.id2label.is_none() && config.label2id.is_none() {
 			Some(CandleBertModel::load(vb.clone(), &config).map_err(|e| {
 				LLMError::new(
@@ -251,15 +247,23 @@ impl LLM for BertLLM {
 		Ok(input_map)
 	}
 
-    async fn tokenize(&self, word: &str) -> Vec<i32> {
-        self.tokenizer
-            .encode(word, false)
-            .unwrap()
-            .get_ids()
-            .iter()
-            .map(|&id| id as i32)
-            .collect()
-    }
+    async fn tokenize(&self, word: &str) -> Result<Vec<i32>, LLMError> {
+		self.tokenizer
+			.encode(word, false)
+			.map_err(|e| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("token encoding failed: {}", e)),
+				)
+			})
+			.map(|encoding| {
+				encoding.get_ids()
+					.iter()
+					.map(|&id| id as i32)
+					.collect()
+			})
+	}
+	
 
 	async fn inference_attention(&self, model_input: HashMap<String, Tensor>) ->Result<Tensor, LLMError> { 
 		let input_ids = model_input.get("input_ids").ok_or_else(|| {
@@ -320,7 +324,7 @@ impl LLM for BertLLM {
 	}
 	
 
-	async fn process_attention_weights(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError> {
+	async fn attention_tensor_to_2d_vector(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError> {
 		let attention_weights_2d = attention_weights.squeeze(0)
 			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?
 			.to_vec2::<f32>()
@@ -336,104 +340,110 @@ impl LLM for BertLLM {
 	}
 
 
-	// async fn token_classification(
-	// 	&self,
-	// 	model_input: HashMap<String, Tensor>,
-	// 	labels: Option<&Tensor>,
-	// ) -> Result<Vec<(String, String)>, LLMError> {
-	// 	if let Some(token_classification_model) = &self.token_classification_model {
-	// 		let input_ids = model_input.get("input_ids").ok_or_else(|| {
-	// 			LLMError::new(
-	// 				LLMErrorKind::ModelError,
-	// 				Arc::new(anyhow::anyhow!("missing input_ids in token classification")),
-	// 			)
-	// 		})?;
-	// 		let token_type_ids = model_input.get("token_type_ids").ok_or_else(|| {
-	// 			LLMError::new(
-	// 				LLMErrorKind::ModelError,
-	// 				Arc::new(anyhow::anyhow!("missing token_type_ids in token classification")),
-	// 			)
-	// 		})?;
-	// 		let output = token_classification_model
-	// 			.forward(input_ids, token_type_ids, labels)
-	// 			.map_err(|e| {
-	// 				LLMError::new(
-	// 					LLMErrorKind::ModelError,
-	// 					Arc::new(anyhow::anyhow!("token classification forward pass failed: {}", e)),
-	// 				)
-	// 			})?;
-	
-	// 		// Calculate softmax probabilities
-	// 		let logits = output.logits;
-	// 		let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1).unwrap().to_vec3::<f32>().unwrap();
-
-	// 		// Get tokens
-	// 		let input_ids_vec = input_ids.to_vec1::<i64>().unwrap();
-	// 		let input_ids_u32: Vec<u32> = input_ids_vec.iter().map(|&id| id as u32).collect();
-	// 		let tokens_string = self.tokenizer.decode(&input_ids_u32, false).unwrap();
-    //     	let tokens: Vec<String> = tokens_string.split_whitespace().map(String::from).collect();
-	
-	// 		// Decode logits to get predicted labels
-	// 		let config = &self.token_classification_model.as_ref().unwrap().config;
-	// 		let id2label = match &config.id2label {
-	// 			Some(map) => map,
-	// 			None => panic!("id2label not found in model config"),
-	// 		};
-	
-	// 		// Map tokens to their predicted labels
-	// 		let mut entity_predictions = Vec::new();
-	// 		let default_label = "O".to_string();
-	
-	// 		for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
-	// 			let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-	// 			let label_idx = probs.iter().position(|&p| p == max_prob).unwrap() as i64;
-	// 			let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
-	// 			entity_predictions.push((token.clone(), label.clone()));
-	// 		}
-	
-	// 		Ok(entity_predictions)
-	// 	} else {
-	// 		Err(LLMError::new(
-	// 			LLMErrorKind::ModelError,
-	// 			Arc::new(anyhow::anyhow!("token classification model not initialized")),
-	// 		))
-	// 	}
-	// }
-	
 	async fn token_classification(
-        &self,
-        model_input: HashMap<String, Tensor>,
-        labels: Option<&Tensor>,
-    ) -> Result<TokenClassifierOutput, LLMError> {
-        if let Some(token_classification_model) = &self.token_classification_model {
-            let input_ids = model_input.get("input_ids").ok_or_else(|| {
+		&self,
+		model_input: HashMap<String, Tensor>,
+		labels: Option<&Tensor>,
+	) -> Result<Vec<(String, String)>, LLMError> {
+		if let Some(token_classification_model) = &self.token_classification_model {
+			let input_ids = model_input.get("input_ids").ok_or_else(|| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("missing input_ids in token classification")),
+				)
+			})?;
+			let token_type_ids = model_input.get("token_type_ids").ok_or_else(|| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("missing token_type_ids in token classification")),
+				)
+			})?;
+			let output = token_classification_model
+				.forward(input_ids, token_type_ids, labels)
+				.map_err(|e| {
+					LLMError::new(
+						LLMErrorKind::ModelError,
+						Arc::new(anyhow::anyhow!("token classification forward pass failed: {}", e)),
+					)
+				})?;
+	
+			// Calculate softmax probabilities
+			let logits = output.logits;
+			let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)
+            .map_err(|e| {
                 LLMError::new(
                     LLMErrorKind::ModelError,
-                    Arc::new(anyhow::anyhow!("missing input_ids in token classification")),
+                    Arc::new(anyhow::anyhow!("softmax calculation failed: {}", e)),
                 )
-            })?;
-            let token_type_ids = model_input.get("token_type_ids").ok_or_else(|| {
+            })?
+            .to_vec3::<f32>()
+            .map_err(|e| {
                 LLMError::new(
                     LLMErrorKind::ModelError,
-                    Arc::new(anyhow::anyhow!("missing token_type_ids in token classification")),
+                    Arc::new(anyhow::anyhow!("conversion to Vec3 failed: {}", e)),
                 )
             })?;
-            let output = token_classification_model
-                .forward(input_ids, token_type_ids, labels)
-                .map_err(|e| {
-                    LLMError::new(
-                        LLMErrorKind::ModelError,
-                        Arc::new(anyhow::anyhow!("token classification forward pass failed: {}", e)),
-                    )
-                })?;
-            Ok(output)
-        } else {
-            Err(LLMError::new(
-                LLMErrorKind::ModelError,
-                Arc::new(anyhow::anyhow!("token classification model not initialized")),
-            ))
-        }
-    }
+			// Get tokens
+			let input_ids_vec_2d = input_ids.to_vec2::<i64>().map_err(|e| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("conversion to Vec2 failed: {}", e)),
+				)
+			})?;
+
+			// Flatten the 2-dimensional vector to 1-dimensional
+			let input_ids_vec: Vec<i64> = input_ids_vec_2d.into_iter().flatten().collect();
+			let input_ids_u32: Vec<u32> = input_ids_vec.iter().map(|&id| id as u32).collect();
+			let tokens_string = self.tokenizer.decode(&input_ids_u32, false).map_err(|e| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("token decoding failed: {}", e)),
+				)
+			})?;
+        	let tokens: Vec<String> = tokens_string.split_whitespace().map(String::from).collect();
+	
+			// Decode logits to get predicted labels
+			let config = &self.token_classification_model.as_ref().ok_or_else(|| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("token classification model config not found")),
+				)
+			})?.config;
+			let id2label = match &config.id2label {
+				Some(map) => map,
+				None => {
+					return Err(LLMError::new(
+						LLMErrorKind::ModelError,
+						Arc::new(anyhow::anyhow!("id2label not found in model config")),
+					));
+				}
+			};
+	
+			// Map tokens to their predicted labels
+			let mut entity_predictions = Vec::new();
+			let default_label = "O".to_string();
+	
+			for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
+				let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
+				let label_idx = probs.iter().position(|&p| p == max_prob).ok_or_else(|| {
+					LLMError::new(
+						LLMErrorKind::ModelError,
+						Arc::new(anyhow::anyhow!("max probability not found")),
+					)
+				})? as i64;
+				let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
+				entity_predictions.push((token.clone(), label.clone()));
+			}
+	
+			Ok(entity_predictions)
+		} else {
+			Err(LLMError::new(
+				LLMErrorKind::ModelError,
+				Arc::new(anyhow::anyhow!("token classification model not initialized")),
+			))
+		}
+	}
+	
 }
 
 #[cfg(test)]
@@ -442,116 +452,83 @@ mod tests {
     use tokio::test;
 
     #[test]
-    async fn test_process_attention_weights() {
+    async fn test_inference_and_attention_processing() {
         let options = EmbedderOptions {
             model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
 			local_dir: None,
-			// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-			// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
             revision: None,
             distribution: None,
-			
         };
         let embedder = BertLLM::new(options).unwrap();
-
-        // Tokenize input text
-		//let input_text = "Joel lives in Delhi".to_string();
         let input_text = "The tectonic movements in the Jurassic era are not common.";
-		let tokens = embedder.tokenize(&input_text).await;
+        let tokens = match embedder.tokenize(&input_text).await {
+            Ok(tokens) => tokens,
+            Err(e) => {
+                println!("Tokenization failed: {:?}", e);
+                return;
+            }
+        };
         println!("These are the Tokens: {:?}", tokens);
-		let encoding = embedder.tokenizer.encode(input_text, true).unwrap();
-        // Prepare model input
-        let model_input1 = embedder.model_input(tokens.clone()).await;
-		let model_input = embedder.model_input(tokens.clone()).await;
-		let model_input = match model_input {
-            Ok(ref input) => {
-                println!("Model Input: {:?}", input);
 
-                // Perform inference to get attention weights
-                match embedder.inference_attention(input.clone()).await {
-                    Ok(tensor) => {
-                        println!("Output Tensor: {:?}", tensor);
-                        Ok(tensor)
-                    }
-                    Err(e) => {
-                        println!("Failed to perform inference: {:?}", e);
-                        Err(e)
-                    }
+        let model_input = match embedder.model_input(tokens.clone()).await {
+            Ok(model_input) => model_input,
+            Err(e) => {
+                println!("Model input creation failed: {:?}", e);
+                return;
+            }
+        };
+
+        // Perform inference to get attention weights
+        match embedder.inference_attention(model_input).await {
+            Ok(tensor) => {
+                println!("Output Tensor: {:?}", tensor);
+
+                // Process the attention weights to remove CLS and SEP tokens
+                match embedder.attention_tensor_to_2d_vector(&tensor).await {
+                    Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
+                    Err(e) => println!("Failed to process attention weights: {:?}", e),
                 }
             }
-            Err(ref e) => {
-                println!("Failed to create model input: {:?}", e);
-                return;
-            }
-        };
-
-
-		// Handle the Result type properly
-		let output_tensor = match model_input {
-			Ok(tensor) => tensor,
-			Err(e) => {
-				println!("Failed to get output tensor: {:?}", e);
-				return;
-			}
-		};
-		
-		
-
-
-		// Process the attention weights to remove CLS and SEP tokens
-		let processed_attention_weights = match embedder.process_attention_weights(&output_tensor).await {
-			Ok(weights) => weights,
-			Err(e) => {
-				println!("Failed to process attention weights: {:?}", e);
-				return;
-			}
-		};
-		println!("Processed Attention Weights: {:?}", processed_attention_weights);	
-        // Map tokens to words
-        let words = embedder.tokens_to_words(&tokens).await;
-        for (token, word) in tokens.iter().zip(words.iter()) {
-            println!("Token {} corresponds to word '{}'", token, word);
+            Err(e) => println!("Failed to perform inference: {:?}", e),
         }
+    }
 
-		// Perform token classification
-        let token_classification_output = match embedder.token_classification(model_input1.unwrap().clone(), None).await {
-            Ok(output) => output,
+	#[test]
+    async fn test_token_classification() {
+        let options = EmbedderOptions {
+            model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+            local_dir: Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+            revision: None,
+            distribution: None,
+        };
+        let embedder = BertLLM::new(options).unwrap();
+        let input_text = "The tectonic movements in the Jurassic era are not common.";
+        let tokens = match embedder.tokenize(&input_text).await {
+            Ok(tokens) => tokens,
             Err(e) => {
-                println!("Failed to perform token classification: {:?}", e);
+                println!("Tokenization failed: {:?}", e);
                 return;
             }
         };
-        println!("Token Classification Logits: {:?}", token_classification_output.logits);
-		let logits = token_classification_output.logits;
-
-		// Calculate softmax probabilities
-        let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1).unwrap().to_vec3::<f32>().unwrap();
-
-        // Get tokens
-        let tokens = encoding.get_tokens().iter().map(|s| s.to_string()).collect::<Vec<String>>();
-
-        // Decode logits to get predicted labels
-        let config = &embedder.token_classification_model.as_ref().unwrap().config;
-        let id2label = match &config.id2label {
-            Some(map) => map,
-            None => panic!("id2label not found in model config"),
+        println!("These are the Tokens: {:?}", tokens);
+        
+        let model_input = match embedder.model_input(tokens.clone()).await {
+            Ok(model_input) => model_input,
+            Err(e) => {
+                println!("Model input creation failed: {:?}", e);
+                return;
+            }
         };
 
-        // Map tokens to their predicted labels
-        let mut entity_predictions = Vec::new();
-        let default_label = "O".to_string();
-
-        for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
-            let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
-            let label_idx = probs.iter().position(|&p| p == max_prob).unwrap() as i64;
-            let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
-            entity_predictions.push((token.clone(), label.clone()));
+        // Perform token classification
+        match embedder.token_classification(model_input, None).await {
+            Ok(token_classification_output) => {
+                // Print tokens and their predicted labels
+                for (token, label) in token_classification_output.iter() {
+                    println!("Token: {}, Label: {}", token, label);
+                }
+            }
+            Err(e) => println!("Failed to perform token classification: {:?}", e),
         }
-
-        // Print tokens and their predicted labels
-        for (token, label) in entity_predictions.iter() {
-            println!("Token: {}, Label: {}", token, label);
-        }
-
     }
 }
