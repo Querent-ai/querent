@@ -47,7 +47,7 @@ pub struct PipelineSettings {
 }
 
 struct PipelineHandlers {
-	pub qflow_handler: ActorHandle<SourceActor>,
+	pub engine_handler: ActorHandle<SourceActor>,
 	pub event_streamer_handler: ActorHandle<EventStreamer>,
 	pub indexer_handler: ActorHandle<Indexer>,
 	pub storage_mapper_handler: ActorHandle<StorageMapper>,
@@ -122,7 +122,7 @@ impl SemanticPipeline {
 				.map(|handler| handler as &dyn Supervisable)
 				.collect();
 			let supervisables: Vec<&dyn Supervisable> = vec![
-				&handles.qflow_handler,
+				&handles.engine_handler,
 				&handles.event_streamer_handler,
 				&handles.indexer_handler,
 				&handles.storage_mapper_handler,
@@ -156,7 +156,7 @@ impl SemanticPipeline {
 
 		if !failure_or_unhealthy_actors.is_empty() {
 			error!(
-				qflow_id=?self.id,
+				engine_id=?self.id,
 				healthy_actors=?healthy_actors,
 				failed_or_unhealthy_actors=?failure_or_unhealthy_actors,
 				success_actors=?success_actors,
@@ -167,14 +167,14 @@ impl SemanticPipeline {
 		if healthy_actors.is_empty() {
 			// All the actors finished successfully.
 			info!(
-				qflow_id=?self.id,
+				engine_id=?self.id,
 				"Semantic pipeline success."
 			);
 			return Health::Success;
 		}
 		// No error at this point and there are still some actors running.
 		debug!(
-			qflow_id=?self.id,
+			engine_id=?self.id,
 			healthy_actors=?healthy_actors,
 			failed_or_unhealthy_actors=?failure_or_unhealthy_actors,
 			success_actors=?success_actors,
@@ -187,35 +187,39 @@ impl SemanticPipeline {
 		let Some(handles) = &self.handlers else {
 			return;
 		};
-		handles.qflow_handler.refresh_observe();
+		handles.engine_handler.refresh_observe();
 		handles.event_streamer_handler.refresh_observe();
 		handles.indexer_handler.refresh_observe();
 		handles.storage_mapper_handler.refresh_observe();
 		handles.collection_handlers.iter().for_each(|handler| handler.refresh_observe());
 		handles.ingestor_handler.refresh_observe();
-		// TODO collect collection and ingestion stats once ready
+		let mut collection_counters = vec![];
+		for handler in &handles.collection_handlers {
+			collection_counters.push(handler.last_observation());
+		}
 		self.statistics = self.statistics.clone().add_counters(
-			&handles.qflow_handler.last_observation(),
+			&handles.engine_handler.last_observation(),
 			&handles.event_streamer_handler.last_observation(),
 			&handles.indexer_handler.last_observation(),
 			&handles.storage_mapper_handler.last_observation(),
 			&handles.ingestor_handler.last_observation(),
+			collection_counters,
 		);
 		ctx.observe(self);
 	}
 
-	async fn start_qflow(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
+	async fn start_engine(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
 		let (token_sender, token_receiver) = mpsc::channel(1000);
 		self.token_sender = Some(token_sender.clone());
 		let _spawn_pipeline_permit = ctx
 			.protect_future(SPAWN_PIPELINE_SEMAPHORE.acquire())
 			.await
 			.expect("The semaphore should not be closed.");
-		let qflow_id = self.id.clone();
+		let engine_id = self.id.clone();
 
 		self.terminate_sig = ctx.terminate_sig().child();
 		info!(
-			qflow_id=?qflow_id,
+			engine_id=?engine_id,
 			"spawning semantic pipeline",
 		);
 		let (source_message_bus, source_inbox) = ctx
@@ -225,7 +229,7 @@ impl SemanticPipeline {
 
 		// Storage mapper actor
 		let storage_mapper =
-			StorageMapper::new(qflow_id.clone(), current_timestamp, self.event_storages.clone());
+			StorageMapper::new(engine_id.clone(), current_timestamp, self.event_storages.clone());
 		let (storage_mapper_mailbox, storage_mapper_inbox) = ctx
 			.spawn_actor()
 			.set_terminate_sig(self.terminate_sig.clone())
@@ -233,13 +237,13 @@ impl SemanticPipeline {
 
 		// Indexer actor
 		let indexer =
-			Indexer::new(qflow_id.clone(), current_timestamp, self.index_storages.clone());
+			Indexer::new(engine_id.clone(), current_timestamp, self.index_storages.clone());
 		let (indexer_messagebus, indexer_inbox) =
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(indexer);
 
 		// Ingestor actor
 		let ingestor_service =
-			IngestorService::new(qflow_id.clone(), token_sender.clone(), current_timestamp);
+			IngestorService::new(engine_id.clone(), token_sender.clone(), current_timestamp);
 
 		let (ingestor_mailbox, ingestor_inbox) = ctx
 			.spawn_actor()
@@ -247,7 +251,7 @@ impl SemanticPipeline {
 			.spawn(ingestor_service);
 		// Event streamer actor
 		let event_streamer = EventStreamer::new(
-			qflow_id.clone(),
+			engine_id.clone(),
 			storage_mapper_mailbox,
 			indexer_messagebus,
 			ingestor_mailbox,
@@ -262,7 +266,7 @@ impl SemanticPipeline {
 		let mut collection_handlers = Vec::new();
 		for source in self.data_sources.clone().iter() {
 			let collector_source =
-				Collector::new(qflow_id.clone(), source.clone(), self.terminate_sig.clone());
+				Collector::new(engine_id.clone(), source.clone(), self.terminate_sig.clone());
 			let (_source_mailbox, source_inbox) = ctx
 				.spawn_actor()
 				.set_terminate_sig(self.terminate_sig.clone())
@@ -280,22 +284,22 @@ impl SemanticPipeline {
 		info!("Starting the source actor 🔗");
 		info!("Starting the Ingestor actor 📦");
 
-		// QSource actor
-		let qflow_source = EngineRunner::new(
+		// EngineRunner actor
+		let engine_source = EngineRunner::new(
 			self.id.clone(),
 			self.engine.clone(),
 			token_receiver,
 			self.terminate_sig.clone(),
 		);
-		let qflow_source_actor =
-			SourceActor { source: Box::new(qflow_source), event_streamer_messagebus };
-		let (_, qflow_inbox) = ctx
+		let engine_source_actor =
+			SourceActor { source: Box::new(engine_source), event_streamer_messagebus };
+		let (_, engine_inbox) = ctx
 			.spawn_actor()
 			.set_messagebuses(source_message_bus, source_inbox)
 			.set_terminate_sig(self.terminate_sig.clone())
-			.spawn(qflow_source_actor);
+			.spawn(engine_source_actor);
 		self.handlers = Some(PipelineHandlers {
-			qflow_handler: qflow_inbox,
+			engine_handler: engine_inbox,
 			event_streamer_handler: event_streamer_inbox,
 			indexer_handler: indexer_inbox,
 			storage_mapper_handler: storage_mapper_inbox,
@@ -310,7 +314,7 @@ impl SemanticPipeline {
 		self.terminate_sig.kill();
 		if let Some(handles) = self.handlers.take() {
 			tokio::join!(
-				handles.qflow_handler.kill(),
+				handles.engine_handler.kill(),
 				handles.event_streamer_handler.kill(),
 				handles.indexer_handler.kill(),
 				handles.storage_mapper_handler.kill(),
@@ -409,7 +413,7 @@ impl Handler<Trigger> for SemanticPipeline {
 		if self.handlers.is_some() {
 			return Ok(());
 		}
-		if let Err(spawn_error) = self.start_qflow(ctx).await {
+		if let Err(spawn_error) = self.start_engine(ctx).await {
 			let retry_delay = wait_time(trigger.retry_count + 1);
 			error!(error = ?spawn_error, retry_count = trigger.retry_count, retry_delay = ?retry_delay, "error while spawning indexing pipeline, retrying after some time");
 			self.terminate().await;
