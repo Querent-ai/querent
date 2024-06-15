@@ -3,8 +3,8 @@ use actors::AskError;
 use bytes::Bytes;
 use bytestring::ByteString;
 use common::{
-	EventStreamerCounters, EventType, EventsCounter, IndexerCounters, IngestorCounters,
-	StorageMapperCounters,
+	CollectionCounter, EventStreamerCounters, EventType, EventsCounter, IndexerCounters,
+	IngestorCounters, StorageMapperCounters,
 };
 use prost::DecodeError;
 use serde::{Deserialize, Serialize};
@@ -14,7 +14,7 @@ use std::{
 };
 include!("../codegen/querent/production.semantics.rs");
 pub use collector_config::*;
-pub use semantic_pipeline_request::*;
+
 pub type SemanticsResult<T> = std::result::Result<T, SemanticsError>;
 
 #[derive(Debug, thiserror::Error, Eq, PartialEq, Serialize, Deserialize)]
@@ -92,16 +92,20 @@ impl IndexingStatistics {
 		indexer_counters: &IndexerCounters,
 		storage_mapper_counters: &StorageMapperCounters,
 		ingestor_counters: &IngestorCounters,
+		collection_counters: Vec<serde_json::Value>,
 	) -> Self {
 		let qflow_counters: EventsCounter =
 			serde_json::from_value(qflow_counters.clone()).unwrap_or_default();
+		for counter in collection_counters {
+			let counter: CollectionCounter = serde_json::from_value(counter).unwrap_or_default();
+			self.total_docs += counter.total_docs.load(Ordering::Relaxed) as u64;
+		}
 		self.total_events = qflow_counters.total.load(Ordering::Relaxed) as u64;
 		self.total_events_processed = qflow_counters.processed.load(Ordering::Relaxed) as u64;
 		self.total_events_received =
 			event_streamer_counters.events_received.load(Ordering::Relaxed) as u64;
 		self.total_events_sent = event_streamer_counters.events_processed.load(Ordering::Relaxed);
 		self.total_batches = event_streamer_counters.batches_received.load(Ordering::Relaxed);
-		self.total_docs = qflow_counters.total_docs.load(Ordering::Relaxed);
 		self.total_sentences = indexer_counters.total_sentences_indexed.load(Ordering::Relaxed);
 		self.total_subjects = indexer_counters.total_subjects_indexed.load(Ordering::Relaxed);
 		self.total_predicates = indexer_counters.total_predicates_indexed.load(Ordering::Relaxed);
