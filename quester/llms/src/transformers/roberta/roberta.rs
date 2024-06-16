@@ -55,7 +55,6 @@ pub struct RobertaLLM {
 	model: Option<CandleRobertaModel>,
 	token_classification_model: Option<RobertaForTokenClassification>,
 	tokenizer: Tokenizer,
-	options: EmbedderOptions,
 	device: candle_core::Device,
 }
 
@@ -207,7 +206,7 @@ impl RobertaLLM {
 			tokenizer.with_padding(Some(pp));
 		}
 
-		let this = Self { model, token_classification_model, tokenizer, options, device };
+		let this = Self { model, token_classification_model, tokenizer, device };
 
 		Ok(this)
 	}
@@ -488,9 +487,6 @@ mod tests {
 
 		// Tokenize input text
 		let input_text = "Joel lives in Delhi";
-		// let tokens = embedder.tokenize(&input_text).await;
-		// println!("These are the Tokens: {:?}", tokens);
-		let encoding = embedder.tokenizer.encode(input_text, true).unwrap();
 		let tokens = match embedder.tokenize(&input_text).await {
 			Ok(tokens) => tokens,
 			Err(e) => {

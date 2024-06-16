@@ -54,7 +54,6 @@ pub struct BertLLM {
 	model: Option<CandleBertModel>,
 	token_classification_model: Option<BertForTokenClassification>,
 	tokenizer: Tokenizer,
-	options: EmbedderOptions,
 	device: candle_core::Device,
 }
 
@@ -206,7 +205,7 @@ impl BertLLM {
 			tokenizer.with_padding(Some(pp));
 		}
 
-		let this = Self { model, token_classification_model, tokenizer, options, device };
+		let this = Self { model, token_classification_model, tokenizer, device };
 
 		Ok(this)
 	}
