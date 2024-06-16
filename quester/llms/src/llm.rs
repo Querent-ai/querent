@@ -70,24 +70,27 @@ impl From<serde_json::Error> for LLMError {
 }
 #[async_trait]
 pub trait LLM: Send + Sync {
-    async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
-    async fn num_start_tokens(&self) -> usize;
-    async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
-    async fn model_input(
-        &self,
-        tokenized_sequence: Vec<i32>,
-    ) -> Result<std::collections::HashMap<String, Tensor>, LLMError>;
-    async fn tokenize(&self, word: &str) -> Result<Vec<i32>, LLMError>;
-    async fn inference_attention(
-        &self,
-        model_input: std::collections::HashMap<String, Tensor>,
-    ) -> Result<Tensor,LLMError>;
-    async fn maximum_tokens(&self) -> usize;
-    async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
-    async fn attention_tensor_to_2d_vector(&self, attention_weights: &Tensor) -> Result<Vec<Vec<f32>>, LLMError>;
+	async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
+	async fn num_start_tokens(&self) -> usize;
+	async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
+	async fn model_input(
+		&self,
+		tokenized_sequence: Vec<i32>,
+	) -> Result<std::collections::HashMap<String, Tensor>, LLMError>;
+	async fn tokenize(&self, word: &str) -> Result<Vec<i32>, LLMError>;
+	async fn inference_attention(
+		&self,
+		model_input: std::collections::HashMap<String, Tensor>,
+	) -> Result<Tensor, LLMError>;
+	async fn maximum_tokens(&self) -> usize;
+	async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
+	async fn attention_tensor_to_2d_vector(
+		&self,
+		attention_weights: &Tensor,
+	) -> Result<Vec<Vec<f32>>, LLMError>;
 	async fn token_classification(
-        &self,
-        model_input: std::collections::HashMap<String, Tensor>,
-        labels: Option<&Tensor>,
-    ) -> Result<Vec<(String, String)>, LLMError>;
+		&self,
+		model_input: std::collections::HashMap<String, Tensor>,
+		labels: Option<&Tensor>,
+	) -> Result<Vec<(String, String)>, LLMError>;
 }

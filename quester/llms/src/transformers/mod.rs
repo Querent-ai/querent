@@ -1,13 +1,13 @@
-pub mod bert{
+pub mod bert {
 	pub mod bert;
-pub use bert::*;
-pub mod bert_model_functions;
-pub use bert_model_functions::*;
-// pub mod bert_tokenclassification;
+	pub use bert::*;
+	pub mod bert_model_functions;
+	pub use bert_model_functions::*;
+	// pub mod bert_tokenclassification;
 }
-pub mod roberta{
-	pub mod roberta_model_functions;
+pub mod roberta {
 	pub mod roberta;
+	pub mod roberta_model_functions;
 }
 pub mod modelling_outputs;
 use ordered_float::OrderedFloat;
@@ -28,4 +28,3 @@ pub struct DistributionShift {
 	/// Set below 0.4 to make the results less packed around the mean, and above 0.4 to make them more packed.
 	pub current_sigma: OrderedFloat<f32>,
 }
-
