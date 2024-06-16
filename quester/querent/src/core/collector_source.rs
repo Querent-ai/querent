@@ -184,8 +184,6 @@ impl Source for Collector {
 				if chunks.is_empty() {
 					continue;
 				}
-				let total_size = *self.file_size.get(file).unwrap_or(&0);
-				self.counters.increment_total_bytes(total_size as u64);
 				let events_batch = CollectionBatch::new(
 					file,
 					&chunks[0].extension.clone().unwrap_or_default(),

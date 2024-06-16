@@ -31,29 +31,18 @@ pub struct RestartPipelineRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-    #[prost(float, tag = "3")]
-    pub version: f32,
-    #[prost(message, repeated, tag = "4")]
+    #[prost(message, repeated, tag = "1")]
     pub collectors: ::prost::alloc::vec::Vec<CollectorConfig>,
-    #[prost(message, repeated, tag = "5")]
+    #[prost(message, repeated, tag = "2")]
     pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
-    #[prost(message, optional, tag = "6")]
-    pub config: ::core::option::Option<WorkflowContract>,
-    #[prost(oneof = "semantic_pipeline_request::Name", tags = "1, 2")]
-    pub name: ::core::option::Option<semantic_pipeline_request::Name>,
-}
-/// Nested message and enum types in `SemanticPipelineRequest`.
-pub mod semantic_pipeline_request {
-    #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-    #[serde(rename_all = "snake_case")]
-    #[allow(clippy::derive_partial_eq_without_eq)]
-    #[derive(Clone, PartialEq, ::prost::Oneof)]
-    pub enum Name {
-        #[prost(message, tag = "1")]
-        KnowledgeGraphUsingLlama2V1(super::LLamaConfig),
-        #[prost(message, tag = "2")]
-        KnowledgeGraphUsingOpenai(super::OpenAiConfig),
-    }
+    #[prost(message, optional, tag = "3")]
+    pub fixed_entities: ::core::option::Option<FixedEntities>,
+    #[prost(message, optional, tag = "4")]
+    pub sample_entities: ::core::option::Option<SampleEntities>,
+    #[prost(enumeration = "Model", optional, tag = "5")]
+    pub model: ::core::option::Option<i32>,
+    #[prost(float, optional, tag = "6")]
+    pub attention_threshold: ::core::option::Option<f32>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -68,66 +57,6 @@ pub struct FixedEntities {
 pub struct SampleEntities {
     #[prost(string, repeated, tag = "1")]
     pub entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct FixedRelationships {
-    #[prost(string, repeated, tag = "1")]
-    pub relationships: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SampleRelationships {
-    #[prost(string, repeated, tag = "1")]
-    pub relationships: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct WorkflowContract {
-    #[prost(string, optional, tag = "1")]
-    pub ner_model_name: ::core::option::Option<::prost::alloc::string::String>,
-    #[prost(bool, optional, tag = "2")]
-    pub enable_filtering: ::core::option::Option<bool>,
-    #[prost(message, optional, tag = "3")]
-    pub fixed_entities: ::core::option::Option<FixedEntities>,
-    #[prost(message, optional, tag = "4")]
-    pub sample_entities: ::core::option::Option<SampleEntities>,
-    #[prost(bool, optional, tag = "5")]
-    pub is_confined_search: ::core::option::Option<bool>,
-    #[prost(string, optional, tag = "6")]
-    pub user_context: ::core::option::Option<::prost::alloc::string::String>,
-    #[prost(float, optional, tag = "7")]
-    pub score_threshold: ::core::option::Option<f32>,
-    #[prost(float, optional, tag = "8")]
-    pub attention_score_threshold: ::core::option::Option<f32>,
-    #[prost(float, optional, tag = "9")]
-    pub similarity_threshold: ::core::option::Option<f32>,
-    #[prost(int32, optional, tag = "10")]
-    pub min_cluster_size: ::core::option::Option<i32>,
-    #[prost(int32, optional, tag = "11")]
-    pub min_samples: ::core::option::Option<i32>,
-    #[prost(float, optional, tag = "12")]
-    pub cluster_persistence_threshold: ::core::option::Option<f32>,
-    #[prost(message, optional, tag = "13")]
-    pub fixed_relationships: ::core::option::Option<FixedRelationships>,
-    #[prost(message, optional, tag = "14")]
-    pub sample_relationships: ::core::option::Option<SampleRelationships>,
-}
-/// LLamaConfig holds configuration for LLama workflows.
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct LLamaConfig {}
-/// OpenAIConfig holds configuration for OpenAI workflows.
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct OpenAiConfig {
-    #[prost(string, tag = "1")]
-    pub openai_api_key: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -588,6 +517,37 @@ pub struct Neo4jConfig {
     /// Maximum connection pool size for the Neo4j storage.
     #[prost(int32, tag = "8")]
     pub max_connection_pool_size: i32,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum Model {
+    Bert = 0,
+    GeoBert = 1,
+    PubMedBert = 2,
+}
+impl Model {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Model::Bert => "BERT",
+            Model::GeoBert => "GeoBert",
+            Model::PubMedBert => "PubMedBert",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "BERT" => Some(Self::Bert),
+            "GeoBert" => Some(Self::GeoBert),
+            "PubMedBert" => Some(Self::PubMedBert),
+            _ => None,
+        }
+    }
 }
 /// BEGIN
 #[allow(unused_imports)]
