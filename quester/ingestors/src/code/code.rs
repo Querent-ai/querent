@@ -83,7 +83,8 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_code_ingestor() {
-		let bytes = std::fs::read("../csv/csv.rs").unwrap();
+		let included_bytes = include_bytes!("../csv/csv.rs");
+		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
