@@ -129,8 +129,6 @@ message FileCollectorConfig {
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
 message AzureCollectorConfig {
-  // Account URL of the Azure collector.
-  string account_url = 1;
   // Connection string of the Azure collector.
   string connection_string = 2;
   // Container of the Azure collector.
@@ -197,10 +195,6 @@ message GoogleDriveCollectorConfig {
   string drive_client_secret = 2;
   // Refresh token of the Google Drive collector.
   string drive_refresh_token = 3;
-  // Scopes of the Google Drive collector.
-  string drive_scopes = 4;
-  // Token of the Google Drive collector.
-  string drive_token = 5;
   // Folder to crawl of the Google Drive collector.
   string folder_to_crawl = 6;
   // Specific file type of the Google Drive collector.
@@ -219,10 +213,6 @@ message EmailCollectorConfig {
   string imap_password = 4;
   // Folder of the Email collector.
   string imap_folder = 5;
-  // Key file of the Email collector.
-  string imap_keyfile = 6;
-  // Cert file of the Email collector.
-  string imap_certfile = 7;
 }
 
 // DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.

@@ -3,27 +3,26 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::IngestedTokens;
-use std::{io::Cursor, pin::Pin, sync::Arc};
-use tokio::io::AsyncReadExt;
+use std::{pin::Pin, sync::Arc};
 
 use crate::{
-	html::parser::HtmlParser, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
-	IngestorError, IngestorErrorKind, IngestorResult,
+	pptx::parser::extract_text_from_pptx, process_ingested_tokens_stream, AsyncProcessor,
+	BaseIngestor, IngestorResult,
 };
 
 // Define the TxtIngestor
-pub struct HtmlIngestor {
+pub struct PptxIngestor {
 	processors: Vec<Arc<dyn AsyncProcessor>>,
 }
 
-impl HtmlIngestor {
+impl PptxIngestor {
 	pub fn new() -> Self {
 		Self { processors: Vec::new() }
 	}
 }
 
 #[async_trait]
-impl BaseIngestor for HtmlIngestor {
+impl BaseIngestor for PptxIngestor {
 	fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
 		self.processors = processors;
 	}
@@ -51,27 +50,20 @@ impl BaseIngestor for HtmlIngestor {
 		let stream = {
 			let buffer = Arc::clone(&buffer);
 			stream! {
-				let mut content = String::new();
-				let mut cursor = Cursor::new(buffer.as_ref());
-
-				cursor.read_to_string(&mut content).await
-					.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-
-				let mut parser = HtmlParser::new();
-				parser.parse(&content.clone());
-
-				for token in parser.get_body_elements() {
-					if token == "" {
-						continue;
-					} else {
+				let text_result = extract_text_from_pptx(&buffer);
+				match text_result {
+					Ok(text) => {
 						let ingested_tokens = IngestedTokens {
-							data: vec![token.to_string()],
+							data: vec![text],
 							file: file.clone(),
 							doc_source: doc_source.clone(),
 							is_token_stream: false,
 						};
-
 						yield Ok(ingested_tokens);
+					},
+					Err(e) => {
+						eprintln!("Error: {:?}", e);
+						yield Err(e);
 					}
 				}
 			}
@@ -90,22 +82,22 @@ impl BaseIngestor for HtmlIngestor {
 // 	use futures::StreamExt;
 
 //     #[tokio::test]
-//     async fn test_html_ingestor() {
+//     async fn test_pptx_ingestor() {
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/english_terminology.html").unwrap();
+//         let bytes = std::fs::read("/home/ansh/pyg-trail/ppt/Eagle-Ford-Shale-Basin-Study-APR_22_2019.pptx").unwrap();
 
 //         // Create a CollectedBytes instance
 //         let collected_bytes = CollectedBytes {
 //             data: Some(bytes),
-//             file: Some(Path::new("english_terminology.html").to_path_buf()),
+//             file: Some(Path::new("Eagle-Ford-Shale-Basin-Study-APR_22_2019.pptx").to_path_buf()),
 //             doc_source: Some("test_source".to_string()),
 // 			eof: false,
-// 			extension: Some("html".to_string()),
+// 			extension: Some("pptx".to_string()),
 // 			size: Some(10),
 //         };
 
 //         // Create a TxtIngestor instance
-//         let ingestor = HtmlIngestor::new();
+//         let ingestor = PptxIngestor::new();
 
 //         // Ingest the file
 //         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();

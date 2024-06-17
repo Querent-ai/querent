@@ -74,23 +74,35 @@ impl LocalFolderSource {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
 		let chunk_size = self.chunk_size;
 		let stream = stream::unfold(
-			(file_path, chunk_size, 0),
-			move |(file_path, chunk_size, offset)| async move {
+			(file_path, chunk_size, 0, false),
+			move |(file_path, chunk_size, offset, eof_reached)| async move {
+				if eof_reached {
+					return None;
+				}
 				let file = match fs::File::open(&file_path).await {
 					Ok(f) => f,
 					Err(e) =>
-						return Some((Err(SourceError::from(e)), (file_path, chunk_size, offset))),
+						return Some((
+							Err(SourceError::from(e)),
+							(file_path, chunk_size, offset, false),
+						)),
 				};
 				let mut reader = BufReader::new(file);
 				let mut buffer = vec![0; chunk_size];
 				if let Err(e) = reader.seek(SeekFrom::Start(offset as u64)).await {
-					return Some((Err(SourceError::from(e)), (file_path, chunk_size, offset)));
+					return Some((
+						Err(SourceError::from(e)),
+						(file_path, chunk_size, offset, false),
+					));
 				}
 
 				let bytes_read = match reader.read(&mut buffer).await {
 					Ok(br) => br,
 					Err(e) =>
-						return Some((Err(SourceError::from(e)), (file_path, chunk_size, offset))),
+						return Some((
+							Err(SourceError::from(e)),
+							(file_path, chunk_size, offset, false),
+						)),
 				};
 
 				if bytes_read == 0 {
@@ -102,7 +114,7 @@ impl LocalFolderSource {
 						Some(file_path.to_string_lossy().to_string()),
 						None,
 					);
-					return Some((Ok(eof_collected_bytes), (file_path, chunk_size, offset)));
+					return Some((Ok(eof_collected_bytes), (file_path, chunk_size, offset, true)));
 				}
 
 				let collected_bytes = CollectedBytes::new(
@@ -113,7 +125,7 @@ impl LocalFolderSource {
 					Some(bytes_read),
 				);
 
-				Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read)))
+				Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read, false)))
 			},
 		);
 
@@ -212,3 +224,45 @@ impl Source for LocalFolderSource {
 		self.poll_data_recursive(self.folder_path.clone()).await
 	}
 }
+
+// #[cfg(test)]
+// mod tests {
+
+//     use std::{collections::HashSet, path::PathBuf};
+// 	use futures::StreamExt;
+
+// use crate::Source;
+
+// use super::LocalFolderSource;
+
+// 	#[tokio::test]
+// 	async fn test_local_file_collector() {
+// 		let directory_path = "/home/ansh/querent/quester/quester/storage/sql".to_string();
+// 		let root_path = PathBuf::from(directory_path);
+
+// 		let local_storage = LocalFolderSource::new(root_path, None);
+
+// 		println!("Connectivity :- {:?}", local_storage.check_connectivity().await);
+
+// 		let result = local_storage.poll_data().await;
+
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					}
+// 				}
+// 				Err(_) => panic!("Expected successful data collection"),
+// 				// None => println!("Received none");
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+
+// 	}
+// }

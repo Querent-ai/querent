@@ -139,9 +139,17 @@ impl Source for AzureBlobStorage {
 			.next()
 			.await
 		{
-			let _ = first_blob_result?;
+			match first_blob_result {
+				Ok(_) => Ok(()),
+				Err(e) => {
+					println!("Error connecting to Azure Blob Storage: {}", e);
+					Err(e.into())
+				},
+			}
+		} else {
+			println!("Failed to get first blob result");
+			Err(anyhow::anyhow!("Failed to connect to Azure Blob Storage"))
 		}
-		Ok(())
 	}
 
 	#[instrument(level = "debug", skip(self, range), fields(range.start = range.start, range.end = range.end))]
@@ -325,3 +333,51 @@ impl From<AzureErrorWrapper> for SourceError {
 		}
 	}
 }
+
+// #[cfg(test)]
+// mod tests {
+
+// 	use std::collections::HashSet;
+
+// use super::*;
+
+// 	#[tokio::test]
+// 	async fn test_azure_collector() {
+// 		// Configure the GCS collector config with a mock credential
+// 		let azure_config = AzureCollectorConfig {
+// 		    account_url: "".to_string(),
+// 			connection_string: "DefaultEndpointsProtocol=https;AccountName=querent;AccountKey=AB6gsGVuwGDs3OoFzJc0eQ4OtRj35wYgHGt3PPLafCHye3Ze9xw6t4cZfUNIXM5pNoBMGeehGUDo+AStQSTTnQ==;EndpointSuffix=core.windows.net".to_string(),
+// 			credentials: "AB6gsGVuwGDs3OoFzJc0eQ4OtRj35wYgHGt3PPLafCHye3Ze9xw6t4cZfUNIXM5pNoBMGeehGUDo+AStQSTTnQ==".to_string(),
+// 			container: "testfiles".to_string(),
+// 			chunk_size: 1024,
+// 			prefix: "".to_string(),
+//         };
+
+// 		let azure_storage = AzureBlobStorage::new(azure_config);
+
+// 		assert!(
+// 			azure_storage.check_connectivity().await.is_ok(),
+// 			"Failed to connect to azure storage"
+// 		);
+
+// 		let result = azure_storage.poll_data().await;
+
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					}
+// 				}
+// 				Err(_) => panic!("Expected successful data collection"),
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+
+// 	}
+// }
