@@ -242,6 +242,8 @@ imap = "2.4.1"
 native-tls = "0.2"
 mailparse = "0.15.0"
 yup-oauth2 = "10.0.1"
+oauth2 = "4.4.2"
+zip = "0.5.13"
 
 [profile.release]
 panic = "unwind"

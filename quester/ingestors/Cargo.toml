@@ -69,3 +69,4 @@ docx-rust = { workspace = true }
 xlsx_reader = { workspace = true }
 xml = { workspace = true }
 rusty-tesseract = { workspace = true }
+zip = { workspace = true }

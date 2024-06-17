@@ -6,7 +6,7 @@ use google_drive3::{
 	api::Scope,
 	hyper::{self, client::HttpConnector},
 	hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
-	oauth2::{ApplicationSecret, InstalledFlowAuthenticator, InstalledFlowReturnMethod},
+	oauth2::{ApplicationSecret, InstalledFlowAuthenticator, InstalledFlowReturnMethod, ServiceAccountAuthenticator, ServiceAccountKey},
 };
 use hyper::Body;
 use proto::semantics::GoogleDriveCollectorConfig;
@@ -53,12 +53,31 @@ impl GoogleDriveSource {
 			client_x509_cert_url: None,
 		};
 
-		let auth =
-			InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-				.persist_tokens_to_disk("tokencache.json")
-				.build()
-				.await
-				.expect("authenticator could not be built");
+		// let auth =
+		// 	InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
+		// 		.build()
+		// 		.await
+		// 		.expect("authenticator could not be built");
+
+		let service_account_key = ServiceAccountKey {
+			project_id: Some("querent-403619".to_string()),
+			private_key_id: Some("ab6f05f2c4f462354ce1a81a67e382842829a3a1".to_string()),
+			private_key: "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCLeR4TMbYZwUlU\nhKRJi9WDCd8zNXZJ8cPMKYxfxh2LuobL4lvagG+9HwUpso2qJJwGmWJDtCSncrWO\nPTMZ14zv72EtLNpCNkYtSlsGQwMu/uUA+p5UZiGoM2Ic827Y9EijQLxXVhKcQq5/\nFfVDLCxZtCFwSCL2xLXqLmS8PbCQW0iYlEHHrg+f+VWseEe+9Ib+4TzARQAIoY7E\n4lAMeGH/TNY/c4IUEb5i1NMzoaXCmIMujWPDpyXOWIweKQKfVnNe9CugeSBKX2+d\nAphPh2Y6MiUpuo6enznX0Rv/vU/IRKlqUbZQA1jYA70Y+d5BqFMxjnGfGsHlR4x/\nIVPOl7UdAgMBAAECggEAAlASGFni7ebnXyQq8EBGHFvpzFjW2w+MAmLu/biUjVhc\nu11HziYClFWDGaepEzjzsGVTPJGsaO1tRsxLgGJzZxgmWaAsh1wMilw5Ca/LSfh2\nli9RuE8QQFCH0DiWLjlQygo9BUq7WMV/TMKxtDkzjBJBWrILiGGHLbiyuW9hcedX\nVfGQL1oCMZT1diH40SpPWbjRiODIiE/pp08hE9m3+ov0b8Y8lzNchLDQjoc7CqzA\nlweak7jQ1wUG4svAWukPtkeKSECaxXjgqYD9TWxhmINITAqvkR48GKvDR2jTj7wS\nQxMh0wha0GU+SU5Z0xjtqwbC8lUOG7kRX3UhLKH7sQKBgQDDMjHoH8073edAlK24\nh7b+GXMBqth5ChsF6qvbdsd73neGDB8NrX5D+L/sJuUadxW0M5wjJyMJGlYEukG+\n6RSczFMYDXmfMIMnx1duhttVD5dvzx090k0ANTwawe9NKKnY6jCzgU1A812G4kdn\nV2WJUzBRC1chLAHUp2XqyCg0MQKBgQC261NNfEDPJK1tWWlmm4CMmU2pk35ziaOx\nnJrVK8s0ZBpHXym7QvVNwzkuHAoWW/15ssFKMVv+HlcARtZx50Y55puGskvDRtF4\nzRf7GovocE0idj0P1BUp0Mkxuih5VW3wrfiiqIHzrM6Re76BpT1d7oU8w5Vadb3V\nZmzCa0dwrQKBgH8GtlWiBHR2Nxze5KKWpy57L02hedhjDCzwh8B9btocb1nrn3XO\nNsJTKcqrkSKE5rnrcCusN2+gFORktY5grkpP6a9YbZJ8Bo4neq1x02BqkhlwBk6K\nAhQlkKS1Gl7zHH0OAn1+ouCmv3Gc5ezJgkk4utOy9pOeyN4zxe5hLVCxAoGAe4iK\nBbZ4fmyiw0qzKBy0wD94d6GosJav+m9tEbI11fgU10aphFJAIHhL0ZwWI+uUT/At\nIdIb8o7C6ujsQpiSkN/xARLAn+zf4tl/7JGNEzlknnWD34C3mjnq5q52Txsm2Hhl\nhlSPDuYRy6bqjdvuidVgHh1obGNABTLbGKIi6TECgYAOffuMlgROcDxJpb163LLk\nuXYGd8JQ1nnqtyt+72NE/5ZOg6j/rwyVOOsUOrExS6Pm6vactz5XqgX+902/blvN\nMrXQNJ40KBZZNZV1AiPFXvEG09wEx39hxCV+AkWRTprvDg8EXoC/YtYLMaG9ioVq\nlAZN4OfrWi8fq13v8foUxw==\n-----END PRIVATE KEY-----\n".to_string(),
+			client_email: "querent-403619@querent-403619.iam.gserviceaccount.com".to_string(),
+			client_id: Some("111363052744608238256".to_string()),
+			token_uri: "https://oauth2.googleapis.com/token".to_string(),
+			key_type: Some("service_account".to_string()),
+			auth_uri: Some("https://accounts.google.com/o/oauth2/auth".to_string()),
+			auth_provider_x509_cert_url: Some("https://www.googleapis.com/oauth2/v1/certs".to_string()),
+			client_x509_cert_url: Some("https://www.googleapis.com/robot/v1/metadata/x509/querent-403619%40querent-403619.iam.gserviceaccount.com".to_string()),
+		};
+		let auth2 = ServiceAccountAuthenticator::builder(service_account_key).build().await.expect("authenticator could not be built");
+		let _ = auth2.force_refreshed_token(&[config.drive_scopes.clone()]).await.map_err(|e| format!("Failed to refresh token: {}", e));
+
+		let token = auth2.force_refreshed_token(&[config.drive_scopes]).await
+            .map_err(|e| format!("Failed to get token: {}", e));
+		println!("Access Token: {:?}", token);
+
 		let connector = HttpsConnectorBuilder::new()
 			.with_native_roots()
 			.https_or_http()
@@ -67,7 +86,7 @@ impl GoogleDriveSource {
 			.build();
 
 		let http_client = hyper::Client::builder().build(connector);
-		let hub = DriveHub::new(http_client, auth);
+		let hub = DriveHub::new(http_client, auth2);
 
 		GoogleDriveSource { hub, folder_id: config.folder_to_crawl, page_token: None }
 	}
@@ -288,6 +307,7 @@ impl Source for GoogleDriveSource {
 					.list()
 					.q(&format!("'{}' in parents", folder_id))
 					.page_token(page_token.as_deref().unwrap_or_default())
+					.add_scope("https://www.googleapis.com/auth/drive".to_string())
 					.doit()
 					.await
 					.map_err(|err| {
@@ -397,54 +417,67 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
+#[cfg(test)]
+mod tests {
 
-//     use std::collections::HashSet;
+    use std::collections::HashSet;
 
-//     use futures::StreamExt;
-//     use proto::semantics::GoogleDriveCollectorConfig;
+    use futures::StreamExt;
+    use proto::semantics::GoogleDriveCollectorConfig;
 
-//     use crate::Source;
+    use crate::Source;
 
-//     use super::GoogleDriveSource;
+    use super::GoogleDriveSource;
 
-// 	#[tokio::test]
-// 	async fn test_drive_collector() {
-// 		let google_config = GoogleDriveCollectorConfig {
-// 			drive_client_secret: "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".to_string(),
-// 			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
-// 			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
-// 			drive_scopes: "https://www.googleapis.com/auth/drive".to_string(),
-// 			drive_token: "ya29.a0AfB_byAMnws17-UAYR2hU29zC83Rw4bxn2LsF5i_sWQ5xDMI00li205pXlA-JrwVmBh0kNBK7sKP33urPZ9-DM9DDKMv6EQsaqJsy57aHQYUwddT42SwuZAVINyTwp340Qiy_hSaVG5ezT9PIYRO5Qd1Yn9wm5rd7Aq-".to_string(),
-// 			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
-// 			specific_file_type: "application/pdf".to_string()
-// 		};
+	#[tokio::test]
+	async fn test_drive_collector() {
+		let google_config = GoogleDriveCollectorConfig {
+			drive_client_secret: "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".to_string(),
+			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
+			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
+			drive_scopes: "https://www.googleapis.com/auth/drive".to_string(),
+			drive_token: "ya29.a0AfB_byAMnws17-UAYR2hU29zC83Rw4bxn2LsF5i_sWQ5xDMI00li205pXlA-JrwVmBh0kNBK7sKP33urPZ9-DM9DDKMv6EQsaqJsy57aHQYUwddT42SwuZAVINyTwp340Qiy_hSaVG5ezT9PIYRO5Qd1Yn9wm5rd7Aq-".to_string(),
+			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+			specific_file_type: "application/pdf".to_string()
+		};
 
-// 		let drive_storage = GoogleDriveSource::new(google_config).await;
-// 		let connectivity = drive_storage.check_connectivity().await;
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
 
-// 		println!("Connectivity: {:?}", connectivity);
+		println!("Connectivity: {:?}", connectivity);
 
-// 		let result = drive_storage.poll_data().await;
+		let result = drive_storage.hub.files().list()
+            .add_scope("https://www.googleapis.com/auth/drive.readonly")
+            .q(&format!("'{}' in parents", drive_storage.folder_id))
+            .doit()
+            .await;
+        let _ = match result {
+            Ok(res) => {
+				println!("Response from files list {:?}", res);
+			},
+            Err(e) => eprintln!("Expected successful data collection {:?}", e),
+        };
 
-// 		let mut stream = result.unwrap();
-// 		let mut count_files: HashSet<String> = HashSet::new();
-// 		while let Some(item) = stream.next().await {
-// 			match item {
-// 				Ok(collected_bytes) => {
 
-// 					if let Some(pathbuf) = collected_bytes.file {
-// 						if let Some(str_path) = pathbuf.to_str() {
-// 							count_files.insert(str_path.to_string());
-// 						}
-// 					}
-// 				}
-// 				Err(_) => panic!("Expected successful data collection"),
-// 			}
-// 		}
-// 		println!("Files are --- {:?}", count_files);
+		let result = drive_storage.poll_data().await;
 
-// 	}
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) => {
+					println!("Collected bytes: {:?}", collected_bytes);
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					}
+				}
+				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
 
-// }
+	}
+
+}

@@ -8,9 +8,10 @@ use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{
-	csv::csv::CsvIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor,
-	image::image::ImageIngestor, json::json::JsonIngestor, pdf::pdfv1::PdfIngestor,
-	txt::txt::TxtIngestor, xml::xml::XmlIngestor,
+	code::code::CodeIngestor, csv::csv::CsvIngestor, docx::docx::DocxIngestor,
+	html::html::HtmlIngestor, image::image::ImageIngestor, json::json::JsonIngestor,
+	pdf::pdfv1::PdfIngestor, pptx::pptx::PptxIngestor, txt::txt::TxtIngestor,
+	xml::xml::XmlIngestor,
 };
 
 /// Ingestor error kind.
@@ -30,6 +31,10 @@ pub enum IngestorErrorKind {
 	Internal,
 	/// Csv error,
 	Csv,
+	/// Zip error
+	ZipError,
+	/// Xml error
+	Xml,
 }
 
 /// Generic IngestorError.
@@ -89,6 +94,18 @@ impl From<csv::Error> for IngestorError {
 	}
 }
 
+impl From<zip::result::ZipError> for IngestorError {
+	fn from(error: zip::result::ZipError) -> Self {
+		IngestorError::new(IngestorErrorKind::ZipError, Arc::new(error.into()))
+	}
+}
+
+impl From<xml::reader::Error> for IngestorError {
+	fn from(error: xml::reader::Error) -> Self {
+		IngestorError::new(IngestorErrorKind::Xml, Arc::new(error.into()))
+	}
+}
+
 // Define the trait for async processor
 #[async_trait]
 pub trait AsyncProcessor: Send + Sync {
@@ -142,6 +159,14 @@ pub async fn process_ingested_tokens_stream(
 pub async fn resolve_ingestor_with_extension(
 	extension: &str,
 ) -> IngestorResult<Arc<dyn BaseIngestor>> {
+	let programming_languages = vec![
+		"py", "pyw", "pyp", "js", "mjs", "java", "cpp", "h", "hpp", "c", "h", "cs", "rb", "swift",
+		"php", "php3", "php4", "php5", "phtml", "html", "htm", "css", "go", "rs", "kt", "ts", "pl",
+		"sql", "r", "m", "sh", "bash", "zsh", "dart", "scala", "groovy", "lua", "m", "vb",
+	];
+	if programming_languages.contains(&extension) {
+		return Ok(Arc::new(CodeIngestor::new()));
+	}
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new())),
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
@@ -153,6 +178,7 @@ pub async fn resolve_ingestor_with_extension(
 		"jpg" => Ok(Arc::new(ImageIngestor::new())),
 		"png" => Ok(Arc::new(ImageIngestor::new())),
 		"json" => Ok(Arc::new(JsonIngestor::new())),
+		"pptx" => Ok(Arc::new(PptxIngestor::new())),
 		_ => Err(IngestorError::new(
 			IngestorErrorKind::NotSupported,
 			Arc::new(anyhow::anyhow!("Extension not supported")),
