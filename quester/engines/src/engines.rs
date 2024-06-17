@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use common::EventState;
 use futures::Stream;
+use llms::LLMError;
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
@@ -64,6 +65,13 @@ impl From<io::Error> for EngineError {
 
 impl From<serde_json::Error> for EngineError {
 	fn from(err: serde_json::Error) -> EngineError {
+		EngineError::new(EngineErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
+// Add the conversion from LLMError to EngineError
+impl From<LLMError> for EngineError {
+	fn from(err: LLMError) -> EngineError {
 		EngineError::new(EngineErrorKind::Io, Arc::new(err.into()))
 	}
 }

@@ -29,7 +29,7 @@ pub struct EmbedderOptions {
 	pub model: String,
 	pub revision: Option<String>,
 	pub distribution: Option<DistributionShift>,
-	local_dir: Option<String>,
+	pub local_dir: Option<String>,
 }
 
 impl EmbedderOptions {
@@ -524,7 +524,7 @@ mod tests {
 			distribution: None,
 		};
 		let embedder = BertLLM::new(options).unwrap();
-		let input_text = "The tectonic movements in the Jurassic era are not common.";
+		let input_text = "A mercury porosimeter emphasized the degree of pore plugging after cyclic tests, and the ﬁndings revealed a smaller pore size distribution after N2 tests due to the asphaltene deposition process when compared to cores that had not been pressured. This extensive study focuses on the eﬀects of asphaltene deposition on oil recovery under cyclic N2-miscible and immiscible conditions in shale resources. 1.";
 		let tokens = match embedder.tokenize(&input_text).await {
 			Ok(tokens) => tokens,
 			Err(e) => {

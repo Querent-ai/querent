@@ -240,6 +240,7 @@ candle-nn = { version = "0.5.0" }
 hf-hub = "0.3.2"
 ordered-float = "4.2.0"
 records = "0.2.0"
+unicode-segmentation = "1.7"
 
 [profile.release]
 panic = "unwind"
