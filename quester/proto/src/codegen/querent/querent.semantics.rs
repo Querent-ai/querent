@@ -310,12 +310,6 @@ pub struct GoogleDriveCollectorConfig {
     /// Refresh token of the Google Drive collector.
     #[prost(string, tag = "3")]
     pub drive_refresh_token: ::prost::alloc::string::String,
-    /// Scopes of the Google Drive collector.
-    #[prost(string, tag = "4")]
-    pub drive_scopes: ::prost::alloc::string::String,
-    /// Token of the Google Drive collector.
-    #[prost(string, tag = "5")]
-    pub drive_token: ::prost::alloc::string::String,
     /// Folder to crawl of the Google Drive collector.
     #[prost(string, tag = "6")]
     pub folder_to_crawl: ::prost::alloc::string::String,

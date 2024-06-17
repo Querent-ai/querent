@@ -197,10 +197,6 @@ message GoogleDriveCollectorConfig {
   string drive_client_secret = 2;
   // Refresh token of the Google Drive collector.
   string drive_refresh_token = 3;
-  // Scopes of the Google Drive collector.
-  string drive_scopes = 4;
-  // Token of the Google Drive collector.
-  string drive_token = 5;
   // Folder to crawl of the Google Drive collector.
   string folder_to_crawl = 6;
   // Specific file type of the Google Drive collector.

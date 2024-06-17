@@ -45,7 +45,7 @@ impl GoogleDriveSource {
 			client_id: config.drive_client_id,
 			client_secret: config.drive_client_secret,
 			refresh_token: config.drive_refresh_token,
-			key_type: config.drive_scopes,
+			key_type: "".to_string(),
 		};
 
 		let connector = HttpsConnectorBuilder::new()
@@ -408,8 +408,6 @@ mod tests {
 			drive_client_secret: "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".to_string(),
 			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
 			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
-			drive_scopes: "https://www.googleapis.com/auth/drive".to_string(),
-			drive_token: "ya29.a0AfB_byAMnws17-UAYR2hU29zC83Rw4bxn2LsF5i_sWQ5xDMI00li205pXlA-JrwVmBh0kNBK7sKP33urPZ9-DM9DDKMv6EQsaqJsy57aHQYUwddT42SwuZAVINyTwp340Qiy_hSaVG5ezT9PIYRO5Qd1Yn9wm5rd7Aq-".to_string(),
 			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
 			specific_file_type: "application/pdf".to_string()
 		};
