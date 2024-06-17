@@ -5,7 +5,6 @@ use futures::{Stream, StreamExt};
 use llms::llm::LLM;
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
-use llms::transformers::bert::BertLLM;
 use crate::utils::{create_binary_pairs, label_entities_in_sentences, match_entities_with_tokens, remove_newlines, split_into_chunks, tokens_to_words};
 use crate::utils::ClassifiedSentence;
 
@@ -160,13 +159,13 @@ mod tests {
     use super::*;
     use futures::StreamExt;
     use llms::transformers::bert::EmbedderOptions;
-    use std::{fs::File, io::{Read, Write}};
-    use tokio::fs::read;
+    use std::{fs::File, io::Read};
     use tokio::sync::mpsc;
     use ingestors::{pdf::pdfv1::PdfIngestor, BaseIngestor};
     use common::CollectedBytes;
     use std::sync::Arc;
     use tokio_stream::wrappers::ReceiverStream;
+	use llms::transformers::bert::BertLLM;
 
 
     #[tokio::test]

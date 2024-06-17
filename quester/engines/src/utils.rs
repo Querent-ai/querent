@@ -4,7 +4,7 @@ use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct ClassifiedSentence {
+pub struct ClassifiedSentence {
     pub sentence: String,
     pub entities: Vec<(String, String, usize)>,
 }
