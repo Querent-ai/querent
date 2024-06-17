@@ -129,8 +129,6 @@ message FileCollectorConfig {
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
 message AzureCollectorConfig {
-  // Account URL of the Azure collector.
-  string account_url = 1;
   // Connection string of the Azure collector.
   string connection_string = 2;
   // Container of the Azure collector.

@@ -208,9 +208,6 @@ pub struct FileCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AzureCollectorConfig {
-    /// Account URL of the Azure collector.
-    #[prost(string, tag = "1")]
-    pub account_url: ::prost::alloc::string::String,
     /// Connection string of the Azure collector.
     #[prost(string, tag = "2")]
     pub connection_string: ::prost::alloc::string::String,
