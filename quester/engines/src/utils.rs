@@ -3,17 +3,25 @@ use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
 
+use crate::EngineError;
+
 #[derive(Debug, Serialize)]
 pub struct ClassifiedSentence {
 	pub sentence: String,
-	pub entities: Vec<(String, String, usize)>,
+	pub entities: Vec<(String, String, usize, usize)>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct ClassifiedSentenceWithPairs {
-	pub sentence: String,
-	pub entities: Vec<(String, String, usize)>,
-	pub pairs: Vec<(String, String)>,
+    pub sentence: String,
+    pub entities: Vec<(String, String, usize, usize)>, // (entity, label, start, end)
+    pub pairs: Vec<(String, usize, usize, String, usize, usize)>, // (entity1, start1, end1, entity2, start2, end2)
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct ClassifiedSentenceWithAttention {
+    pub classified_sentence: ClassifiedSentenceWithPairs,
+    pub attention_matrix: Option<Vec<Vec<f32>>>,
 }
 
 /// Removes newline characters from the given text.
@@ -75,94 +83,190 @@ pub fn split_into_chunks(max_tokens: usize, tokens: &str) -> Vec<String> {
 }
 
 pub fn label_entities_in_sentences(
-	entities: &[String],
-	sentences: &[String],
+    entities: &[String],
+    sentences: &[String],
 ) -> Vec<ClassifiedSentence> {
-	let mut classified_sentences = Vec::new();
-	for sentence in sentences {
-		let mut found_entities = Vec::new();
-		for entity in entities {
-			if sentence.contains(entity) {
-				found_entities.push((entity.clone(), "Unlabelled".to_string(), 0)); // Position will be updated later
-			}
-		}
-		classified_sentences
-			.push(ClassifiedSentence { sentence: sentence.clone(), entities: found_entities });
-	}
-	classified_sentences
+    let mut classified_sentences = Vec::new();
+    for sentence in sentences {
+        let mut found_entities = Vec::new();
+        for entity in entities {
+            let positions = find_entity_indices(sentence, entity);
+            for (start, end) in positions {
+                found_entities.push((entity.clone(), "Unlabelled".to_string(), start, end));
+            }
+        }
+        classified_sentences.push(ClassifiedSentence {
+            sentence: sentence.clone(),
+            entities: found_entities,
+        });
+    }
+    classified_sentences
 }
+
+fn find_entity_indices(sentence: &str, entity: &str) -> Vec<(usize, usize)> {
+    let sentence_lower = sentence.to_lowercase();
+    let entity_lower = entity.to_lowercase();
+    let mut positions = Vec::new();
+    let mut start_pos = 0;
+    while let Some(pos) = sentence_lower[start_pos..].find(&entity_lower) {
+        let start = start_pos + pos;
+        let end = start + entity.len();
+        positions.push((start, end));
+        start_pos = end;  // Move past this occurrence
+    }
+
+    positions
+}
+
 
 pub async fn tokens_to_words(llm: &dyn LLM, tokens: &[Vec<i32>]) -> Vec<Vec<String>> {
 	let mut words_list = Vec::new();
 	for token_seq in tokens {
 		let words = llm.tokens_to_words(token_seq).await;
-		println!("Words are --------{:?}", words);
 		words_list.push(words);
 	}
 	words_list
 }
 
 pub fn match_entities_with_tokens(
-	tokenized_sentences: &[Vec<String>],
-	classified_sentences: &[ClassifiedSentence],
+    tokenized_sentences: &[Vec<String>],
+    classified_sentences: &[ClassifiedSentence],
 ) -> Vec<ClassifiedSentence> {
-	let mut results = Vec::new();
+    let mut results = Vec::new();
 
-	for (sentence_index, classified_sentence) in classified_sentences.iter().enumerate() {
-		let sentence_tokens = &tokenized_sentences[sentence_index];
-		let mut matched_entities = Vec::new();
+    for (sentence_index, classified_sentence) in classified_sentences.iter().enumerate() {
+        let sentence_tokens = &tokenized_sentences[sentence_index];
+        let mut matched_entities = Vec::new();
+        let mut seen_positions = std::collections::HashSet::new();
 
-		for (entity, label, _) in &classified_sentence.entities {
-			if let Some(position) = sentence_tokens.iter().position(|token| token == entity) {
-				matched_entities.push((entity.clone(), label.clone(), position));
-			}
-		}
+        for (entity, label, _start, _end) in &classified_sentence.entities {
+            let token_indices = find_all_token_indices(sentence_tokens, entity);
+            for (token_start, token_end) in token_indices {
+                if seen_positions.insert((token_start, token_end)) {
+                    matched_entities.push((entity.clone(), label.clone(), token_start, token_end));
+                }
+            }
+        }
 
-		results.push(ClassifiedSentence {
-			sentence: classified_sentence.sentence.clone(),
-			entities: matched_entities,
-		});
-	}
+        results.push(ClassifiedSentence {
+            sentence: classified_sentence.sentence.clone(),
+            entities: matched_entities,
+        });
+    }
 
-	results
+    results
 }
 
-pub fn create_binary_pairs(
-	classified_sentences: &[ClassifiedSentence],
-) -> Vec<ClassifiedSentenceWithPairs> {
-	let mut results = Vec::new();
+fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)> {
+    let entity_tokens: Vec<String> = entity.split_whitespace().map(|s| s.to_lowercase()).collect();
+    let mut indices = Vec::new();
+    
+    for i in 0..tokens.len() {
+        let token_slice: Vec<String> = tokens[i..i + entity_tokens.len().min(tokens.len() - i)]
+            .iter()
+            .map(|s| s.to_lowercase())
+            .collect();
+        if i + entity_tokens.len() <= tokens.len() && token_slice == entity_tokens[..] {
+            indices.push((i, i + entity_tokens.len() - 1));
+        }
+    }
+    
+    indices
+}
 
-	for classified_sentence in classified_sentences {
-		let sentence = &classified_sentence.sentence;
-		let entities = &classified_sentence.entities;
 
-		if entities.len() > 1 {
-			let mut pairs = Vec::new();
+pub fn create_binary_pairs(classified_sentences: &[ClassifiedSentence]) -> Vec<ClassifiedSentenceWithPairs> {
+    let mut results = Vec::new();
 
-			for i in 0..entities.len() {
-				for j in (i + 1)..entities.len() {
-					let (entity1, _, index1) = &entities[i];
-					let (entity2, _, index2) = &entities[j];
+    for classified_sentence in classified_sentences {
+        let sentence = &classified_sentence.sentence;
+        let mut entities = classified_sentence.entities.clone();
 
-					if (index1.clone() as isize - index2.clone() as isize).abs() < 10 {
-						pairs.push((entity1.clone(), entity2.clone()));
-					}
-				}
-			}
+        // Sort entities by their start indices
+        entities.sort_by_key(|k| k.2);
 
-			results.push(ClassifiedSentenceWithPairs {
-				sentence: sentence.clone(),
-				entities: entities.clone(),
-				pairs,
-			});
-		} else {
-			results.push(ClassifiedSentenceWithPairs {
-				sentence: sentence.clone(),
-				entities: entities.clone(),
-				pairs: Vec::new(),
-			});
-		}
-	}
+        if entities.len() > 1 {
+            let mut pairs = Vec::new();
 
-	results
+            for i in 0..entities.len() {
+                for j in (i + 1)..entities.len() {
+                    let (entity1, _, start1, end1) = &entities[i];
+                    let (entity2, _, start2, end2) = &entities[j];
+
+                    // Skip if the entities are the same or if either is [UNK]
+                    if entity1 == entity2 || entity1 == "[UNK]" || entity2 == "[UNK]" {
+                        continue;
+                    }
+
+                    // Add constraint: entity start index should not be between another entity's start and end indices
+                    if (*start1 >= *start2 && *start1 <= *end2) || (*start2 >= *start1 && *start2 <= *end1) {
+                        continue;
+                    }
+
+                    // Calculate the character distance between entity1 and entity2
+                    let char_distance = (*start1 as isize - *start2 as isize).abs();
+
+                    // Skip pairs where the distance is greater than 15 characters
+                    if char_distance > 15 {
+                        continue;
+                    }
+
+                    pairs.push((entity1.clone(), *start1, *end1, entity2.clone(), *start2, *end2));
+                }
+            }
+
+            results.push(ClassifiedSentenceWithPairs {
+                sentence: sentence.clone(),
+                entities,
+                pairs,
+            });
+        } else {
+            results.push(ClassifiedSentenceWithPairs {
+                sentence: sentence.clone(),
+                entities,
+                pairs: Vec::new(),
+            });
+        }
+    }
+
+    results
+}
+
+pub async fn add_attention_to_classified_sentences(
+    llm: &dyn LLM,
+    classified_sentences_with_pairs: &[ClassifiedSentenceWithPairs],
+    tokenized_chunks: &[Vec<i32>],
+) -> Result<Vec<ClassifiedSentenceWithAttention>, EngineError> {
+    let mut extended_classified_sentences_with_attention = Vec::new();
+
+    for (index, classified_sentence) in classified_sentences_with_pairs.iter().enumerate() {
+        if !classified_sentence.pairs.is_empty() {
+            // Get the corresponding tokenized chunk
+            let tokenized_chunk = &tokenized_chunks[index];
+
+            // Prepare model input for inference attention
+            let model_input = llm.model_input(tokenized_chunk.clone()).await.map_err(EngineError::from)?;
+
+            // Perform inference attention
+            let attention_result = llm.inference_attention(model_input).await.map_err(EngineError::from)?;
+
+            // Convert the attention tensor to a 2D vector
+            let attention_weights = llm.attention_tensor_to_2d_vector(&attention_result).await.map_err(EngineError::from)?;
+
+            // Add the attention matrix to the classified sentence
+            extended_classified_sentences_with_attention.push(ClassifiedSentenceWithAttention {
+                classified_sentence: classified_sentence.clone(),
+                attention_matrix: Some(attention_weights),
+            });
+        } else {
+            // If no entity pairs, add the classified sentence with an empty 2D vector
+            let empty_attention_weights = vec![];
+            extended_classified_sentences_with_attention.push(ClassifiedSentenceWithAttention {
+                classified_sentence: classified_sentence.clone(),
+                attention_matrix: Some(empty_attention_weights),
+            });
+        }
+    }
+
+    Ok(extended_classified_sentences_with_attention)
 }

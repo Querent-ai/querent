@@ -1,6 +1,5 @@
 use crate::utils::{
-	create_binary_pairs, label_entities_in_sentences, match_entities_with_tokens, remove_newlines,
-	split_into_chunks, tokens_to_words, ClassifiedSentence,
+	add_attention_to_classified_sentences, create_binary_pairs, label_entities_in_sentences, match_entities_with_tokens, remove_newlines, split_into_chunks, tokens_to_words, ClassifiedSentence
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -9,6 +8,7 @@ use futures::{Stream, StreamExt};
 use llms::llm::LLM;
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
+use candle_core::{DType, Tensor, Device};
 
 use crate::{Engine, EngineError, EngineResult};
 
@@ -38,7 +38,6 @@ impl Engine for AttentionTensorsEngine {
 		// Process the token stream to get chunks
 		let mut token_stream = token_stream;
 		while let Some(token) = token_stream.next().await {
-			println!("Token------------{:?}", token);
 
 			// Process the data to remove '\n' characters using the utility function
 			let cleaned_data: Vec<String> =
@@ -50,9 +49,6 @@ impl Engine for AttentionTensorsEngine {
 				all_chunks.extend(split_chunks);
 			}
 		}
-		println!("All Chunks-------{:?}", all_chunks);
-		println!("Entities: {:?}", self.entities);
-
 		// Tokenize each chunk
 		let mut tokenized_chunks = Vec::new();
 		for chunk in &all_chunks {
@@ -60,8 +56,8 @@ impl Engine for AttentionTensorsEngine {
 				self.llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
 			tokenized_chunks.push(tokenized_chunk);
 		}
-		println!("Tokenized Chunks------{:?}", tokenized_chunks);
 
+		println!("Tokenized Chunks-----{:?}", tokenized_chunks);
 		// Match entities with tokens and get their indices
 		let classified_sentences = if !self.entities.is_empty() {
 			println!("Using user-provided entities.");
@@ -103,7 +99,7 @@ impl Engine for AttentionTensorsEngine {
 
 				classified_sentences.push(ClassifiedSentence {
 					sentence: chunk.clone(),
-					entities: filtered_entities.into_iter().map(|(e, l)| (e, l, 0)).collect(), // Initialize indices to 0
+					entities: filtered_entities.into_iter().map(|(e, l)| (e, l, 0, 0)).collect(), // Initialize indices to 0
 				});
 			}
 
@@ -120,39 +116,47 @@ impl Engine for AttentionTensorsEngine {
 		let classified_sentences_with_pairs = create_binary_pairs(&classified_sentences);
 		println!("Classified Sentences with Pairs: {:?}", classified_sentences_with_pairs);
 
-		// Create the stream to yield the results
-		let stream = stream! {
-			for classified_sentence in classified_sentences_with_pairs {
-				// Create a payload
-				let payload = SemanticKnowledgePayload {
-					subject: "mock123".to_string(),
-					subject_type: "mock".to_string(),
-					predicate: "mock".to_string(),
-					predicate_type: "mock".to_string(),
-					object: "mock".to_string(),
-					object_type: "mock".to_string(),
-					sentence: classified_sentence.sentence.clone(),
-					image_id: None,
-				};
+		let extended_classified_sentences_with_attention = add_attention_to_classified_sentences(
+            self.llm.as_ref(),
+            &classified_sentences_with_pairs,
+            &tokenized_chunks,
+        )
+        .await?;
 
-				let event = EventState {
-					event_type: EventType::Graph,
-					file: "mock_file".to_string(), // Update appropriately
-					doc_source: "mock_source".to_string(), // Update appropriately
-					image_id: None,
-					timestamp: 0.0,
-					payload: serde_json::to_string(&payload).unwrap_or_default(),
-				};
+        println!("Classified Sentences with Attention: {:?}", extended_classified_sentences_with_attention);
 
-				// Yield the created event
-				yield Ok(event);
-			}
-		};
+        // Create the stream to yield the results
+        let stream = stream! {
+            for classified_sentence_with_attention in extended_classified_sentences_with_attention {
+                // Create a payload
+                let payload = SemanticKnowledgePayload {
+                    subject: "mock123".to_string(),
+                    subject_type: "mock".to_string(),
+                    predicate: "mock".to_string(),
+                    predicate_type: "mock".to_string(),
+                    object: "mock".to_string(),
+                    object_type: "mock".to_string(),
+                    sentence: classified_sentence_with_attention.classified_sentence.sentence.clone(),
+                    image_id: None,
+                };
 
-		Ok(Box::pin(stream))
-	}
+                let event = EventState {
+                    event_type: EventType::Graph,
+                    file: "mock_file".to_string(), // Update appropriately
+                    doc_source: "mock_source".to_string(), // Update appropriately
+                    image_id: None,
+                    timestamp: 0.0,
+                    payload: serde_json::to_string(&payload).unwrap_or_default(),
+                };
+
+                // Yield the created event along with the attention matrix
+                yield Ok(event);
+            }
+        };
+
+        Ok(Box::pin(stream))
+    }
 }
-
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -174,7 +178,7 @@ mod tests {
 		// // Read the sample .txt file
 		// let bytes = read(test_file_path.to_string()).await.expect("Failed to read test file");
 		// Create a sample .pdf file for testing
-		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/Small_Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf";
+		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/english_test.pdf";
 		let mut file = File::open(test_file_path).expect("Failed to open test file");
 
 		// Read the sample .pdf file into a byte vector
@@ -213,25 +217,25 @@ mod tests {
 		});
 
 		// Initialize BertLLM with EmbedderOptions
-		// let options = EmbedderOptions {
-		//     model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-		//     local_dir: None,
-		//     revision: None,
-		//     distribution: None,
-		// };
 		let options = EmbedderOptions {
-			model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-			local_dir: Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
-			revision: None,
-			distribution: None,
+		    model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+		    local_dir: None,
+		    revision: None,
+		    distribution: None,
 		};
+		// let options = EmbedderOptions {
+		// 	model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+		// 	local_dir: Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+		// 	revision: None,
+		// 	distribution: None,
+		// };
 		let embedder = Arc::new(BertLLM::new(options).unwrap());
 
 		// Create an instance of AttentionTensorsEngine
-		// let engine = AttentionTensorsEngine::new(embedder, vec!["oil".to_string(), "gas".to_string()]);
+		let engine = AttentionTensorsEngine::new(embedder, vec!["joel".to_string(), "india".to_string(), "nitrogen gas".to_string()]);
 
 		// Create an instance of Attention Tensor without fixed entities
-		let engine = AttentionTensorsEngine::new(embedder, vec![]);
+		// let engine = AttentionTensorsEngine::new(embedder, vec![]);
 
 		// Wrap the receiver in a tokio_stream::wrappers::ReceiverStream to convert it into a Stream
 		let receiver_stream = ReceiverStream::new(receiver);

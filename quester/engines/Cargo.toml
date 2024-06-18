@@ -70,3 +70,6 @@ crossbeam-channel = { workspace = true }
 ingestors = { workspace = true }
 tokio-stream = { workspace = true }
 unicode-segmentation = { workspace = true }
+candle-core = { workspace = true }
+candle-transformers = { workspace = true }
+candle-nn = { workspace = true }
