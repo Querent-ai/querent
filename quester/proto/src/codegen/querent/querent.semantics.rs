@@ -208,9 +208,6 @@ pub struct FileCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AzureCollectorConfig {
-    /// Account URL of the Azure collector.
-    #[prost(string, tag = "1")]
-    pub account_url: ::prost::alloc::string::String,
     /// Connection string of the Azure collector.
     #[prost(string, tag = "2")]
     pub connection_string: ::prost::alloc::string::String,
@@ -310,12 +307,6 @@ pub struct GoogleDriveCollectorConfig {
     /// Refresh token of the Google Drive collector.
     #[prost(string, tag = "3")]
     pub drive_refresh_token: ::prost::alloc::string::String,
-    /// Scopes of the Google Drive collector.
-    #[prost(string, tag = "4")]
-    pub drive_scopes: ::prost::alloc::string::String,
-    /// Token of the Google Drive collector.
-    #[prost(string, tag = "5")]
-    pub drive_token: ::prost::alloc::string::String,
     /// Folder to crawl of the Google Drive collector.
     #[prost(string, tag = "6")]
     pub folder_to_crawl: ::prost::alloc::string::String,
@@ -343,12 +334,6 @@ pub struct EmailCollectorConfig {
     /// Folder of the Email collector.
     #[prost(string, tag = "5")]
     pub imap_folder: ::prost::alloc::string::String,
-    /// Key file of the Email collector.
-    #[prost(string, tag = "6")]
-    pub imap_keyfile: ::prost::alloc::string::String,
-    /// Cert file of the Email collector.
-    #[prost(string, tag = "7")]
-    pub imap_certfile: ::prost::alloc::string::String,
 }
 /// DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

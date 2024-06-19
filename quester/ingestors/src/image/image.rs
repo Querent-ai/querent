@@ -3,27 +3,24 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::IngestedTokens;
-use std::{io::Cursor, pin::Pin, sync::Arc};
-use tokio::io::AsyncReadExt;
+use rusty_tesseract::{image, Image};
+use std::{pin::Pin, sync::Arc};
 
-use crate::{
-	html::parser::HtmlParser, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
-	IngestorError, IngestorErrorKind, IngestorResult,
-};
+use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
 
 // Define the TxtIngestor
-pub struct HtmlIngestor {
+pub struct ImageIngestor {
 	processors: Vec<Arc<dyn AsyncProcessor>>,
 }
 
-impl HtmlIngestor {
+impl ImageIngestor {
 	pub fn new() -> Self {
 		Self { processors: Vec::new() }
 	}
 }
 
 #[async_trait]
-impl BaseIngestor for HtmlIngestor {
+impl BaseIngestor for ImageIngestor {
 	fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
 		self.processors = processors;
 	}
@@ -51,29 +48,22 @@ impl BaseIngestor for HtmlIngestor {
 		let stream = {
 			let buffer = Arc::clone(&buffer);
 			stream! {
-				let mut content = String::new();
-				let mut cursor = Cursor::new(buffer.as_ref());
+			let dyn_img = image::load_from_memory(&buffer).unwrap();
 
-				cursor.read_to_string(&mut content).await
-					.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
+			let img = Image::from_dynamic_image(&dyn_img).unwrap();
 
-				let mut parser = HtmlParser::new();
-				parser.parse(&content.clone());
+			let default_args = rusty_tesseract::Args::default();
 
-				for token in parser.get_body_elements() {
-					if token == "" {
-						continue;
-					} else {
-						let ingested_tokens = IngestedTokens {
-							data: vec![token.to_string()],
-							file: file.clone(),
-							doc_source: doc_source.clone(),
-							is_token_stream: false,
-						};
+			let output = rusty_tesseract::image_to_string(&img, &default_args).unwrap();
 
-						yield Ok(ingested_tokens);
-					}
-				}
+			let ingested_tokens = IngestedTokens {
+				data: vec![output.to_string()],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+			};
+
+			yield Ok(ingested_tokens);
 			}
 		};
 
@@ -90,22 +80,22 @@ impl BaseIngestor for HtmlIngestor {
 // 	use futures::StreamExt;
 
 //     #[tokio::test]
-//     async fn test_html_ingestor() {
+//     async fn test_img_ingestor() {
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/english_terminology.html").unwrap();
+//         let bytes = std::fs::read("/home/ansh/pyg-trail/1520206936825.jpeg").unwrap();
 
 //         // Create a CollectedBytes instance
 //         let collected_bytes = CollectedBytes {
 //             data: Some(bytes),
-//             file: Some(Path::new("english_terminology.html").to_path_buf()),
+//             file: Some(Path::new("1520206936825.jpeg").to_path_buf()),
 //             doc_source: Some("test_source".to_string()),
 // 			eof: false,
-// 			extension: Some("html".to_string()),
+// 			extension: Some("jpeg".to_string()),
 // 			size: Some(10),
 //         };
 
 //         // Create a TxtIngestor instance
-//         let ingestor = HtmlIngestor::new();
+//         let ingestor = ImageIngestor::new();
 
 //         // Ingest the file
 //         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
