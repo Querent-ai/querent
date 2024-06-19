@@ -1,7 +1,11 @@
+use std::collections::HashMap;
+
 use llms::LLM;
 use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
+use crate::agn::HeadTailRelations;
+
 
 use crate::EngineError;
 
@@ -23,6 +27,14 @@ pub struct ClassifiedSentenceWithAttention {
     pub classified_sentence: ClassifiedSentenceWithPairs,
     pub attention_matrix: Option<Vec<Vec<f32>>>,
 }
+
+#[derive(Debug, Clone)]
+pub struct ClassifiedSentenceWithRelations {
+    pub classified_sentence: ClassifiedSentenceWithPairs,
+    // pub attention_matrix: Option<Vec<Vec<f32>>>,
+    pub relations: Vec<HeadTailRelations>,
+}
+
 
 /// Removes newline characters from the given text.
 pub fn remove_newlines(text: &str) -> String {
@@ -207,7 +219,7 @@ pub fn create_binary_pairs(classified_sentences: &[ClassifiedSentence]) -> Vec<C
                     let char_distance = (*start1 as isize - *start2 as isize).abs();
 
                     // Skip pairs where the distance is greater than 15 characters
-                    if char_distance > 15 {
+                    if char_distance > 25 {
                         continue;
                     }
 
@@ -270,3 +282,39 @@ pub async fn add_attention_to_classified_sentences(
 
     Ok(extended_classified_sentences_with_attention)
 }
+
+
+pub fn merge_similar_relations(
+    sentences_with_relations: &mut [ClassifiedSentenceWithRelations],
+) {
+    for sentence in sentences_with_relations {
+        for relation in &mut sentence.relations {
+            let mut merged_relations: HashMap<String, f32> = HashMap::new();
+
+            for (rel, score) in &relation.relations {
+                let mut merged = false;
+                let mut keys_to_remove = Vec::new();
+                let mut new_key = rel.clone();
+                let mut new_score = *score;
+
+                for (existing_rel, existing_score) in &mut merged_relations {
+                    if existing_rel.contains(rel) || rel.contains(existing_rel) {
+                        new_key = if rel.len() > existing_rel.len() { rel.clone() } else { existing_rel.clone() };
+                        new_score += *existing_score;
+                        keys_to_remove.push(existing_rel.clone());
+                        merged = true;
+                    }
+                }
+
+                for key in keys_to_remove {
+                    merged_relations.remove(&key);
+                }
+
+                merged_relations.insert(new_key, new_score);
+            }
+
+            relation.relations = merged_relations.into_iter().collect();
+        }
+    }
+}
+

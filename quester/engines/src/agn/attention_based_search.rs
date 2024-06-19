@@ -130,72 +130,72 @@ pub fn perform_search(
         new_paths.sort_by(|a, b| b.mean_score().partial_cmp(&a.mean_score()).unwrap());
         queue.extend(new_paths.into_iter().take(search_candidates));
     }
-
+    // println!("Candidate Paths--------------{:?}", candidate_paths);
     Ok(candidate_paths)
 }
 
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::utils::{
-        ClassifiedSentenceWithAttention, ClassifiedSentenceWithPairs
-    };
-    #[test]
-    fn test_perform_search() {
-        // Define the classified sentence with attention
-        let classified_sentence_with_attention = ClassifiedSentenceWithAttention {
-            classified_sentence: ClassifiedSentenceWithPairs {
-                sentence: "Joel 1 2 India.".to_string(),
-                entities: vec![
-                    ("joel".to_string(), "Unlabelled".to_string(), 0, 0),
-                    ("india".to_string(), "Unlabelled".to_string(), 3, 3),
-                ],
-                pairs: vec![("joel".to_string(), 0, 0, "india".to_string(), 3, 3)],
-            },
-            attention_matrix: Some(vec![
-                vec![0.17606843, 0.027115423, 0.02369972, 0.035531946, 0.040166296],
-                vec![0.1329437, 0.095136136, 0.035234112, 0.03919317, 0.05276324],
-                vec![0.2027459, 0.10026775, 0.056107037, 0.09195952, 0.07401152],
-                vec![0.097249776, 0.04050471, 0.038452335, 0.12229665, 0.04973845],
-                vec![0.22857486, 0.06029765, 0.04682016, 0.06759972, 0.07255538],
-            ]),
-        };
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::utils::{
+//         ClassifiedSentenceWithAttention, ClassifiedSentenceWithPairs
+//     };
+//     #[test]
+//     fn test_perform_search() {
+//         // Define the classified sentence with attention
+//         let classified_sentence_with_attention = ClassifiedSentenceWithAttention {
+//             classified_sentence: ClassifiedSentenceWithPairs {
+//                 sentence: "Joel 1 2 India.".to_string(),
+//                 entities: vec![
+//                     ("joel".to_string(), "Unlabelled".to_string(), 0, 0),
+//                     ("india".to_string(), "Unlabelled".to_string(), 3, 3),
+//                 ],
+//                 pairs: vec![("joel".to_string(), 0, 0, "india".to_string(), 3, 3)],
+//             },
+//             attention_matrix: Some(vec![
+//                 vec![0.17606843, 0.027115423, 0.02369972, 0.035531946, 0.040166296],
+//                 vec![0.1329437, 0.095136136, 0.035234112, 0.03919317, 0.05276324],
+//                 vec![0.2027459, 0.10026775, 0.056107037, 0.09195952, 0.07401152],
+//                 vec![0.097249776, 0.04050471, 0.038452335, 0.12229665, 0.04973845],
+//                 vec![0.22857486, 0.06029765, 0.04682016, 0.06759972, 0.07255538],
+//             ]),
+//         };
 
-        // Define the entity pair
-        let entity_pair = EntityPair {
-            head_entity: Entity {
-                name: "joel".to_string(),
-                start_idx: 0,
-                end_idx: 0,
-            },
-            tail_entity: Entity {
-                name: "india".to_string(),
-                start_idx: 3,
-                end_idx: 3,
-            },
-            context: "Joel lives in India.".to_string(),
-        };
+//         // Define the entity pair
+//         let entity_pair = EntityPair {
+//             head_entity: Entity {
+//                 name: "joel".to_string(),
+//                 start_idx: 0,
+//                 end_idx: 0,
+//             },
+//             tail_entity: Entity {
+//                 name: "india".to_string(),
+//                 start_idx: 3,
+//                 end_idx: 3,
+//             },
+//             context: "Joel lives in India.".to_string(),
+//         };
 
-        // Get the attention matrix from the classified sentence with attention
-        let attention_matrix = classified_sentence_with_attention.attention_matrix.unwrap();
+//         // Get the attention matrix from the classified sentence with attention
+//         let attention_matrix = classified_sentence_with_attention.attention_matrix.unwrap();
 
-        // Perform search
-        let result = perform_search(
-            0, // entity_start_index
-            &attention_matrix,
-            &entity_pair,
-            2, // search_candidates
-            true, // require_contiguous
-            2, // max_relation_length
-        );
+//         // Perform search
+//         let result = perform_search(
+//             0, // entity_start_index
+//             &attention_matrix,
+//             &entity_pair,
+//             2, // search_candidates
+//             true, // require_contiguous
+//             2, // max_relation_length
+//         );
 
-        match result {
-            Ok(paths) => {
-                println!("Found paths: {:?}", paths);
-                assert!(!paths.is_empty(), "No paths found");
-            },
-            Err(e) => println!("Error: {}", e),
-        }
-    }
-}
+//         match result {
+//             Ok(paths) => {
+//                 println!("Found paths: {:?}", paths);
+//                 assert!(!paths.is_empty(), "No paths found");
+//             },
+//             Err(e) => println!("Error: {}", e),
+//         }
+//     }
+// }

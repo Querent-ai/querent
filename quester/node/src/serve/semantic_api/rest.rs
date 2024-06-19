@@ -1,6 +1,8 @@
 use actors::{AskError, MessageBus, Observe};
 use common::EventType;
-use engines::mock::MockEngine;
+// use engines::mock::MockEngine;
+use engines::agn::AttentionTensorsEngine;
+use llms::transformers::bert::{EmbedderOptions, BertLLM};
 use futures_util::StreamExt;
 use proto::{
 	config::StorageConfigs,
@@ -179,7 +181,15 @@ pub async fn start_pipeline(
 
 	let data_sources = create_dynamic_sources(&request).await?;
 	// TODO REPLACE WITH CORRECT AGN engine
-	let engine = Arc::new(MockEngine::new());
+	// let engine = Arc::new(MockEngine::new());
+	let options = EmbedderOptions {
+		model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+		local_dir: None,
+		revision: None,
+		distribution: None,
+	};
+	let embedder = Arc::new(BertLLM::new(options).unwrap());
+	let engine = Arc::new(AttentionTensorsEngine::new(embedder, vec!["oil".to_string(), "gas".to_string(),"porosity".to_string(), "joel".to_string(), "india".to_string(),"microsoft".to_string(), "nitrogen gas".to_string()]));
 
 	let pipeline_settings =
 		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };

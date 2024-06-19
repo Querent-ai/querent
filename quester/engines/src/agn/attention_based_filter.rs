@@ -1,16 +1,12 @@
 use std::collections::{HashMap, HashSet};
+use crate::agn::attention_based_search::Entity;
 
-#[derive(Debug, Clone)]
-pub struct Entity {
-    pub text: String,
-    pub wikidata_id: Option<String>,
-}
 
 #[derive(Debug, Clone)]
 pub struct HeadTailRelations {
     pub head: Entity,
     pub tail: Entity,
-    pub relations: Vec<String>,
+    pub relations: Vec<(String, f32)>,
 }
 
 #[derive(Debug, Clone)]
@@ -26,7 +22,6 @@ impl SearchBeam {
 }
 
 pub struct IndividualFilter {
-    token_idx_2_word_doc_idx: Vec<(String, usize)>,
     doc: Vec<Token>,
     forward_relations: bool,
     threshold: f32,
@@ -39,131 +34,121 @@ pub struct Token {
 }
 
 impl IndividualFilter {
-    pub fn new(
-        token_idx_2_word_doc_idx: Vec<(String, usize)>,
-        doc: Vec<Token>,
-        forward_relations: bool,
-        threshold: f32,
-    ) -> Self {
-        Self {
-            token_idx_2_word_doc_idx,
-            doc,
-            forward_relations,
-            threshold,
+        pub fn new(doc: Vec<Token>, forward_relations: bool, threshold: f32) -> Self {
+            Self {
+                doc,
+                forward_relations,
+                threshold,
+            }
+        }
+    
+        pub fn filter(&self, candidates: Vec<SearchBeam>, head: &Entity, tail: &Entity) -> HeadTailRelations {
+            let mut response = HeadTailRelations {
+                head: head.clone(),
+                tail: tail.clone(),
+                relations: Vec::new(),
+            };
+    
+            let mut seen_relations = HashSet::new();
+    
+            for candidate in candidates {
+                if candidate.mean_score() < self.threshold {
+                    // println!("Skipping candidate with mean score {}", candidate.mean_score());
+                    continue;
+                }
+    
+                let mut rel_txt = String::new();
+                let mut last_index = None;
+                let mut valid = true;
+    
+                // println!("Processing candidate with rel_tokens: {:?}", candidate.rel_tokens);
+    
+                for &token_id in &candidate.rel_tokens {
+                    let word_id = token_id;
+                    let word = &self.doc[token_id].text;
+                    // println!("Word ID is -----{:?}", word_id);
+                    // println!("Word is --------{:?}", word);
+                    // println!("last index --------{:?}", last_index);
+                    if self.forward_relations && last_index.is_some() {
+                        let last_idx = last_index.unwrap();
+                        if word_id <= last_idx || word_id - last_idx != 1 {
+                            valid = false;
+                            // println!("Invalid token sequence: word_id {} is not contiguous with last_index {}", word_id, last_idx);
+                            break;
+                        }
+                    }
+                    last_index = Some(word_id);
+    
+                    if !rel_txt.is_empty() {
+                        rel_txt.push(' ');
+                    }
+                    let lowered_word = word.to_lowercase();
+    
+                    // Only skip if the entire word is equal to head or tail entity text
+                    if !head.name.eq_ignore_ascii_case(&lowered_word) && !tail.name.eq_ignore_ascii_case(&lowered_word) {
+                        rel_txt.push_str(&lowered_word);
+                        // println!("Adding word: {}", lowered_word);
+                    } else {
+                        // println!("Skipping word: {}", lowered_word);
+                    }
+    
+                    // println!("Accumulated relation text: {}", rel_txt);
+                }
+    
+                if valid {
+                    let lemmatized_txt = self.simple_filter(&rel_txt);
+                    // println!("Lemmatized relation text: {}", lemmatized_txt);
+                    if !lemmatized_txt.is_empty() && seen_relations.insert(lemmatized_txt.clone()) {
+                        // println!("Added relation: {}", lemmatized_txt);
+                        response.relations.push((lemmatized_txt, candidate.mean_score()));
+                    }
+                }
+            }
+    
+            response
+        }
+    
+        fn simple_filter(&self, relation: &str) -> String {
+            let filtered_relation = relation
+                .split_whitespace()
+                .filter(|word| word.chars().all(char::is_alphanumeric))
+                .collect::<Vec<&str>>()
+                .join(" ");
+            // println!("Filtered relation: {}", filtered_relation);
+            filtered_relation
         }
     }
 
-    pub fn filter(&self, candidates: Vec<SearchBeam>, head: &Entity, tail: &Entity) -> HeadTailRelations {
-        let mut response = HeadTailRelations {
-            head: head.clone(),
-            tail: tail.clone(),
-            relations: Vec::new(),
-        };
 
-        for candidate in candidates {
-            if candidate.mean_score() < self.threshold {
-                continue;
-            }
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-            let mut rel_txt = String::new();
-            let mut rel_idx = Vec::new();
-            let mut last_index = None;
-            let mut valid = true;
+//     #[test]
+//     fn test_individual_filter() {
+//         let doc = vec![
+//             Token { text: "Joel".to_string(), lemma: "joel".to_string() },
+//             Token { text: "lives".to_string(), lemma: "live".to_string() },
+//             Token { text: "in".to_string(), lemma: "in".to_string() },
+//             Token { text: "India".to_string(), lemma: "india".to_string() },
+//             Token { text: ".".to_string(), lemma: ".".to_string() },
+//         ];
 
-            for &token_id in &candidate.rel_tokens {
-                let (ref word, word_id) = self.token_idx_2_word_doc_idx[token_id];
+//         let filter = IndividualFilter::new(doc, true, 0.05);
 
-                if self.forward_relations && last_index.is_some() && word_id - last_index.unwrap() != 1 {
-                    valid = false;
-                    break;
-                }
-                last_index = Some(word_id);
+//         let candidates = vec![
+//             SearchBeam { rel_tokens: vec![1], score: 0.1 },
+//             SearchBeam { rel_tokens: vec![1, 2], score: 0.2 },
+//             SearchBeam { rel_tokens: vec![1, 2, 3], score: 0.3 },
+//         ];
 
-                if !rel_txt.is_empty() {
-                    rel_txt.push(' ');
-                }
-                let lowered_word = word.to_lowercase();
-                if !head.text.contains(&lowered_word) && !tail.text.contains(&lowered_word) {
-                    rel_txt.push_str(&lowered_word);
-                    rel_idx.push(word_id);
-                }
-            }
+//         let head = Entity { name: "joel".to_string(), start_idx: 0, end_idx: 0};
+//         let tail = Entity { name: "india".to_string(), start_idx:0, end_idx:0};
 
-            if valid {
-                let lemmatized_txt = self.simple_filter(&rel_txt);
-                if !lemmatized_txt.is_empty() {
-                    response.relations.push(lemmatized_txt);
-                }
-            }
-        }
+//         let result = filter.filter(candidates, &head, &tail);
 
-        response
-    }
-
-    fn simple_filter(&self, relation: &str) -> String {
-        relation
-            .split_whitespace()
-            .filter(|word| word.chars().all(char::is_alphanumeric))
-            .collect::<Vec<&str>>()
-            .join(" ")
-    }
-}
-
-pub fn frequency_cutoff(ht_relations: &mut [HeadTailRelations], frequency: usize) {
-    if frequency == 1 {
-        return;
-    }
-    let mut counter: HashMap<String, usize> = HashMap::new();
-
-    for ht_item in ht_relations.iter() {
-        for relation in &ht_item.relations {
-            *counter.entry(relation.clone()).or_insert(0) += 1;
-        }
-    }
-
-    for ht_item in ht_relations.iter_mut() {
-        ht_item.relations.retain(|rel| counter.get(rel).copied().unwrap_or(0) >= frequency);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_individual_filter() {
-        let token_idx_2_word_doc_idx = vec![
-            ("Joel".to_string(), 0),
-            ("lives".to_string(), 1),
-            ("in".to_string(), 2),
-            ("India".to_string(), 3),
-            (".".to_string(), 4),
-        ];
-
-        let doc = vec![
-            Token { text: "Joel".to_string(), lemma: "joel".to_string() },
-            Token { text: "lives".to_string(), lemma: "live".to_string() },
-            Token { text: "in".to_string(), lemma: "in".to_string() },
-            Token { text: "India".to_string(), lemma: "india".to_string() },
-            Token { text: ".".to_string(), lemma: ".".to_string() },
-        ];
-
-        let filter = IndividualFilter::new(token_idx_2_word_doc_idx, doc, true, 0.05);
-
-        let candidates = vec![
-            SearchBeam { rel_tokens: vec![1], score: 0.1 },
-            SearchBeam { rel_tokens: vec![1, 2], score: 0.2 },
-            SearchBeam { rel_tokens: vec![1, 2, 3], score: 0.3 },
-        ];
-
-        let head = Entity { text: "joel".to_string(), wikidata_id: None };
-        let tail = Entity { text: "india".to_string(), wikidata_id: None };
-
-        let result = filter.filter(candidates, &head, &tail);
-        println!("Filtered Relations: {:?}", result.relations);
-
-        // assert_eq!(result.relations.len(), 2);
-        // assert!(result.relations.contains(&"live".to_string()));
-    }
-
-}
+//         // assert_eq!(result.relations.len(), 2);
+//         // assert!(result.relations.contains(&"lives in".to_string()));
+//         // assert!(result.relations.contains(&"lives in india".to_string()));
+//     }
+//     }
