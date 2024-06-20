@@ -1,12 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 
 use llms::LLM;
 use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
-use crate::agn::HeadTailRelations;
-
-
+use crate::{agn::HeadTailRelations, EngineErrorKind};
+use fastembed::TextEmbedding;
 use crate::EngineError;
 
 #[derive(Debug, Serialize)]
@@ -31,7 +30,7 @@ pub struct ClassifiedSentenceWithAttention {
 #[derive(Debug, Clone)]
 pub struct ClassifiedSentenceWithRelations {
     pub classified_sentence: ClassifiedSentenceWithPairs,
-    // pub attention_matrix: Option<Vec<Vec<f32>>>,
+    pub attention_matrix: Option<Vec<Vec<f32>>>,
     pub relations: Vec<HeadTailRelations>,
 }
 
@@ -292,7 +291,7 @@ pub fn merge_similar_relations(
             let mut merged_relations: HashMap<String, f32> = HashMap::new();
 
             for (rel, score) in &relation.relations {
-                let mut merged = false;
+                let mut _merged = false;
                 let mut keys_to_remove = Vec::new();
                 let mut new_key = rel.clone();
                 let mut new_score = *score;
@@ -302,7 +301,7 @@ pub fn merge_similar_relations(
                         new_key = if rel.len() > existing_rel.len() { rel.clone() } else { existing_rel.clone() };
                         new_score += *existing_score;
                         keys_to_remove.push(existing_rel.clone());
-                        merged = true;
+                        _merged = true;
                     }
                 }
 
@@ -318,3 +317,50 @@ pub fn merge_similar_relations(
     }
 }
 
+/// Utility function to calculate biased sentence embedding
+pub async fn calculate_biased_sentence_embedding(
+    embedder: &TextEmbedding,
+    attention_matrix: &Vec<Vec<f32>>,
+    head_entity: &str,
+    tail_entity: &str,
+    predicate: &str,
+    score: &f32,
+    sentence: &str,
+    head_start_idx: usize,
+    head_end_idx: usize,
+    tail_start_idx: usize,
+    tail_end_idx: usize,
+) -> Result<Vec<f32>, EngineError> {
+    // Obtain embeddings
+    let sentence_embedding = embedder.embed(vec![sentence.to_string()], None)
+        .map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(anyhow::anyhow!(e.to_string()))))?[0].clone();
+    let head_embedding = embedder.embed(vec![head_entity.to_string()], None)
+        .map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(anyhow::anyhow!(e.to_string()))))?[0].clone();
+    let tail_embedding = embedder.embed(vec![tail_entity.to_string()], None)
+        .map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(anyhow::anyhow!(e.to_string()))))?[0].clone();
+    let predicate_embedding = embedder.embed(vec![predicate.to_string()], None)
+        .map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(anyhow::anyhow!(e.to_string()))))?[0].clone();
+
+    // Calculate attention scores for head and tail entities
+    let head_attention_score: f32 = attention_matrix.iter()
+        .map(|row| (head_start_idx..=head_end_idx).map(|idx| row[idx]).sum::<f32>() / (head_end_idx - head_start_idx + 1) as f32)
+        .sum::<f32>() / attention_matrix.len() as f32;
+
+    let tail_attention_score: f32 = attention_matrix.iter()
+        .map(|row| (tail_start_idx..=tail_end_idx).map(|idx| row[idx]).sum::<f32>() / (tail_end_idx - tail_start_idx + 1) as f32)
+        .sum::<f32>() / attention_matrix.len() as f32;
+
+    // Initialize the biased sentence embedding
+    let mut biased_sentence_embedding = sentence_embedding.clone();
+
+    // Adjust the sentence embedding with entity embeddings
+    for i in 0..biased_sentence_embedding.len() {
+        biased_sentence_embedding[i] += head_attention_score * head_embedding[i] + tail_attention_score * tail_embedding[i] + score * predicate_embedding[i];
+    }
+
+    // Normalize the resulting vector (optional)
+    let norm: f32 = biased_sentence_embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
+    let normalized_biased_sentence_embedding: Vec<f32> = biased_sentence_embedding.iter().map(|&x| x / norm).collect();
+
+    Ok(normalized_biased_sentence_embedding)
+}

@@ -86,13 +86,13 @@ impl From<CandleCoreError> for EngineError {
 
 /// Engine trait.
 #[async_trait]
-pub trait Engine: Send + Sync + 'static {
-	/// Process the ingested tokens.
-	async fn process_ingested_tokens(
-		&self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
-	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
+pub trait Engine: Send + Sync {
+    async fn process_ingested_tokens<'life0>(
+        &'life0 self,
+        token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+    ) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>>;
 }
+
 
 /// Debugging trait for Engine.
 impl std::fmt::Debug for dyn Engine {

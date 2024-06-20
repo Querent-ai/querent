@@ -1,6 +1,6 @@
 use actors::{AskError, MessageBus, Observe};
 use common::EventType;
-// use engines::mock::MockEngine;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use engines::agn::AttentionTensorsEngine;
 use llms::transformers::bert::{EmbedderOptions, BertLLM};
 use futures_util::StreamExt;
@@ -189,7 +189,17 @@ pub async fn start_pipeline(
 		distribution: None,
 	};
 	let embedder = Arc::new(BertLLM::new(options).unwrap());
-	let engine = Arc::new(AttentionTensorsEngine::new(embedder, vec!["oil".to_string(), "gas".to_string(),"porosity".to_string(), "joel".to_string(), "india".to_string(),"microsoft".to_string(), "nitrogen gas".to_string()]));
+
+	// Initialize the embedding model
+    let embedding_model = TextEmbedding::try_new(InitOptions {
+        model_name: EmbeddingModel::AllMiniLML6V2,
+        show_download_progress: true,
+        ..Default::default()
+    }).unwrap();
+
+
+	let engine = Arc::new(AttentionTensorsEngine::new(embedder, vec!["oil".to_string(), "gas".to_string(),"porosity".to_string(), "joel".to_string(), "india".to_string(),"microsoft".to_string(), "nitrogen gas".to_string()], Some(embedding_model)));
+
 
 	let pipeline_settings =
 		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };
