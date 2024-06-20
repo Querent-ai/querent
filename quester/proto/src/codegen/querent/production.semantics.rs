@@ -420,6 +420,26 @@ pub struct NewsCollectorConfig {
 	#[prost(string, tag = "8")]
 	pub sources: ::prost::alloc::string::String,
 }
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OneDriveConfig {
+    /// Client ID of the app
+    #[prost(string, tag = "1")]
+    pub client_id: ::prost::alloc::string::String,
+    /// Client secret of the app
+    #[prost(string, tag = "2")]
+    pub client_secret: ::prost::alloc::string::String,
+    /// Redirect URI
+    #[prost(string, tag = "3")]
+    pub redirect_uri: ::prost::alloc::string::String,
+    /// Auth code of the app
+    #[prost(string, tag = "4")]
+    pub auth_code: ::prost::alloc::string::String,
+	/// Folder path of the app
+    #[prost(string, tag = "5")]
+    pub folder_path: ::prost::alloc::string::String,
+}
 /// StorageConfig is a message to hold configuration for a storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]

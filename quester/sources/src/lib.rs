@@ -14,6 +14,7 @@ pub mod email;
 pub mod filesystem;
 pub mod gcs;
 pub mod s3;
+pub mod onedrive;
 
 async fn default_copy_to_file<S: Source + ?Sized>(
 	storage: &S,

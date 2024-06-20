@@ -65,3 +65,5 @@ native-tls = { workspace = true }
 mailparse = { workspace = true }
 yup-oauth2 = { workspace = true }
 oauth2 = { workspace = true }
+onedrive-api = {workspace = true}
+reqwest = {workspace = true}

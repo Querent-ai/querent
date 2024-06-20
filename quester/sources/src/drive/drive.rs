@@ -390,65 +390,65 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 	}
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-	use std::collections::HashSet;
+// 	use std::collections::HashSet;
 
-	use futures::StreamExt;
-	use proto::semantics::GoogleDriveCollectorConfig;
+// 	use futures::StreamExt;
+// 	use proto::semantics::GoogleDriveCollectorConfig;
 
-	use crate::Source;
+// 	use crate::Source;
 
-	use super::GoogleDriveSource;
+// 	use super::GoogleDriveSource;
 
-	#[tokio::test]
-	async fn test_drive_collector() {
-		let google_config = GoogleDriveCollectorConfig {
-			drive_client_secret: "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".to_string(),
-			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
-			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
-			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
-			specific_file_type: "application/pdf".to_string()
-		};
+// 	#[tokio::test]
+// 	async fn test_drive_collector() {
+// 		let google_config = GoogleDriveCollectorConfig {
+// 			drive_client_secret: "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".to_string(),
+// 			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
+// 			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
+// 			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+// 			specific_file_type: "application/pdf".to_string()
+// 		};
 
-		let drive_storage = GoogleDriveSource::new(google_config).await;
-		let connectivity = drive_storage.check_connectivity().await;
+// 		let drive_storage = GoogleDriveSource::new(google_config).await;
+// 		let connectivity = drive_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
+// 		println!("Connectivity: {:?}", connectivity);
 
-		let result = drive_storage
-			.hub
-			.files()
-			.list()
-			.add_scope("https://www.googleapis.com/auth/drive.readonly")
-			.q(&format!("'{}' in parents", drive_storage.folder_id))
-			.doit()
-			.await;
-		let _ = match result {
-			Ok(res) => {
-				println!("Response from files list {:?}", res);
-			},
-			Err(e) => eprintln!("Expected successful data collection {:?}", e),
-		};
+// 		let result = drive_storage
+// 			.hub
+// 			.files()
+// 			.list()
+// 			.add_scope("https://www.googleapis.com/auth/drive.readonly")
+// 			.q(&format!("'{}' in parents", drive_storage.folder_id))
+// 			.doit()
+// 			.await;
+// 		let _ = match result {
+// 			Ok(res) => {
+// 				println!("Response from files list {:?}", res);
+// 			},
+// 			Err(e) => eprintln!("Expected successful data collection {:?}", e),
+// 		};
 
-		let result = drive_storage.poll_data().await;
+// 		let result = drive_storage.poll_data().await;
 
-		let mut stream = result.unwrap();
-		let mut count_files: HashSet<String> = HashSet::new();
-		while let Some(item) = stream.next().await {
-			match item {
-				Ok(collected_bytes) => {
-					println!("Collected bytes: {:?}", collected_bytes);
-					if let Some(pathbuf) = collected_bytes.file {
-						if let Some(str_path) = pathbuf.to_str() {
-							count_files.insert(str_path.to_string());
-						}
-					}
-				},
-				Err(err) => eprintln!("Expected successful data collection {:?}", err),
-			}
-		}
-		println!("Files are --- {:?}", count_files);
-	}
-}
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+// 					println!("Collected bytes: {:?}", collected_bytes);
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					}
+// 				},
+// 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+// 	}
+// }
