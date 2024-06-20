@@ -178,7 +178,6 @@ pub async fn start_pipeline(
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
 			})?;
 	}
-	println!("This is the config here ----{:?}", request.fixed_entities);
 
 	// Extract entities from request.fixed_entities or use a default
 	let entities = match &request.fixed_entities {

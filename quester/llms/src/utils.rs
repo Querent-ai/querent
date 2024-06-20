@@ -14,8 +14,6 @@ use crate::transformers::{
 		RobertaForTokenClassification, RobertaModel,
 	},
 };
-// use crate::transformers::bert::bert_tokenclassification::{BertModel, BertConfig};
-// use crate::transformers::bert::bert_tokenclassification::{BertForTokenClassification};
 
 pub enum ModelType {
 	RobertaModel { model: RobertaModel },
@@ -65,11 +63,6 @@ pub fn build_roberta_model_and_tokenizer(
 		(api.get("config.json")?, tokenizer_filename, api.get("model.safetensors")?)
 	};
 
-	println!("config_filename: {}", config_filename.display());
-	println!("tokenizer_filename: {}", tokenizer_filename.display());
-	println!("weights_filename: {}", weights_filename.display());
-	println!("here 1");
-
 	let config_content = std::fs::read_to_string(&config_filename)
 		.map_err(|e| anyhow!("Failed to read config file: {}", e))?;
 
@@ -87,11 +80,8 @@ pub fn build_roberta_model_and_tokenizer(
 	let tokenizer = Tokenizer::from_file(&tokenizer_filename)
 		.map_err(|e| anyhow!("Failed to load tokenizer: {}", e))?;
 
-	println!("here 2");
-
 	let vb =
 		unsafe { VarBuilder::from_mmaped_safetensors(&[weights_filename], DType::F32, &device)? };
-	println!("here 3");
 
 	let model = match model_type {
 		"RobertaModel" => {
@@ -122,6 +112,5 @@ pub fn build_roberta_model_and_tokenizer(
 		_ => return Err(anyhow!("Invalid model_type: {}", model_type)),
 	};
 
-	println!("here 4");
 	Ok((model, tokenizer))
 }
