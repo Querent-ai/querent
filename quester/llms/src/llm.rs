@@ -4,7 +4,6 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
 
-
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LLMErrorKind {

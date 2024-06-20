@@ -1,9 +1,9 @@
 use actors::{AskError, MessageBus, Observe};
 use common::EventType;
-use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use engines::agn::AttentionTensorsEngine;
-use llms::transformers::bert::{EmbedderOptions, BertLLM};
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
+use llms::transformers::bert::{BertLLM, EmbedderOptions};
 use proto::{
 	config::StorageConfigs,
 	semantics::{
@@ -178,19 +178,19 @@ pub async fn start_pipeline(
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
 			})?;
 	}
-	println!("This is the config here ----{:?}",request.fixed_entities);
+	println!("This is the config here ----{:?}", request.fixed_entities);
 
 	// Extract entities from request.fixed_entities or use a default
-    let entities = match &request.fixed_entities {
-        Some(fixed_entities) => fixed_entities.entities.clone(),
-        _ => Vec::new(),
-    };
+	let entities = match &request.fixed_entities {
+		Some(fixed_entities) => fixed_entities.entities.clone(),
+		_ => Vec::new(),
+	};
 
 	// Extract entities from request.fixed_entities or use a default
-    let sample_entities = match &request.sample_entities {
-        Some(sample_entities) => sample_entities.entities.clone(),
-        _ => Vec::new(),
-    };
+	let sample_entities = match &request.sample_entities {
+		Some(sample_entities) => sample_entities.entities.clone(),
+		_ => Vec::new(),
+	};
 
 	let data_sources = create_dynamic_sources(&request).await?;
 	// TODO REPLACE WITH CORRECT AGN engine
@@ -204,15 +204,19 @@ pub async fn start_pipeline(
 	let embedder = Arc::new(BertLLM::new(options).unwrap());
 
 	// Initialize the embedding model
-    let embedding_model = TextEmbedding::try_new(InitOptions {
-        model_name: EmbeddingModel::AllMiniLML6V2,
-        show_download_progress: true,
-        ..Default::default()
-    }).unwrap();
+	let embedding_model = TextEmbedding::try_new(InitOptions {
+		model_name: EmbeddingModel::AllMiniLML6V2,
+		show_download_progress: true,
+		..Default::default()
+	})
+	.unwrap();
 
-
-	let engine = Arc::new(AttentionTensorsEngine::new(embedder, entities, sample_entities, Some(embedding_model)));
-
+	let engine = Arc::new(AttentionTensorsEngine::new(
+		embedder,
+		entities,
+		sample_entities,
+		Some(embedding_model),
+	));
 
 	let pipeline_settings =
 		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };

@@ -2,138 +2,141 @@ use std::collections::HashSet;
 
 #[derive(Debug, Clone)]
 pub struct Entity {
-    pub name: String,
-    pub start_idx: usize,
-    pub end_idx: usize,
+	pub name: String,
+	pub start_idx: usize,
+	pub end_idx: usize,
 }
 
 #[derive(Debug, Clone)]
 pub struct EntityPair {
-    pub head_entity: Entity,
-    pub tail_entity: Entity,
-    pub context: String,
+	pub head_entity: Entity,
+	pub tail_entity: Entity,
+	pub context: String,
 }
 
 #[derive(Debug, Clone)]
 pub struct SearchContextualRelationship {
-    pub current_token: usize,
-    pub total_score: f32,
-    pub visited_tokens: Vec<usize>,
-    pub relation_tokens: Vec<usize>,
+	pub current_token: usize,
+	pub total_score: f32,
+	pub visited_tokens: Vec<usize>,
+	pub relation_tokens: Vec<usize>,
 }
 
 impl SearchContextualRelationship {
-    pub fn new(initial_token_id: usize) -> Self {
-        Self {
-            current_token: initial_token_id,
-            total_score: 0.0,
-            visited_tokens: vec![initial_token_id],
-            relation_tokens: Vec::new(),
-        }
-    }
+	pub fn new(initial_token_id: usize) -> Self {
+		Self {
+			current_token: initial_token_id,
+			total_score: 0.0,
+			visited_tokens: vec![initial_token_id],
+			relation_tokens: Vec::new(),
+		}
+	}
 
-    pub fn add_token(&mut self, token_id: usize, score: f32) {
-        self.current_token = token_id;
-        self.visited_tokens.push(token_id);
-        self.total_score += score;
-        self.relation_tokens.push(token_id);
-    }
+	pub fn add_token(&mut self, token_id: usize, score: f32) {
+		self.current_token = token_id;
+		self.visited_tokens.push(token_id);
+		self.total_score += score;
+		self.relation_tokens.push(token_id);
+	}
 
-    pub fn has_relation(&self) -> bool {
-        !self.relation_tokens.is_empty()
-    }
+	pub fn has_relation(&self) -> bool {
+		!self.relation_tokens.is_empty()
+	}
 
-    pub fn finalize_path(&mut self, score: f32) {
-        self.total_score += score;
-    }
+	pub fn finalize_path(&mut self, score: f32) {
+		self.total_score += score;
+	}
 
-    pub fn mean_score(&self) -> f32 {
-        if self.relation_tokens.is_empty() {
-            0.0
-        } else {
-            self.total_score / self.relation_tokens.len() as f32
-        }
-    }
+	pub fn mean_score(&self) -> f32 {
+		if self.relation_tokens.is_empty() {
+			0.0
+		} else {
+			self.total_score / self.relation_tokens.len() as f32
+		}
+	}
 }
 
 pub fn sort_by_mean_score(path: &SearchContextualRelationship) -> f32 {
-    path.mean_score()
+	path.mean_score()
 }
 
 pub fn is_valid_token(
-    token_id: usize,
-    pair: &EntityPair,
-    candidate_paths: &mut Vec<SearchContextualRelationship>,
-    current_path: &mut SearchContextualRelationship,
-    score: f32,
+	token_id: usize,
+	pair: &EntityPair,
+	candidate_paths: &mut Vec<SearchContextualRelationship>,
+	current_path: &mut SearchContextualRelationship,
+	score: f32,
 ) -> bool {
-    if (pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id) {
-        if current_path.has_relation() {
-            current_path.finalize_path(score);
-            candidate_paths.push(current_path.clone());
-            return false;
-        }
-    }
+	if (pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id) {
+		if current_path.has_relation() {
+			current_path.finalize_path(score);
+			candidate_paths.push(current_path.clone());
+			return false;
+		}
+	}
 
-    !(pair.head_entity.start_idx..=pair.head_entity.end_idx).contains(&token_id)
-        && !(pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id)
+	!(pair.head_entity.start_idx..=pair.head_entity.end_idx).contains(&token_id) &&
+		!(pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id)
 }
 
 pub fn perform_search(
-    entity_start_index: usize,
-    attention_matrix: &[Vec<f32>],
-    entity_pair: &EntityPair,
-    search_candidates: usize,
-    require_contiguous: bool,
-    max_relation_length: usize
+	entity_start_index: usize,
+	attention_matrix: &[Vec<f32>],
+	entity_pair: &EntityPair,
+	search_candidates: usize,
+	require_contiguous: bool,
+	max_relation_length: usize,
 ) -> Result<Vec<SearchContextualRelationship>, Box<dyn std::error::Error>> {
-    let mut queue = vec![SearchContextualRelationship::new(entity_start_index)];
-    let mut candidate_paths = Vec::new();
-    let mut visited_paths = HashSet::new();
+	let mut queue = vec![SearchContextualRelationship::new(entity_start_index)];
+	let mut candidate_paths = Vec::new();
+	let mut visited_paths = HashSet::new();
 
-    while !queue.is_empty() {
-        let mut current_path = queue.remove(0);
+	while !queue.is_empty() {
+		let mut current_path = queue.remove(0);
 
-        if current_path.relation_tokens.len() > max_relation_length {
-            continue;
-        }
+		if current_path.relation_tokens.len() > max_relation_length {
+			continue;
+		}
 
-        if require_contiguous
-            && current_path.relation_tokens.len() > 1
-            && (current_path.relation_tokens[current_path.relation_tokens.len() - 2]
-                as isize
-                - current_path.relation_tokens[current_path.relation_tokens.len() - 1] as isize)
-                .abs()
-                != 1
-        {
-            continue;
-        }
+		if require_contiguous &&
+			current_path.relation_tokens.len() > 1 &&
+			(current_path.relation_tokens[current_path.relation_tokens.len() - 2] as isize -
+				current_path.relation_tokens[current_path.relation_tokens.len() - 1] as isize)
+				.abs() != 1
+		{
+			continue;
+		}
 
-        let mut new_paths = Vec::new();
+		let mut new_paths = Vec::new();
 
-        // Get attention scores for the current token
-        let attention_scores = &attention_matrix[current_path.current_token];
+		// Get attention scores for the current token
+		let attention_scores = &attention_matrix[current_path.current_token];
 
-        for i in 0..attention_scores.len() {
-            let next_path: Vec<_> = current_path.visited_tokens.iter().chain(std::iter::once(&i)).cloned().collect();
-            if is_valid_token(i, entity_pair, &mut candidate_paths, &mut current_path, attention_scores[i])
-                && !visited_paths.contains(&next_path)
-                && current_path.current_token != i
-            {
-                let mut new_path = current_path.clone();
-                new_path.add_token(i, attention_scores[i]);
-                visited_paths.insert(next_path.clone());
-                new_paths.push(new_path);
-            }
-        }
+		for i in 0..attention_scores.len() {
+			let next_path: Vec<_> =
+				current_path.visited_tokens.iter().chain(std::iter::once(&i)).cloned().collect();
+			if is_valid_token(
+				i,
+				entity_pair,
+				&mut candidate_paths,
+				&mut current_path,
+				attention_scores[i],
+			) && !visited_paths.contains(&next_path) &&
+				current_path.current_token != i
+			{
+				let mut new_path = current_path.clone();
+				new_path.add_token(i, attention_scores[i]);
+				visited_paths.insert(next_path.clone());
+				new_paths.push(new_path);
+			}
+		}
 
-        new_paths.sort_by(|a, b| b.mean_score().partial_cmp(&a.mean_score()).unwrap());
-        queue.extend(new_paths.into_iter().take(search_candidates));
-    }
-    // println!("Candidate Paths--------------{:?}", candidate_paths);
-    Ok(candidate_paths)
+		new_paths.sort_by(|a, b| b.mean_score().partial_cmp(&a.mean_score()).unwrap());
+		queue.extend(new_paths.into_iter().take(search_candidates));
+	}
+	// println!("Candidate Paths--------------{:?}", candidate_paths);
+	Ok(candidate_paths)
 }
-
 
 // #[cfg(test)]
 // mod tests {
