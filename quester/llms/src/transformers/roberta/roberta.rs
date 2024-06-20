@@ -230,9 +230,9 @@ impl LLM for RobertaLLM {
 		&self,
 		tokenized_sequence: Vec<i32>,
 	) -> Result<HashMap<String, Tensor>, LLMError> {
-		let cls_token_id = 0; // <s>
-					  // Tokenize input text
-		let sep_token_id = 2; // </s>
+		let cls_token_id = 0;
+		// Tokenize input text
+		let sep_token_id = 2;
 
 		let tokenized_sequence =
 			vec![vec![cls_token_id], tokenized_sequence, vec![sep_token_id]].concat();
