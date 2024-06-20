@@ -134,7 +134,6 @@ pub fn perform_search(
 		new_paths.sort_by(|a, b| b.mean_score().partial_cmp(&a.mean_score()).unwrap());
 		queue.extend(new_paths.into_iter().take(search_candidates));
 	}
-	// println!("Candidate Paths--------------{:?}", candidate_paths);
 	Ok(candidate_paths)
 }
 
