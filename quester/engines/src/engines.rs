@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use common::EventState;
 use futures::Stream;
+use llms::LLMError;
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
-/// Ingestor error kind.
+use candle_core::Error as CandleCoreError;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum EngineErrorKind {
 	/// Event streaming failed
@@ -15,6 +17,8 @@ pub enum EngineErrorKind {
 	Io,
 	/// Not found error.
 	NotFound,
+	/// Model error.
+	ModelError, // <-- Add this new variant
 }
 
 /// Generic IngestorError.
@@ -68,14 +72,25 @@ impl From<serde_json::Error> for EngineError {
 	}
 }
 
+impl From<LLMError> for EngineError {
+	fn from(err: LLMError) -> EngineError {
+		EngineError::new(EngineErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
+impl From<CandleCoreError> for EngineError {
+	fn from(err: CandleCoreError) -> EngineError {
+		EngineError::new(EngineErrorKind::ModelError, Arc::new(err.into()))
+	}
+}
+
 /// Engine trait.
 #[async_trait]
-pub trait Engine: Send + Sync + 'static {
-	/// Process the ingested tokens.
-	async fn process_ingested_tokens(
-		&self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
-	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>>;
+pub trait Engine: Send + Sync {
+	async fn process_ingested_tokens<'life0>(
+		&'life0 self,
+		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>>;
 }
 
 /// Debugging trait for Engine.

@@ -13,6 +13,7 @@ documentation = "https:/querent.xyz/docs/"
 common = { workspace = true }
 proto = { workspace = true }
 actors = { workspace = true }
+llms = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 anyhow = { workspace = true }
@@ -67,3 +68,9 @@ tl = { workspace = true }
 csv = { workspace = true }
 crossbeam-channel = { workspace = true }
 ingestors = { workspace = true }
+tokio-stream = { workspace = true }
+unicode-segmentation = { workspace = true }
+candle-core = { workspace = true }
+candle-transformers = { workspace = true }
+candle-nn = { workspace = true }
+fastembed =  { workspace = true }

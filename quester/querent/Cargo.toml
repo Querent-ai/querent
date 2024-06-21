@@ -46,7 +46,7 @@ text-splitter = { workspace = true }
 reqwest = { workspace = true }
 urlencoding = { workspace = true }
 tokenizers = { workspace = true }
-fastembed = "3"
+fastembed =  { workspace = true }
 sources = { workspace = true}
 tokio-stream = { workspace = true }
 
