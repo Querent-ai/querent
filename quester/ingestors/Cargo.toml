@@ -10,7 +10,6 @@ homepage = "https://querent.xyz/"
 documentation = "https:/querent.xyz/docs/"
 
 [dependencies]
-querent-synapse = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }
 actors = { workspace = true }
@@ -61,3 +60,13 @@ hyper-rustls = { workspace = true }
 hyper = { workspace = true }
 serde_json = { workspace = true }
 lopdf = { workspace = true }
+pdf-extract = { workspace = true }
+url = { workspace = true }
+readability = { workspace = true }
+tl = { workspace = true }
+csv = { workspace = true }
+docx-rust = { workspace = true }
+xlsx_reader = { workspace = true }
+xml = { workspace = true }
+rusty-tesseract = { workspace = true }
+zip = { workspace = true }

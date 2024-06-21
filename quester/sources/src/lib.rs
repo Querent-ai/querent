@@ -10,6 +10,7 @@ pub use source::*;
 use tokio::fs::File;
 pub mod azure;
 pub mod drive;
+pub mod email;
 pub mod filesystem;
 pub mod gcs;
 pub mod s3;

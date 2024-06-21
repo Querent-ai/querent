@@ -1,6 +1,7 @@
-use querent_synapse::callbacks::EventType;
 use serde::Serialize;
 use std::{collections::HashMap, sync::atomic::AtomicU64};
+
+use crate::EventType;
 
 #[derive(Debug, Serialize)]
 pub struct StorageMapperCounters {

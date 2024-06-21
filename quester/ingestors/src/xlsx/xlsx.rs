@@ -1,0 +1,122 @@
+use async_stream::stream;
+use async_trait::async_trait;
+use common::CollectedBytes;
+use futures::Stream;
+use proto::semantics::IngestedTokens;
+use std::{pin::Pin, sync::Arc};
+
+use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
+
+// Define the XlsxIngestor
+pub struct XlsxIngestor {
+	processors: Vec<Arc<dyn AsyncProcessor>>,
+}
+
+impl XlsxIngestor {
+	pub fn new() -> Self {
+		Self { processors: Vec::new() }
+	}
+}
+
+#[async_trait]
+impl BaseIngestor for XlsxIngestor {
+	fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
+		self.processors = processors;
+	}
+
+	async fn ingest(
+		&self,
+		all_collected_bytes: Vec<CollectedBytes>,
+	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
+	{
+		// collect all the bytes into a single buffer
+		let mut buffer = Vec::new();
+		let mut file = String::new();
+		let mut doc_source = String::new();
+		for collected_bytes in all_collected_bytes.iter() {
+			if file.is_empty() {
+				file =
+					collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
+			}
+			if doc_source.is_empty() {
+				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+			}
+			buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+		}
+
+		let buffer = Arc::new(buffer);
+		let stream = {
+			let buffer = Arc::clone(&buffer);
+			stream! {
+				match xlsx_reader::parse_xlsx(&buffer, None) {
+					Ok(parsed_xlsx) => {
+						let mut res = String::new();
+						for (_, row_map) in &parsed_xlsx {
+							let mut first = true;
+							for (inner_size, value) in row_map {
+								if first {
+									first = false;
+								} else {
+									res.push_str(", ");
+								}
+								res.push_str(&format!("{},{}", inner_size, value));
+							}
+							res.push_str("\n");
+						}
+						let ingested_tokens = IngestedTokens {
+							data: vec![res],
+							file: file.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+						};
+						yield Ok(ingested_tokens);
+					},
+					Err(e) => {
+						eprintln!("Error parsing xlsx - {}", e);
+					}
+				}
+
+			}
+		};
+
+		let processed_stream =
+			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
+		Ok(Box::pin(processed_stream))
+	}
+}
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use std::path::Path;
+// 	use futures::StreamExt;
+
+//     #[tokio::test]
+//     async fn test_xlsx_ingestor() {
+
+//         let bytes = std::fs::read("/home/ansh/pyg-trail/about_the_avengers.xlsx").unwrap();
+
+//         // Create a CollectedBytes instance
+//         let collected_bytes = CollectedBytes {
+//             data: Some(bytes),
+//             file: Some(Path::new("about_the_avengers.xlsx").to_path_buf()),
+//             doc_source: Some("test_source".to_string()),
+// 			eof: false,
+// 			extension: Some("xlsx".to_string()),
+// 			size: Some(10),
+//         };
+
+//         // Create a TxtIngestor instance
+//         let ingestor = XlsxIngestor::new();
+
+//         // Ingest the file
+//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+//         // Collect the stream into a Vec
+// 		let mut stream = result_stream;
+//         while let Some(tokens) = stream.next().await {
+// 			let tokens = tokens.unwrap();
+// 			println!("These are the tokens in file --------------{:?}", tokens);
+// 		}
+// 	}
+// }

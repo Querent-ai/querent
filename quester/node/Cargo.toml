@@ -61,21 +61,21 @@ warp = { workspace = true }
 serde_qs = { workspace = true }
 num_cpus = { workspace = true }
 hyper = { workspace = true }
-pyo3-asyncio = { workspace = true }
-pyo3 = { workspace = true }
-querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
 querent = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
 discovery = { workspace = true }
+engines = { workspace = true }
+llms = { workspace = true }
 rust-embed = { workspace = true }
 mime_guess = { workspace = true }
 uuid = { workspace = true }
 storage = { workspace = true }
 futures-util = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
+fastembed =  { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }

@@ -10,7 +10,6 @@ homepage = "https://querent.xyz/"
 documentation = "https:/querent.xyz/docs/"
 
 [dependencies]
-querent-synapse = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }
 async-stream = { workspace = true }
@@ -59,3 +58,10 @@ google-drive3 = { workspace = true }
 hyper-rustls = { workspace = true }
 hyper = { workspace = true }
 serde_json = { workspace = true }
+ingestors = { workspace = true }
+lopdf = { workspace = true }
+imap = { workspace = true }
+native-tls = { workspace = true }
+mailparse = { workspace = true }
+yup-oauth2 = { workspace = true }
+oauth2 = { workspace = true }

@@ -113,6 +113,7 @@ pub trait Storage: Send + Sync + 'static {
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
+		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>>;
 	/// Store key value pair
 	async fn store_kv(&self, key: &String, value: &String) -> StorageResult<()>;

@@ -84,6 +84,7 @@ impl Storage for Neo4jStorage {
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,
+		_offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		// Implement Neo4j similarity search logic (if needed)
 		Ok(vec![])

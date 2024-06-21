@@ -1,26 +1,27 @@
 use actors::{AskError, MessageBus, Observe};
-use common::semantic_api::SendIngestedTokens;
+use common::EventType;
+use engines::agn::AttentionTensorsEngine;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
+use llms::transformers::bert::{BertLLM, EmbedderOptions};
 use proto::{
 	config::StorageConfigs,
 	semantics::{
 		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
-		FixedRelationships, GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig,
-		IndexingStatistics, JiraCollectorConfig, LLamaConfig, MilvusConfig, Name, Neo4jConfig,
-		NewsCollectorConfig, OpenAiConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
-		S3CollectorConfig, SampleEntities, SampleRelationships, SemanticPipelineRequest,
-		SemanticPipelineResponse, SlackCollectorConfig, StorageConfig, StorageType,
-		WorkflowContract,
+		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
+		JiraCollectorConfig, MilvusConfig, Neo4jConfig, NewsCollectorConfig, PipelineMetadata,
+		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
+		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
+		SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
+use proto::semantics::IngestedTokens;
 use querent::{
-	create_dynamic_sources, create_querent_synapose_workflow, ObservePipeline, PipelineErrors,
-	PipelineSettings, RestartPipeline, SemanticService, SemanticServiceCounters, ShutdownPipeline,
-	SpawnPipeline,
+	create_dynamic_sources, ObservePipeline, PipelineErrors, PipelineSettings, RestartPipeline,
+	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
-use querent_synapse::{callbacks::EventType, comm::IngestedTokens};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use storage::create_storages;
 use tracing::{error, warn};
@@ -42,7 +43,6 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 	components(schemas(
 		SemanticPipelineRequest,
 		Backend,
-		Name,
 		SemanticPipelineResponse,
 		SemanticServiceCounters,
 		IndexingStatistics,
@@ -50,8 +50,6 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		IngestedTokens,
 		PipelinesMetadata,
 		PipelineMetadata,
-		OpenAiConfig,
-		LLamaConfig,
 		GcsCollectorConfig,
 		S3CollectorConfig,
 		JiraCollectorConfig,
@@ -66,11 +64,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		PostgresConfig,
 		MilvusConfig,
 		Neo4jConfig,
-		WorkflowContract,
 		FixedEntities,
 		SampleEntities,
-		FixedRelationships,
-		SampleRelationships,
 		AzureCollectorConfig,
 		EmailCollectorConfig,
 		SlackCollectorConfig,
@@ -183,19 +178,47 @@ pub async fn start_pipeline(
 				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
 			})?;
 	}
-	let qflow: querent_synapse::querent::Workflow =
-		create_querent_synapose_workflow(new_uuid.clone(), &request, secret_store.clone()).await?;
-	let data_sources = create_dynamic_sources(&request).await?;
 
-	let pipeline_settings = PipelineSettings {
-		qflow_id: new_uuid.clone(),
-		qflow,
-		event_storages,
-		index_storages,
-		secret_store,
-		semantic_service_bus: semantic_service_mailbox.clone(),
-		data_sources,
+	// Extract entities from request.fixed_entities or use a default
+	let entities = match &request.fixed_entities {
+		Some(fixed_entities) => fixed_entities.entities.clone(),
+		_ => Vec::new(),
 	};
+
+	// Extract entities from request.fixed_entities or use a default
+	let sample_entities = match &request.sample_entities {
+		Some(sample_entities) => sample_entities.entities.clone(),
+		_ => Vec::new(),
+	};
+
+	let data_sources = create_dynamic_sources(&request).await?;
+	// TODO REPLACE WITH CORRECT AGN engine
+	// let engine = Arc::new(MockEngine::new());
+	let options = EmbedderOptions {
+		model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+		local_dir: None,
+		revision: None,
+		distribution: None,
+	};
+	let embedder = Arc::new(BertLLM::new(options).unwrap());
+
+	// Initialize the embedding model
+	let embedding_model = TextEmbedding::try_new(InitOptions {
+		model_name: EmbeddingModel::AllMiniLML6V2,
+		show_download_progress: true,
+		..Default::default()
+	})
+	.unwrap();
+
+	let engine = Arc::new(AttentionTensorsEngine::new(
+		embedder,
+		entities,
+		sample_entities,
+		Some(embedding_model),
+	));
+
+	let pipeline_settings =
+		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };
 
 	let pipeline_rest = semantic_service_mailbox
 		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.clone() })

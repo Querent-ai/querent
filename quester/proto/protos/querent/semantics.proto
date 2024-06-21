@@ -29,14 +29,18 @@ message RestartPipelineRequest {
 }
 
 message SemanticPipelineRequest {
-  oneof name {
-    LLamaConfig knowledge_graph_using_llama2_v1 = 1;
-    OpenAIConfig knowledge_graph_using_openai = 2;
-  }
-  float version = 3;
-  repeated CollectorConfig collectors = 4;
-  repeated StorageConfig storage_configs = 5;
-  WorkflowContract config = 6;
+  repeated CollectorConfig collectors = 1;
+  repeated StorageConfig storage_configs = 2;
+  optional FixedEntities fixed_entities = 3;
+  optional SampleEntities sample_entities = 4;
+  optional Model model = 5;
+  optional float attention_threshold = 6;
+}
+
+enum Model {
+  BERT = 0;
+  GeoBert = 1;
+  PubMedBert = 2;
 }
 
 message FixedEntities {
@@ -45,39 +49,6 @@ message FixedEntities {
 
 message SampleEntities {
   repeated string entities = 1;
-}
-
-message FixedRelationships {
-  repeated string relationships = 1;
-}
-
-message SampleRelationships {
-  repeated string relationships = 1;
-}
-
-message WorkflowContract {
-  optional string ner_model_name = 1;
-  optional bool enable_filtering = 2;
-  FixedEntities fixed_entities = 3;
-  SampleEntities sample_entities = 4;
-  optional bool is_confined_search = 5;
-  optional string user_context = 6;
-  optional float score_threshold = 7;
-  optional float attention_score_threshold = 8;
-  optional float similarity_threshold = 9;
-  optional int32 min_cluster_size = 10;
-  optional int32 min_samples = 11;
-  optional float cluster_persistence_threshold = 12;
-  FixedRelationships fixed_relationships = 13;
-  SampleRelationships sample_relationships = 14;
-}
-
-// LLamaConfig holds configuration for LLama workflows.
-message LLamaConfig {}
-
-// OpenAIConfig holds configuration for OpenAI workflows.
-message OpenAIConfig {
-  string openai_api_key = 1;
 }
 
 message SemanticPipelineResponse {
@@ -120,9 +91,6 @@ message IndexingStatistics {
 
 message PipelineMetadata {
   string pipeline_id = 1;
-  string name = 2;
-  string import = 3;
-  string attr = 4;
 }
 
 message PipelinesMetadata {
@@ -161,8 +129,6 @@ message FileCollectorConfig {
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
 message AzureCollectorConfig {
-  // Account URL of the Azure collector.
-  string account_url = 1;
   // Connection string of the Azure collector.
   string connection_string = 2;
   // Container of the Azure collector.
@@ -229,10 +195,6 @@ message GoogleDriveCollectorConfig {
   string drive_client_secret = 2;
   // Refresh token of the Google Drive collector.
   string drive_refresh_token = 3;
-  // Scopes of the Google Drive collector.
-  string drive_scopes = 4;
-  // Token of the Google Drive collector.
-  string drive_token = 5;
   // Folder to crawl of the Google Drive collector.
   string folder_to_crawl = 6;
   // Specific file type of the Google Drive collector.
@@ -251,10 +213,6 @@ message EmailCollectorConfig {
   string imap_password = 4;
   // Folder of the Email collector.
   string imap_folder = 5;
-  // Key file of the Email collector.
-  string imap_keyfile = 6;
-  // Cert file of the Email collector.
-  string imap_certfile = 7;
 }
 
 // DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.

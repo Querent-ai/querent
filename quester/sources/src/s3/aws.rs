@@ -3,6 +3,7 @@ use std::{io, ops::Range, path::Path, pin::Pin};
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use async_stream::stream;
 use async_trait::async_trait;
+use aws_credential_types::Credentials;
 use aws_sdk_s3::{
 	config::Region,
 	error::SdkError,
@@ -34,14 +35,14 @@ pub struct S3Source {
 }
 
 impl S3Source {
-	pub fn new(config: S3CollectorConfig) -> Self {
+	pub async fn new(config: S3CollectorConfig) -> Self {
 		let bucket_name = config.bucket.clone();
 		let static_region_str = config.region.clone();
-		let region = Region::new(static_region_str);
+		let region = Region::new(static_region_str.clone());
 		let access_key = config.access_key.clone();
 		let secret_key = config.secret_key.clone();
 		let chunk_size = 1024 * 1024 * 10; // this is 10MB
-		S3Source {
+		let mut s3 = S3Source {
 			bucket_name,
 			region,
 			access_key,
@@ -49,7 +50,23 @@ impl S3Source {
 			chunk_size,
 			s3_client: None,
 			continuation_token: None,
-		}
+		};
+
+		let credentials = Credentials::new(
+			config.access_key.clone(),
+			config.secret_key.clone(),
+			None,
+			None,
+			"manual",
+		);
+		let config = aws_config::from_env()
+			.credentials_provider(credentials)
+			.region(Region::new(static_region_str))
+			.load()
+			.await;
+
+		s3.s3_client = Some(S3Client::new(&config));
+		s3
 	}
 
 	async fn create_get_object_request(
@@ -101,7 +118,14 @@ impl Source for S3Source {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await;
 
-		self.s3_client.as_ref().unwrap().list_objects_v2().send().await?;
+		let _ = self
+			.s3_client
+			.as_ref()
+			.unwrap()
+			.list_objects_v2()
+			.bucket(self.bucket_name.clone())
+			.send()
+			.await;
 		Ok(())
 	}
 
@@ -279,3 +303,68 @@ async fn download_all(byte_stream: ByteStream, output: &mut Vec<u8>) -> io::Resu
 	output.shrink_to_fit();
 	Ok(())
 }
+
+// #[cfg(test)]
+
+// mod tests {
+
+// 	use std::collections::HashSet;
+
+//     use super::*;
+
+// 	use aws_credential_types::Credentials;
+//     use futures::StreamExt;
+
+// 	#[tokio::test]
+// 	async fn test_aws_collector() {
+// 		let aws_config = S3CollectorConfig {
+// 			access_key: "AKIAU6GDY2RDMGC2RNTK".to_string(),
+
+// 			secret_key: "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".to_string(),
+
+// 			region: "ap-south-1".to_string(),
+
+// 			bucket: "querentbucket1".to_string(),
+// 		};
+
+// 		let credentials = Credentials::new(
+// 			aws_config.access_key.clone(),
+// 			aws_config.secret_key.clone(),
+// 			None,
+// 			None,
+// 			"manual",
+// 		);
+
+// 		let mut s3_storage = S3Source::new(aws_config).await;
+
+// 		let config = aws_config::from_env()
+// 			.credentials_provider(credentials)
+// 			.region(s3_storage.region.clone())
+// 			.load()
+// 			.await;
+
+// 		s3_storage.s3_client = Some(S3Client::new(&config));
+
+// 		let result = s3_storage.check_connectivity().await;
+// 		assert!(result.is_ok());
+
+// 		let result = s3_storage.poll_data().await;
+
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					}
+// 				}
+// 				Err(_) => panic!("Expected successful data collection"),
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+
+// 	}
+// }

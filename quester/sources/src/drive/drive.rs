@@ -4,10 +4,9 @@ use common::CollectedBytes;
 use futures::{Stream, StreamExt};
 use google_drive3::{
 	api::Scope,
-	hyper,
-	hyper::client::HttpConnector,
+	hyper::{self, client::HttpConnector},
 	hyper_rustls::{HttpsConnector, HttpsConnectorBuilder},
-	oauth2::{ApplicationSecret, InstalledFlowAuthenticator, InstalledFlowReturnMethod},
+	oauth2::{authorized_user::AuthorizedUserSecret, AuthorizedUserAuthenticator},
 };
 use hyper::Body;
 use proto::semantics::GoogleDriveCollectorConfig;
@@ -42,31 +41,23 @@ impl std::fmt::Debug for GoogleDriveSource {
 
 impl GoogleDriveSource {
 	pub async fn new(config: GoogleDriveCollectorConfig) -> Self {
-		let secret = ApplicationSecret {
-			client_id: config.drive_client_id.clone(),
-			client_secret: config.drive_client_secret.clone(),
-			auth_uri: "https://accounts.google.com/o/oauth2/auth".to_string(),
-			token_uri: "https://oauth2.googleapis.com/token".to_string(),
-			redirect_uris: vec![],
-			project_id: None,
-			auth_provider_x509_cert_url: None,
-			client_email: None,
-			client_x509_cert_url: None,
+		let auth = AuthorizedUserSecret {
+			client_id: config.drive_client_id,
+			client_secret: config.drive_client_secret,
+			refresh_token: config.drive_refresh_token,
+			key_type: "".to_string(),
 		};
 
-		let auth =
-			InstalledFlowAuthenticator::builder(secret, InstalledFlowReturnMethod::HTTPRedirect)
-				.persist_tokens_to_disk("tokencache.json")
-				.build()
-				.await
-				.expect("authenticator could not be built");
 		let connector = HttpsConnectorBuilder::new()
 			.with_native_roots()
 			.https_or_http()
 			.enable_http1()
 			.enable_http2()
 			.build();
-
+		let auth = AuthorizedUserAuthenticator::builder(auth)
+			.build()
+			.await
+			.expect("Failed to build authenticator");
 		let http_client = hyper::Client::builder().build(connector);
 		let hub = DriveHub::new(http_client, auth);
 
@@ -289,6 +280,7 @@ impl Source for GoogleDriveSource {
 					.list()
 					.q(&format!("'{}' in parents", folder_id))
 					.page_token(page_token.as_deref().unwrap_or_default())
+					.add_scope("https://www.googleapis.com/auth/drive".to_string())
 					.doit()
 					.await
 					.map_err(|err| {
@@ -395,5 +387,68 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 		Ok(resp_obj.into_body())
 	} else {
 		Ok(resp_obj.into_body())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+
+	use std::collections::HashSet;
+
+	use futures::StreamExt;
+	use proto::semantics::GoogleDriveCollectorConfig;
+
+	use crate::Source;
+
+	use super::GoogleDriveSource;
+
+	#[tokio::test]
+	async fn test_drive_collector() {
+		let google_config = GoogleDriveCollectorConfig {
+			drive_client_secret: "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".to_string(),
+			drive_client_id: "4402204563-lso0f98dve9k33durfvqdt6dppl7iqn5.apps.googleusercontent.com".to_string(),
+			drive_refresh_token: "1//0g7Sd9WayGH-yCgYIARAAGBASNwF-L9Irh8XWYJ_zz43V0Ema-OqTCaHzdJKrNtgJDrrrRSs8z6iJU9dgR8tA1fucRKjwUVggwy8".to_string(),
+			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+			specific_file_type: "application/pdf".to_string()
+		};
+
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
+
+		println!("Connectivity: {:?}", connectivity);
+
+		let result = drive_storage
+			.hub
+			.files()
+			.list()
+			.add_scope("https://www.googleapis.com/auth/drive.readonly")
+			.q(&format!("'{}' in parents", drive_storage.folder_id))
+			.doit()
+			.await;
+		let _ = match result {
+			Ok(res) => {
+				println!("Response from files list {:?}", res);
+			},
+			Err(e) => eprintln!("Expected successful data collection {:?}", e),
+		};
+
+		let result = drive_storage.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) => {
+					println!("Collected bytes: {:?}", collected_bytes);
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					}
+				},
+				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
 	}
 }

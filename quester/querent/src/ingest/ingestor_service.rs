@@ -4,24 +4,20 @@ use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
-use ingestors::{pdf::pdfv1::PdfIngestor, processors::text_processing::TextCleanupProcessor, resolve_ingestor_with_extension};
-use querent_synapse::comm::IngestedTokens;
-use tokio::runtime::Handle;
+use ingestors::resolve_ingestor_with_extension;
+use proto::semantics::IngestedTokens;
+use tokio::{runtime::Handle, sync::mpsc::Sender};
 use tracing::{debug, error, info};
 
 pub struct IngestorService {
 	pub collector_id: String,
 	pub timestamp: u64,
 	pub counters: Arc<IngestorCounters>,
-	token_sender: crossbeam_channel::Sender<IngestedTokens>,
+	token_sender: Sender<IngestedTokens>,
 }
 
 impl IngestorService {
-	pub fn new(
-		collector_id: String,
-		token_sender: crossbeam_channel::Sender<IngestedTokens>,
-		timestamp: u64,
-	) -> Self {
+	pub fn new(collector_id: String, token_sender: Sender<IngestedTokens>, timestamp: u64) -> Self {
 		Self { collector_id, timestamp, counters: Arc::new(IngestorCounters::new()), token_sender }
 	}
 
@@ -41,7 +37,7 @@ impl IngestorService {
 		self.counters.clone()
 	}
 
-	pub fn get_token_sender(&self) -> crossbeam_channel::Sender<IngestedTokens> {
+	pub fn get_token_sender(&self) -> Sender<IngestedTokens> {
 		self.token_sender.clone()
 	}
 }
@@ -106,10 +102,6 @@ impl Handler<CollectionBatch> for IngestorService {
 				)
 			})?;
 
-		//check for ingestor type and set the processor
-		if file_ingestor.is::<PdfIngestor>() {
-			file_ingestor.set_processors(TextCleanupProcessor::new());
-		}
 
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
@@ -130,8 +122,8 @@ impl Handler<CollectionBatch> for IngestorService {
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
-								if let Err(e) = token_sender.send(ingested_tokens) {
-									error!("Failed to send IngestedTokens: {}", e);
+								if let Err(e) = token_sender.send(ingested_tokens).await {
+									error!("Failed to send IngestedTokens to token_sender with error: {}", e);
 									break;
 								}
 								counters.increment_total_ingested_tokens(1);

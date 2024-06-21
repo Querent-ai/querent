@@ -1,4 +1,3 @@
-use querent_synapse::callbacks::{EventState, EventType};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
@@ -49,17 +48,11 @@ pub struct EventsCounter {
 	pub qflow_id: String,
 	pub total: AtomicU64,
 	pub processed: AtomicU64,
-	pub total_docs: AtomicU64,
 }
 
 impl EventsCounter {
 	pub fn new(qflow_id: String) -> Self {
-		Self {
-			qflow_id,
-			total: AtomicU64::new(0),
-			processed: AtomicU64::new(0),
-			total_docs: AtomicU64::new(0),
-		}
+		Self { qflow_id, total: AtomicU64::new(0), processed: AtomicU64::new(0) }
 	}
 
 	pub fn increment_total(&self) {
@@ -68,10 +61,6 @@ impl EventsCounter {
 
 	pub fn increment_processed(&self, count: u64) {
 		self.processed.fetch_add(count, Ordering::SeqCst);
-	}
-
-	pub fn increment_total_docs(&self) {
-		self.total_docs.fetch_add(1, Ordering::SeqCst);
 	}
 }
 
@@ -108,24 +97,15 @@ impl EventStreamerCounters {
 pub struct CollectionCounter {
 	pub total_docs: AtomicU64,
 	pub ext_counter_map: HashMap<String, u64>,
-	pub total_bytes: AtomicU64,
 }
 
 impl CollectionCounter {
 	pub fn new() -> Self {
-		Self {
-			total_docs: AtomicU64::new(0),
-			ext_counter_map: HashMap::new(),
-			total_bytes: AtomicU64::new(0),
-		}
+		Self { total_docs: AtomicU64::new(0), ext_counter_map: HashMap::new() }
 	}
 
 	pub fn increment_total_docs(&self) {
 		self.total_docs.fetch_add(1, Ordering::SeqCst);
-	}
-
-	pub fn increment_total_bytes(&self, count: u64) {
-		self.total_bytes.fetch_add(count, Ordering::SeqCst);
 	}
 
 	pub fn increment_ext_counter(&mut self, ext: &String) {
@@ -157,4 +137,24 @@ impl CollectionBatch {
 	pub fn ext(&self) -> String {
 		self.ext.clone()
 	}
+}
+
+// Define an enumeration for different event types
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+pub enum EventType {
+	Graph,
+	Vector,
+	QueryResult,
+	Success,
+	Failure,
+}
+// Define a structure to represent the state of an event
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub struct EventState {
+	pub event_type: EventType,
+	pub timestamp: f64,
+	pub payload: String,
+	pub file: String,
+	pub doc_source: String,
+	pub image_id: Option<String>,
 }

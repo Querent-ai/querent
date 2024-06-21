@@ -11,20 +11,18 @@ documentation = "https://querent.xyz/docs/"
 
 
 [dependencies]
-querent-synapse = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
 storage = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
 ingestors = { workspace = true }
+engines = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 tokio = { workspace =true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-pyo3-asyncio = { workspace = true }
-pyo3 = { workspace = true }
 log = { workspace = true }
 chrono = { workspace = true }
 tracing = { workspace = true }
@@ -48,9 +46,9 @@ text-splitter = { workspace = true }
 reqwest = { workspace = true }
 urlencoding = { workspace = true }
 tokenizers = { workspace = true }
-fastembed = "3"
+fastembed =  { workspace = true }
 sources = { workspace = true}
-
+tokio-stream = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }
@@ -59,7 +57,3 @@ common = { workspace = true, features = ["testsuite"] }
 [features]
 testsuite = []
 
-[[test]]
-name = "test_basic"
-path = "pytests/test_basic.rs"
-harness = false
