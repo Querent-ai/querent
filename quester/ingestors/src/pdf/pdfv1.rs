@@ -12,8 +12,8 @@ use std::{
 };
 
 use crate::{
-	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind,
-	IngestorResult,
+	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
+	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
 };
 
 // Define the PdfIngestor
@@ -23,7 +23,7 @@ pub struct PdfIngestor {
 
 impl PdfIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 
