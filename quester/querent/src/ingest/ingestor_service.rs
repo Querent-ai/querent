@@ -4,7 +4,7 @@ use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
-use ingestors::resolve_ingestor_with_extension;
+use ingestors::{pdf::pdfv1::PdfIngestor, processors::text_processing::TextCleanupProcessor, resolve_ingestor_with_extension};
 use querent_synapse::comm::IngestedTokens;
 use tokio::runtime::Handle;
 use tracing::{debug, error, info};
@@ -105,6 +105,11 @@ impl Handler<CollectionBatch> for IngestorService {
 					anyhow::anyhow!("Failed to resolve ingestor: {}", e).into(),
 				)
 			})?;
+
+		//check for ingestor type and set the processor
+		if file_ingestor.is::<PdfIngestor>() {
+			file_ingestor.set_processors(TextCleanupProcessor::new());
+		}
 
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use querent_synapse::comm::IngestedTokens;
+use proto::semantics::IngestedTokens;
 use regex::Regex;
 
 use crate::{AsyncProcessor, IngestorResult};
@@ -13,16 +13,21 @@ impl TextCleanupProcessor {
 
 	async fn cleanup_text(&self, data: &str) -> String {
 		let mut data = data.to_string();
+
 		data = data.replace("\"", "").replace('“', "").replace('”', "");
 		data = data.replace("\\n", " ").replace("\\t", " ");
 
 		let re_hex = Regex::new(r"\\x[0-9a-fA-F]{2}").unwrap();
 		data = re_hex.replace_all(&data, "").to_string();
 
-		data = data.replace("\n", " ").replace("\r", " ").replace("\t", " ");
-
-		let re_control = Regex::new(r"[\x00-\x08\x0b\x0c\x0e-\x1f]+").unwrap();
+		let re_control = Regex::new(r"[\x00-\x1F\x7F]+").unwrap();
 		data = re_control.replace_all(&data, "").to_string();
+		let re_whitespace = Regex::new(r"\s+").unwrap();
+		data = re_whitespace.replace_all(&data, " ").to_string();
+
+		data = data.chars()
+				.filter(|&c| c.is_ascii() || !c.is_control())
+				.collect();
 
 		data
 	}
@@ -31,7 +36,7 @@ impl TextCleanupProcessor {
 #[async_trait]
 impl AsyncProcessor for TextCleanupProcessor {
 	async fn process_text(&self, data: IngestedTokens) -> IngestorResult<IngestedTokens> {
-		let tokens = data.clone().data.clone().unwrap_or_default();
+		let tokens = data.clone().data.clone();
 		let mut cleaned_tokens = Vec::new();
 		for token in tokens.iter() {
 			let cleaned_text = self.cleanup_text(&token).await;
@@ -39,7 +44,7 @@ impl AsyncProcessor for TextCleanupProcessor {
 		}
 
 		let mut data = data.clone();
-		data.data = Some(cleaned_tokens);
+		data.data = cleaned_tokens;
 		Ok(data)
 	}
 }
