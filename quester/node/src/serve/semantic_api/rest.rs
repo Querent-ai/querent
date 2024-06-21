@@ -3,7 +3,10 @@ use common::EventType;
 use engines::agn::AttentionTensorsEngine;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
-use llms::transformers::bert::{BertLLM, EmbedderOptions};
+use llms::{
+	transformers::bert::{BertLLM, EmbedderOptions},
+	LLM,
+};
 use proto::{
 	config::StorageConfigs,
 	semantics::{
@@ -191,8 +194,22 @@ pub async fn start_pipeline(
 		_ => Vec::new(),
 	};
 
+	// Initialize NER model only if fixed_entities is not defined or empty
+	let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
+		let ner_options = EmbedderOptions {
+			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+			local_dir: None,
+			revision: None,
+			distribution: None,
+		};
+
+		Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+	} else {
+		None // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
+	};
+
 	let data_sources = create_dynamic_sources(&request).await?;
-	// TODO REPLACE WITH CORRECT AGN engine
+
 	// let engine = Arc::new(MockEngine::new());
 	let options = EmbedderOptions {
 		model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
@@ -215,6 +232,7 @@ pub async fn start_pipeline(
 		entities,
 		sample_entities,
 		Some(embedding_model),
+		ner_llm,
 	));
 
 	let pipeline_settings =
