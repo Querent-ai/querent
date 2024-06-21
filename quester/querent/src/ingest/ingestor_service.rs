@@ -102,7 +102,6 @@ impl Handler<CollectionBatch> for IngestorService {
 				)
 			})?;
 
-
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		let counters = self.get_counters();

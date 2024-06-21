@@ -58,7 +58,6 @@ async def print_querent(config, text: str):
 
 "#;
 
-
 pub async fn create_dynamic_sources(
 	request: &SemanticPipelineRequest,
 ) -> Result<Vec<Arc<dyn sources::Source>>, PipelineErrors> {

@@ -25,9 +25,7 @@ impl TextCleanupProcessor {
 		let re_whitespace = Regex::new(r"\s+").unwrap();
 		data = re_whitespace.replace_all(&data, " ").to_string();
 
-		data = data.chars()
-				.filter(|&c| c.is_ascii() || !c.is_control())
-				.collect();
+		data = data.chars().filter(|&c| c.is_ascii() || !c.is_control()).collect();
 
 		data
 	}
