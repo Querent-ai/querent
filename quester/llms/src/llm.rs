@@ -15,8 +15,9 @@ pub enum LLMErrorKind {
 	PyTorch,
 	/// Safetensors error.
 	SafeTensors,
-	///Model error
+	/// Model error.
 	ModelError,
+	// Add more error kinds here if needed
 }
 
 /// Generic IngestorError.
@@ -68,6 +69,7 @@ impl From<serde_json::Error> for LLMError {
 		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
 	}
 }
+
 #[async_trait]
 pub trait LLM: Send + Sync {
 	async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
@@ -76,21 +78,21 @@ pub trait LLM: Send + Sync {
 	async fn model_input(
 		&self,
 		tokenized_sequence: Vec<i32>,
-	) -> Result<std::collections::HashMap<String, Tensor>, LLMError>;
-	async fn tokenize(&self, word: &str) -> Result<Vec<i32>, LLMError>;
+	) -> LLMResult<std::collections::HashMap<String, Tensor>>;
+	async fn tokenize(&self, word: &str) -> LLMResult<Vec<i32>>;
 	async fn inference_attention(
 		&self,
 		model_input: std::collections::HashMap<String, Tensor>,
-	) -> Result<Tensor, LLMError>;
+	) -> LLMResult<Tensor>;
 	async fn maximum_tokens(&self) -> usize;
 	async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
 	async fn attention_tensor_to_2d_vector(
 		&self,
 		attention_weights: &Tensor,
-	) -> Result<Vec<Vec<f32>>, LLMError>;
+	) -> LLMResult<Vec<Vec<f32>>>;
 	async fn token_classification(
 		&self,
 		model_input: std::collections::HashMap<String, Tensor>,
 		labels: Option<&Tensor>,
-	) -> Result<Vec<(String, String)>, LLMError>;
+	) -> LLMResult<Vec<(String, String)>>;
 }

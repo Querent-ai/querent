@@ -68,7 +68,7 @@ impl BertLLM {
 		};
 
 		let (config_filename, tokenizer_filename, weights_filename, weight_source) =
-			if let Some(local_dir) = options.local_dir.clone() {
+			if let Some(local_dir) = &options.local_dir {
 				// Read from local directory
 				let config_filename = PathBuf::from(format!("{}/config.json", local_dir));
 				let tokenizer_filename = PathBuf::from(format!("{}/tokenizer.json", local_dir));
@@ -93,9 +93,12 @@ impl BertLLM {
 				(config_filename, tokenizer_filename, weights_filename, weight_source)
 			} else {
 				// Fetch from Hugging Face API
-				let repo = match options.revision.clone() {
-					Some(revision) =>
-						Repo::with_revision(options.model.clone(), RepoType::Model, revision),
+				let repo = match &options.revision {
+					Some(revision) => Repo::with_revision(
+						options.model.clone(),
+						RepoType::Model,
+						revision.clone(),
+					),
 					None => Repo::model(options.model.clone()),
 				};
 				let api = Api::new().map_err(|e| {
@@ -172,6 +175,7 @@ impl BertLLM {
 				)?
 			},
 		};
+
 		let model = if config.id2label.is_none() && config.label2id.is_none() {
 			Some(CandleBertModel::load(vb.clone(), &config).map_err(|e| {
 				LLMError::new(
@@ -468,89 +472,47 @@ impl LLM for BertLLM {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use super::*;
-// 	use tokio::test;
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use tokio::test;
 
-// 	#[test]
-// 	async fn test_inference_and_attention_processing() {
-// 		let options = EmbedderOptions {
-// 			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-// 			local_dir: None,
-// 			revision: None,
-// 			distribution: None,
-// 		};
-// 		let embedder = BertLLM::new(options).unwrap();
-// 		let input_text = "The tectonic movements in the Jurassic era are not common.";
-// 		let tokens = match embedder.tokenize(&input_text).await {
-// 			Ok(tokens) => tokens,
-// 			Err(e) => {
-// 				println!("Tokenization failed: {:?}", e);
-// 				return;
-// 			},
-// 		};
-// 		println!("These are the Tokens: {:?}", tokens);
+	#[test]
+	async fn test_inference_and_attention_processing() {
+		let options = EmbedderOptions {
+			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+			local_dir: None,
+			revision: None,
+			distribution: None,
+		};
+		let embedder = BertLLM::new(options).unwrap();
+		let input_text = "The tectonic movements in the Jurassic era are not common.";
+		let tokens = match embedder.tokenize(&input_text).await {
+			Ok(tokens) => tokens,
+			Err(e) => {
+				println!("Tokenization failed: {:?}", e);
+				return;
+			},
+		};
 
-// 		let model_input = match embedder.model_input(tokens.clone()).await {
-// 			Ok(model_input) => model_input,
-// 			Err(e) => {
-// 				println!("Model input creation failed: {:?}", e);
-// 				return;
-// 			},
-// 		};
+		let model_input = match embedder.model_input(tokens.clone()).await {
+			Ok(model_input) => model_input,
+			Err(e) => {
+				println!("Model input creation failed: {:?}", e);
+				return;
+			},
+		};
 
-// 		// Perform inference to get attention weights
-// 		match embedder.inference_attention(model_input).await {
-// 			Ok(tensor) => {
-// 				println!("Output Tensor: {:?}", tensor);
-
-// 				// Process the attention weights to remove CLS and SEP tokens
-// 				match embedder.attention_tensor_to_2d_vector(&tensor).await {
-// 					Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
-// 					Err(e) => println!("Failed to process attention weights: {:?}", e),
-// 				}
-// 			},
-// 			Err(e) => println!("Failed to perform inference: {:?}", e),
-// 		}
-// 	}
-
-// 	#[test]
-// 	async fn test_token_classification() {
-// 		let options = EmbedderOptions {
-// 			model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-// 			local_dir: Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
-// 			revision: None,
-// 			distribution: None,
-// 		};
-// 		let embedder = BertLLM::new(options).unwrap();
-// 		let input_text = "A mercury porosimeter emphasized the degree of pore plugging after cyclic tests, and the ﬁndings revealed a smaller pore size distribution after N2 tests due to the asphaltene deposition process when compared to cores that had not been pressured. This extensive study focuses on the eﬀects of asphaltene deposition on oil recovery under cyclic N2-miscible and immiscible conditions in shale resources. 1.";
-// 		let tokens = match embedder.tokenize(&input_text).await {
-// 			Ok(tokens) => tokens,
-// 			Err(e) => {
-// 				println!("Tokenization failed: {:?}", e);
-// 				return;
-// 			},
-// 		};
-// 		println!("These are the Tokens: {:?}", tokens);
-
-// 		let model_input = match embedder.model_input(tokens.clone()).await {
-// 			Ok(model_input) => model_input,
-// 			Err(e) => {
-// 				println!("Model input creation failed: {:?}", e);
-// 				return;
-// 			},
-// 		};
-
-// 		// Perform token classification
-// 		match embedder.token_classification(model_input, None).await {
-// 			Ok(token_classification_output) => {
-// 				// Print tokens and their predicted labels
-// 				for (token, label) in token_classification_output.iter() {
-// 					println!("Token: {}, Label: {}", token, label);
-// 				}
-// 			},
-// 			Err(e) => println!("Failed to perform token classification: {:?}", e),
-// 		}
-// 	}
-// }
+		// Perform inference to get attention weights
+		match embedder.inference_attention(model_input).await {
+			Ok(tensor) => {
+				// Process the attention weights to remove CLS and SEP tokens
+				match embedder.attention_tensor_to_2d_vector(&tensor).await {
+					Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
+					Err(e) => println!("Failed to process attention weights: {:?}", e),
+				}
+			},
+			Err(e) => println!("Failed to perform inference: {:?}", e),
+		}
+	}
+}
