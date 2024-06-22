@@ -4,7 +4,10 @@ use engines::agn::AttentionTensorsEngine;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
 use llms::{
-	transformers::{bert::{BertLLM, EmbedderOptions}, roberta::roberta::RobertaLLM},
+	transformers::{
+		bert::{BertLLM, EmbedderOptions},
+		roberta::roberta::RobertaLLM,
+	},
 	LLM,
 };
 use proto::{
@@ -195,11 +198,12 @@ pub async fn start_pipeline(
 	};
 
 	// Extract and handle the model parameter
-    let (model_string, model_type) = match request.model.and_then(Model::from_i32) {
-        Some(Model::English) => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()),
-        Some(Model::Geology) => ("botryan96/GeoBERT".to_string(), "Bert".to_string()),
-        _ => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()), // Default to option 1
-    };
+	let (model_string, model_type) = match request.model.and_then(Model::from_i32) {
+		Some(Model::English) =>
+			("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()),
+		Some(Model::Geology) => ("botryan96/GeoBERT".to_string(), "Bert".to_string()),
+		_ => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()), // Default to option 1
+	};
 
 	// Initialize NER model only if fixed_entities is not defined or empty
 	let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
@@ -209,13 +213,11 @@ pub async fn start_pipeline(
 			revision: None,
 			distribution: None,
 		};
-		if model_type == "Roberta".to_string(){
+		if model_type == "Roberta".to_string() {
 			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
-		}
-		else if model_type == "Bert".to_string() {
+		} else if model_type == "Bert".to_string() {
 			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
-		}
-		else {
+		} else {
 			None
 		}
 	} else {
