@@ -197,8 +197,8 @@ pub async fn start_pipeline(
 	// Initialize NER model only if fixed_entities is not defined or empty
 	let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
 		let ner_options = EmbedderOptions {
-			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-			local_dir: None,
+			model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+			local_dir: Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
 			revision: None,
 			distribution: None,
 		};
