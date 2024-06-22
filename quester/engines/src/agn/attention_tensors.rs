@@ -88,7 +88,6 @@ impl Engine for AttentionTensorsEngine {
 					let initial_classified_sentences =
 						label_entities_in_sentences(&entities, &all_chunks);
 					let tokenized_words = tokens_to_words(llm.as_ref(), &tokenized_chunks).await;
-					println!("Classificatiuon Results ---------{:?}", initial_classified_sentences);
 					match_entities_with_tokens(&tokenized_words, &initial_classified_sentences)
 				} else {
 					let mut model_inputs = Vec::new();
@@ -104,7 +103,6 @@ impl Engine for AttentionTensorsEngine {
 							let model_input = ner_llm.model_input(tokens.clone()).await.map_err(|e| EngineError::from(e))?;
 							model_inputs.push(model_input);
 						}
-						println!("Labell--------");
 						let mut classification_results = Vec::new();
 						for input in &model_inputs {
 							let classification_result = ner_llm.token_classification(input.clone(), None).await.map_err(|e| EngineError::from(e))?;
@@ -117,15 +115,16 @@ impl Engine for AttentionTensorsEngine {
 
 							classified_sentences.push(ClassifiedSentence {
 								sentence: chunk.clone(),
-								entities: filtered_entities.into_iter().map(|(e, l)| (e, l, 0, 0)).collect(),
-							});
+								entities: filtered_entities
+											.into_iter()
+											.map(|(e, l)| (e.to_lowercase(), l, 0, 0))
+											.collect(),
+									});
 						}
-						println!("Classification Results ---------{:?}", classified_sentences);
 					}
 
 					match_entities_with_tokens(&tokenized_words, &classified_sentences)
 				};
-				println!("Classificatiuon Results 222222222---------{:?}", classified_sentences);
 				let classified_sentences_with_pairs = create_binary_pairs(&classified_sentences);
 
 				let extended_classified_sentences_with_attention = add_attention_to_classified_sentences(
@@ -201,14 +200,9 @@ impl Engine for AttentionTensorsEngine {
 				}
 
 				merge_similar_relations(&mut all_sentences_with_relations);
-
 				if !all_sentences_with_relations.is_empty()  && entities.is_empty(){
-					println!("Entities are ------{:?}", entities);
-					println!("Sample Entities are ------{:?}", sample_entities);
 					(entities, sample_entities) = extract_entities_and_types(all_sentences_with_relations.clone());
 				}
-				println!("Entities are ------{:?}", entities);
-				println!("Sample Entities are ------{:?}", sample_entities);
 				for sentence_with_relations in all_sentences_with_relations {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
@@ -301,17 +295,15 @@ impl Engine for AttentionTensorsEngine {
 // 	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 // 	use futures::StreamExt;
 // 	use ingestors::{pdf::pdfv1::PdfIngestor, BaseIngestor};
-// 	use llms::transformers::bert::{BertLLM, EmbedderOptions};
+// 	use llms::transformers::{bert::{BertLLM, EmbedderOptions}, roberta::roberta::RobertaLLM};
 // 	use std::{fs::File, io::Read, sync::Arc};
 // 	use tokio::sync::mpsc;
 // 	use tokio_stream::wrappers::ReceiverStream;
 
 // 	#[tokio::test]
 // 	async fn test_txt_ingestor() {
-// 		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/test.pdf";
+// 		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/english_test.pdf";
 // 		let mut file = File::open(test_file_path).expect("Failed to open test file");
-
-// 		// Read the sample .pdf file into a byte vector
 // 		let mut buffer = Vec::new();
 // 		file.read_to_end(&mut buffer).expect("Failed to read test file");
 
@@ -360,13 +352,17 @@ impl Engine for AttentionTensorsEngine {
 // 		// Initialize NER model only if fixed_entities is not defined or empty
 // 		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
 // 			let ner_options = EmbedderOptions {
-// 				model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-// 				local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+// 				// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+// 				// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+// 				// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+// 				model: "deepset/roberta-base-squad2".to_string(),
+// 				local_dir : None,
 // 				revision: None,
 // 				distribution: None,
 // 			};
 
-// 			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+// 			// Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+// 			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
 // 		} else {
 // 			None  // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
 // 		};

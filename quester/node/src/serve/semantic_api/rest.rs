@@ -4,7 +4,7 @@ use engines::agn::AttentionTensorsEngine;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
 use llms::{
-	transformers::bert::{BertLLM, EmbedderOptions},
+	transformers::{bert::{BertLLM, EmbedderOptions}, roberta::roberta::RobertaLLM},
 	LLM,
 };
 use proto::{
@@ -30,7 +30,7 @@ use storage::create_storages;
 use tracing::{error, warn};
 use warp::{filters::ws::WebSocket, reject::Rejection, Filter};
 
-use crate::{extract_format_from_qs, make_json_api_response, serve::require};
+use crate::{extract_format_from_qs, make_json_api_response, serve::require, Model};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
@@ -194,16 +194,30 @@ pub async fn start_pipeline(
 		_ => Vec::new(),
 	};
 
+	// Extract and handle the model parameter
+    let (model_string, model_type) = match request.model.and_then(Model::from_i32) {
+        Some(Model::English) => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()),
+        Some(Model::Geology) => ("botryan96/GeoBERT".to_string(), "Bert".to_string()),
+        _ => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()), // Default to option 1
+    };
+
 	// Initialize NER model only if fixed_entities is not defined or empty
 	let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
 		let ner_options = EmbedderOptions {
-			model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-			local_dir: Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+			model: model_string.to_string(),
+			local_dir: None,
 			revision: None,
 			distribution: None,
 		};
-
-		Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+		if model_type == "Roberta".to_string(){
+			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+		}
+		else if model_type == "Bert".to_string() {
+			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+		}
+		else {
+			None
+		}
 	} else {
 		None // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
 	};
