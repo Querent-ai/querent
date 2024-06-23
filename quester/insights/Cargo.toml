@@ -13,6 +13,7 @@ documentation = "https:/querent.xyz/docs/"
 common = { workspace = true }
 proto = { workspace = true }
 actors = { workspace = true }
+storage = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 anyhow = { workspace = true }
