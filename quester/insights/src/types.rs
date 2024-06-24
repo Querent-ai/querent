@@ -151,4 +151,5 @@ pub struct InsightConfig {
 	pub embedded_knowledge_store: Arc<dyn Storage>,
 	pub discovered_knowledge_store: Arc<dyn Storage>,
 	pub graph_storage: Option<Arc<dyn Storage>>,
+	pub custom_options: CustomInsightOptions,
 }
