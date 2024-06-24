@@ -6,6 +6,7 @@ use storage::Storage;
 
 pub mod discovery_searcher;
 pub mod discovery_service;
+pub mod discovery_traverser;
 
 async fn insert_discovered_knowledge_async(
 	storage: Arc<dyn Storage>,
