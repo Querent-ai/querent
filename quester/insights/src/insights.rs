@@ -95,7 +95,7 @@ pub trait Insight: Send + Sync {
 	async fn info(&self) -> InsightInfo;
 
 	/// Does insight support streaming
-	fn supports_streaming(&self)-> bool;
+	fn supports_streaming(&self) -> bool;
 
 	/// Callback from config
 	/// Use Value as data type for the sake of object safety, FFI, simplicity, and it's used in JS anyway
