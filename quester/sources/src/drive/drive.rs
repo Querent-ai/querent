@@ -413,24 +413,7 @@ mod tests {
 		};
 
 		let drive_storage = GoogleDriveSource::new(google_config).await;
-		let connectivity = drive_storage.check_connectivity().await;
-
-		println!("Connectivity: {:?}", connectivity);
-
-		let result = drive_storage
-			.hub
-			.files()
-			.list()
-			.add_scope("https://www.googleapis.com/auth/drive.readonly")
-			.q(&format!("'{}' in parents", drive_storage.folder_id))
-			.doit()
-			.await;
-		let _ = match result {
-			Ok(res) => {
-				println!("Response from files list {:?}", res);
-			},
-			Err(e) => eprintln!("Expected successful data collection {:?}", e),
-		};
+		let _connectivity = drive_storage.check_connectivity().await;
 
 		let result = drive_storage.poll_data().await;
 

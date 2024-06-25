@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
-	result::{ConnectionError, ConnectionResult, Error}, sql_types::Float, ExpressionMethods, QueryDsl
+	result::{ConnectionError, ConnectionResult},
+	ExpressionMethods, QueryDsl,
 };
 
 use crate::DieselError;
@@ -17,7 +18,10 @@ use proto::semantics::PostgresConfig;
 use std::{sync::Arc, time::SystemTime};
 use tracing::error;
 
-use crate::{semantic_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
+use crate::{
+	semantic_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult,
+	POOL_TIMEOUT,
+};
 use pgvector::Vector;
 
 use deadpool::Runtime;
@@ -164,29 +168,31 @@ impl Storage for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	
-		let transaction_result = conn.transaction::<_, DieselError, _>(|conn| {
-			Box::pin(async move {
-				for (_document_id, _source, _image_id, item) in payload {
-					let form = EmbeddedKnowledge {
-						embeddings: Some(Vector::from(item.embeddings.clone())),
-						score: item.score,
-						event_id: item.event_id.clone(),
-					};
-					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
-						.values(form)
-						.execute(conn)
-						.await?;
-				}
-				Ok(())
+
+		let transaction_result = conn
+			.transaction::<_, DieselError, _>(|conn| {
+				Box::pin(async move {
+					for (_document_id, _source, _image_id, item) in payload {
+						let form = EmbeddedKnowledge {
+							embeddings: Some(Vector::from(item.embeddings.clone())),
+							score: item.score,
+							event_id: item.event_id.clone(),
+						};
+						diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
+							.values(form)
+							.execute(conn)
+							.await?;
+					}
+					Ok(())
+				})
 			})
-		}).await;
-	
+			.await;
+
 		transaction_result.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	
+
 		Ok(())
 	}
 
@@ -219,7 +225,7 @@ impl Storage for PGVector {
 
 		Ok(())
 	}
-	
+
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,
@@ -228,14 +234,12 @@ impl Storage for PGVector {
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		println!("Ok results from embedded-------------------------1111111111");
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	
+
 		let vector = Vector::from(payload.clone());
-		println!("Ok results from embedded-------------------------");
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
 			.select((
 				embedded_knowledge::dsl::embeddings,
@@ -249,12 +253,10 @@ impl Storage for PGVector {
 			.offset(offset)
 			.load::<(Option<Vector>, f32, String, Option<f64>)>(&mut conn)
 			.await;
-		println!("Query Resulrs-------------------{:?}", query_result);
 		match query_result {
 			Ok(result) => {
 				let mut results: Vec<DocumentPayload> = Vec::new();
-				println!("Ok results from embedded-------------------------{:?}", result.clone());
-				for (embeddings, score, event_id, other_cosine_distance) in result {
+				for (_embeddings, score, event_id, other_cosine_distance) in result {
 					// Query to semantic knowledge table using uuid
 					// let other_cosine_distance_1: f64 = other_cosine_distance.unwrap_or(0.0); // Use a default value if None
 					let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
@@ -268,12 +270,14 @@ impl Storage for PGVector {
 						))
 						.filter(semantic_knowledge::dsl::event_id.eq(event_id))
 						.offset(offset)
-						.load::<(String, String,  String, String, String)>(&mut conn)
+						.load::<(String, String, String, String, String)>(&mut conn)
 						.await;
-	
+
 					match query_result_semantic {
 						Ok(result_semantic) => {
-							for (doc_id, subject, object, document_store, sentence) in result_semantic {
+							for (doc_id, subject, object, document_store, sentence) in
+								result_semantic
+							{
 								let mut doc_payload = DocumentPayload::default();
 								doc_payload.doc_id = doc_id.clone();
 								doc_payload.subject = subject.clone();
@@ -287,7 +291,7 @@ impl Storage for PGVector {
 								doc_payload.query_embedding = Some(payload.clone());
 								results.push(doc_payload);
 							}
-						}
+						},
 						Err(e) => {
 							eprintln!("Error querying semantic data: {:?}", e);
 							// Handle the error appropriately, for example by returning an error result
@@ -295,18 +299,18 @@ impl Storage for PGVector {
 								kind: StorageErrorKind::Query,
 								source: Arc::new(anyhow::Error::from(e)),
 							});
-						}
+						},
 					}
 				}
 				Ok(results)
-			}
+			},
 			Err(err) => {
 				log::error!("Query failed: {:?}", err);
 				Err(StorageError {
 					kind: StorageErrorKind::Query,
 					source: Arc::new(anyhow::Error::from(err)),
 				})
-			}
+			},
 		}
 	}
 
@@ -375,7 +379,6 @@ table! {
 	}
 }
 
-//make one more table for semantic 
 
 #[cfg(test)]
 mod test {

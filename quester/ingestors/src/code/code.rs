@@ -56,7 +56,6 @@ impl BaseIngestor for CodeIngestor {
 
 				cursor.read_to_string(&mut content).await
 					.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-				println!("Content is {:?}", content);
 
 				let ingested_tokens = IngestedTokens {
 					data: vec![content.to_string()],

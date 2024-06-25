@@ -1,8 +1,9 @@
 use crate::utils::{
 	add_attention_to_classified_sentences, calculate_biased_sentence_embedding,
-	create_binary_pairs, extract_entities_and_types, label_entities_in_sentences,
-	match_entities_with_tokens, merge_similar_relations, remove_newlines, split_into_chunks,
-	tokens_to_words, ClassifiedSentence, ClassifiedSentenceWithRelations, generate_custom_comb_uuid,
+	create_binary_pairs, extract_entities_and_types, generate_custom_comb_uuid,
+	label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations,
+	remove_newlines, split_into_chunks, tokens_to_words, ClassifiedSentence,
+	ClassifiedSentenceWithRelations,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -208,7 +209,6 @@ impl Engine for AttentionTensorsEngine {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
 							event_ids.push(generate_custom_comb_uuid());
-							println!("This is the event id --------------{:?}", event_ids);
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
@@ -237,7 +237,6 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
-							println!("Semnatic Event -------------{:?}", event);
 							i = i + 1;
 							yield Ok(event);
 						}
@@ -280,12 +279,11 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
-							println!("Vector Event -------------{:?}", event);
 							i = i + 1;
 							yield Ok(event);
 						}
 					}
-					
+
 				}
 			}
 		};

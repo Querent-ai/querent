@@ -19,7 +19,7 @@ pub struct DocumentPayload {
 pub struct VectorPayload {
 	pub event_id: String,
 	pub embeddings: Vec<f32>,
-	pub score: f32
+	pub score: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

@@ -1,10 +1,10 @@
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{agn::HeadTailRelations, EngineError, EngineErrorKind};
-use chrono::{Utc, TimeZone};
-use rand::{Rng, thread_rng};
+use chrono::{TimeZone, Utc};
 use fastembed::TextEmbedding;
 use llms::LLM;
+use rand::{thread_rng, Rng};
 use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
@@ -399,19 +399,19 @@ pub async fn calculate_biased_sentence_embedding(
 }
 
 pub fn generate_custom_comb_uuid() -> String {
-    let custom_epoch = Utc.with_ymd_and_hms(2020, 1, 1,0, 0, 0).unwrap();
-    let now = Utc::now();
-    let millis_since_epoch = now.signed_duration_since(custom_epoch).num_milliseconds();
+	let custom_epoch = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
+	let now = Utc::now();
+	let millis_since_epoch = now.signed_duration_since(custom_epoch).num_milliseconds();
 
-    // Ensure the timestamp fits into 52 bits
-    let timestamp_part = (millis_since_epoch as u64) & 0x000F_FFFF_FFFF_FFFF;
+	// Ensure the timestamp fits into 52 bits
+	let timestamp_part = (millis_since_epoch as u64) & 0x000F_FFFF_FFFF_FFFF;
 
-    // Generate a 12-bit random number
-    let mut rng = thread_rng();
-    let random_part: u16 = rng.gen_range(0..4096);
+	// Generate a 12-bit random number
+	let mut rng = thread_rng();
+	let random_part: u16 = rng.gen_range(0..4096);
 
-    // Combine both parts: Shift timestamp by 12 bits and add the random part
-    let uuid_int = (timestamp_part << 12) | (random_part as u64);
+	// Combine both parts: Shift timestamp by 12 bits and add the random part
+	let uuid_int = (timestamp_part << 12) | (random_part as u64);
 
 	uuid_int.to_string()
 }
@@ -432,4 +432,3 @@ pub fn extract_entities_and_types(
 
 	(entities, sample_entities)
 }
-
