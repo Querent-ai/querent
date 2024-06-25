@@ -415,3 +415,21 @@ pub fn generate_custom_comb_uuid() -> String {
 
 	uuid_int.to_string()
 }
+
+pub fn extract_entities_and_types(
+	all_sentences_with_relations: Vec<ClassifiedSentenceWithRelations>,
+) -> (Vec<String>, Vec<String>) {
+	let mut entities = Vec::new();
+	let mut sample_entities = Vec::new();
+
+	for item in all_sentences_with_relations {
+		for (entity, entity_type, _start_idx, _end_idx) in item.classified_sentence.entities.clone()
+		{
+			entities.push(entity);
+			sample_entities.push(entity_type);
+		}
+	}
+
+	(entities, sample_entities)
+}
+

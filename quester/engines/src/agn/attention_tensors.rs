@@ -1,5 +1,8 @@
 use crate::utils::{
-	add_attention_to_classified_sentences, calculate_biased_sentence_embedding, create_binary_pairs, generate_custom_comb_uuid, label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations, remove_newlines, split_into_chunks, tokens_to_words, ClassifiedSentence, ClassifiedSentenceWithRelations
+	add_attention_to_classified_sentences, calculate_biased_sentence_embedding,
+	create_binary_pairs, extract_entities_and_types, label_entities_in_sentences,
+	match_entities_with_tokens, merge_similar_relations, remove_newlines, split_into_chunks,
+	tokens_to_words, ClassifiedSentence, ClassifiedSentenceWithRelations, generate_custom_comb_uuid,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -23,6 +26,7 @@ pub struct AttentionTensorsEngine {
 	pub entities: Vec<String>,
 	pub sample_entities: Vec<String>,
 	embedding_model: Option<TextEmbedding>,
+	ner_llm: Option<Arc<dyn LLM>>,
 }
 
 impl AttentionTensorsEngine {
@@ -31,8 +35,9 @@ impl AttentionTensorsEngine {
 		entities: Vec<String>,
 		sample_entities: Vec<String>,
 		embedding_model: Option<TextEmbedding>,
+		ner_llm: Option<Arc<dyn LLM>>, // Accept as optional
 	) -> Self {
-		Self { llm, entities, sample_entities, embedding_model }
+		Self { llm, entities, sample_entities, embedding_model, ner_llm }
 	}
 }
 
@@ -45,8 +50,8 @@ impl Engine for AttentionTensorsEngine {
 		// Await the maximum tokens value outside the stream! block
 		let max_tokens = self.llm.maximum_tokens().await;
 		// Make copies of necessary parts of `self`
-		let entities = self.entities.clone();
-		let sample_entities = self.sample_entities.clone();
+		let mut entities = self.entities.clone();
+		let mut sample_entities = self.sample_entities.clone();
 		let llm = self.llm.clone();
 
 		if self.embedding_model.is_none() {
@@ -88,37 +93,40 @@ impl Engine for AttentionTensorsEngine {
 					match_entities_with_tokens(&tokenized_words, &initial_classified_sentences)
 				} else {
 					let mut model_inputs = Vec::new();
-					for tokens in &tokenized_chunks {
-						let model_input =
-							llm.model_input(tokens.clone()).await.map_err(|e| EngineError::from(e))?;
-						model_inputs.push(model_input);
-					}
-
-					let mut classification_results = Vec::new();
-					for input in &model_inputs {
-						let classification_result = self
-							.llm
-							.token_classification(input.clone(), None)
-							.await
-							.map_err(|e| EngineError::from(e))?;
-						classification_results.push(classification_result);
-					}
-
-					let mut classified_sentences = Vec::new();
-					for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
-						let filtered_entities: Vec<(String, String)> =
-							classification.iter().filter(|(_, label)| label != "O").cloned().collect();
-
-						classified_sentences.push(ClassifiedSentence {
-							sentence: chunk.clone(),
-							entities: filtered_entities.into_iter().map(|(e, l)| (e, l, 0, 0)).collect(),
-						});
-					}
-
+					let mut tokenized_chunks_ner = Vec::new();
 					let tokenized_words = tokens_to_words(llm.as_ref(), &tokenized_chunks).await;
+					let mut classified_sentences = Vec::new();
+					if let Some(ref ner_llm) = self.ner_llm {
+						for chunk in &all_chunks {
+							let tokenized_chunk = ner_llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
+							tokenized_chunks_ner.push(tokenized_chunk);
+						}
+						for tokens in &tokenized_chunks_ner {
+							let model_input = ner_llm.model_input(tokens.clone()).await.map_err(|e| EngineError::from(e))?;
+							model_inputs.push(model_input);
+						}
+						let mut classification_results = Vec::new();
+						for input in &model_inputs {
+							let classification_result = ner_llm.token_classification(input.clone(), None).await.map_err(|e| EngineError::from(e))?;
+							classification_results.push(classification_result);
+						}
+
+
+						for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
+							let filtered_entities: Vec<(String, String)> = classification.iter().filter(|(_, label)| label != "O").cloned().collect();
+
+							classified_sentences.push(ClassifiedSentence {
+								sentence: chunk.clone(),
+								entities: filtered_entities
+											.into_iter()
+											.map(|(e, l)| (e.to_lowercase(), l, 0, 0))
+											.collect(),
+									});
+						}
+					}
+
 					match_entities_with_tokens(&tokenized_words, &classified_sentences)
 				};
-
 				let classified_sentences_with_pairs = create_binary_pairs(&classified_sentences);
 
 				let extended_classified_sentences_with_attention = add_attention_to_classified_sentences(
@@ -193,7 +201,9 @@ impl Engine for AttentionTensorsEngine {
 				}
 
 				merge_similar_relations(&mut all_sentences_with_relations);
-
+				if !all_sentences_with_relations.is_empty()  && entities.is_empty(){
+					(entities, sample_entities) = extract_entities_and_types(all_sentences_with_relations.clone());
+				}
 				for sentence_with_relations in all_sentences_with_relations {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
@@ -342,11 +352,11 @@ impl Engine for AttentionTensorsEngine {
 // 		// Initialize NER model only if fixed_entities is not defined or empty
 // 		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
 // 			let ner_options = EmbedderOptions {
-// 				model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-// 				local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+// 				// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+// 				// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
 // 				// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
-// 				// model: "deepset/roberta-base-squad2".to_string(),
-// 				// local_dir : None,
+// 				model: "deepset/roberta-base-squad2".to_string(),
+// 				local_dir : None,
 // 				revision: None,
 // 				distribution: None,
 // 			};

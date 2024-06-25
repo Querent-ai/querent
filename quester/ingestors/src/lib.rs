@@ -9,6 +9,7 @@ pub mod image;
 pub mod json;
 pub mod pdf;
 pub mod pptx;
+pub mod processors;
 pub mod txt;
 pub mod xlsx;
 pub mod xml;

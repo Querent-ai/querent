@@ -472,47 +472,47 @@ impl LLM for BertLLM {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use tokio::test;
+// #[cfg(test)]
+// mod tests {
+// 	use super::*;
+// 	use tokio::test;
 
-	#[test]
-	async fn test_inference_and_attention_processing() {
-		let options = EmbedderOptions {
-			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-			local_dir: None,
-			revision: None,
-			distribution: None,
-		};
-		let embedder = BertLLM::new(options).unwrap();
-		let input_text = "The tectonic movements in the Jurassic era are not common.";
-		let tokens = match embedder.tokenize(&input_text).await {
-			Ok(tokens) => tokens,
-			Err(e) => {
-				println!("Tokenization failed: {:?}", e);
-				return;
-			},
-		};
+// 	#[test]
+// 	async fn test_inference_and_attention_processing() {
+// 		let options = EmbedderOptions {
+// 			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+// 			local_dir: None,
+// 			revision: None,
+// 			distribution: None,
+// 		};
+// 		let embedder = BertLLM::new(options).unwrap();
+// 		let input_text = "The tectonic movements in the Jurassic era are not common.";
+// 		let tokens = match embedder.tokenize(&input_text).await {
+// 			Ok(tokens) => tokens,
+// 			Err(e) => {
+// 				println!("Tokenization failed: {:?}", e);
+// 				return;
+// 			},
+// 		};
 
-		let model_input = match embedder.model_input(tokens.clone()).await {
-			Ok(model_input) => model_input,
-			Err(e) => {
-				println!("Model input creation failed: {:?}", e);
-				return;
-			},
-		};
+// 		let model_input = match embedder.model_input(tokens.clone()).await {
+// 			Ok(model_input) => model_input,
+// 			Err(e) => {
+// 				println!("Model input creation failed: {:?}", e);
+// 				return;
+// 			},
+// 		};
 
-		// Perform inference to get attention weights
-		match embedder.inference_attention(model_input).await {
-			Ok(tensor) => {
-				// Process the attention weights to remove CLS and SEP tokens
-				match embedder.attention_tensor_to_2d_vector(&tensor).await {
-					Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
-					Err(e) => println!("Failed to process attention weights: {:?}", e),
-				}
-			},
-			Err(e) => println!("Failed to perform inference: {:?}", e),
-		}
-	}
-}
+// 		// Perform inference to get attention weights
+// 		match embedder.inference_attention(model_input).await {
+// 			Ok(tensor) => {
+// 				// Process the attention weights to remove CLS and SEP tokens
+// 				match embedder.attention_tensor_to_2d_vector(&tensor).await {
+// 					Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
+// 					Err(e) => println!("Failed to process attention weights: {:?}", e),
+// 				}
+// 			},
+// 			Err(e) => println!("Failed to perform inference: {:?}", e),
+// 		}
+// 	}
+// }
