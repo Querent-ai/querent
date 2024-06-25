@@ -12,11 +12,12 @@ pub struct DocumentPayload {
 	pub cosine_distance: Option<f64>,
 	pub query_embedding: Option<Vec<f32>>,
 	pub session_id: Option<String>,
+	pub score: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct VectorPayload {
-	pub event_id: u64,
+	pub event_id: String,
 	pub embeddings: Vec<f32>,
 	pub score: f32
 }
@@ -32,7 +33,7 @@ pub struct SemanticKnowledgePayload {
 	pub sentence: String,
 	pub image_id: Option<String>,
 	pub blob: Option<String>,
-	pub event_id: u64,
+	pub event_id: String,
 }
 
 impl SemanticKnowledgePayload {

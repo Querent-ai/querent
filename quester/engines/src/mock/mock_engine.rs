@@ -28,7 +28,7 @@ impl Engine for MockEngine {
 					sentence: "mock".to_string(),
 					image_id: None,
 					blob: Some("mock".to_string()),
-					event_id: 123456
+					event_id: "mock".to_string()
 				};
 
 				// create an event

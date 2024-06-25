@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
-	result::{ConnectionError, ConnectionResult}, sql_types::{Double, Float}, ExpressionMethods, QueryDsl
+	result::{ConnectionError, ConnectionResult, Error}, sql_types::Float, ExpressionMethods, QueryDsl
 };
-use diesel::{FromSqlRow, AsExpression};
-use diesel::sql_types::BigInt;
+
+use crate::DieselError;
 
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -35,12 +35,12 @@ use rustls::{
 pub struct EmbeddedKnowledge {
 	pub embeddings: Option<Vector>,
 	pub score: f32,
-	pub event_id: EventId,
+	pub event_id: String,
 }
 
-#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
-#[diesel(sql_type = BigInt)]
-pub struct EventId(pub u64);
+// #[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+// #[diesel(sql_type = BigInt)]
+// pub struct EventId(pub u64);
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = discovered_knowledge)]
@@ -164,14 +164,14 @@ impl Storage for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-
-		conn.transaction::<_, diesel::result::Error, _>(|conn| {
+	
+		let transaction_result = conn.transaction::<_, DieselError, _>(|conn| {
 			Box::pin(async move {
-				for (document_id, source, image_id, item) in payload {
+				for (_document_id, _source, _image_id, item) in payload {
 					let form = EmbeddedKnowledge {
 						embeddings: Some(Vector::from(item.embeddings.clone())),
 						score: item.score,
-						event_id: EventId(item.event_id),
+						event_id: item.event_id.clone(),
 					};
 					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
@@ -180,11 +180,13 @@ impl Storage for PGVector {
 				}
 				Ok(())
 			})
-			}).await.map_err(|e| StorageError {
+		}).await;
+	
+		transaction_result.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
-		});
-
+		})?;
+	
 		Ok(())
 	}
 
@@ -217,6 +219,7 @@ impl Storage for PGVector {
 
 		Ok(())
 	}
+	
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,
@@ -229,9 +232,8 @@ impl Storage for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-
+	
 		let vector = Vector::from(payload.clone());
-		// change this
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
 			.select((
 				embedded_knowledge::dsl::embeddings,
@@ -242,64 +244,63 @@ impl Storage for PGVector {
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.offset(offset)
-			.load::<(Option<Vector>, f64, i64)>(
-				&mut *conn,
-			)
+			.load::<(Option<Vector>, f32, String)>(&mut conn)
 			.await;
-
-
+	
 		match query_result {
 			Ok(result) => {
 				let mut results: Vec<DocumentPayload> = Vec::new();
-				for (
-					_embeddings,
-					score,
-					event_id,
-				) in result
-				{
-					//query to semantic knowledge table using uuid
+				for (_embeddings, score, event_id) in result {
+					// Query to semantic knowledge table using uuid
 					let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
-					.select((
-						semantic_knowledge::dsl::document_id,
-						semantic_knowledge::dsl::subject,
-						semantic_knowledge::dsl::predicate,
-						semantic_knowledge::dsl::object,
-						semantic_knowledge::dsl::document_source,
-						semantic_knowledge::dsl::sentence
-					))
-					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
-					.offset(offset)
-					.load::<(String, String, String, String, String, String)>(
-						&mut *conn,
-					).await;
+						.select((
+							semantic_knowledge::dsl::document_id,
+							semantic_knowledge::dsl::subject,
+							semantic_knowledge::dsl::predicate,
+							semantic_knowledge::dsl::object,
+							semantic_knowledge::dsl::document_source,
+							semantic_knowledge::dsl::sentence,
+						))
+						.filter(semantic_knowledge::dsl::event_id.eq(event_id))
+						.offset(offset)
+						.load::<(String, String, String, String, String, String)>(&mut conn)
+						.await;
+	
 					match query_result_semantic {
 						Ok(result_semantic) => {
 							for (doc_id, subject, predicate, object, document_store, sentence) in result_semantic {
-								let result_semantic = result_semantic[0];
 								let mut doc_payload = DocumentPayload::default();
 								doc_payload.doc_id = doc_id.clone();
 								doc_payload.subject = subject.clone();
 								doc_payload.predicate = predicate.clone();
 								doc_payload.object = object.clone();
 								doc_payload.doc_source = document_store.clone();
-								doc_payload.score = score.clone();
+								doc_payload.score = score as f64;
 								doc_payload.sentence = sentence.clone();
 								doc_payload.session_id = Some(session_id.clone());
 								doc_payload.query_embedding = Some(payload.clone());
 								results.push(doc_payload);
 							}
 						}
+						Err(e) => {
+							eprintln!("Error querying semantic data: {:?}", e);
+							// Handle the error appropriately, for example by returning an error result
+							return Err(StorageError {
+								kind: StorageErrorKind::Query,
+								source: Arc::new(anyhow::Error::from(e)),
+							});
+						}
 					}
 				}
 				Ok(results)
-			},
+			}
 			Err(err) => {
 				log::error!("Query failed: {:?}", err);
 				Err(StorageError {
 					kind: StorageErrorKind::Query,
 					source: Arc::new(anyhow::Error::from(err)),
 				})
-			},
+			}
 		}
 	}
 
@@ -344,7 +345,7 @@ table! {
 		id -> Int4,
 		embeddings -> Nullable<Vector>,
 		score -> Float4,
-		event_id -> Int8,
+		event_id -> VarChar,
 	}
 }
 

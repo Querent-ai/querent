@@ -398,7 +398,7 @@ pub async fn calculate_biased_sentence_embedding(
 	Ok(normalized_biased_sentence_embedding)
 }
 
-pub fn generate_custom_comb_uuid() -> u64 {
+pub fn generate_custom_comb_uuid() -> String {
     let custom_epoch = Utc.with_ymd_and_hms(2020, 1, 1,0, 0, 0).unwrap();
     let now = Utc::now();
     let millis_since_epoch = now.signed_duration_since(custom_epoch).num_milliseconds();
@@ -411,5 +411,7 @@ pub fn generate_custom_comb_uuid() -> u64 {
     let random_part: u16 = rng.gen_range(0..4096);
 
     // Combine both parts: Shift timestamp by 12 bits and add the random part
-    (timestamp_part << 12) | (random_part as u64)
+    let uuid_int = (timestamp_part << 12) | (random_part as u64);
+
+	uuid_int.to_string()
 }

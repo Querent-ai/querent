@@ -79,6 +79,8 @@ impl Engine for AttentionTensorsEngine {
 						llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
 					tokenized_chunks.push(tokenized_chunk);
 				}
+				let mut event_ids: Vec<String> = Vec::new();
+				let mut i = 0;
 				let classified_sentences = if !entities.is_empty() {
 					let initial_classified_sentences =
 						label_entities_in_sentences(&entities, &all_chunks);
@@ -127,9 +129,6 @@ impl Engine for AttentionTensorsEngine {
 				.await?;
 
 				let mut all_sentences_with_relations = Vec::new();
-				let mut event_ids: Vec<u64> = Vec::new();
-				let mut i = 0;
-
 				for (classified, tokenized_chunk) in extended_classified_sentences_with_attention.iter().zip(tokenized_chunks.iter()) {
 					let attention_matrix = classified.attention_matrix.as_ref().unwrap().clone();
 					let pairs = &classified.classified_sentence.pairs;
@@ -191,7 +190,6 @@ impl Engine for AttentionTensorsEngine {
 						attention_matrix: Some(attention_matrix),
 						relations: sentence_relations,
 					});
-					event_ids.push(generate_custom_comb_uuid());
 				}
 
 				merge_similar_relations(&mut all_sentences_with_relations);
@@ -199,6 +197,7 @@ impl Engine for AttentionTensorsEngine {
 				for sentence_with_relations in all_sentences_with_relations {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
+							event_ids.push(generate_custom_comb_uuid());
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
@@ -286,17 +285,15 @@ impl Engine for AttentionTensorsEngine {
 // 	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 // 	use futures::StreamExt;
 // 	use ingestors::{pdf::pdfv1::PdfIngestor, BaseIngestor};
-// 	use llms::transformers::bert::{BertLLM, EmbedderOptions};
+// 	use llms::transformers::{bert::{BertLLM, EmbedderOptions}, roberta::roberta::RobertaLLM};
 // 	use std::{fs::File, io::Read, sync::Arc};
 // 	use tokio::sync::mpsc;
 // 	use tokio_stream::wrappers::ReceiverStream;
 
 // 	#[tokio::test]
 // 	async fn test_txt_ingestor() {
-// 		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/small.pdf";
+// 		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/english_test.pdf";
 // 		let mut file = File::open(test_file_path).expect("Failed to open test file");
-
-// 		// Read the sample .pdf file into a byte vector
 // 		let mut buffer = Vec::new();
 // 		file.read_to_end(&mut buffer).expect("Failed to read test file");
 
@@ -330,6 +327,36 @@ impl Engine for AttentionTensorsEngine {
 // 			}
 // 		});
 
+// 		// let entities = vec![
+// 		// 	"oil".to_string(),
+// 		// 	"gas".to_string(),
+// 		// 	"porosity".to_string(),
+// 		// 	"joel".to_string(),
+// 		// 	"india".to_string(),
+// 		// 	"microsoft".to_string(),
+// 		// 	"nitrogen gas".to_string(),
+// 		// 	"deposition".to_string(),
+// 		// ];
+// 		let entities = vec![];
+
+// 		// Initialize NER model only if fixed_entities is not defined or empty
+// 		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
+// 			let ner_options = EmbedderOptions {
+// 				model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+// 				local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+// 				// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+// 				// model: "deepset/roberta-base-squad2".to_string(),
+// 				// local_dir : None,
+// 				revision: None,
+// 				distribution: None,
+// 			};
+
+// 			// Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+// 			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+// 		} else {
+// 			None  // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
+// 		};
+
 // 		// Initialize BertLLM with EmbedderOptions
 // 		let options = EmbedderOptions {
 // 			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
@@ -356,15 +383,7 @@ impl Engine for AttentionTensorsEngine {
 // 		// Create an instance of AttentionTensorsEngine
 // 		let engine = AttentionTensorsEngine::new(
 // 			embedder,
-// 			vec![
-// 				"oil".to_string(),
-// 				"gas".to_string(),
-// 				"porosity".to_string(),
-// 				"joel".to_string(),
-// 				"india".to_string(),
-// 				"microsoft".to_string(),
-// 				"nitrogen gas".to_string(),
-// 			],
+// 			entities,
 // 			vec![
 // 				"oil".to_string(),
 // 				"gas".to_string(),
@@ -375,6 +394,7 @@ impl Engine for AttentionTensorsEngine {
 // 				"nitrogen gas".to_string(),
 // 			],
 // 			Some(embedding_model),
+// 			ner_llm,
 // 		);
 
 // 		// Create an instance of Attention Tensor without fixed entities
