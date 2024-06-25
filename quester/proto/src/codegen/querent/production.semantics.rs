@@ -31,8 +31,8 @@ pub struct RestartPipelineRequest {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-	#[prost(message, repeated, tag = "1")]
-	pub collectors: ::prost::alloc::vec::Vec<CollectorConfig>,
+	#[prost(string, repeated, tag = "1")]
+    pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 	#[prost(message, repeated, tag = "2")]
 	pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
 	#[prost(message, optional, tag = "3")]
@@ -200,6 +200,9 @@ pub mod collector_config {
 pub struct FileCollectorConfig {
 	#[prost(string, tag = "1")]
 	pub root_path: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "2")]
+    pub id: i64,
 }
 /// AzureCollectorConfig is a message to hold configuration for an Azure collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -221,6 +224,9 @@ pub struct AzureCollectorConfig {
 	/// Chunk size of the Azure collector.
 	#[prost(int64, tag = "5")]
 	pub chunk_size: i64,
+	/// Id for the collector
+    #[prost(int64, tag = "7")]
+    pub id: i64,
 }
 /// GCSCollectorConfig is a message to hold configuration for a GCS collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -233,6 +239,9 @@ pub struct GcsCollectorConfig {
 	/// Credentials of the GCS collector.
 	#[prost(string, tag = "2")]
 	pub credentials: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "3")]
+    pub id: i64,
 }
 /// S3CollectorConfig is a message to hold configuration for an S3 collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -251,6 +260,9 @@ pub struct S3CollectorConfig {
 	/// Bucket of the S3 collector.
 	#[prost(string, tag = "4")]
 	pub bucket: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "5")]
+    pub id: i64,
 }
 /// JiraCollectorConfig is a message to hold configuration for a Jira collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -290,6 +302,9 @@ pub struct JiraCollectorConfig {
 	/// Max results of the Jira collector.
 	#[prost(int32, tag = "11")]
 	pub jira_max_results: i32,
+	/// Id for the collector
+    #[prost(int64, tag = "12")]
+    pub id: i64,
 }
 /// GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -311,6 +326,9 @@ pub struct GoogleDriveCollectorConfig {
 	/// Specific file type of the Google Drive collector.
 	#[prost(string, tag = "7")]
 	pub specific_file_type: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "8")]
+    pub id: i64,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -332,6 +350,9 @@ pub struct EmailCollectorConfig {
 	/// Folder of the Email collector.
 	#[prost(string, tag = "5")]
 	pub imap_folder: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "6")]
+    pub id: i64,
 }
 /// DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -350,6 +371,9 @@ pub struct DropBoxCollectorConfig {
 	/// Folder path of the DropBox collector.
 	#[prost(string, tag = "4")]
 	pub folder_path: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "5")]
+    pub id: i64,
 }
 /// GithubCollectorConfig is a message to hold configuration for a Github collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -365,6 +389,9 @@ pub struct GithubCollectorConfig {
 	/// Repository of the Github collector.
 	#[prost(string, tag = "3")]
 	pub repository: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "4")]
+    pub id: i64,
 }
 /// SlackCollectorConfig is a message to hold configuration for a Slack collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -389,6 +416,9 @@ pub struct SlackCollectorConfig {
 	/// Limit of the Slack collector.
 	#[prost(int64, tag = "6")]
 	pub limit: i64,
+	/// Id for the collector
+    #[prost(int64, tag = "7")]
+    pub id: i64,
 }
 /// NewsCollectorConfig is a message to hold configuration for a News collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -419,6 +449,9 @@ pub struct NewsCollectorConfig {
 	/// Sources of the News collector.
 	#[prost(string, tag = "8")]
 	pub sources: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(int64, tag = "9")]
+    pub id: i64,
 }
 /// StorageConfig is a message to hold configuration for a storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
