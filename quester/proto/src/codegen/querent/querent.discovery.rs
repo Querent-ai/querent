@@ -93,7 +93,7 @@ pub struct Insight {
     /// The document source
     #[prost(string, tag = "2")]
     pub source: ::prost::alloc::string::String,
-    /// The knowledge retrieved from the search result
+    /// The attention score retrieved from the search result
     #[prost(string, tag = "3")]
     pub relationship_strength: ::prost::alloc::string::String,
     /// The sentence retrieved from the search resulty
