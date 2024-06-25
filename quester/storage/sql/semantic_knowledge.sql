@@ -10,5 +10,6 @@ CREATE TABLE semantic_knowledge (
     document_id VARCHAR,
     document_source VARCHAR,
     collection_id VARCHAR,
-    image_id VARCHAR
+    image_id VARCHAR,
+    event_id VARCHAR
 );

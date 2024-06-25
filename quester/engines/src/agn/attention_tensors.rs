@@ -1,8 +1,5 @@
 use crate::utils::{
-	add_attention_to_classified_sentences, calculate_biased_sentence_embedding,
-	create_binary_pairs, label_entities_in_sentences, match_entities_with_tokens,
-	merge_similar_relations, remove_newlines, split_into_chunks, tokens_to_words,
-	ClassifiedSentence, ClassifiedSentenceWithRelations,
+	add_attention_to_classified_sentences, calculate_biased_sentence_embedding, create_binary_pairs, generate_custom_comb_uuid, label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations, remove_newlines, split_into_chunks, tokens_to_words, ClassifiedSentence, ClassifiedSentenceWithRelations
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -130,6 +127,8 @@ impl Engine for AttentionTensorsEngine {
 				.await?;
 
 				let mut all_sentences_with_relations = Vec::new();
+				let mut event_ids: Vec<u64> = Vec::new();
+				let mut i = 0;
 
 				for (classified, tokenized_chunk) in extended_classified_sentences_with_attention.iter().zip(tokenized_chunks.iter()) {
 					let attention_matrix = classified.attention_matrix.as_ref().unwrap().clone();
@@ -192,6 +191,7 @@ impl Engine for AttentionTensorsEngine {
 						attention_matrix: Some(attention_matrix),
 						relations: sentence_relations,
 					});
+					event_ids.push(generate_custom_comb_uuid());
 				}
 
 				merge_similar_relations(&mut all_sentences_with_relations);
@@ -216,6 +216,8 @@ impl Engine for AttentionTensorsEngine {
 								object_type: object_type.to_string(),
 								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
 								image_id: None,
+								blob: Some("mock".to_string()),
+								event_id: event_ids[i].clone(),
 							};
 							let event = EventState {
 								event_type: EventType::Graph,
@@ -253,15 +255,10 @@ impl Engine for AttentionTensorsEngine {
 								tail_start_index,
 								tail_end_index,
 							).await.map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(e.into())))?;
-							let id = format!("{}-{}-{}", head_entity, predicate, tail_entity);
 							let payload = VectorPayload {
-								id,
+								event_id: event_ids[i].clone(),
 								embeddings: biased_embedding.clone(),
-								size: biased_embedding.len() as u64,
-								namespace: predicate.to_string(),
-								sentence: Some(sentence_with_relations.classified_sentence.sentence.clone()),
-								document_source: Some("mock".to_string()),
-								blob: Some("mock".to_string()),
+								score: biased_embedding.len() as f32,
 							};
 							let event = EventState {
 								event_type: EventType::Vector,
@@ -274,6 +271,7 @@ impl Engine for AttentionTensorsEngine {
 							yield Ok(event);
 						}
 					}
+					i = i + 1;
 				}
 			}
 		};

@@ -8,6 +8,8 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
+use diesel::{FromSqlRow, AsExpression};
+use diesel::sql_types::BigInt;
 use futures_util::{future::BoxFuture, FutureExt};
 use proto::semantics::PostgresConfig;
 use std::{sync::Arc, time::SystemTime};
@@ -36,7 +38,12 @@ pub struct SemanticKnowledge {
 	pub document_source: String,
 	pub collection_id: Option<String>,
 	pub image_id: Option<String>,
+	pub event_id: EventId,
 }
+
+#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression, Serialize)]
+#[diesel(sql_type = BigInt)]
+pub struct EventId(pub u64);
 
 pub struct PostgresStorage {
 	pub pool: ActualDbPool,
@@ -179,6 +186,7 @@ impl Storage for PostgresStorage {
 						document_source: document_source.clone(),
 						collection_id: Some(collection_id.clone()),
 						image_id: image_id.clone(),
+						event_id: EventId(item.event_id).clone(),
 					};
 					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
 						.values(form)
@@ -228,6 +236,7 @@ table! {
 		document_source -> Varchar,
 		collection_id -> Nullable<Varchar>,
 		image_id -> Nullable<VarChar>,
+		event_id -> Int8
 	}
 }
 

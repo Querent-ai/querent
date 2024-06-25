@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
-	result::{ConnectionError, ConnectionResult},
-	ExpressionMethods, QueryDsl,
+	result::{ConnectionError, ConnectionResult}, sql_types::{Double, Float}, ExpressionMethods, QueryDsl
 };
+use diesel::{FromSqlRow, AsExpression};
+use diesel::sql_types::BigInt;
 
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -16,7 +17,7 @@ use proto::semantics::PostgresConfig;
 use std::{sync::Arc, time::SystemTime};
 use tracing::error;
 
-use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
+use crate::{semantic_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
 use pgvector::Vector;
 
 use deadpool::Runtime;
@@ -32,15 +33,14 @@ use rustls::{
 #[diesel(table_name = embedded_knowledge)]
 
 pub struct EmbeddedKnowledge {
-	pub document_id: String,
-	pub document_source: String,
-	pub knowledge: String,
 	pub embeddings: Option<Vector>,
-	pub predicate: String,
-	pub sentence: Option<String>,
-	pub collection_id: Option<String>,
-	pub image_id: Option<String>,
+	pub score: f32,
+	pub event_id: EventId,
 }
+
+#[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
+#[diesel(sql_type = BigInt)]
+pub struct EventId(pub u64);
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = discovered_knowledge)]
@@ -164,18 +164,14 @@ impl Storage for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+
 		conn.transaction::<_, diesel::result::Error, _>(|conn| {
-			async move {
+			Box::pin(async move {
 				for (document_id, source, image_id, item) in payload {
 					let form = EmbeddedKnowledge {
-						document_id: document_id.clone(),
-						document_source: source.clone(),
 						embeddings: Some(Vector::from(item.embeddings.clone())),
-						predicate: item.namespace.clone(),
-						knowledge: item.id.clone(),
-						sentence: item.sentence.clone(),
-						collection_id: Some(_collection_id.clone()),
-						image_id: image_id.clone(),
+						score: item.score,
+						event_id: EventId(item.event_id),
 					};
 					diesel::insert_into(embedded_knowledge::dsl::embedded_knowledge)
 						.values(form)
@@ -183,14 +179,11 @@ impl Storage for PGVector {
 						.await?;
 				}
 				Ok(())
-			}
-			.scope_boxed()
-		})
-		.await
-		.map_err(|e| StorageError {
+			})
+			}).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+		});
 
 		Ok(())
 	}
@@ -238,61 +231,65 @@ impl Storage for PGVector {
 		})?;
 
 		let vector = Vector::from(payload.clone());
+		// change this
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
 			.select((
-				embedded_knowledge::dsl::document_id,
-				embedded_knowledge::dsl::document_source,
-				embedded_knowledge::dsl::knowledge,
 				embedded_knowledge::dsl::embeddings,
-				embedded_knowledge::dsl::predicate,
-				embedded_knowledge::dsl::sentence,
-				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
+				embedded_knowledge::dsl::score,
+				embedded_knowledge::dsl::event_id,
 			))
 			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.offset(offset)
-			.load::<(String, String, String, Option<Vector>, String, Option<String>, Option<f64>)>(
+			.load::<(Option<Vector>, f64, i64)>(
 				&mut *conn,
 			)
 			.await;
 
+
 		match query_result {
 			Ok(result) => {
-				let mut results = Vec::new();
+				let mut results: Vec<DocumentPayload> = Vec::new();
 				for (
-					doc_id,
-					doc_source,
-					knowledge,
 					_embeddings,
-					predicate,
-					sentence,
-					cosine_distance,
+					score,
+					event_id,
 				) in result
 				{
-					let mut doc_payload = DocumentPayload::default();
-					doc_payload.doc_id = doc_id;
-					doc_payload.knowledge = knowledge;
-					let knowledge_parts: Vec<&str> = doc_payload.knowledge.split('-').collect();
-					if knowledge_parts.len() == 3 {
-						doc_payload.subject = knowledge_parts[0].to_string();
-						doc_payload.predicate = knowledge_parts[1].to_string();
-						doc_payload.object = knowledge_parts[2].to_string();
-					} else {
-						log::debug!(
-							"Knowledge triple not in correct format: {:?}",
-							doc_payload.knowledge
-						);
-					};
-					doc_payload.doc_source = doc_source;
-					doc_payload.cosine_distance = cosine_distance;
-					doc_payload.predicate = predicate;
-					if let Some(sentence_value) = sentence {
-						doc_payload.sentence = sentence_value;
+					//query to semantic knowledge table using uuid
+					let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
+					.select((
+						semantic_knowledge::dsl::document_id,
+						semantic_knowledge::dsl::subject,
+						semantic_knowledge::dsl::predicate,
+						semantic_knowledge::dsl::object,
+						semantic_knowledge::dsl::document_source,
+						semantic_knowledge::dsl::sentence
+					))
+					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
+					.offset(offset)
+					.load::<(String, String, String, String, String, String)>(
+						&mut *conn,
+					).await;
+					match query_result_semantic {
+						Ok(result_semantic) => {
+							for (doc_id, subject, predicate, object, document_store, sentence) in result_semantic {
+								let result_semantic = result_semantic[0];
+								let mut doc_payload = DocumentPayload::default();
+								doc_payload.doc_id = doc_id.clone();
+								doc_payload.subject = subject.clone();
+								doc_payload.predicate = predicate.clone();
+								doc_payload.object = object.clone();
+								doc_payload.doc_source = document_store.clone();
+								doc_payload.score = score.clone();
+								doc_payload.sentence = sentence.clone();
+								doc_payload.session_id = Some(session_id.clone());
+								doc_payload.query_embedding = Some(payload.clone());
+								results.push(doc_payload);
+							}
+						}
 					}
-					doc_payload.session_id = Some(session_id.clone());
-					doc_payload.query_embedding = Some(payload.clone());
-					results.push(doc_payload);
 				}
 				Ok(results)
 			},
@@ -345,14 +342,9 @@ table! {
 
 	embedded_knowledge (id) {
 		id -> Int4,
-		document_id -> Varchar,
-		document_source -> Varchar,
-		knowledge -> Text,
 		embeddings -> Nullable<Vector>,
-		predicate -> Text,
-		sentence -> Nullable<Text>,
-		collection_id -> Nullable<Text>,
-		image_id -> Nullable<Text>,
+		score -> Float4,
+		event_id -> Int8,
 	}
 }
 
@@ -375,6 +367,8 @@ table! {
 		session_id -> Nullable<Text>,
 	}
 }
+
+//make one more table for semantic 
 
 #[cfg(test)]
 mod test {
