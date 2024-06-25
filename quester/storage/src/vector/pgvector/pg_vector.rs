@@ -379,7 +379,6 @@ table! {
 	}
 }
 
-
 #[cfg(test)]
 mod test {
 	use super::*;
