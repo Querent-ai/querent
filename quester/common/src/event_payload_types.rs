@@ -8,11 +8,10 @@ pub struct DocumentPayload {
 	pub knowledge: String,
 	pub subject: String,
 	pub object: String,
-	// pub predicate: String,
 	pub cosine_distance: Option<f64>,
 	pub query_embedding: Option<Vec<f32>>,
 	pub session_id: Option<String>,
-	pub score: f64,
+	pub score: f32,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]

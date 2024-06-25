@@ -149,15 +149,14 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 							let res = results.clone();
 							for document in results {
 								let tags = format!(
-									"{}, {}",
+									"{}-{}",
 									document.subject.replace('_', " "),
 									document.object.replace('_', " "),
-									// document.predicate.replace('_', " ")
 								);
 								let formatted_document = proto::discovery::Insight {
 									document: document.doc_id,
 									source: document.doc_source,
-									knowledge: document.knowledge,
+									relationship_strength: document.score.to_string(),
 									sentence: document.sentence,
 									tags,
 								};

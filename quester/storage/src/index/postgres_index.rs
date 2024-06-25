@@ -177,8 +177,6 @@ impl Storage for PostgresStorage {
 						subject_type: item.subject_type.clone(),
 						object: item.object.clone(),
 						object_type: item.object_type.clone(),
-						// predicate: item.predicate.clone(),
-						// predicate_type: item.predicate_type.clone(),
 						sentence: item.sentence.clone(),
 						document_id: document_id.clone(),
 						document_source: document_source.clone(),

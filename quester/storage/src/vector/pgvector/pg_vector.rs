@@ -52,13 +52,12 @@ pub struct DiscoveredKnowledge {
 	pub doc_id: String,
 	pub doc_source: String,
 	pub sentence: String,
-	pub knowledge: String,
 	pub subject: String,
 	pub object: String,
-	// pub predicate: String,
 	pub cosine_distance: Option<f64>,
 	pub query_embedding: Option<Vector>,
 	pub session_id: Option<String>,
+	pub score: Option<f64>,
 }
 
 impl DiscoveredKnowledge {
@@ -67,13 +66,12 @@ impl DiscoveredKnowledge {
 			doc_id: payload.doc_id,
 			doc_source: payload.doc_source,
 			sentence: payload.sentence,
-			knowledge: payload.knowledge,
 			subject: payload.subject,
 			object: payload.object,
-			// predicate: payload.predicate,
 			cosine_distance: payload.cosine_distance,
 			query_embedding: Some(Vector::from(payload.query_embedding.unwrap_or_default())),
 			session_id: payload.session_id,
+			score: Some(payload.score as f64),
 		}
 	}
 }
@@ -263,7 +261,6 @@ impl Storage for PGVector {
 						.select((
 							semantic_knowledge::dsl::document_id,
 							semantic_knowledge::dsl::subject,
-							// semantic_knowledge::dsl::predicate,
 							semantic_knowledge::dsl::object,
 							semantic_knowledge::dsl::document_source,
 							semantic_knowledge::dsl::sentence,
@@ -281,11 +278,10 @@ impl Storage for PGVector {
 								let mut doc_payload = DocumentPayload::default();
 								doc_payload.doc_id = doc_id.clone();
 								doc_payload.subject = subject.clone();
-								// doc_payload.predicate = predicate.clone();
 								doc_payload.object = object.clone();
 								doc_payload.doc_source = document_store.clone();
 								doc_payload.cosine_distance = other_cosine_distance;
-								doc_payload.score = score as f64;
+								doc_payload.score = score;
 								doc_payload.sentence = sentence.clone();
 								doc_payload.session_id = Some(session_id.clone());
 								doc_payload.query_embedding = Some(payload.clone());
@@ -371,11 +367,11 @@ table! {
 		knowledge -> Text,
 		subject -> Text,
 		object -> Text,
-		// predicate -> Text,
 		cosine_distance -> Nullable<Float8>,
 		query -> Nullable<Text>,
 		query_embedding -> Nullable<Vector>,
 		session_id -> Nullable<Text>,
+		score -> Nullable<Float8>,
 	}
 }
 
