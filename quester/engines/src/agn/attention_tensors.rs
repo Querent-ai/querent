@@ -1,8 +1,9 @@
 use crate::utils::{
 	add_attention_to_classified_sentences, calculate_biased_sentence_embedding,
-	create_binary_pairs, extract_entities_and_types, label_entities_in_sentences,
-	match_entities_with_tokens, merge_similar_relations, remove_newlines, split_into_chunks,
-	tokens_to_words, ClassifiedSentence, ClassifiedSentenceWithRelations,
+	create_binary_pairs, extract_entities_and_types, generate_custom_comb_uuid,
+	label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations,
+	remove_newlines, split_into_chunks, tokens_to_words, ClassifiedSentence,
+	ClassifiedSentenceWithRelations,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -84,6 +85,8 @@ impl Engine for AttentionTensorsEngine {
 						llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
 					tokenized_chunks.push(tokenized_chunk);
 				}
+				let mut event_ids: Vec<String> = Vec::new();
+				let mut i = 0;
 				let classified_sentences = if !entities.is_empty() {
 					let initial_classified_sentences =
 						label_entities_in_sentences(&entities, &all_chunks);
@@ -135,7 +138,6 @@ impl Engine for AttentionTensorsEngine {
 				.await?;
 
 				let mut all_sentences_with_relations = Vec::new();
-
 				for (classified, tokenized_chunk) in extended_classified_sentences_with_attention.iter().zip(tokenized_chunks.iter()) {
 					let attention_matrix = classified.attention_matrix.as_ref().unwrap().clone();
 					let pairs = &classified.classified_sentence.pairs;
@@ -206,6 +208,7 @@ impl Engine for AttentionTensorsEngine {
 				for sentence_with_relations in all_sentences_with_relations {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
+							event_ids.push(generate_custom_comb_uuid());
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
@@ -223,6 +226,8 @@ impl Engine for AttentionTensorsEngine {
 								object_type: object_type.to_string(),
 								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
 								image_id: None,
+								blob: Some("mock".to_string()),
+								event_id: event_ids[i].clone(),
 							};
 							let event = EventState {
 								event_type: EventType::Graph,
@@ -232,11 +237,12 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
+							i = i + 1;
 							yield Ok(event);
 						}
 					}
 					let attention_matrix = sentence_with_relations.attention_matrix.as_ref().unwrap();
-
+					i = 0;
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
 						let tail_entity = &relation.tail.name;
@@ -260,15 +266,10 @@ impl Engine for AttentionTensorsEngine {
 								tail_start_index,
 								tail_end_index,
 							).await.map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(e.into())))?;
-							let id = format!("{}-{}-{}", head_entity, predicate, tail_entity);
 							let payload = VectorPayload {
-								id,
+								event_id: event_ids[i].clone(),
 								embeddings: biased_embedding.clone(),
-								size: biased_embedding.len() as u64,
-								namespace: predicate.to_string(),
-								sentence: Some(sentence_with_relations.classified_sentence.sentence.clone()),
-								document_source: Some("mock".to_string()),
-								blob: Some("mock".to_string()),
+								score: *score as f32,
 							};
 							let event = EventState {
 								event_type: EventType::Vector,
@@ -278,9 +279,11 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
+							i = i + 1;
 							yield Ok(event);
 						}
 					}
+
 				}
 			}
 		};
@@ -354,8 +357,8 @@ impl Engine for AttentionTensorsEngine {
 // 			let ner_options = EmbedderOptions {
 // 				// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
 // 				// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
-// 				// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
-// 				model: "deepset/roberta-base-squad2".to_string(),
+// 				model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+// 				// model: "deepset/roberta-base-squad2".to_string(),
 // 				local_dir : None,
 // 				revision: None,
 // 				distribution: None,

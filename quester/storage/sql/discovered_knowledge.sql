@@ -8,7 +8,6 @@ CREATE TABLE discovered_knowledge(
     knowledge TEXT,
     subject TEXT,
     object TEXT,
-    predicate TEXT,
     cosine_distance FLOAT8,
     query_embedding vector(384),
     session_id VARCHAR

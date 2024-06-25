@@ -74,3 +74,4 @@ candle-core = { workspace = true }
 candle-transformers = { workspace = true }
 candle-nn = { workspace = true }
 fastembed =  { workspace = true }
+rand = { workspace = true }
