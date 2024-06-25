@@ -5,7 +5,7 @@ use cluster::Cluster;
 use common::PubSubBroker;
 pub mod core;
 pub use core::*;
-use proto::{semantics::SemanticPipelineRequest, NodeConfig};
+use proto::{semantics::CollectorConfig, NodeConfig};
 pub mod events;
 pub use events::*;
 pub mod storage;
@@ -59,9 +59,8 @@ async def print_querent(config, text: str):
 "#;
 
 pub async fn create_dynamic_sources(
-	request: &SemanticPipelineRequest,
+	collectors_configs: Vec<CollectorConfig>,
 ) -> Result<Vec<Arc<dyn sources::Source>>, PipelineErrors> {
-	let collectors_configs = request.collectors.clone();
 	let mut sources: Vec<Arc<dyn sources::Source>> = vec![];
 	for collector in collectors_configs {
 		match &collector.backend {
