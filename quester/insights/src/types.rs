@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
@@ -22,6 +22,8 @@ pub struct InsightInfo {
 	/// Image bytes, use 1:1 aspect ratio, PNG for transparency recommended.
 	#[serde(skip)]
 	pub icon: &'static [u8],
+	/// Insight options
+	pub additional_options: HashMap<String, CustomInsightOption>,
 }
 
 /// Possible custom option values for insights.
@@ -151,5 +153,5 @@ pub struct InsightConfig {
 	pub embedded_knowledge_store: Arc<dyn Storage>,
 	pub discovered_knowledge_store: Arc<dyn Storage>,
 	pub graph_storage: Option<Arc<dyn Storage>>,
-	pub custom_options: CustomInsightOptions,
+	pub additional_options: HashMap<String, CustomInsightOption>,
 }
