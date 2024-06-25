@@ -69,12 +69,15 @@ pub struct CustomInsightOption {
 	pub tooltip: Option<String>,
 	/// Value of the custom option.
 	pub value: InsightCustomOptionValue,
+	/// Default value of the custom option.
+	#[serde(skip)]
+	pub default_value: Option<InsightCustomOptionValue>,
 }
 
 impl CustomInsightOption {
 	/// Create a new custom option.
-	pub fn new(id: &str, label: &str, value: InsightCustomOptionValue) -> CustomInsightOption {
-		CustomInsightOption { id: id.to_string(), label: label.to_string(), tooltip: None, value }
+	pub fn new(id: &str, label: &str, value: InsightCustomOptionValue, default_value: Option<InsightCustomOptionValue>) -> CustomInsightOption {
+		CustomInsightOption { id: id.to_string(), label: label.to_string(), tooltip: None, value , default_value }
 	}
 
 	/// Add a tooltip to the custom option.
@@ -104,8 +107,9 @@ impl CustomInsightOptions {
 		id: &str,
 		label: &str,
 		value: InsightCustomOptionValue,
+		default_value: Option<InsightCustomOptionValue>,
 	) -> CustomInsightOptions {
-		self.options.push(CustomInsightOption::new(id, label, value));
+		self.options.push(CustomInsightOption::new(id, label, value, default_value));
 		self
 	}
 
@@ -116,8 +120,9 @@ impl CustomInsightOptions {
 		label: &str,
 		tooltip: &str,
 		value: InsightCustomOptionValue,
+		default_value: Option<InsightCustomOptionValue>,
 	) -> CustomInsightOptions {
-		self.options.push(CustomInsightOption::new(id, label, value).tooltip(tooltip));
+		self.options.push(CustomInsightOption::new(id, label, value, default_value).tooltip(tooltip));
 		self
 	}
 
