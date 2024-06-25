@@ -51,7 +51,7 @@ pub struct DiscoveredKnowledge {
 	pub knowledge: String,
 	pub subject: String,
 	pub object: String,
-	pub predicate: String,
+	// pub predicate: String,
 	pub cosine_distance: Option<f64>,
 	pub query_embedding: Option<Vector>,
 	pub session_id: Option<String>,
@@ -66,7 +66,7 @@ impl DiscoveredKnowledge {
 			knowledge: payload.knowledge,
 			subject: payload.subject,
 			object: payload.object,
-			predicate: payload.predicate,
+			// predicate: payload.predicate,
 			cosine_distance: payload.cosine_distance,
 			query_embedding: Some(Vector::from(payload.query_embedding.unwrap_or_default())),
 			session_id: payload.session_id,
@@ -228,53 +228,59 @@ impl Storage for PGVector {
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
+		println!("Ok results from embedded-------------------------1111111111");
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 	
 		let vector = Vector::from(payload.clone());
+		println!("Ok results from embedded-------------------------");
 		let query_result = embedded_knowledge::dsl::embedded_knowledge
 			.select((
 				embedded_knowledge::dsl::embeddings,
 				embedded_knowledge::dsl::score,
 				embedded_knowledge::dsl::event_id,
+				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
 			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.offset(offset)
-			.load::<(Option<Vector>, f32, String)>(&mut conn)
+			.load::<(Option<Vector>, f32, String, Option<f64>)>(&mut conn)
 			.await;
-	
+		println!("Query Resulrs-------------------{:?}", query_result);
 		match query_result {
 			Ok(result) => {
 				let mut results: Vec<DocumentPayload> = Vec::new();
-				for (_embeddings, score, event_id) in result {
+				println!("Ok results from embedded-------------------------{:?}", result.clone());
+				for (embeddings, score, event_id, other_cosine_distance) in result {
 					// Query to semantic knowledge table using uuid
+					// let other_cosine_distance_1: f64 = other_cosine_distance.unwrap_or(0.0); // Use a default value if None
 					let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
 						.select((
 							semantic_knowledge::dsl::document_id,
 							semantic_knowledge::dsl::subject,
-							semantic_knowledge::dsl::predicate,
+							// semantic_knowledge::dsl::predicate,
 							semantic_knowledge::dsl::object,
 							semantic_knowledge::dsl::document_source,
 							semantic_knowledge::dsl::sentence,
 						))
 						.filter(semantic_knowledge::dsl::event_id.eq(event_id))
 						.offset(offset)
-						.load::<(String, String, String, String, String, String)>(&mut conn)
+						.load::<(String, String,  String, String, String)>(&mut conn)
 						.await;
 	
 					match query_result_semantic {
 						Ok(result_semantic) => {
-							for (doc_id, subject, predicate, object, document_store, sentence) in result_semantic {
+							for (doc_id, subject, object, document_store, sentence) in result_semantic {
 								let mut doc_payload = DocumentPayload::default();
 								doc_payload.doc_id = doc_id.clone();
 								doc_payload.subject = subject.clone();
-								doc_payload.predicate = predicate.clone();
+								// doc_payload.predicate = predicate.clone();
 								doc_payload.object = object.clone();
 								doc_payload.doc_source = document_store.clone();
+								doc_payload.cosine_distance = other_cosine_distance;
 								doc_payload.score = score as f64;
 								doc_payload.sentence = sentence.clone();
 								doc_payload.session_id = Some(session_id.clone());
@@ -361,7 +367,7 @@ table! {
 		knowledge -> Text,
 		subject -> Text,
 		object -> Text,
-		predicate -> Text,
+		// predicate -> Text,
 		cosine_distance -> Nullable<Float8>,
 		query -> Nullable<Text>,
 		query_embedding -> Nullable<Vector>,

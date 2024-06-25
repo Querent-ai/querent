@@ -144,7 +144,7 @@ impl Storage for MilvusStorage {
 											continue;
 										}
 										doc_payload.subject = knowledge_parts[0].to_string();
-										doc_payload.predicate = knowledge_parts[1].to_string();
+										// doc_payload.predicate = knowledge_parts[1].to_string();
 										doc_payload.object = knowledge_parts[2].to_string();
 									},
 									"document" => {

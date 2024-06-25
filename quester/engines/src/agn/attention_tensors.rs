@@ -208,6 +208,7 @@ impl Engine for AttentionTensorsEngine {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
 							event_ids.push(generate_custom_comb_uuid());
+							println!("This is the event id --------------{:?}", event_ids);
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
@@ -236,11 +237,13 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
+							println!("Semnatic Event -------------{:?}", event);
+							i = i + 1;
 							yield Ok(event);
 						}
 					}
 					let attention_matrix = sentence_with_relations.attention_matrix.as_ref().unwrap();
-
+					i = 0;
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
 						let tail_entity = &relation.tail.name;
@@ -267,7 +270,7 @@ impl Engine for AttentionTensorsEngine {
 							let payload = VectorPayload {
 								event_id: event_ids[i].clone(),
 								embeddings: biased_embedding.clone(),
-								score: biased_embedding.len() as f32,
+								score: *score as f32,
 							};
 							let event = EventState {
 								event_type: EventType::Vector,
@@ -277,10 +280,12 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
+							println!("Vector Event -------------{:?}", event);
+							i = i + 1;
 							yield Ok(event);
 						}
 					}
-					i = i + 1;
+					
 				}
 			}
 		};
@@ -354,8 +359,8 @@ impl Engine for AttentionTensorsEngine {
 // 			let ner_options = EmbedderOptions {
 // 				// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
 // 				// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
-// 				// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
-// 				model: "deepset/roberta-base-squad2".to_string(),
+// 				model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+// 				// model: "deepset/roberta-base-squad2".to_string(),
 // 				local_dir : None,
 // 				revision: None,
 // 				distribution: None,

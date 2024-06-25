@@ -4,8 +4,6 @@ CREATE TABLE semantic_knowledge (
     subject_type VARCHAR,
     object VARCHAR,
     object_type VARCHAR,
-    predicate VARCHAR,
-    predicate_type VARCHAR,
     sentence TEXT,
     document_id VARCHAR,
     document_source VARCHAR,
