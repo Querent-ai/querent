@@ -7,13 +7,13 @@ use llms::transformers::bert::{BertLLM, EmbedderOptions};
 use proto::{
 	config::StorageConfigs,
 	semantics::{
-		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
-		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
-		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
-		JiraCollectorConfig, MilvusConfig, Neo4jConfig, NewsCollectorConfig, PipelineMetadata,
-		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
-		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
-		SlackCollectorConfig, StorageConfig, StorageType,
+		AzureCollectorConfig, Backend, CollectorConfig, CollectorConfigResponse,
+		DropBoxCollectorConfig, EmailCollectorConfig, EmptyGetPipelinesMetadata,
+		FileCollectorConfig, FixedEntities, GcsCollectorConfig, GithubCollectorConfig,
+		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig,
+		Neo4jConfig, NewsCollectorConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
+		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
+		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
@@ -39,6 +39,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		stop_pipeline,
 		ingest_tokens,
 		restart_pipeline,
+		set_collectors,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -69,6 +70,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		AzureCollectorConfig,
 		EmailCollectorConfig,
 		SlackCollectorConfig,
+		CollectorConfigResponse,
 	))
 )]
 pub struct SemanticApi;
@@ -191,7 +193,24 @@ pub async fn start_pipeline(
 		_ => Vec::new(),
 	};
 
-	let data_sources = create_dynamic_sources(&request).await?;
+	let mut collectors_configs = Vec::new();
+	for collector_id in request.collectors {
+		let config_value = secret_store.get_kv(&collector_id).await.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
+		});
+		if let Some(value) = config_value.unwrap() {
+			let collector_config_value: CollectorConfig = serde_json::from_str(&value)
+				.map_err(|e| {
+					PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Failed to create sources: {:?}",
+						e
+					))
+				})
+				.unwrap();
+			collectors_configs.push(collector_config_value);
+		}
+	}
+	let data_sources = create_dynamic_sources(collectors_configs).await?;
 	// TODO REPLACE WITH CORRECT AGN engine
 	// let engine = Arc::new(MockEngine::new());
 	let options = EmbedderOptions {
@@ -235,6 +254,7 @@ pub async fn start_pipeline(
 			result_pipe_obs.unwrap_err()
 		)));
 	}
+	//call secret store and get the credentials
 	Ok(SemanticPipelineResponse { pipeline_id: id })
 }
 
@@ -451,4 +471,58 @@ pub fn restart_pipeline_post_handler(
 		.then(restart_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+}
+
+pub fn set_collectors_post_handler(
+	secret_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "collectors")
+		.and(warp::body::json())
+		.and(warp::post())
+		.and(require(Some(secret_store)))
+		.then(set_collectors)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+    post,
+    tag = "Semantic Service",
+    path = "/semantics/collectors",
+    request_body = CollectorConfig,
+    responses(
+        (status = 200, description = "Set the collectors successfully", body = CollectorConfigResponse)
+    ),
+)]
+pub async fn set_collectors(
+	collector: CollectorConfig,
+	secret_store: Arc<dyn storage::Storage>,
+) -> Result<CollectorConfigResponse, PipelineErrors> {
+	let collector_string = serde_json::to_string(&collector).map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json string: {:?}", e))
+	})?;
+	let collector_json: &serde_json::Value =
+		&serde_json::from_str(&collector_string).map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json {:?}", e))
+		})?;
+	let id = collector_json["backend"]
+		.as_object()
+		.and_then(|backend| {
+			backend.values().find_map(|backend_value| {
+				backend_value.as_object()?.get("id")?.as_str().map(|s| s.to_string())
+			})
+		})
+		.ok_or_else(|| anyhow::anyhow!("Failed to extract id from CollectorConfig"))
+		.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!(
+				"Failed to extract id from CollectorConfig {:?}",
+				e
+			))
+		})?;
+
+	secret_store.store_kv(&id, &collector_string).await.map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to store key: {:?}", e))
+	})?;
+
+	Ok(CollectorConfigResponse { id })
 }

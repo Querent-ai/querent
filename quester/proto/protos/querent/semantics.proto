@@ -10,6 +10,7 @@ service SemanticsService {
   rpc DescribePipeline(DescribePipelineRequest) returns (IndexingStatistics) {}
   rpc IngestTokens(SendIngestedTokens) returns (BooleanResponse) {}
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
+  rpc PostCollectors(CollectorConfig) returns (CollectorConfigResponse) {}
 }
 
 message EmptyObserve{}
@@ -28,8 +29,12 @@ message RestartPipelineRequest {
   string pipeline_id = 1;
 }
 
+message CollectorConfigResponse {
+  string id = 1;
+}
+
 message SemanticPipelineRequest {
-  repeated CollectorConfig collectors = 1;
+  repeated string collectors = 1;
   repeated StorageConfig storage_configs = 2;
   optional FixedEntities fixed_entities = 3;
   optional SampleEntities sample_entities = 4;
@@ -125,6 +130,8 @@ message CollectorConfig {
 // FileCollectorConfig is a message to hold configuration for a file collector.
 message FileCollectorConfig {
   string root_path = 1;
+  // Id for the collector
+  string id = 2;
 }
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
@@ -139,6 +146,8 @@ message AzureCollectorConfig {
   string prefix = 5;
   // Chunk size of the Azure collector.
   int64 chunk_size = 6;
+  // Id for the collector
+  string id = 7;
 }
 
 // GCSCollectorConfig is a message to hold configuration for a GCS collector.
@@ -147,6 +156,8 @@ message GCSCollectorConfig {
   string bucket = 1;
   // Credentials of the GCS collector.
   string credentials = 2;
+  // Id for the collector
+  string id = 3;
 }
 
 // S3CollectorConfig is a message to hold configuration for an S3 collector.
@@ -159,6 +170,8 @@ message S3CollectorConfig {
   string region = 3;
   // Bucket of the S3 collector.
   string bucket = 4;
+  // Id for the collector
+  string id = 5;
 }
 
 // JiraCollectorConfig is a message to hold configuration for a Jira collector.
@@ -185,6 +198,8 @@ message JiraCollectorConfig {
   int32 jira_start_at = 10;
   // Max results of the Jira collector.
   int32 jira_max_results = 11;
+  // Id for the collector
+  string id = 12;
 }
 
 // GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
@@ -199,6 +214,8 @@ message GoogleDriveCollectorConfig {
   string folder_to_crawl = 6;
   // Specific file type of the Google Drive collector.
   string specific_file_type = 7;
+  // Id for the collector
+  string id = 8;
 }
 
 // EmailCollectorConfig is a message to hold configuration for an Email collector.
@@ -213,6 +230,8 @@ message EmailCollectorConfig {
   string imap_password = 4;
   // Folder of the Email collector.
   string imap_folder = 5;
+  // Id for the collector
+  string id = 6;
 }
 
 // DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
@@ -225,6 +244,8 @@ message DropBoxCollectorConfig {
   string dropbox_refresh_token = 3;
   // Folder path of the DropBox collector.
   string folder_path = 4;
+  // Id for the collector
+  string id = 5;
 }
 
 // GithubCollectorConfig is a message to hold configuration for a Github collector.
@@ -235,6 +256,8 @@ message GithubCollectorConfig {
   string github_access_token = 2;
   // Repository of the Github collector.
   string repository = 3;
+  // Id for the collector
+  string id = 4;
 }
 
 // SlackCollectorConfig is a message to hold configuration for a Slack collector.
@@ -251,6 +274,8 @@ message SlackCollectorConfig {
   bool includive = 5;
   // Limit of the Slack collector.
   int64 limit = 6;
+  // Id for the collector
+  string id = 7;
 }
 
 // NewsCollectorConfig is a message to hold configuration for a News collector.
@@ -271,6 +296,8 @@ message NewsCollectorConfig {
   string exclude_domains = 7;
   // Sources of the News collector.
   string sources = 8;
+  // Id for the collector
+  string id = 9;
 }
 
 // Storage

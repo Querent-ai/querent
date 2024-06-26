@@ -30,9 +30,16 @@ pub struct RestartPipelineRequest {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CollectorConfigResponse {
+    #[prost(string, tag = "1")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-	#[prost(message, repeated, tag = "1")]
-	pub collectors: ::prost::alloc::vec::Vec<CollectorConfig>,
+	#[prost(string, repeated, tag = "1")]
+    pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 	#[prost(message, repeated, tag = "2")]
 	pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
 	#[prost(message, optional, tag = "3")]
@@ -200,6 +207,9 @@ pub mod collector_config {
 pub struct FileCollectorConfig {
 	#[prost(string, tag = "1")]
 	pub root_path: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
 }
 /// AzureCollectorConfig is a message to hold configuration for an Azure collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -221,6 +231,9 @@ pub struct AzureCollectorConfig {
 	/// Chunk size of the Azure collector.
 	#[prost(int64, tag = "5")]
 	pub chunk_size: i64,
+	/// Id for the collector
+    #[prost(string, tag = "7")]
+    pub id: ::prost::alloc::string::String,
 }
 /// GCSCollectorConfig is a message to hold configuration for a GCS collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -233,6 +246,9 @@ pub struct GcsCollectorConfig {
 	/// Credentials of the GCS collector.
 	#[prost(string, tag = "2")]
 	pub credentials: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "3")]
+    pub id: ::prost::alloc::string::String,
 }
 /// S3CollectorConfig is a message to hold configuration for an S3 collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -251,6 +267,9 @@ pub struct S3CollectorConfig {
 	/// Bucket of the S3 collector.
 	#[prost(string, tag = "4")]
 	pub bucket: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "5")]
+    pub id: ::prost::alloc::string::String,
 }
 /// JiraCollectorConfig is a message to hold configuration for a Jira collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -290,6 +309,9 @@ pub struct JiraCollectorConfig {
 	/// Max results of the Jira collector.
 	#[prost(int32, tag = "11")]
 	pub jira_max_results: i32,
+	/// Id for the collector
+    #[prost(string, tag = "12")]
+    pub id: ::prost::alloc::string::String,
 }
 /// GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -311,6 +333,9 @@ pub struct GoogleDriveCollectorConfig {
 	/// Specific file type of the Google Drive collector.
 	#[prost(string, tag = "7")]
 	pub specific_file_type: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "8")]
+    pub id: ::prost::alloc::string::String,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -332,6 +357,9 @@ pub struct EmailCollectorConfig {
 	/// Folder of the Email collector.
 	#[prost(string, tag = "5")]
 	pub imap_folder: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "6")]
+    pub id: ::prost::alloc::string::String,
 }
 /// DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -350,6 +378,9 @@ pub struct DropBoxCollectorConfig {
 	/// Folder path of the DropBox collector.
 	#[prost(string, tag = "4")]
 	pub folder_path: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "5")]
+    pub id: ::prost::alloc::string::String,
 }
 /// GithubCollectorConfig is a message to hold configuration for a Github collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -365,6 +396,9 @@ pub struct GithubCollectorConfig {
 	/// Repository of the Github collector.
 	#[prost(string, tag = "3")]
 	pub repository: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "4")]
+    pub id: ::prost::alloc::string::String,
 }
 /// SlackCollectorConfig is a message to hold configuration for a Slack collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -389,6 +423,9 @@ pub struct SlackCollectorConfig {
 	/// Limit of the Slack collector.
 	#[prost(int64, tag = "6")]
 	pub limit: i64,
+	/// Id for the collector
+    #[prost(string, tag = "7")]
+    pub id: ::prost::alloc::string::String,
 }
 /// NewsCollectorConfig is a message to hold configuration for a News collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -419,6 +456,9 @@ pub struct NewsCollectorConfig {
 	/// Sources of the News collector.
 	#[prost(string, tag = "8")]
 	pub sources: ::prost::alloc::string::String,
+	/// Id for the collector
+    #[prost(string, tag = "9")]
+    pub id: ::prost::alloc::string::String,
 }
 /// StorageConfig is a message to hold configuration for a storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -572,6 +612,11 @@ impl RpcName for RestartPipelineRequest {
 		"restart_pipeline"
 	}
 }
+impl RpcName for CollectorConfig {
+    fn rpc_name() -> &'static str {
+        "post_collectors"
+    }
+}
 #[cfg_attr(any(test, feature = "testsuite"), mockall::automock)]
 #[async_trait::async_trait]
 pub trait SemanticsService: std::fmt::Debug + dyn_clone::DynClone + Send + Sync + 'static {
@@ -603,6 +648,10 @@ pub trait SemanticsService: std::fmt::Debug + dyn_clone::DynClone + Send + Sync 
 		&mut self,
 		request: RestartPipelineRequest,
 	) -> crate::semantics::SemanticsResult<BooleanResponse>;
+	async fn post_collectors(
+        &mut self,
+        request: CollectorConfig,
+    ) -> crate::semantics::SemanticsResult<CollectorConfigResponse>;
 }
 dyn_clone::clone_trait_object!(SemanticsService);
 #[cfg(any(test, feature = "testsuite"))]
@@ -722,6 +771,12 @@ impl SemanticsService for SemanticsServiceClient {
 	) -> crate::semantics::SemanticsResult<BooleanResponse> {
 		self.inner.restart_pipeline(request).await
 	}
+	async fn post_collectors(
+        &mut self,
+        request: CollectorConfig,
+    ) -> crate::semantics::SemanticsResult<CollectorConfigResponse> {
+        self.inner.post_collectors(request).await
+    }
 }
 #[cfg(any(test, feature = "testsuite"))]
 pub mod semantics_service_mock {
@@ -774,6 +829,12 @@ pub mod semantics_service_mock {
 		) -> crate::semantics::SemanticsResult<super::BooleanResponse> {
 			self.inner.lock().await.restart_pipeline(request).await
 		}
+		async fn post_collectors(
+            &mut self,
+            request: super::CollectorConfig,
+        ) -> crate::semantics::SemanticsResult<super::CollectorConfigResponse> {
+            self.inner.lock().await.post_collectors(request).await
+        }
 	}
 	impl From<MockSemanticsService> for SemanticsServiceClient {
 		fn from(mock: MockSemanticsService) -> Self {
@@ -898,6 +959,22 @@ impl tower::Service<RestartPipelineRequest> for Box<dyn SemanticsService> {
 		Box::pin(fut)
 	}
 }
+impl tower::Service<CollectorConfig> for Box<dyn SemanticsService> {
+    type Response = CollectorConfigResponse;
+    type Error = crate::semantics::SemanticsError;
+    type Future = BoxFuture<Self::Response, Self::Error>;
+    fn poll_ready(
+        &mut self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+    fn call(&mut self, request: CollectorConfig) -> Self::Future {
+        let mut svc = self.clone();
+        let fut = async move { svc.post_collectors(request).await };
+        Box::pin(fut)
+    }
+}
 /// A tower service stack is a set of tower services.
 #[derive(Debug)]
 struct SemanticsServiceTowerServiceStack {
@@ -937,6 +1014,11 @@ struct SemanticsServiceTowerServiceStack {
 		BooleanResponse,
 		crate::semantics::SemanticsError,
 	>,
+	post_collectors_svc: common::tower::BoxService<
+        CollectorConfig,
+        CollectorConfigResponse,
+        crate::semantics::SemanticsError,
+    >,
 }
 impl Clone for SemanticsServiceTowerServiceStack {
 	fn clone(&self) -> Self {
@@ -949,6 +1031,7 @@ impl Clone for SemanticsServiceTowerServiceStack {
 			describe_pipeline_svc: self.describe_pipeline_svc.clone(),
 			ingest_tokens_svc: self.ingest_tokens_svc.clone(),
 			restart_pipeline_svc: self.restart_pipeline_svc.clone(),
+			post_collectors_svc: self.post_collectors_svc.clone(),
 		}
 	}
 }
@@ -996,6 +1079,12 @@ impl SemanticsService for SemanticsServiceTowerServiceStack {
 	) -> crate::semantics::SemanticsResult<BooleanResponse> {
 		self.restart_pipeline_svc.ready().await?.call(request).await
 	}
+	async fn post_collectors(
+        &mut self,
+        request: CollectorConfig,
+    ) -> crate::semantics::SemanticsResult<CollectorConfigResponse> {
+        self.post_collectors_svc.ready().await?.call(request).await
+    }
 }
 type StartPipelineLayer = common::tower::BoxLayer<
 	common::tower::BoxService<
@@ -1067,6 +1156,16 @@ type RestartPipelineLayer = common::tower::BoxLayer<
 	BooleanResponse,
 	crate::semantics::SemanticsError,
 >;
+type PostCollectorsLayer = common::tower::BoxLayer<
+    common::tower::BoxService<
+        CollectorConfig,
+        CollectorConfigResponse,
+        crate::semantics::SemanticsError,
+    >,
+    CollectorConfig,
+    CollectorConfigResponse,
+    crate::semantics::SemanticsError,
+>;
 #[derive(Debug, Default)]
 pub struct SemanticsServiceTowerLayerStack {
 	start_pipeline_layers: Vec<StartPipelineLayer>,
@@ -1076,6 +1175,7 @@ pub struct SemanticsServiceTowerLayerStack {
 	describe_pipeline_layers: Vec<DescribePipelineLayer>,
 	ingest_tokens_layers: Vec<IngestTokensLayer>,
 	restart_pipeline_layers: Vec<RestartPipelineLayer>,
+	post_collectors_layers: Vec<PostCollectorsLayer>,
 }
 impl SemanticsServiceTowerLayerStack {
 	pub fn stack_layer<L>(mut self, layer: L) -> Self
@@ -1297,6 +1397,31 @@ impl SemanticsServiceTowerLayerStack {
 				crate::semantics::SemanticsError,
 			>,
 		>>::Service as tower::Service<RestartPipelineRequest>>::Future: Send + 'static,
+		L: tower::Layer<
+                common::tower::BoxService<
+                    CollectorConfig,
+                    CollectorConfigResponse,
+                    crate::semantics::SemanticsError,
+                >,
+            > + Clone + Send + Sync + 'static,
+        <L as tower::Layer<
+            common::tower::BoxService<
+                CollectorConfig,
+                CollectorConfigResponse,
+                crate::semantics::SemanticsError,
+            >,
+        >>::Service: tower::Service<
+                CollectorConfig,
+                Response = CollectorConfigResponse,
+                Error = crate::semantics::SemanticsError,
+            > + Clone + Send + Sync + 'static,
+        <<L as tower::Layer<
+            common::tower::BoxService<
+                CollectorConfig,
+                CollectorConfigResponse,
+                crate::semantics::SemanticsError,
+            >,
+        >>::Service as tower::Service<CollectorConfig>>::Future: Send + 'static,
 	{
 		self.start_pipeline_layers.push(common::tower::BoxLayer::new(layer.clone()));
 		self.observe_pipeline_layers.push(common::tower::BoxLayer::new(layer.clone()));
@@ -1306,6 +1431,7 @@ impl SemanticsServiceTowerLayerStack {
 		self.describe_pipeline_layers.push(common::tower::BoxLayer::new(layer.clone()));
 		self.ingest_tokens_layers.push(common::tower::BoxLayer::new(layer.clone()));
 		self.restart_pipeline_layers.push(common::tower::BoxLayer::new(layer.clone()));
+		self.post_collectors_layers.push(common::tower::BoxLayer::new(layer.clone()));
 		self
 	}
 	pub fn stack_start_pipeline_layer<L>(mut self, layer: L) -> Self
@@ -1476,6 +1602,25 @@ impl SemanticsServiceTowerLayerStack {
 		self.restart_pipeline_layers.push(common::tower::BoxLayer::new(layer));
 		self
 	}
+	pub fn stack_post_collectors_layer<L>(mut self, layer: L) -> Self
+    where
+        L: tower::Layer<
+                common::tower::BoxService<
+                    CollectorConfig,
+                    CollectorConfigResponse,
+                    crate::semantics::SemanticsError,
+                >,
+            > + Send + Sync + 'static,
+        L::Service: tower::Service<
+                CollectorConfig,
+                Response = CollectorConfigResponse,
+                Error = crate::semantics::SemanticsError,
+            > + Clone + Send + Sync + 'static,
+        <L::Service as tower::Service<CollectorConfig>>::Future: Send + 'static,
+    {
+        self.post_collectors_layers.push(common::tower::BoxLayer::new(layer));
+        self
+    }
 	pub fn build<T>(self, instance: T) -> SemanticsServiceClient
 	where
 		T: SemanticsService,
@@ -1561,6 +1706,14 @@ impl SemanticsServiceTowerLayerStack {
 			.fold(common::tower::BoxService::new(boxed_instance.clone()), |svc, layer| {
 				layer.layer(svc)
 			});
+		let post_collectors_svc = self
+            .post_collectors_layers
+            .into_iter()
+            .rev()
+            .fold(
+                common::tower::BoxService::new(boxed_instance.clone()),
+                |svc, layer| layer.layer(svc),
+            );
 		let tower_svc_stack = SemanticsServiceTowerServiceStack {
 			inner: boxed_instance.clone(),
 			start_pipeline_svc,
@@ -1570,6 +1723,7 @@ impl SemanticsServiceTowerLayerStack {
 			describe_pipeline_svc,
 			ingest_tokens_svc,
 			restart_pipeline_svc,
+			post_collectors_svc,
 		};
 		SemanticsServiceClient::new(tower_svc_stack)
 	}
@@ -1669,6 +1823,12 @@ where
 			Response = BooleanResponse,
 			Error = crate::semantics::SemanticsError,
 			Future = BoxFuture<BooleanResponse, crate::semantics::SemanticsError>,
+		>
+        + tower::Service<
+            CollectorConfig,
+            Response = CollectorConfigResponse,
+            Error = crate::semantics::SemanticsError,
+            Future = BoxFuture<CollectorConfigResponse, crate::semantics::SemanticsError>,
 		>,
 {
 	async fn start_pipeline(
@@ -1713,6 +1873,12 @@ where
 	) -> crate::semantics::SemanticsResult<BooleanResponse> {
 		self.call(request).await
 	}
+	async fn post_collectors(
+        &mut self,
+        request: CollectorConfig,
+    ) -> crate::semantics::SemanticsResult<CollectorConfigResponse> {
+        self.call(request).await
+    }
 }
 #[derive(Debug, Clone)]
 pub struct SemanticsServiceGrpcClientAdapter<T> {
@@ -1815,6 +1981,16 @@ where
 			.map(|response| response.into_inner())
 			.map_err(crate::error::grpc_status_to_service_error)
 	}
+	async fn post_collectors(
+        &mut self,
+        request: CollectorConfig,
+    ) -> crate::semantics::SemanticsResult<CollectorConfigResponse> {
+        self.inner
+            .post_collectors(request)
+            .await
+            .map(|response| response.into_inner())
+            .map_err(crate::error::grpc_status_to_service_error)
+    }
 }
 #[derive(Debug)]
 pub struct SemanticsServiceGrpcServerAdapter {
@@ -1907,6 +2083,17 @@ impl semantics_service_grpc_server::SemanticsServiceGrpc for SemanticsServiceGrp
 			.map(tonic::Response::new)
 			.map_err(crate::error::grpc_error_to_grpc_status)
 	}
+	async fn post_collectors(
+        &self,
+        request: tonic::Request<CollectorConfig>,
+    ) -> Result<tonic::Response<CollectorConfigResponse>, tonic::Status> {
+        self.inner
+            .clone()
+            .post_collectors(request.into_inner())
+            .await
+            .map(tonic::Response::new)
+            .map_err(crate::error::grpc_error_to_grpc_status)
+    }
 }
 /// Generated client implementations.
 pub mod semantics_service_grpc_client {
@@ -2127,6 +2314,36 @@ pub mod semantics_service_grpc_client {
 				.insert(GrpcMethod::new("querent.semantics.SemanticsService", "RestartPipeline"));
 			self.inner.unary(req, path, codec).await
 		}
+		pub async fn post_collectors(
+            &mut self,
+            request: impl tonic::IntoRequest<super::CollectorConfig>,
+        ) -> std::result::Result<
+            tonic::Response<super::CollectorConfigResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/querent.semantics.SemanticsService/PostCollectors",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "querent.semantics.SemanticsService",
+                        "PostCollectors",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
 	}
 }
 /// Generated server implementations.
@@ -2164,6 +2381,13 @@ pub mod semantics_service_grpc_server {
 			&self,
 			request: tonic::Request<super::RestartPipelineRequest>,
 		) -> std::result::Result<tonic::Response<super::BooleanResponse>, tonic::Status>;
+		async fn post_collectors(
+            &self,
+            request: tonic::Request<super::CollectorConfig>,
+        ) -> std::result::Result<
+            tonic::Response<super::CollectorConfigResponse>,
+            tonic::Status,
+        >;
 	}
 	#[derive(Debug)]
 	pub struct SemanticsServiceGrpcServer<T: SemanticsServiceGrpc> {
@@ -2521,6 +2745,52 @@ pub mod semantics_service_grpc_server {
 					};
 					Box::pin(fut)
 				},
+				"/querent.semantics.SemanticsService/PostCollectors" => {
+                    #[allow(non_camel_case_types)]
+                    struct PostCollectorsSvc<T: SemanticsServiceGrpc>(pub Arc<T>);
+                    impl<
+                        T: SemanticsServiceGrpc,
+                    > tonic::server::UnaryService<super::CollectorConfig>
+                    for PostCollectorsSvc<T> {
+                        type Response = super::CollectorConfigResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::CollectorConfig>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).post_collectors(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = PostCollectorsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
 				_ => Box::pin(async move {
 					Ok(http::Response::builder()
 						.status(200)
