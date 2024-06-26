@@ -10,6 +10,7 @@ service SemanticsService {
   rpc DescribePipeline(DescribePipelineRequest) returns (IndexingStatistics) {}
   rpc IngestTokens(SendIngestedTokens) returns (BooleanResponse) {}
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
+  rpc PostCollectors(CollectorConfig) returns (CollectorConfigResponse) {}
 }
 
 message EmptyObserve{}
@@ -26,6 +27,10 @@ message DescribePipelineRequest {
 
 message RestartPipelineRequest {
   string pipeline_id = 1;
+}
+
+message CollectorConfigResponse {
+  string id = 1;
 }
 
 message SemanticPipelineRequest {

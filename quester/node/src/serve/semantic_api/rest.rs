@@ -7,13 +7,13 @@ use llms::transformers::bert::{BertLLM, EmbedderOptions};
 use proto::{
 	config::StorageConfigs,
 	semantics::{
-		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
-		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
-		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
-		JiraCollectorConfig, MilvusConfig, Neo4jConfig, NewsCollectorConfig, PipelineMetadata,
-		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
-		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
-		SlackCollectorConfig, StorageConfig, StorageType,
+		AzureCollectorConfig, Backend, CollectorConfig, CollectorConfigResponse,
+		DropBoxCollectorConfig, EmailCollectorConfig, EmptyGetPipelinesMetadata,
+		FileCollectorConfig, FixedEntities, GcsCollectorConfig, GithubCollectorConfig,
+		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig,
+		Neo4jConfig, NewsCollectorConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
+		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
+		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
@@ -469,4 +469,37 @@ pub fn restart_pipeline_post_handler(
 		.then(restart_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+}
+
+pub async fn set_collectors(
+	collector: CollectorConfig,
+	secret_store: Arc<dyn storage::Storage>,
+) -> Result<CollectorConfigResponse, PipelineErrors> {
+	let collector_string = serde_json::to_string(&collector).map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json string: {:?}", e))
+	})?;
+	let collector_json: &serde_json::Value =
+		&serde_json::from_str(&collector_string).map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json {:?}", e))
+		})?;
+	let id = collector_json["backend"]
+		.as_object()
+		.and_then(|backend| {
+			backend.values().find_map(|backend_value| {
+				backend_value.as_object()?.get("id")?.as_str().map(|s| s.to_string())
+			})
+		})
+		.ok_or_else(|| anyhow::anyhow!("Failed to extract id from CollectorConfig"))
+		.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!(
+				"Failed to extract id from CollectorConfig {:?}",
+				e
+			))
+		})?;
+
+	secret_store.store_kv(&id, &collector_string).await.map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to store key: {:?}", e))
+	})?;
+
+	Ok(CollectorConfigResponse { id })
 }
