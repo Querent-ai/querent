@@ -39,6 +39,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		stop_pipeline,
 		ingest_tokens,
 		restart_pipeline,
+		set_collectors,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -69,6 +70,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		AzureCollectorConfig,
 		EmailCollectorConfig,
 		SlackCollectorConfig,
+		CollectorConfigResponse,
 	))
 )]
 pub struct SemanticApi;
@@ -467,6 +469,18 @@ pub fn restart_pipeline_post_handler(
 		.and(warp::post())
 		.and(require(semantic_service_bus))
 		.then(restart_pipeline)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+pub fn set_collectors_post_handler(
+	secret_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "collectors")
+		.and(warp::body::json())
+		.and(warp::post())
+		.and(require(Some(secret_store)))
+		.then(set_collectors)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }
