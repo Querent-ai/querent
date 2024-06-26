@@ -196,13 +196,13 @@ pub async fn start_pipeline(
 	let mut collectors_configs = Vec::new();
 	for collector_id in request.collectors {
 		let config_value = secret_store.get_kv(&collector_id).await.map_err(|e| {
-			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
 		});
 		if let Some(value) = config_value.unwrap() {
 			let collector_config_value: CollectorConfig = serde_json::from_str(&value)
 				.map_err(|e| {
 					PipelineErrors::InvalidParams(anyhow::anyhow!(
-						"Failed to create storages: {:?}",
+						"Failed to create sources: {:?}",
 						e
 					))
 				})
