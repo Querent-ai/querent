@@ -194,14 +194,19 @@ pub async fn start_pipeline(
 	let mut collectors_configs = Vec::new();
 	for collector_id in request.collectors {
 		let config_value = secret_store.get_kv(&collector_id).await.map_err(|e| {
-				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
-			});
-			if let Some(value) = config_value.unwrap() {
-				let collector_config_value: CollectorConfig = serde_json::from_str(&value).map_err(|e| {
-				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
-			}).unwrap();
-				collectors_configs.push(collector_config_value);
-			}
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create storages: {:?}", e))
+		});
+		if let Some(value) = config_value.unwrap() {
+			let collector_config_value: CollectorConfig = serde_json::from_str(&value)
+				.map_err(|e| {
+					PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Failed to create storages: {:?}",
+						e
+					))
+				})
+				.unwrap();
+			collectors_configs.push(collector_config_value);
+		}
 	}
 	let data_sources = create_dynamic_sources(collectors_configs).await?;
 	// TODO REPLACE WITH CORRECT AGN engine
