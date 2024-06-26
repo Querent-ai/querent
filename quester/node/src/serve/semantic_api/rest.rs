@@ -471,6 +471,15 @@ pub fn restart_pipeline_post_handler(
 		.map(make_json_api_response)
 }
 
+#[utoipa::path(
+    post,
+    tag = "Semantic Service",
+    path = "/semantics/collectors",
+    request_body = CollectorConfig,
+    responses(
+        (status = 200, description = "Set the collectors successfully", body = CollectorConfigResponse)
+    ),
+)]
 pub async fn set_collectors(
 	collector: CollectorConfig,
 	secret_store: Arc<dyn storage::Storage>,
