@@ -25,9 +25,9 @@ use crate::{
 	ingest_token_handler, ingest_tokens_put_handler,
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
-	restart_pipeline_post_handler, start_discovery_session_filter, start_pipeline_post_handler,
-	stop_discovery_session_filter, stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo,
-	QuesterServices, RuntimeInfo,
+	restart_pipeline_post_handler, set_collectors_post_handler, start_discovery_session_filter,
+	start_pipeline_post_handler, stop_discovery_session_filter, stop_pipeline_delete_handler,
+	ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -191,7 +191,8 @@ fn api_v1_routes(
 			.or(start_discovery_session_filter(services.discovery_service.clone()))
 			.or(discover_get_filter(services.discovery_service.clone()))
 			.or(discover_post_filter(services.discovery_service.clone()))
-			.or(stop_discovery_session_filter(services.discovery_service.clone())),
+			.or(stop_discovery_session_filter(services.discovery_service.clone()))
+			.or(set_collectors_post_handler(services.secret_store.clone())),
 	)
 }
 
