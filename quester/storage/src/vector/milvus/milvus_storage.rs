@@ -73,6 +73,7 @@ impl Storage for MilvusStorage {
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
+		_query: String,
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,

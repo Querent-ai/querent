@@ -56,6 +56,7 @@ pub struct DiscoveredKnowledge {
 	pub object: String,
 	pub cosine_distance: Option<f64>,
 	pub query_embedding: Option<Vector>,
+	pub query: Option<String>,
 	pub session_id: Option<String>,
 	pub score: Option<f64>,
 }
@@ -70,6 +71,7 @@ impl DiscoveredKnowledge {
 			object: payload.object,
 			cosine_distance: payload.cosine_distance,
 			query_embedding: Some(Vector::from(payload.query_embedding.unwrap_or_default())),
+			query: payload.query,
 			session_id: payload.session_id,
 			score: Some(payload.score as f64),
 		}
@@ -227,6 +229,7 @@ impl Storage for PGVector {
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,
+		query: String,
 		_collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
@@ -285,6 +288,7 @@ impl Storage for PGVector {
 								doc_payload.sentence = sentence.clone();
 								doc_payload.session_id = Some(session_id.clone());
 								doc_payload.query_embedding = Some(payload.clone());
+								doc_payload.query = Some(query.clone());
 								results.push(doc_payload);
 							}
 						},

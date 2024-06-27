@@ -80,6 +80,7 @@ impl Storage for SecretStore {
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
+		_query: String,
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,

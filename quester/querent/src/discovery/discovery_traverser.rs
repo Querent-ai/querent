@@ -137,6 +137,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 					let search_results = storage
 						.similarity_search_l2(
 							message.session_id.clone(),
+							message.query.clone(),
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
 							10,
@@ -149,15 +150,14 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							let res = results.clone();
 							for document in results {
 								let tags = format!(
-									"{}, {}, {}",
+									"{}, {}",
 									document.subject.replace('_', " "),
 									document.object.replace('_', " "),
-									document.predicate.replace('_', " ")
 								);
 								let formatted_document = proto::discovery::Insight {
 									document: document.doc_id,
 									source: document.doc_source,
-									knowledge: document.knowledge,
+									relationship_strength: document.knowledge,
 									sentence: document.sentence,
 									tags,
 								};

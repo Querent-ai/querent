@@ -137,6 +137,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					let search_results = storage
 						.similarity_search_l2(
 							message.session_id.clone(),
+							message.query.clone(),
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
 							10,

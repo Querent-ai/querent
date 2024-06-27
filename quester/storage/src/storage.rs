@@ -110,6 +110,7 @@ pub trait Storage: Send + Sync + 'static {
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,
+		query: String,
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
