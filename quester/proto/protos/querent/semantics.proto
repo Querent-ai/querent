@@ -132,6 +132,7 @@ message FileCollectorConfig {
   string root_path = 1;
   // Id for the collector
   string id = 2;
+
 }
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.

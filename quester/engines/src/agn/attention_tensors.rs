@@ -1,8 +1,9 @@
 use crate::utils::{
 	add_attention_to_classified_sentences, calculate_biased_sentence_embedding,
-	create_binary_pairs, label_entities_in_sentences, match_entities_with_tokens,
-	merge_similar_relations, remove_newlines, split_into_chunks, tokens_to_words,
-	ClassifiedSentence, ClassifiedSentenceWithRelations,
+	create_binary_pairs, extract_entities_and_types, generate_custom_comb_uuid,
+	label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations,
+	remove_newlines, split_into_chunks, tokens_to_words, ClassifiedSentence,
+	ClassifiedSentenceWithRelations,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -26,6 +27,7 @@ pub struct AttentionTensorsEngine {
 	pub entities: Vec<String>,
 	pub sample_entities: Vec<String>,
 	embedding_model: Option<TextEmbedding>,
+	ner_llm: Option<Arc<dyn LLM>>,
 }
 
 impl AttentionTensorsEngine {
@@ -34,8 +36,9 @@ impl AttentionTensorsEngine {
 		entities: Vec<String>,
 		sample_entities: Vec<String>,
 		embedding_model: Option<TextEmbedding>,
+		ner_llm: Option<Arc<dyn LLM>>, // Accept as optional
 	) -> Self {
-		Self { llm, entities, sample_entities, embedding_model }
+		Self { llm, entities, sample_entities, embedding_model, ner_llm }
 	}
 }
 
@@ -48,8 +51,8 @@ impl Engine for AttentionTensorsEngine {
 		// Await the maximum tokens value outside the stream! block
 		let max_tokens = self.llm.maximum_tokens().await;
 		// Make copies of necessary parts of `self`
-		let entities = self.entities.clone();
-		let sample_entities = self.sample_entities.clone();
+		let mut entities = self.entities.clone();
+		let mut sample_entities = self.sample_entities.clone();
 		let llm = self.llm.clone();
 
 		if self.embedding_model.is_none() {
@@ -82,6 +85,8 @@ impl Engine for AttentionTensorsEngine {
 						llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
 					tokenized_chunks.push(tokenized_chunk);
 				}
+				let mut event_ids: Vec<String> = Vec::new();
+				let mut i = 0;
 				let classified_sentences = if !entities.is_empty() {
 					let initial_classified_sentences =
 						label_entities_in_sentences(&entities, &all_chunks);
@@ -89,37 +94,40 @@ impl Engine for AttentionTensorsEngine {
 					match_entities_with_tokens(&tokenized_words, &initial_classified_sentences)
 				} else {
 					let mut model_inputs = Vec::new();
-					for tokens in &tokenized_chunks {
-						let model_input =
-							llm.model_input(tokens.clone()).await.map_err(|e| EngineError::from(e))?;
-						model_inputs.push(model_input);
-					}
-
-					let mut classification_results = Vec::new();
-					for input in &model_inputs {
-						let classification_result = self
-							.llm
-							.token_classification(input.clone(), None)
-							.await
-							.map_err(|e| EngineError::from(e))?;
-						classification_results.push(classification_result);
-					}
-
-					let mut classified_sentences = Vec::new();
-					for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
-						let filtered_entities: Vec<(String, String)> =
-							classification.iter().filter(|(_, label)| label != "O").cloned().collect();
-
-						classified_sentences.push(ClassifiedSentence {
-							sentence: chunk.clone(),
-							entities: filtered_entities.into_iter().map(|(e, l)| (e, l, 0, 0)).collect(),
-						});
-					}
-
+					let mut tokenized_chunks_ner = Vec::new();
 					let tokenized_words = tokens_to_words(llm.as_ref(), &tokenized_chunks).await;
+					let mut classified_sentences = Vec::new();
+					if let Some(ref ner_llm) = self.ner_llm {
+						for chunk in &all_chunks {
+							let tokenized_chunk = ner_llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
+							tokenized_chunks_ner.push(tokenized_chunk);
+						}
+						for tokens in &tokenized_chunks_ner {
+							let model_input = ner_llm.model_input(tokens.clone()).await.map_err(|e| EngineError::from(e))?;
+							model_inputs.push(model_input);
+						}
+						let mut classification_results = Vec::new();
+						for input in &model_inputs {
+							let classification_result = ner_llm.token_classification(input.clone(), None).await.map_err(|e| EngineError::from(e))?;
+							classification_results.push(classification_result);
+						}
+
+
+						for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
+							let filtered_entities: Vec<(String, String)> = classification.iter().filter(|(_, label)| label != "O").cloned().collect();
+
+							classified_sentences.push(ClassifiedSentence {
+								sentence: chunk.clone(),
+								entities: filtered_entities
+											.into_iter()
+											.map(|(e, l)| (e.to_lowercase(), l, 0, 0))
+											.collect(),
+									});
+						}
+					}
+
 					match_entities_with_tokens(&tokenized_words, &classified_sentences)
 				};
-
 				let classified_sentences_with_pairs = create_binary_pairs(&classified_sentences);
 
 				let extended_classified_sentences_with_attention = add_attention_to_classified_sentences(
@@ -130,7 +138,6 @@ impl Engine for AttentionTensorsEngine {
 				.await?;
 
 				let mut all_sentences_with_relations = Vec::new();
-
 				for (classified, tokenized_chunk) in extended_classified_sentences_with_attention.iter().zip(tokenized_chunks.iter()) {
 					let attention_matrix = classified.attention_matrix.as_ref().unwrap().clone();
 					let pairs = &classified.classified_sentence.pairs;
@@ -195,10 +202,13 @@ impl Engine for AttentionTensorsEngine {
 				}
 
 				merge_similar_relations(&mut all_sentences_with_relations);
-
+				if !all_sentences_with_relations.is_empty()  && entities.is_empty(){
+					(entities, sample_entities) = extract_entities_and_types(all_sentences_with_relations.clone());
+				}
 				for sentence_with_relations in all_sentences_with_relations {
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
+							event_ids.push(generate_custom_comb_uuid());
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
@@ -216,6 +226,8 @@ impl Engine for AttentionTensorsEngine {
 								object_type: object_type.to_string(),
 								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
 								image_id: None,
+								blob: Some("mock".to_string()),
+								event_id: event_ids[i].clone(),
 							};
 							let event = EventState {
 								event_type: EventType::Graph,
@@ -225,11 +237,12 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
+							i = i + 1;
 							yield Ok(event);
 						}
 					}
 					let attention_matrix = sentence_with_relations.attention_matrix.as_ref().unwrap();
-
+					i = 0;
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
 						let tail_entity = &relation.tail.name;
@@ -253,15 +266,10 @@ impl Engine for AttentionTensorsEngine {
 								tail_start_index,
 								tail_end_index,
 							).await.map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(e.into())))?;
-							let id = format!("{}-{}-{}", head_entity, predicate, tail_entity);
 							let payload = VectorPayload {
-								id,
+								event_id: event_ids[i].clone(),
 								embeddings: biased_embedding.clone(),
-								size: biased_embedding.len() as u64,
-								namespace: predicate.to_string(),
-								sentence: Some(sentence_with_relations.classified_sentence.sentence.clone()),
-								document_source: Some("mock".to_string()),
-								blob: Some("mock".to_string()),
+								score: *score as f32,
 							};
 							let event = EventState {
 								event_type: EventType::Vector,
@@ -271,9 +279,11 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
+							i = i + 1;
 							yield Ok(event);
 						}
 					}
+
 				}
 			}
 		};
@@ -288,17 +298,15 @@ impl Engine for AttentionTensorsEngine {
 // 	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 // 	use futures::StreamExt;
 // 	use ingestors::{pdf::pdfv1::PdfIngestor, BaseIngestor};
-// 	use llms::transformers::bert::{BertLLM, EmbedderOptions};
+// 	use llms::transformers::{bert::{BertLLM, EmbedderOptions}, roberta::roberta::RobertaLLM};
 // 	use std::{fs::File, io::Read, sync::Arc};
 // 	use tokio::sync::mpsc;
 // 	use tokio_stream::wrappers::ReceiverStream;
 
 // 	#[tokio::test]
 // 	async fn test_txt_ingestor() {
-// 		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/small.pdf";
+// 		let test_file_path = "/home/nishantg/querent-main/Demo_june 6/demo_files/english_test.pdf";
 // 		let mut file = File::open(test_file_path).expect("Failed to open test file");
-
-// 		// Read the sample .pdf file into a byte vector
 // 		let mut buffer = Vec::new();
 // 		file.read_to_end(&mut buffer).expect("Failed to read test file");
 
@@ -332,6 +340,36 @@ impl Engine for AttentionTensorsEngine {
 // 			}
 // 		});
 
+// 		// let entities = vec![
+// 		// 	"oil".to_string(),
+// 		// 	"gas".to_string(),
+// 		// 	"porosity".to_string(),
+// 		// 	"joel".to_string(),
+// 		// 	"india".to_string(),
+// 		// 	"microsoft".to_string(),
+// 		// 	"nitrogen gas".to_string(),
+// 		// 	"deposition".to_string(),
+// 		// ];
+// 		let entities = vec![];
+
+// 		// Initialize NER model only if fixed_entities is not defined or empty
+// 		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
+// 			let ner_options = EmbedderOptions {
+// 				// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+// 				// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+// 				model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+// 				// model: "deepset/roberta-base-squad2".to_string(),
+// 				local_dir : None,
+// 				revision: None,
+// 				distribution: None,
+// 			};
+
+// 			// Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+// 			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+// 		} else {
+// 			None  // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
+// 		};
+
 // 		// Initialize BertLLM with EmbedderOptions
 // 		let options = EmbedderOptions {
 // 			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
@@ -358,15 +396,7 @@ impl Engine for AttentionTensorsEngine {
 // 		// Create an instance of AttentionTensorsEngine
 // 		let engine = AttentionTensorsEngine::new(
 // 			embedder,
-// 			vec![
-// 				"oil".to_string(),
-// 				"gas".to_string(),
-// 				"porosity".to_string(),
-// 				"joel".to_string(),
-// 				"india".to_string(),
-// 				"microsoft".to_string(),
-// 				"nitrogen gas".to_string(),
-// 			],
+// 			entities,
 // 			vec![
 // 				"oil".to_string(),
 // 				"gas".to_string(),
@@ -377,6 +407,7 @@ impl Engine for AttentionTensorsEngine {
 // 				"nitrogen gas".to_string(),
 // 			],
 // 			Some(embedding_model),
+// 			ner_llm,
 // 		);
 
 // 		// Create an instance of Attention Tensor without fixed entities

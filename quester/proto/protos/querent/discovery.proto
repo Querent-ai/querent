@@ -133,8 +133,8 @@ message Insight {
   string document = 1;
    // The document source
   string source = 2;
-   // The knowledge retrieved from the search result
-  string knowledge = 3;
+   // The attention score retrieved from the search result
+  string relationship_strength = 3;
    // The sentence retrieved from the search resulty
   string sentence = 4;
    // The tags of the search result, comma separated subject, object , predicate
