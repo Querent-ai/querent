@@ -11,6 +11,7 @@ service SemanticsService {
   rpc IngestTokens(SendIngestedTokens) returns (BooleanResponse) {}
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
   rpc PostCollectors(CollectorConfig) returns (CollectorConfigResponse) {}
+  rpc DeleteCollectors(DeleteCollectorRequest) returns (DeleteCollectorResponse) {}
 }
 
 message EmptyObserve{}
@@ -31,6 +32,14 @@ message RestartPipelineRequest {
 
 message CollectorConfigResponse {
   string id = 1;
+}
+
+message DeleteCollectorRequest {
+  repeated string id = 1;
+}
+
+message DeleteCollectorResponse {
+  repeated string id = 1;
 }
 
 message SemanticPipelineRequest {
@@ -132,7 +141,6 @@ message FileCollectorConfig {
   string root_path = 1;
   // Id for the collector
   string id = 2;
-
 }
 
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
