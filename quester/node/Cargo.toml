@@ -68,12 +68,14 @@ cluster = { workspace = true }
 proto = { workspace = true }
 discovery = { workspace = true }
 engines = { workspace = true }
+llms = { workspace = true }
 rust-embed = { workspace = true }
 mime_guess = { workspace = true }
 uuid = { workspace = true }
 storage = { workspace = true }
 futures-util = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
+fastembed =  { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }

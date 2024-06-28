@@ -18,6 +18,8 @@ pub struct DiscoverySearch {
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	discovery_agent_params: DiscoverySessionRequest,
 	embedding_model: Option<TextEmbedding>,
+	current_query: String,
+	current_offset: i64,
 }
 
 impl DiscoverySearch {
@@ -27,7 +29,15 @@ impl DiscoverySearch {
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		discovery_agent_params: DiscoverySessionRequest,
 	) -> Self {
-		Self { agent_id, timestamp, event_storages, discovery_agent_params, embedding_model: None }
+		Self {
+			agent_id,
+			timestamp,
+			event_storages,
+			discovery_agent_params,
+			embedding_model: None,
+			current_query: "".to_string(),
+			current_offset: 0,
+		}
 	}
 
 	pub fn get_timestamp(&self) -> u64 {
@@ -109,6 +119,14 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 				"Discovery agent embedding model is not initialized".to_string(),
 			)));
 		}
+		if message.query.is_empty() {
+			return Ok(Err(DiscoveryError::Internal("Discovery agent query is empty".to_string())));
+		}
+		//reset offset if new query
+		if message.query != self.current_query {
+			self.current_offset = 0;
+			self.current_query = message.query.clone();
+		}
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
@@ -122,22 +140,23 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
 							&current_query_embedding.clone(),
 							10,
+							self.current_offset,
 						)
 						.await;
 					match search_results {
 						Ok(results) => {
+							self.current_offset += results.len() as i64;
 							let res = results.clone();
 							for document in results {
 								let tags = format!(
-									"{}, {}, {}",
+									"{}-{}",
 									document.subject.replace('_', " "),
 									document.object.replace('_', " "),
-									document.predicate.replace('_', " ")
 								);
 								let formatted_document = proto::discovery::Insight {
 									document: document.doc_id,
 									source: document.doc_source,
-									knowledge: document.knowledge,
+									relationship_strength: document.score.to_string(),
 									sentence: document.sentence,
 									tags,
 								};

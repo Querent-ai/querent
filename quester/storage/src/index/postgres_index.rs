@@ -29,14 +29,19 @@ pub struct SemanticKnowledge {
 	pub subject_type: String,
 	pub object: String,
 	pub object_type: String,
-	pub predicate: String,
-	pub predicate_type: String,
+	// pub predicate: String,
+	// pub predicate_type: String,
 	pub sentence: String,
 	pub document_id: String,
 	pub document_source: String,
 	pub collection_id: Option<String>,
 	pub image_id: Option<String>,
+	pub event_id: String,
 }
+
+// #[derive(Debug, Clone, Copy, FromSqlRow, AsExpression, Serialize)]
+// #[diesel(sql_type = BigInt)]
+// pub struct EventId(pub u64);
 
 pub struct PostgresStorage {
 	pub pool: ActualDbPool,
@@ -150,6 +155,7 @@ impl Storage for PostgresStorage {
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,
+		_offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
@@ -171,13 +177,12 @@ impl Storage for PostgresStorage {
 						subject_type: item.subject_type.clone(),
 						object: item.object.clone(),
 						object_type: item.object_type.clone(),
-						predicate: item.predicate.clone(),
-						predicate_type: item.predicate_type.clone(),
 						sentence: item.sentence.clone(),
 						document_id: document_id.clone(),
 						document_source: document_source.clone(),
 						collection_id: Some(collection_id.clone()),
 						image_id: image_id.clone(),
+						event_id: item.event_id.clone(),
 					};
 					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
 						.values(form)
@@ -227,6 +232,7 @@ table! {
 		document_source -> Varchar,
 		collection_id -> Nullable<Varchar>,
 		image_id -> Nullable<VarChar>,
+		event_id -> Varchar
 	}
 }
 

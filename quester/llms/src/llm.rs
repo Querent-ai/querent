@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use candle_core::Tensor;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
@@ -10,6 +11,13 @@ pub enum LLMErrorKind {
 	Io,
 	/// Not found error.
 	NotFound,
+	/// PyTorch error.
+	PyTorch,
+	/// Safetensors error.
+	SafeTensors,
+	/// Model error.
+	ModelError,
+	// Add more error kinds here if needed
 }
 
 /// Generic IngestorError.
@@ -70,11 +78,21 @@ pub trait LLM: Send + Sync {
 	async fn model_input(
 		&self,
 		tokenized_sequence: Vec<i32>,
-	) -> std::collections::HashMap<String, Vec<i32>>;
-	async fn tokenize(&self, word: &str) -> Vec<i32>;
+	) -> LLMResult<std::collections::HashMap<String, Tensor>>;
+	async fn tokenize(&self, word: &str) -> LLMResult<Vec<i32>>;
 	async fn inference_attention(
 		&self,
-		model_input: std::collections::HashMap<String, Vec<i32>>,
-	) -> Vec<Vec<f32>>;
+		model_input: std::collections::HashMap<String, Tensor>,
+	) -> LLMResult<Tensor>;
 	async fn maximum_tokens(&self) -> usize;
+	async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
+	async fn attention_tensor_to_2d_vector(
+		&self,
+		attention_weights: &Tensor,
+	) -> LLMResult<Vec<Vec<f32>>>;
+	async fn token_classification(
+		&self,
+		model_input: std::collections::HashMap<String, Tensor>,
+		labels: Option<&Tensor>,
+	) -> LLMResult<Vec<(String, String)>>;
 }

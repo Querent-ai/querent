@@ -10,10 +10,10 @@ pub struct MockEngine;
 
 #[async_trait]
 impl Engine for MockEngine {
-	async fn process_ingested_tokens(
-		&self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'static>>,
-	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'static>>> {
+	async fn process_ingested_tokens<'life0>(
+		&'life0 self,
+		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>> {
 		let stream = stream! {
 			let mut token_stream = token_stream;
 			while let Some(token) = token_stream.next().await {
@@ -27,6 +27,8 @@ impl Engine for MockEngine {
 					object_type: "mock".to_string(),
 					sentence: "mock".to_string(),
 					image_id: None,
+					blob: Some("mock".to_string()),
+					event_id: "mock".to_string()
 				};
 
 				// create an event

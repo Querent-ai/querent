@@ -1,17 +1,25 @@
 use actors::{AskError, MessageBus, Observe};
 use common::EventType;
-use engines::mock::MockEngine;
+use engines::agn::AttentionTensorsEngine;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
+use llms::{
+	transformers::{
+		bert::{BertLLM, EmbedderOptions},
+		roberta::roberta::RobertaLLM,
+	},
+	LLM,
+};
 use proto::{
 	config::StorageConfigs,
 	semantics::{
-		AzureCollectorConfig, Backend, CollectorConfig, DropBoxCollectorConfig,
-		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
-		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
-		JiraCollectorConfig, MilvusConfig, Neo4jConfig, NewsCollectorConfig, PipelineMetadata,
-		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
-		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
-		SlackCollectorConfig, StorageConfig, StorageType,
+		AzureCollectorConfig, Backend, CollectorConfig, CollectorConfigResponse,
+		DropBoxCollectorConfig, EmailCollectorConfig, EmptyGetPipelinesMetadata,
+		FileCollectorConfig, FixedEntities, GcsCollectorConfig, GithubCollectorConfig,
+		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig,
+		Neo4jConfig, NewsCollectorConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
+		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
+		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
@@ -25,7 +33,7 @@ use storage::create_storages;
 use tracing::{error, warn};
 use warp::{filters::ws::WebSocket, reject::Rejection, Filter};
 
-use crate::{extract_format_from_qs, make_json_api_response, serve::require};
+use crate::{extract_format_from_qs, make_json_api_response, serve::require, Model};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
@@ -37,6 +45,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		stop_pipeline,
 		ingest_tokens,
 		restart_pipeline,
+		set_collectors,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -67,6 +76,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		AzureCollectorConfig,
 		EmailCollectorConfig,
 		SlackCollectorConfig,
+		CollectorConfigResponse,
 	))
 )]
 pub struct SemanticApi;
@@ -177,9 +187,87 @@ pub async fn start_pipeline(
 			})?;
 	}
 
-	let data_sources = create_dynamic_sources(&request).await?;
-	// TODO REPLACE WITH CORRECT AGN engine
-	let engine = Arc::new(MockEngine::new());
+	// Extract entities from request.fixed_entities or use a default
+	let entities = match &request.fixed_entities {
+		Some(fixed_entities) => fixed_entities.entities.clone(),
+		_ => Vec::new(),
+	};
+
+	// Extract entities from request.fixed_entities or use a default
+	let sample_entities = match &request.sample_entities {
+		Some(sample_entities) => sample_entities.entities.clone(),
+		_ => Vec::new(),
+	};
+
+	// Extract and handle the model parameter
+	let (model_string, model_type) = match request.model.and_then(Model::from_i32) {
+		Some(Model::English) =>
+			("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()),
+		Some(Model::Geology) => ("botryan96/GeoBERT".to_string(), "Bert".to_string()),
+		_ => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()), // Default to option 1
+	};
+
+	// Initialize NER model only if fixed_entities is not defined or empty
+	let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
+		let ner_options = EmbedderOptions {
+			model: model_string.to_string(),
+			local_dir: None,
+			revision: None,
+			distribution: None,
+		};
+		if model_type == "Roberta".to_string() {
+			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+		} else if model_type == "Bert".to_string() {
+			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+		} else {
+			None
+		}
+	} else {
+		None // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
+	};
+
+	let mut collectors_configs = Vec::new();
+	for collector_id in request.collectors {
+		let config_value = secret_store.get_kv(&collector_id).await.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
+		});
+		if let Some(value) = config_value.unwrap() {
+			let collector_config_value: CollectorConfig = serde_json::from_str(&value)
+				.map_err(|e| {
+					PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Failed to create sources: {:?}",
+						e
+					))
+				})
+				.unwrap();
+			collectors_configs.push(collector_config_value);
+		}
+	}
+	let data_sources = create_dynamic_sources(collectors_configs).await?;
+
+	let options = EmbedderOptions {
+		model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+		local_dir: None,
+		revision: None,
+		distribution: None,
+	};
+	let embedder = Arc::new(BertLLM::new(options).unwrap());
+
+	// Initialize the embedding model
+	let embedding_model = TextEmbedding::try_new(InitOptions {
+		model_name: EmbeddingModel::AllMiniLML6V2,
+		show_download_progress: true,
+		..Default::default()
+	})
+	.unwrap();
+
+	let engine = Arc::new(AttentionTensorsEngine::new(
+		embedder,
+		entities,
+		sample_entities,
+		Some(embedding_model),
+		ner_llm,
+	));
 
 	let pipeline_settings =
 		PipelineSettings { engine, event_storages, index_storages, secret_store, data_sources };
@@ -199,6 +287,7 @@ pub async fn start_pipeline(
 			result_pipe_obs.unwrap_err()
 		)));
 	}
+	//call secret store and get the credentials
 	Ok(SemanticPipelineResponse { pipeline_id: id })
 }
 
@@ -415,4 +504,58 @@ pub fn restart_pipeline_post_handler(
 		.then(restart_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+}
+
+pub fn set_collectors_post_handler(
+	secret_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "collectors")
+		.and(warp::body::json())
+		.and(warp::post())
+		.and(require(Some(secret_store)))
+		.then(set_collectors)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+    post,
+    tag = "Semantic Service",
+    path = "/semantics/collectors",
+    request_body = CollectorConfig,
+    responses(
+        (status = 200, description = "Set the collectors successfully", body = CollectorConfigResponse)
+    ),
+)]
+pub async fn set_collectors(
+	collector: CollectorConfig,
+	secret_store: Arc<dyn storage::Storage>,
+) -> Result<CollectorConfigResponse, PipelineErrors> {
+	let collector_string = serde_json::to_string(&collector).map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json string: {:?}", e))
+	})?;
+	let collector_json: &serde_json::Value =
+		&serde_json::from_str(&collector_string).map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json {:?}", e))
+		})?;
+	let id = collector_json["backend"]
+		.as_object()
+		.and_then(|backend| {
+			backend.values().find_map(|backend_value| {
+				backend_value.as_object()?.get("id")?.as_str().map(|s| s.to_string())
+			})
+		})
+		.ok_or_else(|| anyhow::anyhow!("Failed to extract id from CollectorConfig"))
+		.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!(
+				"Failed to extract id from CollectorConfig {:?}",
+				e
+			))
+		})?;
+
+	secret_store.store_kv(&id, &collector_string).await.map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to store key: {:?}", e))
+	})?;
+
+	Ok(CollectorConfigResponse { id })
 }
