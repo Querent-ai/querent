@@ -4,9 +4,10 @@ use std::{
 };
 
 use async_trait::async_trait;
-use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use common::{ DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+
 
 /// Storage error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -106,6 +107,13 @@ pub trait Storage: Send + Sync + 'static {
 		payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
+	// /// Fetch data from semantic knowledge table
+	// async fn get_semantic_metadata_by_ids(
+	// 	&self,
+	// 	session_id: String,
+	// 	ids: Vec<i32>,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>;
+
 	/// Similarity search for vectors
 	async fn similarity_search_l2(
 		&self,
@@ -116,6 +124,20 @@ pub trait Storage: Send + Sync + 'static {
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>>;
+
+	// /// Similarity search for vectors
+	// async fn get_discovered_data(
+	// 	&self,
+	// 	session_id: String,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>;
+
+	async fn traverse_metadata_table(
+		&self,
+		filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>>;
+	
+
+
 	/// Store key value pair
 	async fn store_kv(&self, key: &String, value: &String) -> StorageResult<()>;
 

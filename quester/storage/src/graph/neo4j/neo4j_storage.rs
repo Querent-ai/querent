@@ -69,6 +69,13 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
+	// async fn get_discovered_data(
+	// 	&self,
+	// 	_session_id: String,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>> {
+	// 	Ok(vec![])
+	// }
+
 	/// Index knowledge for search
 	async fn index_knowledge(
 		&self,
@@ -77,6 +84,21 @@ impl Storage for Neo4jStorage {
 	) -> StorageResult<()> {
 		Ok(())
 	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
+	
+	// async fn get_semantic_metadata_by_ids(
+	// 	&self,
+	// 	_session_id: String,
+	// 	_ids: Vec<i32>,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>{
+	// 	Ok(vec![])
+	// }
 
 	async fn similarity_search_l2(
 		&self,

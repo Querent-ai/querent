@@ -1,19 +1,20 @@
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use diesel::result::{ConnectionError, ConnectionResult};
-
+use diesel::{
+	result::{ConnectionError, ConnectionResult, Error}, ExpressionMethods, QueryDsl
+};
 use diesel_async::{
 	pg::AsyncPgConnection,
 	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager, ManagerConfig},
 	scoped_futures::ScopedFutureExt,
-	RunQueryDsl,
+	RunQueryDsl, 
 };
 use futures_util::{future::BoxFuture, FutureExt};
 use proto::semantics::PostgresConfig;
 use std::{sync::Arc, time::SystemTime};
 use tracing::error;
 
-use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
+use crate::{discovered_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
 use deadpool::Runtime;
 use diesel::{table, Insertable, Queryable, Selectable};
 use diesel_async::AsyncConnection;
@@ -21,6 +22,7 @@ use rustls::{
 	client::{ServerCertVerified, ServerCertVerifier},
 	ServerName,
 };
+
 use serde::Serialize;
 #[derive(Serialize, Queryable, Insertable, Selectable, Debug, Clone)]
 #[diesel(table_name = semantic_knowledge)]
@@ -141,6 +143,14 @@ impl Storage for PostgresStorage {
 		Ok(())
 	}
 
+	// async fn get_semantic_metadata_by_ids(
+	// 	&self,
+	// 	_session_id: String,
+	// 	_ids: Vec<i32>,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>{
+	// 	Ok(vec![])
+	// }
+
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
@@ -160,6 +170,85 @@ impl Storage for PostgresStorage {
 	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
+
+	// async fn get_discovered_data(
+	// 	&self,
+	// 	session_id: String,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>> {
+	// 	// Ok(vec![])
+	// 	let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+	// 		kind: StorageErrorKind::Internal,
+	// 		source: Arc::new(anyhow::Error::from(e)),
+	// 	})?;
+	// 	let results = conn.transaction::<_, diesel::result::Error, _>(|conn| {
+    //         async move {
+    //             let query_result = discovered_knowledge::dsl::discovered_knowledge
+    //                 .select((
+    //                     discovered_knowledge::dsl::doc_id,
+    //                     discovered_knowledge::dsl::doc_source,
+    //                     discovered_knowledge::dsl::sentence,
+    //                     discovered_knowledge::dsl::subject,
+    //                     discovered_knowledge::dsl::object,
+    //                     discovered_knowledge::dsl::cosine_distance,
+    //                     discovered_knowledge::dsl::session_id,
+    //                     discovered_knowledge::dsl::score,
+    //                 ))
+    //                 .filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+    //                 .load::<(
+    //                     String,
+    //                     String,
+    //                     String,
+    //                     String,
+    //                     String,
+    //                     Option<f64>,
+    //                     Option<String>,
+    //                     Option<f64>,
+    //                 )>(conn)
+    //                 .await;
+                
+    //             match query_result {
+    //                 Ok(result) => {
+    //                     let mut results: Vec<DiscoveredKnowledgePayload> = Vec::new();
+    //                     for (doc_id, doc_source, sentence, subject, object, cosine_distance, session_id, score) in result {
+    //                         let doc_payload = DiscoveredKnowledgePayload {
+    //                             doc_id,
+    //                             doc_source,
+    //                             sentence,
+    //                             subject,
+    //                             object,
+    //                             cosine_distance,
+    //                             session_id: session_id,
+    //                             score,
+    //                         };
+    //                         results.push(doc_payload);
+    //                     }
+    //                     Ok(results)
+    //                 }
+    //                 Err(e) => {
+    //                     eprintln!("Error querying semantic data: {:?}", e);
+    //                     Err(e)
+    //                 }
+    //             }
+    //         }
+    //         .scope_boxed()
+    //     })
+    //     .await
+    //     .map_err(|e| StorageError {
+    //         kind: StorageErrorKind::Internal,
+    //         source: Arc::new(anyhow::Error::from(e)),
+    //     })?;
+        
+    //     Ok(results)
+    // }
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
+	
+
 
 	async fn index_knowledge(
 		&self,
@@ -243,6 +332,17 @@ mod test {
 
 	use super::*;
 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
+
+	async fn setup_test_environment() -> PostgresStorage {
+		// Create a PGVector instance with the test database URL
+		let config = PostgresConfig {
+			url: TEST_DB_URL.to_string(),
+			name: "test".to_string(),
+			storage_type: Some(StorageType::Index),
+		};
+
+		PostgresStorage::new(config).await.expect("Failed to create Postgres Stroage instance")
+	}
 
 	// Test function
 	#[tokio::test]

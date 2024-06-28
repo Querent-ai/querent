@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use common::{ DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult},
 	ExpressionMethods, QueryDsl,
@@ -159,6 +159,76 @@ impl Storage for PGVector {
 		Ok(())
 	}
 
+	// async fn get_discovered_data(
+	// 	&self,
+	// 	session_id: String,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>> {
+	// 	// Ok(vec![])
+	// 	let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+	// 		kind: StorageErrorKind::Internal,
+	// 		source: Arc::new(anyhow::Error::from(e)),
+	// 	})?;
+	// 	let results = conn.transaction::<_, diesel::result::Error, _>(|conn| {
+    //         async move {
+    //             let query_result = discovered_knowledge::dsl::discovered_knowledge
+    //                 .select((
+    //                     discovered_knowledge::dsl::doc_id,
+    //                     discovered_knowledge::dsl::doc_source,
+    //                     discovered_knowledge::dsl::sentence,
+    //                     discovered_knowledge::dsl::subject,
+    //                     discovered_knowledge::dsl::object,
+    //                     discovered_knowledge::dsl::cosine_distance,
+    //                     discovered_knowledge::dsl::session_id,
+    //                     discovered_knowledge::dsl::score,
+    //                 ))
+    //                 .filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+    //                 .load::<(
+    //                     String,
+    //                     String,
+    //                     String,
+    //                     String,
+    //                     String,
+    //                     Option<f64>,
+    //                     Option<String>,
+    //                     Option<f64>,
+    //                 )>(conn)
+    //                 .await;
+                
+    //             match query_result {
+    //                 Ok(result) => {
+    //                     let mut results: Vec<DiscoveredKnowledgePayload> = Vec::new();
+    //                     for (doc_id, doc_source, sentence, subject, object, cosine_distance, session_id, score) in result {
+    //                         let doc_payload = DiscoveredKnowledgePayload {
+    //                             doc_id,
+    //                             doc_source,
+    //                             sentence,
+    //                             subject,
+    //                             object,
+    //                             cosine_distance,
+    //                             session_id: session_id,
+    //                             score,
+    //                         };
+    //                         results.push(doc_payload);
+    //                     }
+    //                     Ok(results)
+    //                 }
+    //                 Err(e) => {
+    //                     eprintln!("Error querying semantic data: {:?}", e);
+    //                     Err(e)
+    //                 }
+    //             }
+    //         }
+    //         .scope_boxed()
+    //     })
+    //     .await
+    //     .map_err(|e| StorageError {
+    //         kind: StorageErrorKind::Internal,
+    //         source: Arc::new(anyhow::Error::from(e)),
+    //     })?;
+        
+    //     Ok(results)
+    // }
+
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
@@ -314,6 +384,199 @@ impl Storage for PGVector {
 		}
 	}
 
+	async fn traverse_metadata_table(
+		&self,
+		filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		let mut combined_results: Vec<(i32, String, String, String, String, String, String, f32)> = Vec::new();
+		
+		for (head, tail) in filtered_pairs {
+			let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			
+			// Fetch inward edges where object is the head entity
+			let inward_query_result = semantic_knowledge::dsl::semantic_knowledge
+				.select((
+					semantic_knowledge::dsl::id,
+					semantic_knowledge::dsl::document_id,
+					semantic_knowledge::dsl::subject,
+					semantic_knowledge::dsl::object,
+					semantic_knowledge::dsl::document_source,
+					semantic_knowledge::dsl::sentence,
+					semantic_knowledge::dsl::event_id,
+				))
+				.filter(semantic_knowledge::dsl::object.eq(&head))
+				.load::<(i32, String, String, String, String, String, String)>(conn)
+				.await;
+				
+			match inward_query_result {
+				Ok(results) => {
+					for result in results {
+						let (id, doc_id, subject, object, doc_source, sentence, event_id) = result;
+						// Query the embedded_knowledge table to get the score for the event_id
+						let score_query_result = embedded_knowledge::dsl::embedded_knowledge
+							.select(embedded_knowledge::dsl::score)
+							.filter(embedded_knowledge::dsl::event_id.eq(&event_id))
+							.first::<f32>(conn)
+							.await;
+							
+						match score_query_result {
+							Ok(score) => {
+								combined_results.push((id, doc_id, subject, object, doc_source, sentence, event_id, score));
+							}
+							Err(e) => {
+								eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+								// return Err(StorageError {
+								// 	kind: StorageErrorKind::Query,
+								// 	source: Arc::new(anyhow::Error::from(e)),
+								// });
+							}
+						}
+					}
+				}
+				Err(e) => {
+					eprintln!("Error querying inward edges for head entity {}: {:?}", head, e);
+					return Err(StorageError {
+						kind: StorageErrorKind::Query,
+						source: Arc::new(anyhow::Error::from(e)),
+					});
+				}
+			}
+	
+			// Fetch outward edges where subject is the tail entity
+			let outward_query_result = semantic_knowledge::dsl::semantic_knowledge
+				.select((
+					semantic_knowledge::dsl::id,
+					semantic_knowledge::dsl::document_id,
+					semantic_knowledge::dsl::subject,
+					semantic_knowledge::dsl::object,
+					semantic_knowledge::dsl::document_source,
+					semantic_knowledge::dsl::sentence,
+					semantic_knowledge::dsl::event_id,
+				))
+				.filter(semantic_knowledge::dsl::subject.eq(&tail))
+				.load::<(i32, String, String, String, String, String, String)>(conn)
+				.await;
+				
+			match outward_query_result {
+				Ok(results) => {
+					for result in results {
+						let (id, doc_id, subject, object, doc_source, sentence, event_id) = result;
+						// Query the embedded_knowledge table to get the score for the event_id
+						let score_query_result = embedded_knowledge::dsl::embedded_knowledge
+							.select(embedded_knowledge::dsl::score)
+							.filter(embedded_knowledge::dsl::event_id.eq(&event_id))
+							.first::<f32>(conn)
+							.await;
+							
+						match score_query_result {
+							Ok(score) => {
+								combined_results.push((id, doc_id, subject, object, doc_source, sentence, event_id, score));
+							}
+							Err(e) => {
+								eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+								// return Err(StorageError {
+								// 	kind: StorageErrorKind::Query,
+								// 	source: Arc::new(anyhow::Error::from(e)),
+								// });
+							}
+						}
+					}
+				}
+				Err(e) => {
+					eprintln!("Error querying outward edges for tail entity {}: {:?}", tail, e);
+					return Err(StorageError {
+						kind: StorageErrorKind::Query,
+						source: Arc::new(anyhow::Error::from(e)),
+					});
+				}
+			}
+		}
+	
+		Ok(combined_results)
+	}
+	
+	// async fn get_semantic_metadata_by_ids(
+	// 	&self,
+	// 	session_id: String,
+	// 	ids: Vec<i32>,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>{
+	// 	let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+    //         kind: StorageErrorKind::Internal,
+    //         source: Arc::new(anyhow::Error::from(e)),
+    //     })?;
+
+
+	// 	let query_result = semantic_knowledge::dsl::semantic_knowledge
+	// 			.select((
+	// 				semantic_knowledge::dsl::id,
+	// 				semantic_knowledge::dsl::document_id,
+	// 				semantic_knowledge::dsl::subject,
+	// 				semantic_knowledge::dsl::subject_type,
+	// 				semantic_knowledge::dsl::object,
+	// 				semantic_knowledge::dsl::object_type,
+	// 				semantic_knowledge::dsl::document_source,
+	// 				semantic_knowledge::dsl::sentence,
+	// 				semantic_knowledge::dsl::event_id,
+	// 			))
+	// 			.filter(semantic_knowledge::dsl::id.eq_any(&ids))
+	// 			.load::<(i32, String, String, String, String, String, String, String, String)>(conn)
+	// 			.await;
+	// 		match query_result {
+	// 			Ok(results) => {
+	// 				let mut discovered_knowledge = Vec::new();
+	// 				for (id, doc_id, subject, subject_type, object, object_type, doc_source, sentence, event_id) in results {
+	// 					// Query the embedded_knowledge table to get the score for the event_id
+	// 					let score_query_result = embedded_knowledge::dsl::embedded_knowledge
+	// 						.select(embedded_knowledge::dsl::score)
+	// 						.filter(embedded_knowledge::dsl::event_id.eq(&event_id))
+	// 						.first::<Option<f32>>(conn)
+	// 						.await;
+	
+	// 					match score_query_result {
+	// 						Ok(Some(score)) => {
+	// 							discovered_knowledge.push(DiscoveredKnowledgePayload {
+	// 								doc_id,
+	// 								subject,
+	// 								object,
+	// 								doc_source,
+	// 								sentence,
+	// 								cosine_distance: Some(0.0),
+	// 								session_id: Some(session_id),
+	// 								score: Some(score as f64),
+	// 							});
+	// 						}
+	// 						Err(e) => {
+	// 							eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+	// 							return Err(StorageError {
+	// 								kind: StorageErrorKind::Query,
+	// 								source: Arc::new(anyhow::Error::from(e)),
+	// 							});
+	// 						}
+	// 					}
+	// 				}
+	// 				Ok(discovered_knowledge)
+	// 			}
+	// 			Err(e) => {
+	// 				eprintln!("Error querying semantic knowledge by ids: {:?}", e);
+	// 				Err(StorageError {
+	// 					kind: StorageErrorKind::Query,
+	// 					source: Arc::new(anyhow::Error::from(e)),
+	// 				})
+	// 			}
+	// 		}
+	// 	}
+
+	// async fn get_semantic_metadata_by_ids(
+	// 	&self,
+	// 	_session_id: String,
+	// 	_ids: Vec<i32>,
+	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>{
+	// 	Ok(vec![])
+	// }
+
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
@@ -368,12 +631,11 @@ table! {
 		doc_id -> Varchar,
 		doc_source -> Varchar,
 		sentence -> Text,
-		knowledge -> Text,
 		subject -> Text,
 		object -> Text,
 		cosine_distance -> Nullable<Float8>,
-		query -> Nullable<Text>,
 		query_embedding -> Nullable<Vector>,
+		query -> Nullable<Text>,
 		session_id -> Nullable<Text>,
 		score -> Nullable<Float8>,
 	}
@@ -382,8 +644,85 @@ table! {
 #[cfg(test)]
 mod test {
 	use super::*;
+	use crate::utils::{get_top_k_pairs, process_traverser_results};
 	use proto::semantics::StorageType;
+	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
+
+	async fn setup_test_environment() -> PGVector {
+		// Create a PGVector instance with the test database URL
+		let config = PostgresConfig {
+			url: TEST_DB_URL.to_string(),
+			name: "test".to_string(),
+			storage_type: Some(StorageType::Index),
+		};
+
+		PGVector::new(config).await.expect("Failed to create Postgres Stroage instance")
+	}
+
+	// Test function
+	#[tokio::test]
+
+	async fn test_traverser_search() {
+		let mut current_query_embedding: Vec<f32> = Vec::new();
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		});
+		match embedding_model {
+			Ok(embedder) => {
+				let query = "What is the fluid type in eagle ford shale?".to_string();
+				match embedder.embed(vec![query.clone()], None) {
+					Ok(embeddings) => {
+						current_query_embedding = embeddings[0].clone();
+						// Use current_query_embedding as needed
+					}
+					Err(e) => {
+						eprintln!("Error embedding query: {}", e);
+						// Handle the error appropriately
+					}
+				}
+			}
+			Err(e) => {
+				eprintln!("Error initializing embedding model: {}", e);
+				// Handle the error appropriately
+			}
+		}
+		// self.embedding_model = Some(embedding_model);
+		let storage = setup_test_environment().await;
+		let results = storage
+		.similarity_search_l2("mock".to_string(), "mock".to_string(), "mock".to_string(), &current_query_embedding, 10, 0)
+		.await;
+		
+		// println!("Results are -------{:?}", results);
+	// 	let results = storage
+	// 		.get_discovered_data("12ac36ef40294d87bbbfbe719caa5f70".to_string())
+	// 		.await;
+	// 	// println!("Results: {:?}", results);
+	// 	assert!(results.is_ok());
+	let filtered_results = get_top_k_pairs(results.unwrap(), 10);
+	println!("Filtered Results --------{:?}", filtered_results);
+	let traverser_results_1 = storage.traverse_metadata_table(filtered_results).await;
+	match traverser_results_1 {
+		Ok(results) => {
+			// println!("---------------------Traverser_1 Results --------{:?}", results);
+			let formatted_output = process_traverser_results(results);
+			println!("--------------------------------------------");
+			for line in formatted_output {
+				println!("{}", line);
+}
+		}
+		Err(e) => {
+			eprintln!("Error fetching semantic data: {:?}", e);
+		}
+	}
+
+		
+		// let documents = results.unwrap();
+		// assert!(!documents.is_empty(), "The search should return at least one result.");
+	}
+
 
 	#[tokio::test]
 	async fn test_postgres_storage() {
