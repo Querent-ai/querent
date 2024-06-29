@@ -244,7 +244,7 @@ pub async fn start_pipeline(
 		}
 	}
 	let data_sources = create_dynamic_sources(collectors_configs).await?;
-  
+
 	let options = EmbedderOptions {
 		model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
 		local_dir: None,

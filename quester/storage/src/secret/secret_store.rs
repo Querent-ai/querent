@@ -4,7 +4,7 @@ use std::{
 };
 
 use async_trait::async_trait;
-use common::{ DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use redb::{Database, TableDefinition};
 use std::path::PathBuf;
 
@@ -68,7 +68,6 @@ impl Storage for SecretStore {
 		Ok(())
 	}
 
-
 	async fn traverse_metadata_table(
 		&self,
 		_filtered_pairs: Vec<(String, String)>,
@@ -76,14 +75,6 @@ impl Storage for SecretStore {
 		Ok(vec![])
 	}
 
-	// async fn get_semantic_metadata_by_ids(
-	// 	&self,
-	// 	_session_id: String,
-	// 	_ids: Vec<i32>,
-	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>>{
-	// 	Ok(vec![])
-	// }
-	
 	/// Insert DiscoveryPayload into storage
 	async fn insert_discovered_knowledge(
 		&self,
@@ -92,13 +83,6 @@ impl Storage for SecretStore {
 		// Your insert_discovered_knowledge implementation here
 		Ok(())
 	}
-
-	// async fn get_discovered_data(
-	// 	&self,
-	// 	_session_id: String
-	// ) -> StorageResult<Vec<DiscoveredKnowledgePayload>> {
-	// 	Ok(vec![])
-	// }
 
 	async fn similarity_search_l2(
 		&self,

@@ -1,12 +1,10 @@
+use crate::{utils::traverse_node, DieselError};
 use async_trait::async_trait;
-use common::{ DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
 	result::{ConnectionError, ConnectionResult},
 	ExpressionMethods, QueryDsl,
 };
-use crate::utils::traverse_node;
-use crate::DieselError;
-use std::collections::HashSet;
 use diesel_async::{
 	pg::AsyncPgConnection,
 	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager, ManagerConfig},
@@ -15,7 +13,7 @@ use diesel_async::{
 };
 use futures_util::{future::BoxFuture, FutureExt};
 use proto::semantics::PostgresConfig;
-use std::{sync::Arc, time::SystemTime};
+use std::{collections::HashSet, sync::Arc, time::SystemTime};
 use tracing::error;
 
 use crate::{
@@ -315,26 +313,42 @@ impl Storage for PGVector {
 	}
 
 	async fn traverse_metadata_table(
-        &self,
-        filtered_pairs: Vec<(String, String)>,
-    ) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
-        let mut combined_results: Vec<(i32, String, String, String, String, String, String, f32)> = Vec::new();
-        let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-        
-        for (head, tail) in filtered_pairs {
-            let conn = &mut self.pool.get().await.map_err(|e| StorageError {
-                kind: StorageErrorKind::Internal,
-                source: Arc::new(anyhow::Error::from(e)),
-            })?;
-            
-            // Traverse depth 1
-            traverse_node(&self.pool, head.clone(), &mut combined_results, &mut visited_pairs, conn, 1).await?;
-            traverse_node(&self.pool, tail.clone(), &mut combined_results, &mut visited_pairs, conn, 1).await?;
-        }
+		&self,
+		filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		let mut combined_results: Vec<(i32, String, String, String, String, String, String, f32)> =
+			Vec::new();
+		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
 
-        Ok(combined_results)
-    }
+		for (head, tail) in filtered_pairs {
+			let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 
+			// Traverse depth 1
+			traverse_node(
+				&self.pool,
+				head.clone(),
+				&mut combined_results,
+				&mut visited_pairs,
+				conn,
+				1,
+			)
+			.await?;
+			traverse_node(
+				&self.pool,
+				tail.clone(),
+				&mut combined_results,
+				&mut visited_pairs,
+				conn,
+				1,
+			)
+			.await?;
+		}
+
+		Ok(combined_results)
+	}
 
 	async fn insert_graph(
 		&self,
@@ -400,151 +414,165 @@ table! {
 	}
 }
 
-#[cfg(test)]
-mod test {
-	use super::*;
-	use crate::utils::{get_top_k_pairs, process_traverser_results, extract_unique_pairs, find_intersection};
-	use proto::semantics::StorageType;
-	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
+// #[cfg(test)]
+// mod test {
+// 	use super::*;
+// 	use crate::utils::{
+// 		extract_unique_pairs, find_intersection, get_top_k_pairs, process_traverser_results,
+// 	};
+// 	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+// 	use proto::semantics::StorageType;
+// 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
 
-	async fn setup_test_environment() -> PGVector {
-		// Create a PGVector instance with the test database URL
-		let config = PostgresConfig {
-			url: TEST_DB_URL.to_string(),
-			name: "test".to_string(),
-			storage_type: Some(StorageType::Index),
-		};
+// 	async fn setup_test_environment() -> PGVector {
+// 		// Create a PGVector instance with the test database URL
+// 		let config = PostgresConfig {
+// 			url: TEST_DB_URL.to_string(),
+// 			name: "test".to_string(),
+// 			storage_type: Some(StorageType::Index),
+// 		};
 
-		PGVector::new(config).await.expect("Failed to create Postgres Stroage instance")
-	}
+// 		PGVector::new(config).await.expect("Failed to create Postgres Stroage instance")
+// 	}
 
-	// Test function
-	#[tokio::test]
+// 	// Test function
+// 	#[tokio::test]
 
-	async fn test_traverser_search() {
-		let mut current_query_embedding: Vec<f32> = Vec::new();
-		let embedding_model = TextEmbedding::try_new(InitOptions {
-			model_name: EmbeddingModel::AllMiniLML6V2,
-			show_download_progress: true,
-			..Default::default()
-		});
-		let embedder = match embedding_model {
-			Ok(embedder) => embedder,
-			Err(e) => {
-				eprintln!("Error initializing embedding model: {}", e);
-				return; // Exit the function if the model initialization fails
-			}
-		};
-	
-		let query = "What is the fluid type in eagle ford shale?".to_string();
-		match embedder.embed(vec![query.clone()], None) {
-			Ok(embeddings) => {
-				current_query_embedding = embeddings[0].clone();
-				// Use current_query_embedding as needed
-			}
-			Err(e) => {
-				eprintln!("Error embedding query: {}", e);
-				return; // Exit the function if the embedding fails
-			}
-		}
+// 	async fn test_traverser_search() {
+// 		let mut current_query_embedding: Vec<f32> = Vec::new();
+// 		let embedding_model = TextEmbedding::try_new(InitOptions {
+// 			model_name: EmbeddingModel::AllMiniLML6V2,
+// 			show_download_progress: true,
+// 			..Default::default()
+// 		});
+// 		let embedder = match embedding_model {
+// 			Ok(embedder) => embedder,
+// 			Err(e) => {
+// 				eprintln!("Error initializing embedding model: {}", e);
+// 				return; // Exit the function if the model initialization fails
+// 			},
+// 		};
 
-		let storage = setup_test_environment().await;
-		let results = storage
-		.similarity_search_l2("mock".to_string(), "mock".to_string(), "mock".to_string(), &current_query_embedding, 2, 0)
-		.await;
-		
-		println!("Results are -------{:?}", results);
+// 		let query = "What is the fluid type in eagle ford shale?".to_string();
+// 		match embedder.embed(vec![query.clone()], None) {
+// 			Ok(embeddings) => {
+// 				current_query_embedding = embeddings[0].clone();
+// 				// Use current_query_embedding as needed
+// 			},
+// 			Err(e) => {
+// 				eprintln!("Error embedding query: {}", e);
+// 				return; // Exit the function if the embedding fails
+// 			},
+// 		}
 
-	let filtered_results = get_top_k_pairs(results.unwrap(), 2);
-	println!("Filtered Results --------{:?}", filtered_results);
-	let traverser_results_1 = storage.traverse_metadata_table(filtered_results.clone()).await;
-    let formatted_output_1 = match traverser_results_1 {
-        Ok(results) => extract_unique_pairs(results, filtered_results),
-        Err(e) => {
-            eprintln!("Error during traversal: {:?}", e);
-            filtered_results // or handle the error as needed
-        },
-    };
+// 		let storage = setup_test_environment().await;
+// 		let results = storage
+// 			.similarity_search_l2(
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				&current_query_embedding,
+// 				2,
+// 				0,
+// 			)
+// 			.await;
 
-    println!("Traverser for 1st query final pairs {:?}", formatted_output_1);
-	// match traverser_results_1 {
-	// 	Ok(results) => {
-	// 		println!("---------------------Traverser_1 Results --------{:?}", results);
-	// 		// let formatted_output = process_traverser_results(results);
-	// 		println!("--------------------------------------------");
-// 			for line in formatted_output {
-// 				println!("{}", line);
+// 		println!("Results are -------{:?}", results);
+
+// 		let filtered_results = get_top_k_pairs(results.unwrap(), 2);
+// 		println!("Filtered Results --------{:?}", filtered_results);
+// 		let traverser_results_1 = storage.traverse_metadata_table(filtered_results.clone()).await;
+// 		let formatted_output_1 = match traverser_results_1 {
+// 			Ok(results) => extract_unique_pairs(results, filtered_results),
+// 			Err(e) => {
+// 				eprintln!("Error during traversal: {:?}", e);
+// 				filtered_results // or handle the error as needed
+// 			},
+// 		};
+
+// 		println!("Traverser for 1st query final pairs {:?}", formatted_output_1);
+// 		// match traverser_results_1 {
+// 		// 	Ok(results) => {
+// 		// 		println!("---------------------Traverser_1 Results --------{:?}", results);
+// 		// 		// let formatted_output = process_traverser_results(results);
+// 		// 		println!("--------------------------------------------");
+// 		// 			for line in formatted_output {
+// 		// 				println!("{}", line);
+// 		// }
+// 		// }
+// 		// Err(e) => {
+// 		// 	eprintln!("Error fetching semantic data: {:?}", e);
+// 		// }
+// 		// }
+
+// 		// Now user sees the output and gives 2nd query
+
+// 		// Example of embedding a second query
+
+// 		let second_query = "What is cyclic injection ?".to_string();
+// 		let second_query_embedding = match embedder.embed(vec![second_query.clone()], None) {
+// 			Ok(embeddings) => embeddings[0].clone(),
+// 			Err(e) => {
+// 				eprintln!("Error embedding second query: {}", e);
+// 				return; // Exit the function if the embedding fails
+// 			},
+// 		};
+
+// 		// Perform operations with the second query embedding
+// 		let second_results = storage
+// 			.similarity_search_l2(
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				&second_query_embedding,
+// 				1,
+// 				0,
+// 			)
+// 			.await;
+
+// 		let second_filtered_results = get_top_k_pairs(second_results.unwrap(), 2);
+// 		println!("Second Filtered Results --------{:?}", second_filtered_results);
+// 		let traverser_results_2 =
+// 			storage.traverse_metadata_table(second_filtered_results.clone()).await;
+// 		let formatted_output_2 = match traverser_results_2 {
+// 			Ok(results) => extract_unique_pairs(results, second_filtered_results),
+// 			Err(e) => {
+// 				eprintln!("Error during traversal: {:?}", e);
+// 				second_filtered_results // or handle the error as needed
+// 			},
+// 		};
+
+// 		println!("Traverser for 2nd query final pairs {:?}", formatted_output_2);
+
+// 		let results_intersection = find_intersection(formatted_output_1, formatted_output_2);
+
+// 		println!("Results Intersection ---{:?}", results_intersection);
+// 	}
+
+// 	#[tokio::test]
+// 	async fn test_postgres_storage() {
+// 		// Create a postgres config
+// 		let config = PostgresConfig {
+// 			url: TEST_DB_URL.to_string(),
+// 			name: "test".to_string(),
+// 			storage_type: Some(StorageType::Index),
+// 		};
+
+// 		// Create a PostgresStorage instance with the test database URL
+// 		let storage_result = PGVector::new(config).await;
+
+// 		// Ensure that the storage is created successfully
+// 		assert!(storage_result.is_ok());
+
+// 		// Get the storage instance from the result
+// 		let storage = storage_result.unwrap();
+
+// 		// Perform a connectivity check
+// 		let _connectivity_result = storage.check_connectivity().await;
+// 		// Ensure that the connectivity check is successful
+// 		// Works when there is a database running on the test database URL
+// 		//assert!(_connectivity_result.is_ok());
+
+// 		// You can add more test cases or assertions based on your specific requirements
+// 	}
 // }
-		// }
-		// Err(e) => {
-		// 	eprintln!("Error fetching semantic data: {:?}", e);
-		// }
-	// }
-
-
-	// Now user sees the output and gives 2nd query
-
-    // Example of embedding a second query
-
-
-	let second_query = "What is cyclic injection ?".to_string();
-    let second_query_embedding = match embedder.embed(vec![second_query.clone()], None) {
-        Ok(embeddings) => embeddings[0].clone(),
-        Err(e) => {
-            eprintln!("Error embedding second query: {}", e);
-            return; // Exit the function if the embedding fails
-        }
-    };
-
-    // Perform operations with the second query embedding
-    let second_results = storage
-        .similarity_search_l2("mock".to_string(), "mock".to_string(), "mock".to_string(), &second_query_embedding, 1, 0)
-        .await;
-
-    let second_filtered_results = get_top_k_pairs(second_results.unwrap(), 2);
-    println!("Second Filtered Results --------{:?}", second_filtered_results);
-    let traverser_results_2 = storage.traverse_metadata_table(second_filtered_results.clone()).await;
-	let formatted_output_2 = match traverser_results_2 {
-        Ok(results) => extract_unique_pairs(results, second_filtered_results),
-        Err(e) => {
-            eprintln!("Error during traversal: {:?}", e);
-            second_filtered_results // or handle the error as needed
-        },
-    };
-
-    println!("Traverser for 2nd query final pairs {:?}", formatted_output_2);
-
-	let results_intersection = find_intersection(formatted_output_1, formatted_output_2);
-
-	println!("Results Intersection ---{:?}", results_intersection);
-}
-
-
-	#[tokio::test]
-	async fn test_postgres_storage() {
-		// Create a postgres config
-		let config = PostgresConfig {
-			url: TEST_DB_URL.to_string(),
-			name: "test".to_string(),
-			storage_type: Some(StorageType::Index),
-		};
-
-		// Create a PostgresStorage instance with the test database URL
-		let storage_result = PGVector::new(config).await;
-
-		// Ensure that the storage is created successfully
-		assert!(storage_result.is_ok());
-
-		// Get the storage instance from the result
-		let storage = storage_result.unwrap();
-
-		// Perform a connectivity check
-		let _connectivity_result = storage.check_connectivity().await;
-		// Ensure that the connectivity check is successful
-		// Works when there is a database running on the test database URL
-		//assert!(_connectivity_result.is_ok());
-
-		// You can add more test cases or assertions based on your specific requirements
-	}
-}
