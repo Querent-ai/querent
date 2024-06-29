@@ -182,6 +182,11 @@ impl Storage for Neo4jStorage {
 			source: Arc::new(anyhow::anyhow!("Not implemented")),
 		})
 	}
+
+	//Delete the key value pair
+	async fn delete_kv(&self, _key: &String) -> StorageResult<()> {
+		Ok(())
+	}
 }
 
 #[cfg(test)]

@@ -14,12 +14,13 @@ use proto::{
 	config::StorageConfigs,
 	semantics::{
 		AzureCollectorConfig, Backend, CollectorConfig, CollectorConfigResponse,
-		DropBoxCollectorConfig, EmailCollectorConfig, EmptyGetPipelinesMetadata,
-		FileCollectorConfig, FixedEntities, GcsCollectorConfig, GithubCollectorConfig,
-		GoogleDriveCollectorConfig, IndexingStatistics, JiraCollectorConfig, MilvusConfig,
-		Neo4jConfig, NewsCollectorConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
-		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
-		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
+		DeleteCollectorRequest, DeleteCollectorResponse, DropBoxCollectorConfig,
+		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
+		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
+		JiraCollectorConfig, MilvusConfig, Neo4jConfig, NewsCollectorConfig, PipelineMetadata,
+		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
+		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
+		SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 
@@ -46,6 +47,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		ingest_tokens,
 		restart_pipeline,
 		set_collectors,
+		delete_collectors,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -77,6 +79,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		EmailCollectorConfig,
 		SlackCollectorConfig,
 		CollectorConfigResponse,
+		DeleteCollectorRequest,
+		DeleteCollectorResponse,
 	))
 )]
 pub struct SemanticApi;
@@ -558,4 +562,42 @@ pub async fn set_collectors(
 	})?;
 
 	Ok(CollectorConfigResponse { id })
+}
+
+pub fn delete_collectors_delete_handler(
+	secret_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "collectors" / "purge")
+		.and(warp::body::json())
+		.and(warp::delete())
+		.and(require(Some(secret_store)))
+		.then(delete_collectors)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+    delete,
+    tag = "Semantic Service",
+    path = "/semantics/collectors/purge",
+    request_body = DeleteCollectorRequest,
+    responses(
+        (status = 200, description = "Deleted the collectors successfully", body = DeleteCollectorResponse)
+    ),
+)]
+
+pub async fn delete_collectors(
+	collector: DeleteCollectorRequest,
+	secret_store: Arc<dyn storage::Storage>,
+) -> Result<DeleteCollectorResponse, PipelineErrors> {
+	for key in collector.id.clone() {
+		secret_store.delete_kv(&key).await.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!(
+				"Failed to delete key {:?}: {:?}",
+				key,
+				e
+			))
+		})?;
+	}
+	Ok(DeleteCollectorResponse { id: collector.id })
 }

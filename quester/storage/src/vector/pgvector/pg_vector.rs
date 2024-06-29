@@ -381,6 +381,11 @@ impl Storage for PGVector {
 			source: Arc::new(anyhow::anyhow!("Not implemented")),
 		})
 	}
+
+	//Delete the key value pair
+	async fn delete_kv(&self, _key: &String) -> StorageResult<()> {
+		Ok(())
+	}
 }
 
 table! {

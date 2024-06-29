@@ -148,4 +148,27 @@ impl Storage for SecretStore {
 		};
 		Ok(value)
 	}
+
+	async fn delete_kv(&self, key: &String) -> StorageResult<()> {
+		let delete_txn = self.db.begin_write().map_err(|err| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(err)),
+		})?;
+
+		{
+			let mut table = delete_txn.open_table(TABLE).map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+
+			let _ = table.remove(key.as_str());
+		}
+
+		delete_txn.commit().map_err(|err| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(err)),
+		})?;
+
+		Ok(())
+	}
 }
