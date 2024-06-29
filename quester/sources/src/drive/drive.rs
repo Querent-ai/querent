@@ -50,6 +50,7 @@ impl GoogleDriveSource {
 
 		let connector = HttpsConnectorBuilder::new()
 			.with_native_roots()
+			.expect("Failed to configure HTTPS connector with native roots")
 			.https_or_http()
 			.enable_http1()
 			.enable_http2()
