@@ -40,8 +40,6 @@ pub struct CollectorConfigResponse {
 pub struct SemanticPipelineRequest {
     #[prost(string, repeated, tag = "1")]
     pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(string, repeated, tag = "1")]
-    pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     #[prost(message, repeated, tag = "2")]
     pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
     #[prost(message, optional, tag = "3")]

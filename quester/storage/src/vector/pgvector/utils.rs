@@ -1,6 +1,12 @@
-use std::collections::{HashSet, HashMap};
+use std::{collections::{HashMap, HashSet}, sync::Arc};
 use common::{DocumentPayload};
+use diesel_async::AsyncPgConnection;
+use diesel::{ExpressionMethods, QueryDsl,
+};
+use crate::{embedded_knowledge, semantic_knowledge, ActualDbPool, StorageError, StorageErrorKind, StorageResult};
 
+
+use diesel_async::RunQueryDsl;
 
 // Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
@@ -20,6 +26,149 @@ pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String,
         .map(|p| (p.subject, p.object))
         .collect()
 }
+
+
+
+pub async fn traverse_node(
+    pool: &ActualDbPool,
+    node: String,
+    combined_results: &mut Vec<(i32, String, String, String, String, String, String, f32)>,
+    visited_pairs: &mut HashSet<(String, String)>,
+    conn: &mut AsyncPgConnection,
+    depth: usize
+) -> StorageResult<()> {
+    if depth > 2 {
+        return Ok(());
+    }
+
+    // Fetch inward edges
+    let inward_query_result = semantic_knowledge::dsl::semantic_knowledge
+        .select((
+            semantic_knowledge::dsl::id,
+            semantic_knowledge::dsl::document_id,
+            semantic_knowledge::dsl::subject,
+            semantic_knowledge::dsl::object,
+            semantic_knowledge::dsl::document_source,
+            semantic_knowledge::dsl::sentence,
+            semantic_knowledge::dsl::event_id,
+        ))
+        .filter(semantic_knowledge::dsl::object.eq(&node))
+        .load::<(i32, String, String, String, String, String, String)>(conn)
+        .await;
+
+    match inward_query_result {
+        Ok(results) => {
+            for result in results {
+                let (id, doc_id, subject, object, doc_source, sentence, event_id) = result;
+                let score_query_result = embedded_knowledge::dsl::embedded_knowledge
+                    .select(embedded_knowledge::dsl::score)
+                    .filter(embedded_knowledge::dsl::event_id.eq(&event_id))
+                    .first::<f32>(conn)
+                    .await;
+
+                match score_query_result {
+                    Ok(score) => {
+                        if visited_pairs.insert((subject.clone(), object.clone())) {
+                            combined_results.push((id, doc_id, subject.clone(), object.clone(), doc_source, sentence, event_id, score));
+                            let mut new_conn = pool.get().await.map_err(|e| StorageError {
+                                kind: StorageErrorKind::Internal,
+                                source: Arc::new(anyhow::Error::from(e)),
+                            })?;
+                            Box::pin(traverse_node(pool, subject, combined_results, visited_pairs, &mut new_conn, depth + 1)).await?;
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Error querying inward edges for node {}: {:?}", node, e);
+            return Err(StorageError {
+                kind: StorageErrorKind::Query,
+                source: Arc::new(anyhow::Error::from(e)),
+            });
+        }
+    }
+
+    // Fetch outward edges
+    let outward_query_result = semantic_knowledge::dsl::semantic_knowledge
+        .select((
+            semantic_knowledge::dsl::id,
+            semantic_knowledge::dsl::document_id,
+            semantic_knowledge::dsl::subject,
+            semantic_knowledge::dsl::object,
+            semantic_knowledge::dsl::document_source,
+            semantic_knowledge::dsl::sentence,
+            semantic_knowledge::dsl::event_id,
+        ))
+        .filter(semantic_knowledge::dsl::subject.eq(&node))
+        .load::<(i32, String, String, String, String, String, String)>(conn)
+        .await;
+
+    match outward_query_result {
+        Ok(results) => {
+            for result in results {
+                let (id, doc_id, subject, object, doc_source, sentence, event_id) = result;
+                let score_query_result = embedded_knowledge::dsl::embedded_knowledge
+                    .select(embedded_knowledge::dsl::score)
+                    .filter(embedded_knowledge::dsl::event_id.eq(&event_id))
+                    .first::<f32>(conn)
+                    .await;
+
+                match score_query_result {
+                    Ok(score) => {
+                        if visited_pairs.insert((subject.clone(), object.clone())) {
+                            combined_results.push((id, doc_id, subject.clone(), object.clone(), doc_source, sentence, event_id, score));
+                            let mut new_conn = pool.get().await.map_err(|e| StorageError {
+                                kind: StorageErrorKind::Internal,
+                                source: Arc::new(anyhow::Error::from(e)),
+                            })?;
+                            Box::pin(traverse_node(pool, object, combined_results, visited_pairs, &mut new_conn, depth + 1)).await?;
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("Error querying outward edges for node {}: {:?}", node, e);
+            return Err(StorageError {
+                kind: StorageErrorKind::Query,
+                source: Arc::new(anyhow::Error::from(e)),
+            });
+        }
+    }
+
+    Ok(())
+}
+
+pub fn extract_unique_pairs(
+    traverser_results: Vec<(i32, String, String, String, String, String, String, f32)>,
+    filtered_results: Vec<(String, String)>
+) -> Vec<(String, String)> {
+    let mut unique_pairs: HashSet<(String, String)> = filtered_results.into_iter().collect();
+
+    for (_id, _doc_id, subject, object, _doc_source, _sentence, _event_id, _score) in traverser_results {
+        unique_pairs.insert((subject.clone(), object.clone()));
+    }
+
+    unique_pairs.into_iter().collect()
+}
+
+pub fn find_intersection(
+    pairs1: Vec<(String, String)>,
+    pairs2: Vec<(String, String)>
+) -> Vec<(String, String)> {
+    let set1: HashSet<(String, String)> = pairs1.into_iter().collect();
+    let set2: HashSet<(String, String)> = pairs2.into_iter().collect();
+
+    set1.intersection(&set2).cloned().collect()
+}
+
 
 pub fn process_traverser_results(
     data: Vec<(i32, String, String, String, String, String, String, f32)>,
