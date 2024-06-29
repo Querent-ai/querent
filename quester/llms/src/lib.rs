@@ -6,6 +6,10 @@ pub mod schemas;
 pub mod transformers;
 pub mod utils;
 pub use schemas::*;
+pub mod generative;
+pub use generative::*;
+pub mod options;
+pub use options::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct GenerateResult {
