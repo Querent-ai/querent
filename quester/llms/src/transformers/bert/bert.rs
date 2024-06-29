@@ -8,7 +8,7 @@ use hf_hub::{api::sync::Api, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokenizers::{PaddingParams, Tokenizer};
 
-use crate::{LLMError, LLMErrorKind, LLMResult, LLM};
+use crate::{GenerateResult, LLMError, LLMErrorKind, LLMResult, Message, LLM};
 
 use crate::transformers::DistributionShift;
 
@@ -469,6 +469,14 @@ impl LLM for BertLLM {
 				Arc::new(anyhow::anyhow!("token classification model not initialized")),
 			))
 		}
+	}
+
+	async fn generate(&self, _messages: &[Message]) -> LLMResult<GenerateResult> {
+		// Not supported
+		Err(LLMError::new(
+			LLMErrorKind::ModelError,
+			Arc::new(anyhow::anyhow!("generation not supported")),
+		))
 	}
 }
 

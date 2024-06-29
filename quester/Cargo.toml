@@ -254,7 +254,6 @@ candle-core = { version = "0.5.0" }
 candle-transformers = { version = "0.5.0" }
 candle-nn = { version = "0.5.0" }
 
-
 [profile.release]
 panic = "unwind"
 lto = true
