@@ -49,11 +49,11 @@ impl GoogleDriveSource {
 		};
 
 		let connector = HttpsConnectorBuilder::new()
-			.with_native_roots()
-			.https_or_http()
-			.enable_http1()
-			.enable_http2()
-			.build();
+            .with_native_roots().expect("Failed to configure HTTPS connector with native roots")
+            .https_or_http()
+            .enable_http1()
+            .enable_http2()
+            .build();
 		let auth = AuthorizedUserAuthenticator::builder(auth)
 			.build()
 			.await
