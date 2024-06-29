@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
 
+use crate::{GenerateResult, Message};
+
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LLMErrorKind {
@@ -95,4 +97,10 @@ pub trait LLM: Send + Sync {
 		model_input: std::collections::HashMap<String, Tensor>,
 		labels: Option<&Tensor>,
 	) -> LLMResult<Vec<(String, String)>>;
+	async fn generate(&self, messages: &[Message]) -> LLMResult<GenerateResult>;
+	async fn invoke(&self, prompt: &str) -> Result<String, LLMError> {
+		self.generate(&[Message::new_human_message(prompt)])
+			.await
+			.map(|res| res.generation)
+	}
 }
