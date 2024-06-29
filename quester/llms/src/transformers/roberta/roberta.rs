@@ -1,6 +1,9 @@
-use crate::transformers::{
-	bert::bert_model_functions::DTYPE,
-	roberta::roberta_model_functions::{RobertaConfig, RobertaModel as CandleRobertaModel},
+use crate::{
+	transformers::{
+		bert::bert_model_functions::DTYPE,
+		roberta::roberta_model_functions::{RobertaConfig, RobertaModel as CandleRobertaModel},
+	},
+	GenerateResult, Message,
 };
 use async_trait::async_trait;
 use candle_core::{DType, Tensor};
@@ -467,5 +470,13 @@ impl LLM for RobertaLLM {
 				Arc::new(anyhow::anyhow!("token classification model not initialized")),
 			))
 		}
+	}
+
+	async fn generate(&self, _messages: &[Message]) -> LLMResult<GenerateResult> {
+		// Not supported
+		Err(LLMError::new(
+			LLMErrorKind::ModelError,
+			Arc::new(anyhow::anyhow!("generation not supported")),
+		))
 	}
 }
