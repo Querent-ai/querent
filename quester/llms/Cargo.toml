@@ -75,3 +75,4 @@ tokenizers = { workspace = true }
 ordered-float = { workspace = true }
 records = { workspace = true }
 reqwest-eventsource = { workspace = true }
+async-openai = { workspace = true }
