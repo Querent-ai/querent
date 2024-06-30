@@ -1,3 +1,4 @@
+use async_openai::error::OpenAIError;
 use async_trait::async_trait;
 use candle_core::Tensor;
 use serde::{Deserialize, Serialize};
@@ -68,6 +69,12 @@ impl From<io::Error> for LLMError {
 
 impl From<serde_json::Error> for LLMError {
 	fn from(err: serde_json::Error) -> LLMError {
+		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
+impl From<OpenAIError> for LLMError {
+	fn from(err: OpenAIError) -> LLMError {
 		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
 	}
 }
