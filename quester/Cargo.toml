@@ -118,7 +118,7 @@ rdkafka = { version = "0.36", default-features = false, features = [
   "zstd",
 ] }
 regex = "1.10.0"
-reqwest = { version = "0.11", default-features = false, features = [
+reqwest = { version = "0.12", features = [
   "json",
   "rustls-tls",
   "stream",
@@ -253,6 +253,11 @@ zip = "0.5.13"
 candle-core = { version = "0.5.0" }
 candle-transformers = { version = "0.5.0" }
 candle-nn = { version = "0.5.0" }
+secrecy = "0.8.0"
+ollama-rs = { version = "0.2.0", features = [
+    "stream",
+    "chat-history",
+] }
 
 [profile.release]
 panic = "unwind"
