@@ -9,7 +9,7 @@ use thiserror::Error;
 use crate::{GenerateResult, Message};
 
 /// Ingestor error kind.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LLMErrorKind {
 	/// Io error.
 	Io,
@@ -21,6 +21,8 @@ pub enum LLMErrorKind {
 	SafeTensors,
 	/// Model error.
 	ModelError,
+	// Anthropic error.
+	AnthropicError(String),
 	// Add more error kinds here if needed
 }
 
@@ -55,7 +57,7 @@ impl LLMError {
 
 	/// Returns the corresponding `IngestorErrorKind` for this error.
 	pub fn kind(&self) -> LLMErrorKind {
-		self.kind
+		self.kind.clone()
 	}
 }
 
