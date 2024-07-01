@@ -127,6 +127,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
 		}
+		println!("Inside the traverser---------------");
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
