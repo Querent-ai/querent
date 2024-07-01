@@ -19,7 +19,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		discovery_post_handler,
 		discovery_get_handler,
 		start_discovery_session_handler,
-		stop_discovery_session_handler
+		stop_discovery_session_handler,
+		traverser_post_handler,
 	),
 	components(schemas(
 		DiscoveryRequest,
@@ -191,6 +192,44 @@ pub fn stop_discovery_session_filter(
 		.and(warp::post())
 		.and(require(Some(discovery_service)))
 		.then(stop_discovery_session_handler)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+
+#[utoipa::path(
+    post,
+    tag = "Discover",
+    path = "/discovery/traverser",
+    request_body = DiscoveryRequest,
+    responses(
+        (status = 200, description = "Successfully discovered valuable information.", body = DiscoveryResponse)
+    ),
+)]
+/// Make Traverser (POST Variant)
+///
+/// REST POST traverser handler.
+///
+/// Parses the discovery request from the request body.
+pub async fn traverser_post_handler(
+	request: DiscoveryRequest,
+	discovery_service: Option<Arc<dyn DiscoveryService>>,
+) -> Result<DiscoveryResponse, DiscoveryError> {
+	if discovery_service.is_none() {
+		return Err(DiscoveryError::Unavailable("Discovery service is not available".to_string()));
+	}
+	let response = discovery_service.unwrap().discover_insights(request).await?;
+	Ok(response)
+}
+
+pub fn traverser_post_filter(
+	discovery_service: Option<Arc<dyn DiscoveryService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("discovery" / "traverser")
+		.and(warp::body::json())
+		.and(warp::post())
+		.and(require(Some(discovery_service)))
+		.then(traverser_post_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 }

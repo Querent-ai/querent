@@ -279,6 +279,34 @@ pub mod discovery_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        /// Start traverser session
+        pub async fn start_traverser(
+            &mut self,
+            request: impl tonic::IntoRequest<super::DiscoveryRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DiscoveryResponse>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/querent.discovery.Discovery/StartTraverser",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new("querent.discovery.Discovery", "StartTraverser"),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -310,6 +338,14 @@ pub mod discovery_server {
             request: tonic::Request<super::StopDiscoverySessionRequest>,
         ) -> std::result::Result<
             tonic::Response<super::StopDiscoverySessionResponse>,
+            tonic::Status,
+        >;
+        /// Start traverser session
+        async fn start_traverser(
+            &self,
+            request: tonic::Request<super::DiscoveryRequest>,
+        ) -> std::result::Result<
+            tonic::Response<super::DiscoveryResponse>,
             tonic::Status,
         >;
     }
@@ -516,6 +552,52 @@ pub mod discovery_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = StopDiscoverySessionSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/querent.discovery.Discovery/StartTraverser" => {
+                    #[allow(non_camel_case_types)]
+                    struct StartTraverserSvc<T: Discovery>(pub Arc<T>);
+                    impl<
+                        T: Discovery,
+                    > tonic::server::UnaryService<super::DiscoveryRequest>
+                    for StartTraverserSvc<T> {
+                        type Response = super::DiscoveryResponse;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::DiscoveryRequest>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).start_traverser(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = StartTraverserSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

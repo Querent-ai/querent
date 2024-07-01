@@ -48,4 +48,15 @@ impl grpc::Discovery for DiscoveryAdapter {
 			self.0.stop_discovery_session(req).await;
 		convert_to_grpc_result(res)
 	}
+
+	#[instrument(skip(self, request))]
+	async fn start_traverser(
+		&self,
+		request: tonic::Request<proto::discovery::DiscoveryRequest>,
+	) -> Result<tonic::Response<proto::discovery::DiscoveryResponse>, tonic::Status> {
+		let req = request.into_inner();
+		let res: Result<proto::DiscoveryResponse, discovery::error::DiscoveryError> =
+			self.0.discover_insights(req).await;
+		convert_to_grpc_result(res)
+	}
 }

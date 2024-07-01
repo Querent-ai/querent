@@ -152,4 +152,7 @@ service Discovery {
 
   // Stop the discovery session
   rpc StopDiscoverySession(StopDiscoverySessionRequest) returns (StopDiscoverySessionResponse);
+
+  // Start traverser session
+  rpc StartTraverser(DiscoveryRequest) returns (DiscoveryResponse);
 }
