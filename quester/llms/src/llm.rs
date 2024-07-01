@@ -1,11 +1,15 @@
+use async_openai::error::OpenAIError;
 use async_trait::async_trait;
 use candle_core::Tensor;
+use ollama_rs::error::OllamaError;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, sync::Arc};
 use thiserror::Error;
 
+use crate::{GenerateResult, Message};
+
 /// Ingestor error kind.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LLMErrorKind {
 	/// Io error.
 	Io,
@@ -17,6 +21,8 @@ pub enum LLMErrorKind {
 	SafeTensors,
 	/// Model error.
 	ModelError,
+	// Anthropic error.
+	AnthropicError(String),
 	// Add more error kinds here if needed
 }
 
@@ -51,7 +57,7 @@ impl LLMError {
 
 	/// Returns the corresponding `IngestorErrorKind` for this error.
 	pub fn kind(&self) -> LLMErrorKind {
-		self.kind
+		self.kind.clone()
 	}
 }
 
@@ -66,6 +72,18 @@ impl From<io::Error> for LLMError {
 
 impl From<serde_json::Error> for LLMError {
 	fn from(err: serde_json::Error) -> LLMError {
+		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
+impl From<OpenAIError> for LLMError {
+	fn from(err: OpenAIError) -> LLMError {
+		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
+	}
+}
+
+impl From<OllamaError> for LLMError {
+	fn from(err: OllamaError) -> LLMError {
 		LLMError::new(LLMErrorKind::Io, Arc::new(err.into()))
 	}
 }
@@ -95,4 +113,10 @@ pub trait LLM: Send + Sync {
 		model_input: std::collections::HashMap<String, Tensor>,
 		labels: Option<&Tensor>,
 	) -> LLMResult<Vec<(String, String)>>;
+	async fn generate(&self, messages: &[Message]) -> LLMResult<GenerateResult>;
+	async fn invoke(&self, prompt: &str) -> Result<String, LLMError> {
+		self.generate(&[Message::new_human_message(prompt)])
+			.await
+			.map(|res| res.generation)
+	}
 }

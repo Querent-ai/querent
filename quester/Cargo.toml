@@ -118,7 +118,7 @@ rdkafka = { version = "0.36", default-features = false, features = [
   "zstd",
 ] }
 regex = "1.10.0"
-reqwest = { version = "0.11", default-features = false, features = [
+reqwest = { version = "0.12", features = [
   "json",
   "rustls-tls",
   "stream",
@@ -233,7 +233,7 @@ aws-smithy-client = "0.55.0"
 aws-smithy-http = "0.55.0"
 aws-types = "0.55.0"
 opendal = "0.44"
-google-drive3 = "5.0.4+20240227"
+google-drive3 = "5.0.5+20240618"
 pdf-extract = "0.7.7"
 tl = "0.7.8"
 hf-hub = "0.3.2"
@@ -253,8 +253,12 @@ zip = "0.5.13"
 candle-core = { version = "0.5.0" }
 candle-transformers = { version = "0.5.0" }
 candle-nn = { version = "0.5.0" }
-
 onedrive-api = "0.10.0"
+secrecy = "0.8.0"
+ollama-rs = { version = "0.2.0", features = [
+    "stream",
+    "chat-history",
+] }
 
 [profile.release]
 panic = "unwind"

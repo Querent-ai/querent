@@ -120,6 +120,9 @@ pub trait Storage: Send + Sync + 'static {
 
 	/// Get value for key
 	async fn get_kv(&self, key: &String) -> StorageResult<Option<String>>;
+
+	/// Delete the key value pair
+	async fn delete_kv(&self, key: &String) -> StorageResult<()>;
 }
 
 impl Debug for dyn Storage {
