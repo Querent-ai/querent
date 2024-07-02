@@ -1,6 +1,6 @@
-use std::sync::Arc;
 use actors::ActorExitStatus;
 use common::DocumentPayload;
+use std::sync::Arc;
 use storage::Storage;
 
 pub mod discovery_searcher;
