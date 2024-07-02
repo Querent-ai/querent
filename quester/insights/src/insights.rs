@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{fmt, io, sync::Arc};
+use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{ConfigCallbackResponse, InsightConfig, InsightInfo};
@@ -81,10 +81,6 @@ pub trait Insight: Send + Sync {
 	type Input: Send + Sync + Serialize + for<'de> Deserialize<'de>;
 	/// The output type for the insight.
 	type Output: Send + Sync + Serialize + for<'de> Deserialize<'de>;
-	/// The streaming input type for the insight.
-	type InputStream: Stream<Item = Self::Input> + Send + Sync;
-	/// The streaming output type for the insight.
-	type OutputStream: Stream<Item = InsightResult<Self::Output>> + Send + Sync;
 
 	/// Constructor so creation can be generalized
 	async fn new() -> Box<Self>
@@ -107,16 +103,7 @@ pub trait Insight: Send + Sync {
 	fn get_runner(
 		&mut self,
 		config: &InsightConfig,
-	) -> InsightResult<
-		Arc<
-			dyn InsightRunner<
-				Input = Self::Input,
-				Output = Self::Output,
-				InputStream = Self::InputStream,
-				OutputStream = Self::OutputStream,
-			>,
-		>,
-	>;
+	) -> InsightResult<Arc<dyn InsightRunner<Input = Self::Input, Output = Self::Output>>>;
 }
 
 /// The `InsightRunner` trait, representing a generic insight operation.
@@ -130,14 +117,13 @@ pub trait InsightRunner: Send + Sync {
 	type Input: Send + Sync + Serialize + for<'de> Deserialize<'de>;
 	/// The output type for the insight.
 	type Output: Send + Sync + Serialize + for<'de> Deserialize<'de>;
-	/// The streaming input type for the insight.
-	type InputStream: Stream<Item = Self::Input> + Send + Sync;
-	/// The streaming output type for the insight.
-	type OutputStream: Stream<Item = InsightResult<Self::Output>> + Send + Sync;
 
 	/// Run the insight with the given input.
 	async fn run(&self, input: Self::Input) -> InsightResult<Self::Output>;
 
 	/// Run the insight with the given input stream.
-	async fn run_stream(&self, input: Self::InputStream) -> Self::OutputStream;
+	async fn run_stream(
+		&self,
+		input: Pin<Box<dyn Stream<Item = Self::Input> + Send + 'static>>,
+	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<Self::Output>> + Send + 'static>>>;
 }

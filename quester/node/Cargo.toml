@@ -69,6 +69,7 @@ proto = { workspace = true }
 discovery = { workspace = true }
 engines = { workspace = true }
 llms = { workspace = true }
+insights = { workspace = true }
 rust-embed = { workspace = true }
 mime_guess = { workspace = true }
 uuid = { workspace = true }

@@ -1,11 +1,12 @@
 use std::{collections::HashMap, sync::Arc};
 
+use llms::LLM;
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
 use storage::Storage;
 
 /// Insight Information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
 pub struct InsightInfo {
@@ -27,7 +28,7 @@ pub struct InsightInfo {
 }
 
 /// Possible custom option values for insights.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
@@ -58,7 +59,7 @@ impl InsightCustomOptionValue {
 }
 
 /// A custom option for insights.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomInsightOption {
 	/// Unique identifier for the option.
@@ -163,9 +164,10 @@ pub enum ConfigCallbackResponse {
 	Empty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct InsightConfig {
 	pub id: String,
+	pub llm: Arc<dyn LLM>,
 	pub index_storage: Arc<dyn Storage>,
 	pub embedded_knowledge_vec_store: Arc<dyn Storage>,
 	pub discovered_knowledge_vec_store: Arc<dyn Storage>,
