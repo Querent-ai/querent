@@ -1,5 +1,4 @@
 use std::sync::Arc;
-
 use actors::ActorExitStatus;
 use common::DocumentPayload;
 use storage::Storage;

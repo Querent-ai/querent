@@ -246,7 +246,7 @@ impl Storage for PGVector {
 				embedded_knowledge::dsl::event_id,
 				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
-			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.6))
+			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.2))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.offset(offset)
@@ -418,7 +418,7 @@ table! {
 // mod test {
 // 	use super::*;
 // 	use crate::utils::{
-// 		extract_unique_pairs, find_intersection, get_top_k_pairs, process_traverser_results,
+// 		extract_unique_pairs, find_intersection, get_top_k_pairs, process_traverser_results
 // 	};
 // 	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 // 	use proto::semantics::StorageType;
