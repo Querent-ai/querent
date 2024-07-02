@@ -609,7 +609,7 @@ pub async fn delete_collectors(
 /// list insights handler.
 pub fn list_insights_handler(
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("cluster")
+	warp::path!("insights")
 		.and(warp::path::end())
 		.and(warp::get())
 		.then(list_insights)
