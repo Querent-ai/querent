@@ -167,8 +167,7 @@ pub enum ConfigCallbackResponse {
 pub struct InsightConfig {
 	pub id: String,
 	pub index_storage: Arc<dyn Storage>,
-	pub embedded_knowledge_store: Arc<dyn Storage>,
-	pub discovered_knowledge_store: Arc<dyn Storage>,
-	pub graph_storage: Option<Arc<dyn Storage>>,
+	pub embedded_knowledge_vec_store: Arc<dyn Storage>,
+	pub discovered_knowledge_vec_store: Arc<dyn Storage>,
 	pub additional_options: HashMap<String, CustomInsightOption>,
 }
