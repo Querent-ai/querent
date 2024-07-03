@@ -1,5 +1,6 @@
 use crate::{
-	ConfigCallbackResponse, Insight, InsightConfig, InsightInfo, InsightResult, InsightRunner,
+	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
+	InsightInfo, InsightResult, InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -33,15 +34,34 @@ impl Insight for XAI {
 	type Output = XAIOutput;
 
 	async fn new() -> Box<Self> {
+		let mut additional_options = HashMap::new();
+		additional_options.insert(
+			"openai_api_key".to_string(),
+			CustomInsightOption {
+				id: "openai_api_key".to_string(),
+				label: "OpenAI API Key".to_string(),
+				default_value: Some(InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				}),
+				value: InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				},
+				tooltip: Some("OpenAI API Key".to_string()),
+			},
+		);
 		Box::new(Self {
 			info: InsightInfo {
-				name: "Querent xAI".to_string(),
+				id: "querent.insights.x_ai.openai".to_string(),
+				name: "Querent xAI with GPT".to_string(),
 				description: "xAI utilizes generative models to perform a directed traversal in Querent's attention data fabric.".to_string(),
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
 				icon: &[], // Add your icon bytes here.
 				additional_options: HashMap::new(),
+				conversational: true,
 			},
 		})
 	}

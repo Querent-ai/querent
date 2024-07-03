@@ -9,8 +9,6 @@ use std::fmt::{Debug, Display, Formatter};
 
 include!("../codegen/querent/querent.discovery.rs");
 
-pub type DiscoveryResult<T> = std::result::Result<T, DiscoveryError>;
-
 #[derive(Debug, thiserror::Error, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum DiscoveryError {

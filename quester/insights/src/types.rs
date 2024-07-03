@@ -10,12 +10,16 @@ use storage::Storage;
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
 pub struct InsightInfo {
+	/// ID is  namespaced which is used to identify the insight.
+	pub id: String,
 	/// Insight name.
 	pub name: String,
 	/// Insight description.
 	pub description: String,
 	/// Insight version.
 	pub version: String,
+	/// Is this insight conversational.
+	pub conversational: bool,
 	/// Insight author.
 	pub author: String,
 	/// Insight license.
@@ -167,9 +171,35 @@ pub enum ConfigCallbackResponse {
 #[derive(Clone)]
 pub struct InsightConfig {
 	pub id: String,
+	pub discovery_sesssion_id: String,
+	pub semantic_pipeline_id: String,
 	pub llm: Arc<dyn LLM>,
 	pub index_storage: Arc<dyn Storage>,
 	pub embedded_knowledge_vec_store: Arc<dyn Storage>,
 	pub discovered_knowledge_vec_store: Arc<dyn Storage>,
 	pub additional_options: HashMap<String, CustomInsightOption>,
+}
+
+impl InsightConfig {
+	pub fn new(
+		id: String,
+		discovery_sesssion_id: String,
+		semantic_pipeline_id: String,
+		llm: Arc<dyn LLM>,
+		index_storage: Arc<dyn Storage>,
+		embedded_knowledge_vec_store: Arc<dyn Storage>,
+		discovered_knowledge_vec_store: Arc<dyn Storage>,
+		additional_options: HashMap<String, CustomInsightOption>,
+	) -> InsightConfig {
+		InsightConfig {
+			id,
+			discovery_sesssion_id,
+			semantic_pipeline_id,
+			llm,
+			index_storage,
+			embedded_knowledge_vec_store,
+			discovered_knowledge_vec_store,
+			additional_options,
+		}
+	}
 }
