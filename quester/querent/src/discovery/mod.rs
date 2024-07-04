@@ -1,11 +1,11 @@
-use std::sync::Arc;
-
 use actors::ActorExitStatus;
 use common::DocumentPayload;
+use std::sync::Arc;
 use storage::Storage;
 
 pub mod discovery_searcher;
 pub mod discovery_service;
+pub mod discovery_traverser;
 
 async fn insert_discovered_knowledge_async(
 	storage: Arc<dyn Storage>,

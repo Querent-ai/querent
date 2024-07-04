@@ -73,6 +73,7 @@ impl Storage for MilvusStorage {
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
+		_query: String,
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
@@ -129,24 +130,24 @@ impl Storage for MilvusStorage {
 							let mut doc_payload = DocumentPayload::default();
 							for field in search_res.field {
 								match field.name.as_str() {
-									"knowledge" => {
-										let knowledge: Vec<String> =
-											field.value.try_into().unwrap_or_default();
-										doc_payload.knowledge = knowledge.join(" ");
-										// split at _ to get subject, predicate, object
-										let knowledge_parts: Vec<&str> =
-											doc_payload.knowledge.split('_').collect();
-										if knowledge_parts.len() != 3 {
-											log::error!(
-												"Knowledge triple is not in correct format: {:?}",
-												doc_payload.knowledge
-											);
-											continue;
-										}
-										doc_payload.subject = knowledge_parts[0].to_string();
-										// doc_payload.predicate = knowledge_parts[1].to_string();
-										doc_payload.object = knowledge_parts[2].to_string();
-									},
+									// "knowledge" => {
+									// 	let knowledge: Vec<String> =
+									// 		field.value.try_into().unwrap_or_default();
+									// 	doc_payload.knowledge = knowledge.join(" ");
+									// 	// split at _ to get subject, predicate, object
+									// 	let knowledge_parts: Vec<&str> =
+									// 		// doc_payload.knowledge.split('_').collect();
+									// 	if knowledge_parts.len() != 3 {
+									// 		log::error!(
+									// 			"Knowledge triple is not in correct format: {:?}",
+									// 			// doc_payload.knowledge
+									// 		);
+									// 		continue;
+									// 	}
+									// 	doc_payload.subject = knowledge_parts[0].to_string();
+									// 	// doc_payload.predicate = knowledge_parts[1].to_string();
+									// 	doc_payload.object = knowledge_parts[2].to_string();
+									// },
 									"document" => {
 										let document: Vec<String> =
 											field.value.try_into().unwrap_or_default();
@@ -208,6 +209,13 @@ impl Storage for MilvusStorage {
 	) -> StorageResult<()> {
 		// Your insert_discovered_knowledge implementation here
 		Ok(())
+	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
 	}
 
 	/// Store key value pair

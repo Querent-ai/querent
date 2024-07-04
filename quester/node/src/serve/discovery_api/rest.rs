@@ -19,7 +19,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require};
 		discovery_post_handler,
 		discovery_get_handler,
 		start_discovery_session_handler,
-		stop_discovery_session_handler
+		stop_discovery_session_handler,
 	),
 	components(schemas(
 		DiscoveryRequest,

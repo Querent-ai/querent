@@ -9,6 +9,7 @@ CREATE TABLE discovered_knowledge(
     object TEXT,
     cosine_distance FLOAT8,
     query_embedding vector(384),
+    query VARCHAR,
     session_id VARCHAR,
-    score FLOAT4
+    score FLOAT8
 );
