@@ -46,7 +46,7 @@ impl Insight for XAI {
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
 				icon: &[], // Add your icon bytes here.
-				additional_options: HashMap::new(),
+				additional_options,
 				conversational: true,
 			},
 		})
