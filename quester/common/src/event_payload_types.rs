@@ -33,6 +33,7 @@ pub struct SemanticKnowledgePayload {
 	pub image_id: Option<String>,
 	pub blob: Option<String>,
 	pub event_id: String,
+	pub source_id: String,
 }
 
 impl SemanticKnowledgePayload {

@@ -31,6 +31,7 @@ pub struct GoogleDriveSource {
 	hub: DriveHub,
 	folder_id: String,
 	page_token: Option<String>,
+	source_id: String,
 }
 
 impl std::fmt::Debug for GoogleDriveSource {
@@ -62,7 +63,7 @@ impl GoogleDriveSource {
 		let http_client = hyper::Client::builder().build(connector);
 		let hub = DriveHub::new(http_client, auth);
 
-		GoogleDriveSource { hub, folder_id: config.folder_to_crawl, page_token: None }
+		GoogleDriveSource { hub, folder_id: config.folder_to_crawl, page_token: None, source_id: config.id.clone() }
 	}
 
 	async fn download_file(&self, file_id: &str) -> Result<Body, google_drive3::Error> {
@@ -274,6 +275,7 @@ impl Source for GoogleDriveSource {
 		let mut page_token = self.page_token.clone();
 		let folder_id = self.folder_id.clone();
 		let hub = self.hub.clone();
+		let source_id = self.source_id.clone();
 		let stream = stream! {
 			loop {
 				let (_, list) =hub
@@ -328,6 +330,7 @@ impl Source for GoogleDriveSource {
 									eof,
 									Some(folder_id.clone()),
 									Some(chunk.len()),
+									source_id.clone(),
 								);
 
 								yield Ok(collected_bytes);
@@ -340,6 +343,7 @@ impl Source for GoogleDriveSource {
 								true,
 								Some(folder_id.clone()),
 								None,
+								source_id.clone(),
 							);
 
 							yield Ok(eof_collected_bytes);

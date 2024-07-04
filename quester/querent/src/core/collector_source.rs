@@ -80,7 +80,7 @@ impl Source for Collector {
 							Err(e) => {
 								error!("Failed to poll data here: {:?}", e);
 								if let Err(e) = event_sender
-									.send(CollectedBytes::new(None, None, false, None, None))
+									.send(CollectedBytes::new(None, None, false, None, None, "".to_string()))
 									.await
 								{
 									error!("Failed to send failure signal: {:?}", e);
@@ -91,7 +91,7 @@ impl Source for Collector {
 					}
 
 					if let Err(e) =
-						event_sender.send(CollectedBytes::new(None, None, true, None, None)).await
+						event_sender.send(CollectedBytes::new(None, None, true, None, None, "".to_string())).await
 					{
 						error!("Failed to send EOF signal: {:?}", e);
 					}
@@ -100,7 +100,7 @@ impl Source for Collector {
 				Err(e) => {
 					error!("Failed to poll data: {:?}", e);
 					if let Err(e) =
-						event_sender.send(CollectedBytes::new(None, None, false, None, None)).await
+						event_sender.send(CollectedBytes::new(None, None, false, None, None, "".to_string())).await
 					{
 						error!("Failed to send failure signal: {:?}", e);
 					}

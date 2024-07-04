@@ -72,6 +72,7 @@ impl Engine for AttentionTensorsEngine {
 				let cleaned_data: Vec<String> =
 					token.data.into_iter().map(|s| remove_newlines(&s)).collect();
 				// let doc_source: = token.doc_source;
+				let source_id = token.source_id.clone();
 
 				let mut all_chunks = Vec::new();
 				for data in cleaned_data {
@@ -228,6 +229,7 @@ impl Engine for AttentionTensorsEngine {
 								image_id: None,
 								blob: Some("mock".to_string()),
 								event_id: event_ids[i].clone(),
+								source_id: source_id.clone(),
 							};
 							let event = EventState {
 								event_type: EventType::Graph,

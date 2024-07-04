@@ -23,6 +23,7 @@ use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 pub struct AzureBlobStorage {
 	container_client: ContainerClient,
 	prefix: String,
+	source_id: String,
 }
 
 impl fmt::Debug for AzureBlobStorage {
@@ -46,7 +47,7 @@ impl AzureBlobStorage {
 		let container_client =
 			blob_service_client.container_client(azure_storage_config.container.clone());
 
-		Self { container_client, prefix: azure_storage_config.prefix }
+		Self { container_client, prefix: azure_storage_config.prefix, source_id: azure_storage_config.id.clone() }
 	}
 
 	/// Returns the blob name (a.k.a blob key).
@@ -209,6 +210,7 @@ impl Source for AzureBlobStorage {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let mut blob_stream = self.container_client.list_blobs().into_stream();
 		let container_client = self.container_client.clone();
+		let source_id = self.source_id.clone();
 
 		let stream = stream! {
 			while let Some(blob_result) = blob_stream.next().await {
@@ -261,6 +263,7 @@ impl Source for AzureBlobStorage {
 								false,
 								Some(container_client.container_name().to_string()),
 								Some(bytes_read as usize),
+								source_id.clone(),
 							);
 
 							yield Ok(collected_bytes);
@@ -273,6 +276,7 @@ impl Source for AzureBlobStorage {
 							true,
 							Some(container_client.container_name().to_string()),
 							None,
+							source_id.clone(),
 						);
 						yield Ok(collected_bytes);
 					}

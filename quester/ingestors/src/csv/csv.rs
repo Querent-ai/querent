@@ -32,6 +32,7 @@ impl BaseIngestor for CsvIngestor {
 		let mut buffer = Vec::new();
 		let mut file = String::new();
 		let mut doc_source = String::new();
+		let mut source_id = String::new();
 		for collected_bytes in all_collected_bytes.iter() {
 			if file.is_empty() {
 				file =
@@ -41,6 +42,7 @@ impl BaseIngestor for CsvIngestor {
 				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 			}
 			buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+			source_id = collected_bytes.source_id.clone();
 		}
 
 		let buffer = Arc::new(buffer);
@@ -69,6 +71,7 @@ impl BaseIngestor for CsvIngestor {
 						file: file.clone(),
 						doc_source: doc_source.clone(),
 						is_token_stream: false,
+						source_id: source_id.clone(),
 					};
 
 					yield Ok(ingested_tokens);
@@ -80,6 +83,7 @@ impl BaseIngestor for CsvIngestor {
 					file: file.clone(),
 					doc_source: doc_source.clone(),
 					is_token_stream: false,
+					source_id: source_id.clone(),
 				};
 
 				yield Ok(ingested_tokens);
@@ -112,6 +116,7 @@ impl BaseIngestor for CsvIngestor {
 // 			eof: false,
 // 			extension: Some("csv".to_string()),
 // 			size: Some(10),
+//          source_id: "Filesystem".to_string(),
 //         };
 
 //         let ingestor = CsvIngestor::new();
