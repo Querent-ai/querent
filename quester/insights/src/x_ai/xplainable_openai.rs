@@ -1,10 +1,12 @@
 use crate::{
 	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
-	InsightInfo, InsightInput, InsightOutput, InsightResult, InsightRunner,
+	InsightError, InsightErrorKind, InsightInfo, InsightInput, InsightOutput, InsightResult,
+	InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;
 use futures::{pin_mut, Stream, StreamExt};
+use llms::{OpenAI, OpenAIConfig, LLM};
 use serde_json::Value;
 use std::{collections::HashMap, pin::Pin, sync::Arc};
 
@@ -15,6 +17,7 @@ pub struct XAI {
 
 pub struct XAIRunner {
 	pub config: InsightConfig,
+	pub llm: Arc<dyn LLM>,
 }
 
 #[async_trait]
@@ -65,7 +68,26 @@ impl Insight for XAI {
 	}
 
 	fn get_runner(&self, config: &InsightConfig) -> InsightResult<Arc<dyn InsightRunner>> {
-		Ok(Arc::new(XAIRunner { config: config.clone() }))
+		let openai_api_key = config.get_custom_option("openai_api_key");
+		if openai_api_key.is_none() {
+			return Err(InsightError::new(
+				InsightErrorKind::Unauthorized,
+				anyhow::anyhow!("OpenAI API Key is required").into(),
+			));
+		}
+		let openai_api_key = openai_api_key.unwrap().value.clone();
+		let openai_api_key = match openai_api_key {
+			InsightCustomOptionValue::String { value, .. } => value,
+			_ =>
+				return Err(InsightError::new(
+					InsightErrorKind::Unauthorized,
+					anyhow::anyhow!("OpenAI API Key is required").into(),
+				)),
+		};
+		let default_openai_config: OpenAIConfig =
+			OpenAIConfig::default().with_api_key(openai_api_key);
+		let openai_llm = OpenAI::new(default_openai_config);
+		Ok(Arc::new(XAIRunner { config: config.clone(), llm: Arc::new(openai_llm) }))
 	}
 }
 

@@ -195,4 +195,8 @@ impl InsightConfig {
 			additional_options,
 		}
 	}
+
+	pub fn get_custom_option(&self, id: &str) -> Option<&CustomInsightOption> {
+		self.additional_options.get(id)
+	}
 }
