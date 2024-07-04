@@ -85,8 +85,6 @@ impl Engine for AttentionTensorsEngine {
 						llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
 					tokenized_chunks.push(tokenized_chunk);
 				}
-				let mut event_ids: Vec<String> = Vec::new();
-				let mut i = 0;
 				let classified_sentences = if !entities.is_empty() {
 					let initial_classified_sentences =
 						label_entities_in_sentences(&entities, &all_chunks);
@@ -206,9 +204,12 @@ impl Engine for AttentionTensorsEngine {
 					(entities, sample_entities) = extract_entities_and_types(all_sentences_with_relations.clone());
 				}
 				for sentence_with_relations in all_sentences_with_relations {
+					let mut event_ids = Vec::new();
 					for head_tail_relation in &sentence_with_relations.relations {
 						for (predicate, _score) in &head_tail_relation.relations {
-							event_ids.push(generate_custom_comb_uuid());
+							let event_id = generate_custom_comb_uuid();
+							event_ids.push(event_id.clone());
+
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
@@ -227,7 +228,7 @@ impl Engine for AttentionTensorsEngine {
 								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
 								image_id: None,
 								blob: Some("mock".to_string()),
-								event_id: event_ids[i].clone(),
+								event_id: event_id.clone(),
 							};
 							let event = EventState {
 								event_type: EventType::Graph,
@@ -237,12 +238,12 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
-							i = i + 1;
+
 							yield Ok(event);
 						}
 					}
 					let attention_matrix = sentence_with_relations.attention_matrix.as_ref().unwrap();
-					i = 0;
+					let mut i = 0;
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
 						let tail_entity = &relation.tail.name;
@@ -279,11 +280,10 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
-							i = i + 1;
+							i += 1;
 							yield Ok(event);
 						}
 					}
-
 				}
 			}
 		};

@@ -68,6 +68,13 @@ impl Storage for SecretStore {
 		Ok(())
 	}
 
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
+
 	/// Insert DiscoveryPayload into storage
 	async fn insert_discovered_knowledge(
 		&self,
@@ -80,6 +87,7 @@ impl Storage for SecretStore {
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
+		_query: String,
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,

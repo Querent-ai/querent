@@ -10,6 +10,7 @@ pub struct DocumentPayload {
 	pub object: String,
 	pub cosine_distance: Option<f64>,
 	pub query_embedding: Option<Vec<f32>>,
+	pub query: Option<String>,
 	pub session_id: Option<String>,
 	pub score: f32,
 }
