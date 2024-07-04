@@ -1,8 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
-
-use llms::LLM;
+use common::EventType;
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
+use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 
 /// Insight Information.
@@ -173,10 +172,8 @@ pub struct InsightConfig {
 	pub id: String,
 	pub discovery_sesssion_id: String,
 	pub semantic_pipeline_id: String,
-	pub llm: Arc<dyn LLM>,
-	pub index_storage: Arc<dyn Storage>,
-	pub embedded_knowledge_vec_store: Arc<dyn Storage>,
-	pub discovered_knowledge_vec_store: Arc<dyn Storage>,
+	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub additional_options: HashMap<String, CustomInsightOption>,
 }
 
@@ -185,20 +182,16 @@ impl InsightConfig {
 		id: String,
 		discovery_sesssion_id: String,
 		semantic_pipeline_id: String,
-		llm: Arc<dyn LLM>,
-		index_storage: Arc<dyn Storage>,
-		embedded_knowledge_vec_store: Arc<dyn Storage>,
-		discovered_knowledge_vec_store: Arc<dyn Storage>,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+		index_storages: Vec<Arc<dyn Storage>>,
 		additional_options: HashMap<String, CustomInsightOption>,
 	) -> InsightConfig {
 		InsightConfig {
 			id,
 			discovery_sesssion_id,
 			semantic_pipeline_id,
-			llm,
-			index_storage,
-			embedded_knowledge_vec_store,
-			discovered_knowledge_vec_store,
+			event_storages,
+			index_storages,
 			additional_options,
 		}
 	}

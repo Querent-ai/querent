@@ -28,8 +28,20 @@ message InsightQuery {
 message InsightQueryResponse {
     // The ID of the insight session
     string session_id = 1;
+    // Hash of the query
+    string query_hash = 2;
     // The response from the insight
-    string response = 2;
+    string response = 3;
+}
+
+message StopInsightSessionRequest {
+    // The ID of the insight session
+    string session_id = 1;
+}
+
+message StopInsightSessionResponse {
+    // The ID of the insight session
+    string session_id = 1;
 }
 
 // InsightService is a service that provides insights from data
@@ -38,4 +50,6 @@ service InsightService {
     rpc CreateInsightSession(InsightAnalystRequest) returns (InsightAnalystResponse) {}
     // Provide the input for an insight and get a response (for query-based insights)
     rpc ProvideInsightInput(InsightQuery) returns (InsightQueryResponse) {}
+    // Stop an insight session
+    rpc StopInsightSession(StopInsightSessionRequest) returns (StopInsightSessionResponse) {}
 }

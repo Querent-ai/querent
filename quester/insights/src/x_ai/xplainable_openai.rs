@@ -1,11 +1,10 @@
 use crate::{
 	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
-	InsightInfo, InsightResult, InsightRunner,
+	InsightInfo, InsightInput, InsightOutput, InsightResult, InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;
 use futures::{pin_mut, Stream, StreamExt};
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::{collections::HashMap, pin::Pin, sync::Arc};
 
@@ -14,26 +13,13 @@ pub struct XAI {
 	info: InsightInfo,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct XAIInput {
-	pub query: Value,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct XAIOutput {
-	pub explanation: String,
-}
-
 pub struct XAIRunner {
-	_config: InsightConfig,
+	pub config: InsightConfig,
 }
 
 #[async_trait]
 impl Insight for XAI {
-	type Input = XAIInput;
-	type Output = XAIOutput;
-
-	async fn new() -> Box<Self> {
+	async fn new() -> Arc<Self> {
 		let mut additional_options = HashMap::new();
 		additional_options.insert(
 			"openai_api_key".to_string(),
@@ -51,7 +37,7 @@ impl Insight for XAI {
 				tooltip: Some("OpenAI API Key".to_string()),
 			},
 		);
-		Box::new(Self {
+		Arc::new(Self {
 			info: InsightInfo {
 				id: "querent.insights.x_ai.openai".to_string(),
 				name: "Querent xAI with GPT".to_string(),
@@ -78,35 +64,30 @@ impl Insight for XAI {
 		ConfigCallbackResponse::Empty
 	}
 
-	fn get_runner(
-		&mut self,
-		config: &InsightConfig,
-	) -> InsightResult<Arc<dyn InsightRunner<Input = Self::Input, Output = Self::Output>>> {
-		Ok(Arc::new(XAIRunner { _config: config.clone() }))
+	fn get_runner(&self, config: &InsightConfig) -> InsightResult<Arc<dyn InsightRunner>> {
+		Ok(Arc::new(XAIRunner { config: config.clone() }))
 	}
 }
 
 #[async_trait]
 impl InsightRunner for XAIRunner {
-	type Input = XAIInput;
-	type Output = XAIOutput;
-
-	async fn run(&self, input: Self::Input) -> InsightResult<Self::Output> {
+	async fn run(&self, input: InsightInput) -> InsightResult<InsightOutput> {
 		// Placeholder explanation logic.
-		let explanation = format!("Explanation for input: {:?}", input.query);
-		Ok(XAIOutput { explanation })
+		let explanation = format!("Explanation for input: {:?}", input.data);
+		Ok(InsightOutput { data: Value::String(explanation) })
 	}
 
 	async fn run_stream(
 		&self,
-		input: Pin<Box<dyn Stream<Item = Self::Input> + Send + 'static>>,
-	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<Self::Output>> + Send + 'static>>> {
+		input: Pin<Box<dyn Stream<Item = InsightInput> + Send + 'static>>,
+	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<InsightOutput>> + Send + 'static>>>
+	{
 		let stream = stream! {
 			pin_mut!(input);
 			while let Some(input) = input.next().await {
-				log::info!("Processing input: {:?}", input.query);
-				let output = XAIOutput {
-					explanation: format!("Explanation for input: {:?}", input.query),
+				log::info!("Processing input: {:?}", input.data);
+				let output = InsightOutput {
+					data: Value::String(format!("Explanation for input: {:?}", input.data)),
 				};
 				yield Ok(output);
 			}

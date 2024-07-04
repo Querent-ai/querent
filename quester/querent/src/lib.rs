@@ -15,6 +15,8 @@ pub mod pipeline;
 pub use pipeline::*;
 pub mod discovery;
 pub use discovery::*;
+pub mod insights;
+pub use insights::*;
 pub mod ingest;
 pub mod memory;
 pub mod schemas;

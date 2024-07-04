@@ -1,5 +1,5 @@
 [package]
-name = "insights"
+name = "insights-service"
 version = "3.0.4"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
@@ -15,6 +15,8 @@ proto = { workspace = true }
 actors = { workspace = true }
 storage = { workspace = true }
 llms = { workspace = true }
+insights = { workspace = true }
+querent = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 anyhow = { workspace = true }

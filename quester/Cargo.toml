@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sources", "ingestors", "engines", "llms", "insights", "actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "discovery"]
+members = ["sources", "ingestors", "engines", "llms", "insights", "insights_service", "actors", "common", "querent", "storage", "cluster", "node", "codegen", "proto", "discovery"]
 
 [profile.dev]
 debug = false
@@ -197,6 +197,7 @@ ingestors = { version = "3.0.4", path = "./ingestors" }
 engines = { version = "3.0.4", path = "./engines" }
 llms = { version = "3.0.4", path = "./llms" }
 insights = { version = "3.0.4", path = "./insights" }
+insights-service = { version = "3.0.4", path = "./insights_service" }
 milvus-sdk-rust = "0.1.0"
 neo4rs = "0.7.0"
 diesel-async = "0.4.1"
