@@ -3,9 +3,7 @@ use common::EventType;
 use engines::agn::AttentionTensorsEngine;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
-use insights::{
-	all_insights_info_available, CustomInsightOption, InsightCustomOptionValue, InsightInfo,
-};
+use insights::{CustomInsightOption, InsightCustomOptionValue, InsightInfo};
 use llms::{
 	transformers::{
 		bert::{BertLLM, EmbedderOptions},
@@ -51,7 +49,6 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		restart_pipeline,
 		set_collectors,
 		delete_collectors,
-		list_insights,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -607,27 +604,4 @@ pub async fn delete_collectors(
 		})?;
 	}
 	Ok(DeleteCollectorResponse { id: collector.id })
-}
-
-/// list insights handler.
-pub fn list_insights_handler(
-) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("insights")
-		.and(warp::path::end())
-		.and(warp::get())
-		.then(list_insights)
-		.and(extract_format_from_qs())
-		.map(make_json_api_response)
-}
-
-#[utoipa::path(
-    get,
-    tag = "Insights",
-    path = "/insights",
-    responses(
-        (status = 200, description = "Successfully retrived list of Querent insights.", body = Vec<InsightInfo>)
-    )
-)]
-pub async fn list_insights() -> Result<Vec<InsightInfo>, Infallible> {
-	Ok(all_insights_info_available().await)
 }

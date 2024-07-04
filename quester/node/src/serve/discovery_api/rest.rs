@@ -1,4 +1,3 @@
-use discovery::{error::DiscoveryError, DiscoveryService};
 use proto::{
 	discovery::{
 		DiscoveryAgentType, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
@@ -11,7 +10,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{reject::Rejection, Filter};
 
-use crate::{extract_format_from_qs, make_json_api_response, serve::require};
+use crate::{
+	discovery_api::discovery_service::{error::DiscoveryError, DiscoveryService},
+	extract_format_from_qs, make_json_api_response,
+	serve::require,
+};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(

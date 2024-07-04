@@ -1,10 +1,14 @@
 use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
 
-use crate::{grpc, rest};
+use crate::{
+	discovery_api::discovery_service::{start_discovery_service, DiscoveryService},
+	grpc,
+	insight_api::insights_service::InsightService,
+	rest,
+};
 use actors::{ActorExitStatus, MessageBus, Quester};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig};
-use discovery::{start_discovery_service, DiscoveryService};
 use proto::config::NodeConfig;
 use querent::{start_semantic_service, SemanticService};
 use storage::{create_secret_store, create_storages, Storage};
@@ -25,6 +29,7 @@ pub struct QuesterServices {
 	pub event_broker: PubSubBroker,
 	pub semantic_service_bus: MessageBus<SemanticService>,
 	pub discovery_service: Option<Arc<dyn DiscoveryService>>,
+	pub insight_service: Option<Arc<dyn InsightService>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn Storage>,
@@ -87,6 +92,7 @@ pub async fn serve_quester(
 		event_storages,
 		index_storages,
 		discovery_service: Some(discovery_service),
+		insight_service: None,
 		secret_store,
 	});
 	info!("Starting REST server 📡: check /api-doc.json for available APIs");

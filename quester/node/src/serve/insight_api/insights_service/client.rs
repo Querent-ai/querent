@@ -1,9 +1,9 @@
-use std::{fmt, net::SocketAddr, sync::Arc};
-
-use crate::service::InsightService;
 use proto::SpanContextInterceptor;
+use std::{fmt, net::SocketAddr, sync::Arc};
 use tonic::{codegen::InterceptedService, transport::Channel};
 use tower::timeout::Timeout;
+
+use crate::insight_api::insights_service::InsightService;
 
 #[derive(Clone)]
 enum InsightServiceClientImpl {
