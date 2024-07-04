@@ -32,6 +32,7 @@ pub struct S3Source {
 	pub chunk_size: usize,
 	pub s3_client: Option<S3Client>,
 	pub continuation_token: Option<String>,
+	pub source_id: String,
 }
 
 impl S3Source {
@@ -42,6 +43,7 @@ impl S3Source {
 		let access_key = config.access_key.clone();
 		let secret_key = config.secret_key.clone();
 		let chunk_size = 1024 * 1024 * 10; // this is 10MB
+		let source_id = config.id.clone();
 		let mut s3 = S3Source {
 			bucket_name,
 			region,
@@ -50,6 +52,7 @@ impl S3Source {
 			chunk_size,
 			s3_client: None,
 			continuation_token: None,
+			source_id,
 		};
 
 		let credentials = Credentials::new(
@@ -204,10 +207,16 @@ impl Source for S3Source {
 		let bucket_name = self.bucket_name.clone();
 		let continuation_token_start = self.continuation_token.clone();
 		let chunk_size = self.chunk_size;
+		let source_id = self.source_id.clone();
 
-		let stream =
-			create_poll_data_stream(s3_client, bucket_name, continuation_token_start, chunk_size)
-				.await;
+		let stream = create_poll_data_stream(
+			s3_client,
+			bucket_name,
+			continuation_token_start,
+			chunk_size,
+			source_id,
+		)
+		.await;
 
 		Ok(Box::pin(stream))
 	}
@@ -218,6 +227,7 @@ async fn create_poll_data_stream(
 	bucket_name: String,
 	continuation_token_start: Option<String>,
 	chunk_size: usize,
+	source_id: String,
 ) -> impl Stream<Item = SourceResult<CollectedBytes>> + Send + 'static {
 	stream! {
 		let mut continuation_token = continuation_token_start;
@@ -270,6 +280,7 @@ async fn create_poll_data_stream(
 								false,
 								Some(bucket_name.clone()),
 								Some(bytes_read),
+								source_id.clone(),
 							);
 
 							yield Ok(collected_bytes);
@@ -281,6 +292,7 @@ async fn create_poll_data_stream(
 							true,
 							Some(bucket_name.clone()),
 							None,
+							source_id.clone(),
 						);
 
 						yield Ok(eof_collected_bytes);
