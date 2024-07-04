@@ -1,4 +1,4 @@
-use crate::discovery_searcher::DiscoverySearch;
+use crate::{discovery_searcher::DiscoverySearch, discovery_traverser::DiscoveryTraverse};
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
@@ -15,21 +15,23 @@ use std::{
 };
 use storage::{create_storages, Storage};
 
-// TODO Discovery Agents rethinking needed
-struct DiscoverAgentHandle {
-	mailbox: MessageBus<DiscoverySearch>,
-	handle: ActorHandle<DiscoverySearch>,
+/// Traverser via discovery
+struct DiscoveryTraverseHandle {
+	mailbox: MessageBus<DiscoveryTraverse>,
+	handle: ActorHandle<DiscoveryTraverse>,
 }
 
+/// Searcher via discovery
 struct DiscoverSearchHandle {
 	mailbox: MessageBus<DiscoverySearch>,
 	handle: ActorHandle<DiscoverySearch>,
 }
 
+/// Discovery Agent Service
 pub struct DiscoveryAgentService {
 	node_id: String,
 	cluster: Cluster,
-	agent_pipelines: HashMap<String, DiscoverAgentHandle>,
+	traverse_pipelines: HashMap<String, DiscoveryTraverseHandle>,
 	searcher_pipelines: HashMap<String, DiscoverSearchHandle>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 }
@@ -52,7 +54,7 @@ impl DiscoveryAgentService {
 		Self {
 			node_id,
 			cluster,
-			agent_pipelines: HashMap::new(),
+			traverse_pipelines: HashMap::new(),
 			searcher_pipelines: HashMap::new(),
 			event_storages,
 		}
@@ -107,7 +109,19 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 					DiscoverSearchHandle { mailbox: search_messagebus, handle: search };
 				self.searcher_pipelines.insert(new_uuid.clone(), search_handle);
 			},
-			_ => return Err(anyhow::anyhow!("Invalid session type").into()),
+			DiscoveryAgentType::Traverser => {
+				let search = DiscoveryTraverse::new(
+					new_uuid.clone(),
+					current_timestamp as u64,
+					event_storages.clone(),
+					request.clone(),
+				);
+
+				let (traverse_messagebus, traverse) = ctx.spawn_actor().spawn(search);
+				let traverse_handle =
+					DiscoveryTraverseHandle { mailbox: traverse_messagebus, handle: traverse };
+				self.traverse_pipelines.insert(new_uuid.clone(), traverse_handle);
+			},
 		}
 
 		Ok(Ok(DiscoverySessionResponse { session_id: new_uuid }))
@@ -136,7 +150,7 @@ impl Handler<StopDiscoverySessionRequest> for DiscoveryAgentService {
 		request: StopDiscoverySessionRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Result<StopDiscoverySessionResponse, DiscoveryError>, ActorExitStatus> {
-		let agent_handle = self.agent_pipelines.remove(&request.session_id);
+		let agent_handle = self.traverse_pipelines.remove(&request.session_id);
 		if let Some(agent_handle) = agent_handle {
 			let _ = agent_handle.handle.kill().await;
 			return Ok(Ok(StopDiscoverySessionResponse { session_id: request.session_id }));
@@ -161,7 +175,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 		request: DiscoveryRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Result<DiscoveryResponse, DiscoveryError>, ActorExitStatus> {
-		let agent_handle = self.agent_pipelines.get(&request.session_id);
+		let agent_handle = self.traverse_pipelines.get(&request.session_id);
 		if let Some(agent_handle) = agent_handle {
 			let response = agent_handle
 				.mailbox

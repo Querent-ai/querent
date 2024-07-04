@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::result::{ConnectionError, ConnectionResult};
-
 use diesel_async::{
 	pg::AsyncPgConnection,
 	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager, ManagerConfig},
@@ -21,6 +20,7 @@ use rustls::{
 	client::{ServerCertVerified, ServerCertVerifier},
 	ServerName,
 };
+
 use serde::Serialize;
 #[derive(Serialize, Queryable, Insertable, Selectable, Debug, Clone)]
 #[diesel(table_name = semantic_knowledge)]
@@ -152,11 +152,19 @@ impl Storage for PostgresStorage {
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
+		_query: String,
 		_collection_id: String,
 		_payload: &Vec<f32>,
 		_max_results: i32,
 		_offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
+	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}
 
@@ -247,7 +255,6 @@ mod test {
 
 	use super::*;
 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
-
 	// Test function
 	#[tokio::test]
 	async fn test_postgres_storage() {

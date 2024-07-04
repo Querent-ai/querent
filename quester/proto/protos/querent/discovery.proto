@@ -152,4 +152,5 @@ service Discovery {
 
   // Stop the discovery session
   rpc StopDiscoverySession(StopDiscoverySessionRequest) returns (StopDiscoverySessionResponse);
+
 }

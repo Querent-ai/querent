@@ -106,15 +106,21 @@ pub trait Storage: Send + Sync + 'static {
 		payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()>;
 
-	/// Similarity search for vectors
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,
+		query: String,
 		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>>;
+
+	async fn traverse_metadata_table(
+		&self,
+		filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>>;
+
 	/// Store key value pair
 	async fn store_kv(&self, key: &String, value: &String) -> StorageResult<()>;
 
