@@ -104,7 +104,7 @@ pub fn start_insights_session_filter(
     path = "/insights/prompt",
     request_body = InsightQuery,
     responses(
-        (status = 200, description = "Successfully discovered valuable information.", body = InsightQueryResponse)
+        (status = 200, description = "Successful query response.", body = InsightQueryResponse)
     ),
 )]
 /// Generate Deeper Insights (POST Variant)
@@ -139,10 +139,10 @@ pub fn insights_prompt_filter(
 }
 #[utoipa::path(
     get,
-    tag = "Discover",
+    tag = "Insights",
     path = "/insights/prompt",
     responses(
-        (status = 200, description = "Successfully discovered valuable information.", body = InsightQueryResponse)
+        (status = 200, description = "Successfully query response.", body = InsightQueryResponse)
     ),
     params(
         InsightPromptParam,
@@ -192,7 +192,7 @@ pub struct InsightPromptParam {
 
 #[utoipa::path(
 	post,
-	tag = "Discover",
+	tag = "Insights",
 	path = "/insights/session/stop",
 	request_body = StopInsightSessionRequest,
 	responses(
