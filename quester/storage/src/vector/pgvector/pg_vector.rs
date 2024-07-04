@@ -291,8 +291,7 @@ impl Storage for PGVector {
 							}
 						},
 						Err(e) => {
-							eprintln!("Error querying semantic data: {:?}", e);
-							// Handle the error appropriately, for example by returning an error result
+							error!("Error querying semantic data: {:?}", e);
 							return Err(StorageError {
 								kind: StorageErrorKind::Query,
 								source: Arc::new(anyhow::Error::from(e)),
