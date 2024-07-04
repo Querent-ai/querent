@@ -228,7 +228,7 @@ impl Engine for AttentionTensorsEngine {
 								object_type: object_type.to_string(),
 								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
 								image_id: None,
-								blob: Some("mock".to_string()),								
+								blob: Some("mock".to_string()),
 								source_id: source_id.clone(),
 								event_id: event_id.clone(),
 							};

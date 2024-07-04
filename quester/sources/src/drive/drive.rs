@@ -63,7 +63,12 @@ impl GoogleDriveSource {
 		let http_client = hyper::Client::builder().build(connector);
 		let hub = DriveHub::new(http_client, auth);
 
-		GoogleDriveSource { hub, folder_id: config.folder_to_crawl, page_token: None, source_id: config.id.clone() }
+		GoogleDriveSource {
+			hub,
+			folder_id: config.folder_to_crawl,
+			page_token: None,
+			source_id: config.id.clone(),
+		}
 	}
 
 	async fn download_file(&self, file_id: &str) -> Result<Body, google_drive3::Error> {

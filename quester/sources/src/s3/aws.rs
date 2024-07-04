@@ -209,9 +209,14 @@ impl Source for S3Source {
 		let chunk_size = self.chunk_size;
 		let source_id = self.source_id.clone();
 
-		let stream =
-			create_poll_data_stream(s3_client, bucket_name, continuation_token_start, chunk_size, source_id)
-				.await;
+		let stream = create_poll_data_stream(
+			s3_client,
+			bucket_name,
+			continuation_token_start,
+			chunk_size,
+			source_id,
+		)
+		.await;
 
 		Ok(Box::pin(stream))
 	}

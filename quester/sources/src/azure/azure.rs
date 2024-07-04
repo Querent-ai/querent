@@ -47,7 +47,11 @@ impl AzureBlobStorage {
 		let container_client =
 			blob_service_client.container_client(azure_storage_config.container.clone());
 
-		Self { container_client, prefix: azure_storage_config.prefix, source_id: azure_storage_config.id.clone() }
+		Self {
+			container_client,
+			prefix: azure_storage_config.prefix,
+			source_id: azure_storage_config.id.clone(),
+		}
 	}
 
 	/// Returns the blob name (a.k.a blob key).

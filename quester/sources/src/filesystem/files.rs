@@ -78,62 +78,65 @@ impl LocalFolderSource {
 		let stream = stream::unfold(
 			(file_path, chunk_size, 0, false),
 			move |(file_path, chunk_size, offset, eof_reached)| {
-			let value = source_id.clone();
-			async move {
-				let value = value.clone();
-				if eof_reached {
-					return None;
-				}
-				let file = match fs::File::open(&file_path).await {
-					Ok(f) => f,
-					Err(e) =>
+				let value = source_id.clone();
+				async move {
+					let value = value.clone();
+					if eof_reached {
+						return None;
+					}
+					let file = match fs::File::open(&file_path).await {
+						Ok(f) => f,
+						Err(e) =>
+							return Some((
+								Err(SourceError::from(e)),
+								(file_path, chunk_size, offset, false),
+							)),
+					};
+					let mut reader = BufReader::new(file);
+					let mut buffer = vec![0; chunk_size];
+					if let Err(e) = reader.seek(SeekFrom::Start(offset as u64)).await {
 						return Some((
 							Err(SourceError::from(e)),
 							(file_path, chunk_size, offset, false),
-						)),
-				};
-				let mut reader = BufReader::new(file);
-				let mut buffer = vec![0; chunk_size];
-				if let Err(e) = reader.seek(SeekFrom::Start(offset as u64)).await {
-					return Some((
-						Err(SourceError::from(e)),
-						(file_path, chunk_size, offset, false),
-					));
-				}
+						));
+					}
 
-				let bytes_read = match reader.read(&mut buffer).await {
-					Ok(br) => br,
-					Err(e) =>
+					let bytes_read = match reader.read(&mut buffer).await {
+						Ok(br) => br,
+						Err(e) =>
+							return Some((
+								Err(SourceError::from(e)),
+								(file_path, chunk_size, offset, false),
+							)),
+					};
+
+					if bytes_read == 0 {
+						// End of file reached
+						let eof_collected_bytes = CollectedBytes::new(
+							Some(file_path.clone()),
+							None,
+							true,
+							Some(file_path.to_string_lossy().to_string()),
+							None,
+							value.clone(),
+						);
 						return Some((
-							Err(SourceError::from(e)),
-							(file_path, chunk_size, offset, false),
-						)),
-				};
+							Ok(eof_collected_bytes),
+							(file_path, chunk_size, offset, true),
+						));
+					}
 
-				if bytes_read == 0 {
-					// End of file reached
-					let eof_collected_bytes = CollectedBytes::new(
+					let collected_bytes = CollectedBytes::new(
 						Some(file_path.clone()),
-						None,
-						true,
+						Some(buffer[..bytes_read].to_vec()),
+						false,
 						Some(file_path.to_string_lossy().to_string()),
-						None,
+						Some(bytes_read),
 						value.clone(),
 					);
-					return Some((Ok(eof_collected_bytes), (file_path, chunk_size, offset, true)));
+
+					Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read, false)))
 				}
-
-				let collected_bytes = CollectedBytes::new(
-					Some(file_path.clone()),
-					Some(buffer[..bytes_read].to_vec()),
-					false,
-					Some(file_path.to_string_lossy().to_string()),
-					Some(bytes_read),
-					value.clone()
-				);
-
-				Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read, false)))
-			}
 			},
 		);
 
