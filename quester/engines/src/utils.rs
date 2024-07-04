@@ -73,12 +73,14 @@ pub fn split_into_chunks(max_tokens: usize, tokens: &str) -> Vec<String> {
 			}
 
 			if sentence_length > max_tokens {
-				let mut start = 0;
-				while start < sentence_length {
-					let end = std::cmp::min(start + max_tokens, sentence_length);
-					chunks.push(sentence[start..end].to_string());
-					start = end;
-				}
+                let mut start = 0;
+                let sentence_chars: Vec<char> = sentence.chars().collect();
+                while start < sentence_length {
+                    let end = std::cmp::min(start + max_tokens, sentence_length);
+                    let chunk: String = sentence_chars[start..end].iter().collect();
+                    chunks.push(chunk);
+                    start = end;
+                }
 			} else {
 				current_chunk = sentence.clone();
 				current_length = sentence_length;
