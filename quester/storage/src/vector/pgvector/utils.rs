@@ -4,13 +4,12 @@ use crate::{
 };
 use common::DocumentPayload;
 use diesel::{ExpressionMethods, QueryDsl};
-use diesel_async::AsyncPgConnection;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use std::{
 	collections::{HashMap, HashSet},
 	sync::Arc,
 };
-
-use diesel_async::RunQueryDsl;
+use tracing::error;
 
 // Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
@@ -98,12 +97,12 @@ pub async fn traverse_node(
 							.await?;
 						},
 					Err(e) => {
-						eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+						error!("Error querying score for event_id {}: {:?}", event_id, e);
 					},
 				}
 			},
 		Err(e) => {
-			eprintln!("Error querying inward edges for node {}: {:?}", node, e);
+			error!("Error querying inward edges for node {}: {:?}", node, e);
 			return Err(StorageError {
 				kind: StorageErrorKind::Query,
 				source: Arc::new(anyhow::Error::from(e)),
@@ -164,12 +163,12 @@ pub async fn traverse_node(
 							.await?;
 						},
 					Err(e) => {
-						eprintln!("Error querying score for event_id {}: {:?}", event_id, e);
+						error!("Error querying score for event_id {}: {:?}", event_id, e);
 					},
 				}
 			},
 		Err(e) => {
-			eprintln!("Error querying outward edges for node {}: {:?}", node, e);
+			error!("Error querying outward edges for node {}: {:?}", node, e);
 			return Err(StorageError {
 				kind: StorageErrorKind::Query,
 				source: Arc::new(anyhow::Error::from(e)),
