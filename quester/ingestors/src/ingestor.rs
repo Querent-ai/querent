@@ -1,7 +1,7 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::{pin_mut, Stream, StreamExt};
+use futures::{pin_mut, stream, Stream, StreamExt};
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
@@ -13,6 +13,7 @@ use crate::{
 	pdf::pdfv1::PdfIngestor, pptx::pptx::PptxIngestor, txt::txt::TxtIngestor,
 	xml::xml::XmlIngestor,
 };
+use tracing::info;
 
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -123,6 +124,36 @@ pub trait BaseIngestor: Send + Sync {
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>;
 }
 
+pub struct UnsupportedIngestor {
+	processors: Vec<Arc<dyn AsyncProcessor>>,
+}
+
+impl UnsupportedIngestor {
+	pub fn new() -> Self {
+		Self { processors: Vec::new() }
+	}
+}
+#[async_trait]
+impl BaseIngestor for UnsupportedIngestor {
+	fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
+		self.processors = processors;
+	}
+
+	async fn ingest(
+		&self,
+		all_collected_bytes: Vec<CollectedBytes>,
+	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
+	{
+		let mut extension = String::new();
+		for collected_bytes in all_collected_bytes {
+			extension = collected_bytes.extension.unwrap().clone();
+			break;
+		}
+		info!("The following extension is unsupported at the moment: {:?}", extension.clone());
+		Ok(Box::pin(stream::empty()))
+	}
+}
+
 // apply processors to stream of IngestedTokens and return a stream of IngestedTokens
 pub async fn process_ingested_tokens_stream(
 	ingested_tokens_stream: Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send>>,
@@ -179,9 +210,10 @@ pub async fn resolve_ingestor_with_extension(
 		"png" => Ok(Arc::new(ImageIngestor::new())),
 		"json" => Ok(Arc::new(JsonIngestor::new())),
 		"pptx" => Ok(Arc::new(PptxIngestor::new())),
-		_ => Err(IngestorError::new(
-			IngestorErrorKind::NotSupported,
-			Arc::new(anyhow::anyhow!("Extension not supported")),
-		)),
+		_ => Ok(Arc::new(UnsupportedIngestor::new())),
+		// _ => Err(IngestorError::new(
+		// 	IngestorErrorKind::NotSupported,
+		// 	Arc::new(anyhow::anyhow!("Extension not supported")),
+		// )),
 	}
 }
