@@ -120,6 +120,8 @@ pub struct IngestedTokens {
     pub is_token_stream: bool,
     #[prost(string, tag = "4")]
     pub doc_source: ::prost::alloc::string::String,
+    #[prost(string, tag = "5")]
+    pub source_id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]

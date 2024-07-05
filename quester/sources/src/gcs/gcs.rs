@@ -24,6 +24,7 @@ pub struct ObjectMetadata {
 pub struct OpendalStorage {
 	op: Operator,
 	_bucket: Option<String>,
+	source_id: String,
 }
 
 impl fmt::Debug for OpendalStorage {
@@ -40,9 +41,10 @@ impl OpendalStorage {
 	pub fn new_google_cloud_storage(
 		cfg: opendal::services::Gcs,
 		bucket: Option<String>,
+		source_id: String,
 	) -> Result<Self, SourceError> {
 		let op = Operator::new(cfg)?.finish();
-		Ok(Self { op, _bucket: bucket })
+		Ok(Self { op, _bucket: bucket, source_id })
 	}
 }
 
@@ -100,6 +102,7 @@ impl Source for OpendalStorage {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let bucket_name = self._bucket.clone().unwrap_or_default();
 		let op = self.op.clone();
+		let source_id = self.source_id.clone();
 		let stream = stream! {
 			let mut object_lister = op.lister_with("")
 				.recursive(true)
@@ -145,6 +148,7 @@ impl Source for OpendalStorage {
 								false,
 								Some(bucket_name.clone()),
 								Some(bytes_read),
+								source_id.clone(),
 							);
 
 							yield Ok(collected_bytes);
@@ -156,6 +160,7 @@ impl Source for OpendalStorage {
 							true,
 							Some(bucket_name.clone()),
 							None,
+							source_id.clone(),
 						);
 
 						yield Ok(eof_collected_bytes);
@@ -201,7 +206,7 @@ pub fn get_gcs_storage(gcs_config: GcsCollectorConfig) -> Result<OpendalStorage,
 	let mut cfg = opendal::services::Gcs::default();
 	cfg.credential(&credentials);
 	cfg.bucket(&gcs_config.bucket);
-	OpendalStorage::new_google_cloud_storage(cfg, Some(gcs_config.bucket))
+	OpendalStorage::new_google_cloud_storage(cfg, Some(gcs_config.bucket), gcs_config.id.clone())
 }
 
 // #[cfg(test)]
