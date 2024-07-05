@@ -176,37 +176,39 @@ fn api_v1_routes(
 		);
 	}
 	let api_v1_root_url = warp::path!("api" / "v1" / ..);
-	api_v1_root_url.and(
-		cluster_handler(services.cluster.clone())
-			.or(node_info_handler(
-				BuildInfo::get(),
-				RuntimeInfo::get(),
-				Arc::new(services.node_config.clone()),
-			))
-			.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone())))
-			.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))
-			.or(start_pipeline_post_handler(
-				Some(services.semantic_service_bus.clone()),
-				services.event_storages.clone(),
-				services.index_storages.clone(),
-				services.secret_store.clone(),
-			))
-			.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone())))
-			.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))
-			.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
-			.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
-			.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone())))
-			.or(start_discovery_session_filter(services.discovery_service.clone()))
-			.or(discover_get_filter(services.discovery_service.clone()))
-			.or(discover_post_filter(services.discovery_service.clone()))
-			.or(stop_discovery_session_filter(services.discovery_service.clone()))
-			.or(set_collectors_post_handler(services.secret_store.clone()))
-			.or(delete_collectors_delete_handler(services.secret_store.clone()))
-			.or(start_insights_session_filter(services.insight_service.clone()))
-			.or(stop_insight_session_filter(services.insight_service.clone()))
-			.or(insights_prompt_filter(services.insight_service.clone()))
-			.or(list_insights_handler()),
-	)
+	api_v1_root_url
+		.and(
+			cluster_handler(services.cluster.clone())
+				.or(node_info_handler(
+					BuildInfo::get(),
+					RuntimeInfo::get(),
+					Arc::new(services.node_config.clone()),
+				))
+				.or(pipelines_get_all_handler(Some(services.semantic_service_bus.clone())))
+				.or(observe_pipeline_get_handler(Some(services.semantic_service_bus.clone())))
+				.or(start_pipeline_post_handler(
+					Some(services.semantic_service_bus.clone()),
+					services.event_storages.clone(),
+					services.index_storages.clone(),
+					services.secret_store.clone(),
+				))
+				.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone())))
+				.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))
+				.or(ingest_token_handler(Some(services.semantic_service_bus.clone())))
+				.or(ingest_tokens_put_handler(Some(services.semantic_service_bus.clone())))
+				.or(restart_pipeline_post_handler(Some(services.semantic_service_bus.clone())))
+				.or(start_discovery_session_filter(services.discovery_service.clone()))
+				.or(discover_get_filter(services.discovery_service.clone()))
+				.or(discover_post_filter(services.discovery_service.clone()))
+				.or(stop_discovery_session_filter(services.discovery_service.clone()))
+				.or(set_collectors_post_handler(services.secret_store.clone()))
+				.or(delete_collectors_delete_handler(services.secret_store.clone()))
+				.or(start_insights_session_filter(services.insight_service.clone()))
+				.or(stop_insight_session_filter(services.insight_service.clone()))
+				.or(insights_prompt_filter(services.insight_service.clone()))
+				.or(list_insights_handler()),
+		)
+		.boxed()
 }
 
 /// This function returns a formatted error based on the given rejection reason.
