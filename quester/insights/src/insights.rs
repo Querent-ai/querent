@@ -199,11 +199,6 @@ pub struct InsightOutput {
 /// The `Insight` trait, representing a generic insight operation.
 #[async_trait]
 pub trait Insight: Send + Sync {
-	/// Constructor so creation can be generalized
-	async fn new() -> Arc<Self>
-	where
-		Self: Sized;
-
 	/// Get info about this platform
 	async fn info(&self) -> InsightInfo;
 

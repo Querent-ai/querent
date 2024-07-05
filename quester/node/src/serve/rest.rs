@@ -28,9 +28,9 @@ use crate::{
 	get_pipelines_metadata_handler,
 	health_check_api::health_check_handlers,
 	ingest_token_handler, ingest_tokens_put_handler,
-	insight_api::{
-		insights_get_filter, insights_prompt_filter, list_insights_handler,
-		start_insights_session_filter, stop_insight_session_filter,
+	insight_api::rest::{
+		insights_prompt_filter, list_insights_handler, start_insights_session_filter,
+		stop_insight_session_filter,
 	},
 	json_api_response::{ApiError, JsonApiResponse},
 	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
@@ -202,11 +202,10 @@ fn api_v1_routes(
 			.or(stop_discovery_session_filter(services.discovery_service.clone()))
 			.or(set_collectors_post_handler(services.secret_store.clone()))
 			.or(delete_collectors_delete_handler(services.secret_store.clone()))
-			.or(list_insights_handler())
-			.or(insights_get_filter(services.insight_service.clone()))
-			.or(insights_prompt_filter(services.insight_service.clone()))
 			.or(start_insights_session_filter(services.insight_service.clone()))
-			.or(stop_insight_session_filter(services.insight_service.clone())),
+			.or(stop_insight_session_filter(services.insight_service.clone()))
+			.or(insights_prompt_filter(services.insight_service.clone()))
+			.or(list_insights_handler()),
 	)
 }
 

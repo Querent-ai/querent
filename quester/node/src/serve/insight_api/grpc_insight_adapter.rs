@@ -24,7 +24,7 @@ impl grpc::InsightService for InsightAdapter {
 	) -> Result<tonic::Response<proto::insights::InsightAnalystResponse>, tonic::Status> {
 		let req = request.into_inner();
 		let res: Result<proto::InsightAnalystResponse, InsightError> =
-			self.0.start_insight_session(req).await;
+			self.0.create_insight_session(req).await;
 		convert_to_grpc_result(res)
 	}
 
@@ -34,7 +34,8 @@ impl grpc::InsightService for InsightAdapter {
 		request: tonic::Request<proto::insights::InsightQuery>,
 	) -> Result<tonic::Response<proto::insights::InsightQueryResponse>, tonic::Status> {
 		let req = request.into_inner();
-		let res: Result<proto::InsightQueryResponse, InsightError> = self.0.send_input(req).await;
+		let res: Result<proto::InsightQueryResponse, InsightError> =
+			self.0.provide_insight_input(req).await;
 		convert_to_grpc_result(res)
 	}
 

@@ -1,6 +1,6 @@
 use crate::{
 	cluster_api::ClusterApi, discovery_api::DiscoveryApi, health_check_api::HealthCheckApi,
-	insight_api::InsightsApi, SemanticApi,
+	insight_api::rest::InsightsApi, SemanticApi,
 };
 use std::mem;
 use utoipa::{openapi::Tag, OpenApi};

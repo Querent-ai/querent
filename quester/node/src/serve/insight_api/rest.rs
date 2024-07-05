@@ -6,8 +6,7 @@ use proto::{
 	InsightAnalystRequest, InsightAnalystResponse, InsightQuery, InsightQueryResponse,
 	StopInsightSessionRequest, StopInsightSessionResponse,
 };
-use serde::{Deserialize, Serialize};
-use std::{convert::Infallible, sync::Arc};
+use std::sync::Arc;
 use warp::{reject::Rejection, Filter};
 
 use crate::{
@@ -21,8 +20,7 @@ use crate::{
 		list_insights,
 		start_insight_session_handler,
 		insights_prompt_handler,
-		insights_get_handler,
-		stop_insight_session_handler,
+		stop_insight_session_handler
 	),
 	components(schemas(
 		InsightInfo,
@@ -38,27 +36,28 @@ use crate::{
 )]
 pub struct InsightsApi;
 
+#[utoipa::path(
+    get,
+    tag = "Insights",
+    path = "/insights/list",
+    responses(
+        (status = 200, description = "Successfully retrived list of Querent insights.", body = Vec<InsightInfo>)
+    )
+)]
+pub async fn list_insights() -> Result<Vec<InsightInfo>, InsightError> {
+	Ok(all_insights_info_available().await)
+}
+
 /// list insights handler.
 pub fn list_insights_handler(
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("insights")
+	warp::path!("insights" / "list")
 		.and(warp::path::end())
 		.and(warp::get())
 		.then(list_insights)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
-}
-
-#[utoipa::path(
-    get,
-    tag = "Insights",
-    path = "/insights",
-    responses(
-        (status = 200, description = "Successfully retrived list of Querent insights.", body = Vec<InsightInfo>)
-    )
-)]
-pub async fn list_insights() -> Result<Vec<InsightInfo>, Infallible> {
-	Ok(all_insights_info_available().await)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -82,7 +81,7 @@ pub async fn start_insight_session_handler(
 			Arc::new(anyhow::anyhow!("Insight service is not available")),
 		));
 	}
-	let response = insights_service.unwrap().start_insight_session(request).await?;
+	let response = insights_service.unwrap().create_insight_session(request).await?;
 	Ok(response)
 }
 
@@ -96,6 +95,7 @@ pub fn start_insights_session_filter(
 		.then(start_insight_session_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -122,7 +122,7 @@ pub async fn insights_prompt_handler(
 			Arc::new(anyhow::anyhow!("Insight service is not available")),
 		));
 	}
-	let response = insight_service.unwrap().send_input(request).await?;
+	let response = insight_service.unwrap().provide_insight_input(request).await?;
 	Ok(response)
 }
 
@@ -136,58 +136,7 @@ pub fn insights_prompt_filter(
 		.then(insights_prompt_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
-}
-#[utoipa::path(
-    get,
-    tag = "Insights",
-    path = "/insights/prompt",
-    responses(
-        (status = 200, description = "Successfully query response.", body = InsightQueryResponse)
-    ),
-    params(
-        InsightPromptParam,
-	)
-)]
-/// Generate Deeper Insights (GET Variant)
-///
-/// REST GET insights handler.
-pub async fn insights_get_handler(
-	request: InsightPromptParam,
-	insight_service: Option<Arc<dyn InsightService>>,
-) -> Result<InsightQueryResponse, InsightError> {
-	if insight_service.is_none() {
-		return Err(InsightError::new(
-			InsightErrorKind::NotSupported,
-			Arc::new(anyhow::anyhow!("Insight service is not available")),
-		));
-	}
-	let request_required = InsightQuery { session_id: request.session_id, query: request.query };
-	let response = insight_service.unwrap().send_input(request_required).await?;
-	Ok(response)
-}
-
-pub fn insights_get_filter(
-	insight_service: Option<Arc<dyn InsightService>>,
-) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("insights" / "prompt")
-		.and(warp::query::<InsightPromptParam>())
-		.and(warp::get())
-		.and(require(Some(insight_service)))
-		.then(insights_get_handler)
-		.and(extract_format_from_qs())
-		.map(make_json_api_response)
-}
-
-#[derive(
-	Debug, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::IntoParams, utoipa::ToSchema,
-)]
-#[into_params(parameter_in = Query)]
-#[serde(deny_unknown_fields)]
-pub struct InsightPromptParam {
-	/// The session id to use.
-	pub session_id: String,
-	/// The query to search for.
-	pub query: String,
+		.boxed()
 }
 
 #[utoipa::path(
@@ -225,4 +174,5 @@ pub fn stop_insight_session_filter(
 		.then(stop_insight_session_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }

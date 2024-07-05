@@ -11,8 +11,8 @@ use tonic::transport::Server;
 use tracing::info;
 
 use crate::{
-	discovery_api::DiscoveryAdapter, insight_api::InsightAdapter, QuesterServices,
-	SemanticsGrpcAdapter,
+	discovery_api::grpc_discovery_adapter::DiscoveryAdapter,
+	insight_api::grpc_insight_adapter::InsightAdapter, QuesterServices, SemanticsGrpcAdapter,
 };
 
 /// Starts and binds gRPC services to `grpc_listen_addr`.

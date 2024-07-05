@@ -15,14 +15,8 @@ pub struct XAI {
 	info: InsightInfo,
 }
 
-pub struct XAIRunner {
-	pub config: InsightConfig,
-	pub llm: Arc<dyn LLM>,
-}
-
-#[async_trait]
-impl Insight for XAI {
-	async fn new() -> Arc<Self> {
+impl XAI {
+	pub fn new() -> Self {
 		let mut additional_options = HashMap::new();
 		additional_options.insert(
 			"openai_api_key".to_string(),
@@ -40,7 +34,7 @@ impl Insight for XAI {
 				tooltip: Some("OpenAI API Key".to_string()),
 			},
 		);
-		Arc::new(Self {
+		Self {
 			info: InsightInfo {
 				id: "querent.insights.x_ai.openai".to_string(),
 				name: "Querent xAI with GPT".to_string(),
@@ -52,9 +46,17 @@ impl Insight for XAI {
 				additional_options,
 				conversational: true,
 			},
-		})
+		}
 	}
+}
 
+pub struct XAIRunner {
+	pub config: InsightConfig,
+	pub llm: Arc<dyn LLM>,
+}
+
+#[async_trait]
+impl Insight for XAI {
 	async fn info(&self) -> InsightInfo {
 		self.info.clone()
 	}

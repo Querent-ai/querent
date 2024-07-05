@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use actors::MessageBus;
 use async_trait::async_trait;
 use common::EventType;
-use insights::{InsightConfig, InsightError, InsightErrorKind, InsightResult};
+use insights::{InsightError, InsightErrorKind, InsightResult};
 use proto::insights::{
 	InsightAnalystRequest, InsightAnalystResponse, InsightQuery, InsightQueryResponse,
 	StopInsightSessionRequest, StopInsightSessionResponse,
@@ -14,10 +14,13 @@ use storage::Storage;
 #[async_trait]
 pub trait InsightService: 'static + Send + Sync {
 	/// Discover insights
-	async fn send_input(&self, request: InsightQuery) -> InsightResult<InsightQueryResponse>;
+	async fn provide_insight_input(
+		&self,
+		request: InsightQuery,
+	) -> InsightResult<InsightQueryResponse>;
 
 	/// Start Insight Session
-	async fn start_insight_session(
+	async fn create_insight_session(
 		&self,
 		request: InsightAnalystRequest,
 	) -> InsightResult<InsightAnalystResponse>;
@@ -31,7 +34,6 @@ pub trait InsightService: 'static + Send + Sync {
 
 #[derive(Clone)]
 pub struct InsightImpl {
-	pub config: InsightConfig,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub insight_agent_service_message_bus: MessageBus<InsightAgentService>,
@@ -39,19 +41,18 @@ pub struct InsightImpl {
 
 impl InsightImpl {
 	pub fn new(
-		config: InsightConfig,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
 		insight_agent_service_message_bus: MessageBus<InsightAgentService>,
 	) -> Self {
-		InsightImpl { config, event_storages, index_storages, insight_agent_service_message_bus }
+		InsightImpl { event_storages, index_storages, insight_agent_service_message_bus }
 	}
 }
 
 #[async_trait]
 impl InsightService for InsightImpl {
 	/// Start Insight Session
-	async fn start_insight_session(
+	async fn create_insight_session(
 		&self,
 		request: InsightAnalystRequest,
 	) -> InsightResult<InsightAnalystResponse> {
@@ -93,7 +94,10 @@ impl InsightService for InsightImpl {
 	}
 
 	/// Send Input to Insight
-	async fn send_input(&self, request: InsightQuery) -> InsightResult<InsightQueryResponse> {
+	async fn provide_insight_input(
+		&self,
+		request: InsightQuery,
+	) -> InsightResult<InsightQueryResponse> {
 		let response = self.insight_agent_service_message_bus.ask(request).await.map_err(|e| {
 			log::error!("Failed to send input to insight: {}", e);
 			InsightError::new(

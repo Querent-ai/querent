@@ -4,6 +4,7 @@ use crate::{
 	discovery_api::discovery_service::{start_discovery_service, DiscoveryService},
 	grpc,
 	insight_api::insights_service::InsightService,
+	insights_service::start_insight_service,
 	rest,
 };
 use actors::{ActorExitStatus, MessageBus, Quester};
@@ -61,6 +62,16 @@ pub async fn serve_quester(
 		index_storages.clone(),
 	)
 	.await?;
+
+	let insight_service = start_insight_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+	)
+	.await?;
+
 	let listen_host = node_config.listen_address.parse::<Host>()?;
 	let listen_ip = listen_host.resolve().await?;
 	let grpc_listen_addr = SocketAddr::new(listen_ip, node_config.grpc_config.listen_port);
@@ -92,7 +103,7 @@ pub async fn serve_quester(
 		event_storages,
 		index_storages,
 		discovery_service: Some(discovery_service),
-		insight_service: None,
+		insight_service: Some(insight_service),
 		secret_store,
 	});
 	info!("Starting REST server 📡: check /api-doc.json for available APIs");

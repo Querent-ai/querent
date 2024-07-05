@@ -3,7 +3,6 @@ use common::EventType;
 use engines::agn::AttentionTensorsEngine;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
-use insights::{CustomInsightOption, InsightCustomOptionValue, InsightInfo};
 use llms::{
 	transformers::{
 		bert::{BertLLM, EmbedderOptions},
@@ -82,9 +81,6 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		CollectorConfigResponse,
 		DeleteCollectorRequest,
 		DeleteCollectorResponse,
-		InsightInfo,
-		CustomInsightOption,
-		InsightCustomOptionValue,
 	))
 )]
 pub struct SemanticApi;
