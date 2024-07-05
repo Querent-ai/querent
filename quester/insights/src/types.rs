@@ -1,20 +1,24 @@
-use std::{collections::HashMap, sync::Arc};
-
+use common::EventType;
 use serde::{Deserialize, Serialize};
 use serde_json::{Number, Value};
+use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 
 /// Insight Information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
 pub struct InsightInfo {
+	/// ID is  namespaced which is used to identify the insight.
+	pub id: String,
 	/// Insight name.
 	pub name: String,
 	/// Insight description.
 	pub description: String,
 	/// Insight version.
 	pub version: String,
+	/// Is this insight conversational.
+	pub conversational: bool,
 	/// Insight author.
 	pub author: String,
 	/// Insight license.
@@ -27,7 +31,7 @@ pub struct InsightInfo {
 }
 
 /// Possible custom option values for insights.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
@@ -58,7 +62,7 @@ impl InsightCustomOptionValue {
 }
 
 /// A custom option for insights.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomInsightOption {
 	/// Unique identifier for the option.
@@ -163,12 +167,36 @@ pub enum ConfigCallbackResponse {
 	Empty,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct InsightConfig {
 	pub id: String,
-	pub index_storage: Arc<dyn Storage>,
-	pub embedded_knowledge_store: Arc<dyn Storage>,
-	pub discovered_knowledge_store: Arc<dyn Storage>,
-	pub graph_storage: Option<Arc<dyn Storage>>,
+	pub discovery_sesssion_id: String,
+	pub semantic_pipeline_id: String,
+	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub additional_options: HashMap<String, CustomInsightOption>,
+}
+
+impl InsightConfig {
+	pub fn new(
+		id: String,
+		discovery_sesssion_id: String,
+		semantic_pipeline_id: String,
+		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+		index_storages: Vec<Arc<dyn Storage>>,
+		additional_options: HashMap<String, CustomInsightOption>,
+	) -> InsightConfig {
+		InsightConfig {
+			id,
+			discovery_sesssion_id,
+			semantic_pipeline_id,
+			event_storages,
+			index_storages,
+			additional_options,
+		}
+	}
+
+	pub fn get_custom_option(&self, id: &str) -> Option<&CustomInsightOption> {
+		self.additional_options.get(id)
+	}
 }

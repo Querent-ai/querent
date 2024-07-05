@@ -20,6 +20,7 @@ pub fn cluster_handler(
 		.then(get_cluster)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(

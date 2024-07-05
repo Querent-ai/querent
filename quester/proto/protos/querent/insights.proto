@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package querent.insights;
+
+message InsightAnalystRequest {
+    // Registered ID of the insight; call /insights endpoint for available insights
+    string id = 1;
+    // Optional discovery session ID
+    optional string discovery_session_id = 2;
+    // Optional semantic pipeline ID
+    optional string semantic_pipeline_id = 3;
+    // Additional insight-specific parameters corresponding to the ID
+    map<string, string> additional_options = 4;
+}
+
+message InsightAnalystResponse {
+    // The ID of the insight session
+    string session_id = 1;
+}
+
+message InsightQuery {
+    // The ID of the insight session
+    string session_id = 1;
+    // The query to be used for the insight
+    string query = 2;
+}
+
+message InsightQueryResponse {
+    // The ID of the insight session
+    string session_id = 1;
+    // Hash of the query
+    string query_hash = 2;
+    // The response from the insight
+    string response = 3;
+}
+
+message StopInsightSessionRequest {
+    // The ID of the insight session
+    string session_id = 1;
+}
+
+message StopInsightSessionResponse {
+    // The ID of the insight session
+    string session_id = 1;
+}
+
+// InsightService is a service that provides insights from data
+service InsightService {
+    // Request creation of an insight session
+    rpc CreateInsightSession(InsightAnalystRequest) returns (InsightAnalystResponse) {}
+    // Provide the input for an insight and get a response (for query-based insights)
+    rpc ProvideInsightInput(InsightQuery) returns (InsightQueryResponse) {}
+    // Stop an insight session
+    rpc StopInsightSession(StopInsightSessionRequest) returns (StopInsightSessionResponse) {}
+}
