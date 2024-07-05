@@ -149,7 +149,7 @@ impl Storage for SecretStore {
 		Ok(value)
 	}
 
-	async fn print_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
+	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
 		let read_txn = self.db.begin_read().map_err(|err| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(err)),

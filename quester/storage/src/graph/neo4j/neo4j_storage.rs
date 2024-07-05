@@ -189,7 +189,7 @@ impl Storage for Neo4jStorage {
 	}
 
 	//Get all collectors key value pairs
-	async fn print_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
+	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
 		Ok(Vec::new())
 	}
 }

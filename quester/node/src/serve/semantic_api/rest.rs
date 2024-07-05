@@ -639,7 +639,7 @@ pub async fn list_collectors(
 	secret_store: Arc<dyn storage::Storage>,
 ) -> Result<ListCollectorConfig, PipelineErrors> {
 	let collectors = secret_store
-		.print_all_kv()
+		.get_all_kv()
 		.await
 		.map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to list sources: {:?}", e))
