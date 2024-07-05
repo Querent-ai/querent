@@ -1,6 +1,6 @@
 [package]
 name = "insights"
-version = "3.0.4"
+version = "4.0.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -14,6 +14,7 @@ common = { workspace = true }
 proto = { workspace = true }
 actors = { workspace = true }
 storage = { workspace = true }
+llms = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 anyhow = { workspace = true }
@@ -32,6 +33,9 @@ tracing = { workspace = true }
 log = { workspace = true }
 thiserror = { workspace = true }
 serde = { workspace = true }
+utoipa = { workspace = true }
+tonic = { workspace = true }
+tower = { workspace = true }
 tokio = { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }

@@ -1,6 +1,6 @@
 [package]
 name = "node"
-version = "3.0.4"
+version = "4.0.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -66,9 +66,9 @@ common = { workspace = true }
 querent = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
-discovery = { workspace = true }
 engines = { workspace = true }
 llms = { workspace = true }
+insights = { workspace = true }
 rust-embed = { workspace = true }
 mime_guess = { workspace = true }
 uuid = { workspace = true }
@@ -76,6 +76,7 @@ storage = { workspace = true }
 futures-util = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 fastembed =  { workspace = true }
+log = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
