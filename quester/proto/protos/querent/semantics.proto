@@ -12,6 +12,7 @@ service SemanticsService {
   rpc RestartPipeline(RestartPipelineRequest) returns (BooleanResponse) {}
   rpc PostCollectors(CollectorConfig) returns (CollectorConfigResponse) {}
   rpc DeleteCollectors(DeleteCollectorRequest) returns (DeleteCollectorResponse) {}
+  rpc ListCollectors(ListCollectorRequest) returns (ListCollectorConfig) {}
 }
 
 message EmptyObserve{}
@@ -40,6 +41,12 @@ message DeleteCollectorRequest {
 
 message DeleteCollectorResponse {
   repeated string id = 1;
+}
+
+message ListCollectorRequest {}
+
+message ListCollectorConfig {
+  repeated CollectorConfig config = 1;
 }
 
 message SemanticPipelineRequest {
