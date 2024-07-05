@@ -132,6 +132,7 @@ pub fn pipelines_get_all_handler(
 		.then(semantic_endpoint)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 fn pipelines_get_filter() -> impl Filter<Extract = (), Error = Rejection> + Clone {
 	warp::path!("semantics").and(warp::get())
@@ -145,6 +146,7 @@ pub fn pipelines_get_handler(
 		.then(semantic_endpoint)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 pub fn observe_pipeline_get_handler(
@@ -156,6 +158,7 @@ pub fn observe_pipeline_get_handler(
 		.then(describe_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -311,6 +314,7 @@ pub fn start_pipeline_post_handler(
 		.then(start_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -339,6 +343,7 @@ pub fn get_pipelines_metadata_handler(
 		.then(get_pipelines_metadata)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -473,6 +478,7 @@ pub fn ingest_tokens_put_handler(
 		.then(ingest_tokens)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 /// restart semantic pipeline by providing a pipeline id.
@@ -508,6 +514,7 @@ pub fn restart_pipeline_post_handler(
 		.then(restart_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 pub fn set_collectors_post_handler(
@@ -520,6 +527,7 @@ pub fn set_collectors_post_handler(
 		.then(set_collectors)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -574,6 +582,7 @@ pub fn delete_collectors_delete_handler(
 		.then(delete_collectors)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
