@@ -606,11 +606,10 @@ pub async fn delete_collectors(
 	Ok(DeleteCollectorResponse { id: collector.id })
 }
 
-
 pub fn list_collectors_list_handler(
 	secret_store: Arc<dyn storage::Storage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("semantics" / "collectors"/ "list")
+	warp::path!("semantics" / "collectors" / "list")
 		.and(warp::get())
 		.and(require(Some(secret_store)))
 		.then(list_collectors)
