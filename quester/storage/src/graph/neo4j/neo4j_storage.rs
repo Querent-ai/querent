@@ -187,6 +187,11 @@ impl Storage for Neo4jStorage {
 	async fn delete_kv(&self, _key: &String) -> StorageResult<()> {
 		Ok(())
 	}
+
+	//Get all collectors key value pairs
+	async fn print_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
+		Ok(Vec::new())
+	}
 }
 
 #[cfg(test)]
