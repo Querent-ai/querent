@@ -33,9 +33,10 @@ use crate::{
 		stop_insight_session_filter,
 	},
 	json_api_response::{ApiError, JsonApiResponse},
-	metrics_handler, node_info_handler, observe_pipeline_get_handler, pipelines_get_all_handler,
-	restart_pipeline_post_handler, set_collectors_post_handler, start_pipeline_post_handler,
-	stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo, QuesterServices, RuntimeInfo,
+	list_collectors_list_handler, metrics_handler, node_info_handler, observe_pipeline_get_handler,
+	pipelines_get_all_handler, restart_pipeline_post_handler, set_collectors_post_handler,
+	start_pipeline_post_handler, stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo,
+	QuesterServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -203,6 +204,7 @@ fn api_v1_routes(
 				.or(stop_discovery_session_filter(services.discovery_service.clone()))
 				.or(set_collectors_post_handler(services.secret_store.clone()))
 				.or(delete_collectors_delete_handler(services.secret_store.clone()))
+				.or(list_collectors_list_handler(services.secret_store.clone()))
 				.or(start_insights_session_filter(services.insight_service.clone()))
 				.or(stop_insight_session_filter(services.insight_service.clone()))
 				.or(insights_prompt_filter(services.insight_service.clone()))

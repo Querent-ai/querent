@@ -129,6 +129,9 @@ pub trait Storage: Send + Sync + 'static {
 
 	/// Delete the key value pair
 	async fn delete_kv(&self, key: &String) -> StorageResult<()>;
+
+	/// Get all key value pair
+	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>>;
 }
 
 impl Debug for dyn Storage {
