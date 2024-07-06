@@ -72,6 +72,7 @@ impl Engine for AttentionTensorsEngine {
 				let cleaned_data: Vec<String> =
 					token.data.into_iter().map(|s| remove_newlines(&s)).collect();
 				// let doc_source: = token.doc_source;
+				let source_id = token.source_id.clone();
 
 				let mut all_chunks = Vec::new();
 				for data in cleaned_data {
@@ -228,6 +229,7 @@ impl Engine for AttentionTensorsEngine {
 								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
 								image_id: None,
 								blob: Some("mock".to_string()),
+								source_id: source_id.clone(),
 								event_id: event_id.clone(),
 							};
 							let event = EventState {

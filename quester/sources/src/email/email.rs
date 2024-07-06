@@ -22,6 +22,7 @@ pub struct EmailSource {
 	pub imap_password: String,
 	pub imap_folder: String,
 	pub imap_session: Arc<Mutex<Session<TlsStream<TcpStream>>>>,
+	pub source_id: String,
 }
 
 impl EmailSource {
@@ -44,6 +45,7 @@ impl EmailSource {
 			imap_password: config.imap_password,
 			imap_folder: config.imap_folder,
 			imap_session: Arc::new(Mutex::new(imap_session)),
+			source_id: config.id.clone(),
 		})
 	}
 }
@@ -161,6 +163,7 @@ impl Source for EmailSource {
 					doc_source: Some("email://unknown_sender".to_string()),
 					extension: Some("txt".to_string()),
 					size: Some(body.len()),
+					source_id: self.source_id.clone(),
 				})
 			})
 			.collect();

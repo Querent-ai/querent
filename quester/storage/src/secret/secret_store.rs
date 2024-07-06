@@ -5,7 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use redb::{Database, TableDefinition};
+use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
 use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
@@ -147,6 +147,48 @@ impl Storage for SecretStore {
 			None => None,
 		};
 		Ok(value)
+	}
+
+	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
+		let read_txn = self.db.begin_read().map_err(|err| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(err)),
+		})?;
+
+		let table = read_txn.open_table(TABLE).map_err(|err| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(err)),
+		})?;
+
+		let mut res = Vec::new();
+
+		let iter = table.iter().map_err(|err| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(err)),
+		})?;
+		for result in iter {
+			let (key_access_guard, value_access_guard) = result.map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+
+			let key = key_access_guard.value();
+			let value = value_access_guard.value();
+
+			let key_str =
+				String::from_utf8(key.as_bytes().to_vec()).map_err(|err| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(err)),
+				})?;
+
+			let value: String = rmp_serde::from_slice(value).map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+
+			res.push((key_str, value));
+		}
+		Ok(res)
 	}
 
 	async fn delete_kv(&self, key: &String) -> StorageResult<()> {

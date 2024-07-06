@@ -1,4 +1,3 @@
-use discovery::{error::DiscoveryError, DiscoveryService};
 use proto::{
 	discovery::{
 		DiscoveryAgentType, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
@@ -11,7 +10,11 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use warp::{reject::Rejection, Filter};
 
-use crate::{extract_format_from_qs, make_json_api_response, serve::require};
+use crate::{
+	discovery_api::discovery_service::{error::DiscoveryError, DiscoveryService},
+	extract_format_from_qs, make_json_api_response,
+	serve::require,
+};
 
 #[derive(utoipa::OpenApi)]
 #[openapi(
@@ -72,6 +75,7 @@ pub fn start_discovery_session_filter(
 		.then(start_discovery_session_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -109,6 +113,7 @@ pub fn discover_post_filter(
 		.then(discovery_post_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 #[utoipa::path(
     get,
@@ -147,6 +152,7 @@ pub fn discover_get_filter(
 		.then(discovery_get_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[derive(
@@ -193,4 +199,5 @@ pub fn stop_discovery_session_filter(
 		.then(stop_discovery_session_handler)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }

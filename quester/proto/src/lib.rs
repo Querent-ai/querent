@@ -16,6 +16,8 @@ use ::opentelemetry::{
 pub use discovery::*;
 use tonic::{service::Interceptor, Status};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
+pub mod insights;
+pub use insights::*;
 
 #[derive(Clone, Debug)]
 pub struct SpanContextInterceptor;

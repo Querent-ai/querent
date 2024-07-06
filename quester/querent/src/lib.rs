@@ -15,6 +15,8 @@ pub mod pipeline;
 pub use pipeline::*;
 pub mod discovery;
 pub use discovery::*;
+pub mod insights;
+pub use insights::*;
 pub mod ingest;
 pub mod memory;
 pub mod schemas;
@@ -68,6 +70,7 @@ pub async fn create_dynamic_sources(
 				let file_source = sources::filesystem::files::LocalFolderSource::new(
 					PathBuf::from(config.root_path.clone()),
 					None,
+					config.id.clone(),
 				);
 				sources.push(Arc::new(file_source));
 			},

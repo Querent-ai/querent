@@ -9,7 +9,7 @@ use querent::discovery_service::DiscoveryAgentService;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 
-use crate::error::DiscoveryError;
+use crate::discovery_api::discovery_service::error::DiscoveryError;
 
 #[async_trait]
 pub trait DiscoveryService: 'static + Send + Sync {
@@ -17,19 +17,19 @@ pub trait DiscoveryService: 'static + Send + Sync {
 	async fn discover_insights(
 		&self,
 		request: DiscoveryRequest,
-	) -> crate::Result<DiscoveryResponse>;
+	) -> super::Result<DiscoveryResponse>;
 
 	/// Start Discovery Session
 	async fn start_discovery_session(
 		&self,
 		request: DiscoverySessionRequest,
-	) -> crate::Result<DiscoverySessionResponse>;
+	) -> super::Result<DiscoverySessionResponse>;
 
 	/// Stop Discovery Session
 	async fn stop_discovery_session(
 		&self,
 		request: StopDiscoverySessionRequest,
-	) -> crate::Result<StopDiscoverySessionResponse>;
+	) -> super::Result<StopDiscoverySessionResponse>;
 }
 
 #[derive(Clone)]
@@ -54,7 +54,7 @@ impl DiscoveryService for DiscoveryImpl {
 	async fn discover_insights(
 		&self,
 		request: DiscoveryRequest,
-	) -> crate::Result<DiscoveryResponse> {
+	) -> super::Result<DiscoveryResponse> {
 		let response =
 			self.discovery_agent_service_message_bus.ask(request).await.map_err(|e| {
 				log::error!("Failed to discover insights: {}", e);
@@ -70,7 +70,7 @@ impl DiscoveryService for DiscoveryImpl {
 	async fn start_discovery_session(
 		&self,
 		request: DiscoverySessionRequest,
-	) -> crate::Result<DiscoverySessionResponse> {
+	) -> super::Result<DiscoverySessionResponse> {
 		let response =
 			self.discovery_agent_service_message_bus.ask(request).await.map_err(|e| {
 				log::error!("Failed to start discovery session: {}", e);
@@ -88,7 +88,7 @@ impl DiscoveryService for DiscoveryImpl {
 	async fn stop_discovery_session(
 		&self,
 		request: StopDiscoverySessionRequest,
-	) -> crate::Result<StopDiscoverySessionResponse> {
+	) -> super::Result<StopDiscoverySessionResponse> {
 		let response =
 			self.discovery_agent_service_message_bus.ask(request).await.map_err(|e| {
 				log::error!("Failed to stop discovery session: {}", e);

@@ -1,9 +1,10 @@
 use std::{fmt, net::SocketAddr, sync::Arc};
 
-use crate::service::DiscoveryService;
 use proto::SpanContextInterceptor;
 use tonic::{codegen::InterceptedService, transport::Channel};
 use tower::timeout::Timeout;
+
+use super::service::DiscoveryService;
 
 #[derive(Clone)]
 enum DiscoveryServiceClientImpl {

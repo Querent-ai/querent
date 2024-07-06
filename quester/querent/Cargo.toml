@@ -1,6 +1,6 @@
 [package]
 name = "querent"
-version = "3.0.4"
+version = "4.0.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -16,6 +16,7 @@ common = { workspace = true }
 storage = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
+insights = { workspace = true }
 ingestors = { workspace = true }
 engines = { workspace = true }
 async-trait = { workspace = true }

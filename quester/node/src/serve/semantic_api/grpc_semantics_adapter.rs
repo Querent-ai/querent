@@ -8,8 +8,8 @@ use storage::Storage;
 use tracing::instrument;
 
 use crate::{
-	delete_collectors, describe_pipeline, get_pipelines_metadata, ingest_tokens, restart_pipeline,
-	set_collectors, start_pipeline, stop_pipeline,
+	delete_collectors, describe_pipeline, get_pipelines_metadata, ingest_tokens, list_collectors,
+	restart_pipeline, set_collectors, start_pipeline, stop_pipeline,
 };
 
 #[derive(Debug, Clone)]
@@ -132,6 +132,7 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 				data: token.data.into(),
 				is_token_stream: token.is_token_stream,
 				doc_source: token.doc_source.into(),
+				source_id: token.source_id.into(),
 			};
 			synapse_tokens.push(synapse_token);
 		});
@@ -178,6 +179,19 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 	) -> GrpcResult<tonic::Response<proto::semantics::DeleteCollectorResponse>, tonic::Status> {
 		let req = request.into_inner();
 		let response = delete_collectors(req, self.secret_store.clone()).await;
+		match response {
+			Ok(response) => Ok(tonic::Response::new(response)),
+			Err(err) => Err(tonic::Status::from(err)),
+		}
+	}
+
+	#[instrument(skip(self, request))]
+	async fn list_collectors(
+		&self,
+		request: tonic::Request<proto::semantics::ListCollectorRequest>,
+	) -> GrpcResult<tonic::Response<proto::semantics::ListCollectorConfig>, tonic::Status> {
+		let _req = request.into_inner();
+		let response = list_collectors(self.secret_store.clone()).await;
 		match response {
 			Ok(response) => Ok(tonic::Response::new(response)),
 			Err(err) => Err(tonic::Status::from(err)),

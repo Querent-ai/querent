@@ -17,12 +17,13 @@ use proto::{
 		DeleteCollectorRequest, DeleteCollectorResponse, DropBoxCollectorConfig,
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
-		JiraCollectorConfig, MilvusConfig, Neo4jConfig, NewsCollectorConfig, PipelineMetadata,
-		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
-		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
-		SlackCollectorConfig, StorageConfig, StorageType,
+		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, MilvusConfig, Neo4jConfig,
+		NewsCollectorConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
+		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
+		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
+use serde_json::from_str;
 
 use proto::semantics::IngestedTokens;
 use querent::{
@@ -48,6 +49,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		restart_pipeline,
 		set_collectors,
 		delete_collectors,
+		list_collectors,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -81,6 +83,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		CollectorConfigResponse,
 		DeleteCollectorRequest,
 		DeleteCollectorResponse,
+		ListCollectorRequest,
+		ListCollectorConfig,
 	))
 )]
 pub struct SemanticApi;
@@ -132,6 +136,7 @@ pub fn pipelines_get_all_handler(
 		.then(semantic_endpoint)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 fn pipelines_get_filter() -> impl Filter<Extract = (), Error = Rejection> + Clone {
 	warp::path!("semantics").and(warp::get())
@@ -145,6 +150,7 @@ pub fn pipelines_get_handler(
 		.then(semantic_endpoint)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 pub fn observe_pipeline_get_handler(
@@ -156,6 +162,7 @@ pub fn observe_pipeline_get_handler(
 		.then(describe_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -311,6 +318,7 @@ pub fn start_pipeline_post_handler(
 		.then(start_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -339,6 +347,7 @@ pub fn get_pipelines_metadata_handler(
 		.then(get_pipelines_metadata)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -473,6 +482,7 @@ pub fn ingest_tokens_put_handler(
 		.then(ingest_tokens)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 /// restart semantic pipeline by providing a pipeline id.
@@ -508,6 +518,7 @@ pub fn restart_pipeline_post_handler(
 		.then(restart_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 pub fn set_collectors_post_handler(
@@ -520,6 +531,7 @@ pub fn set_collectors_post_handler(
 		.then(set_collectors)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -574,6 +586,7 @@ pub fn delete_collectors_delete_handler(
 		.then(delete_collectors)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
@@ -600,4 +613,48 @@ pub async fn delete_collectors(
 		})?;
 	}
 	Ok(DeleteCollectorResponse { id: collector.id })
+}
+
+pub fn list_collectors_list_handler(
+	secret_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "collectors" / "list")
+		.and(warp::get())
+		.and(require(Some(secret_store)))
+		.then(list_collectors)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+}
+
+#[utoipa::path(
+    get,
+    tag = "Semantic Service",
+    path = "/semantics/collectors/list",
+    responses(
+        (status = 200, description = "Listed the collectors successfully", body = ListCollectorConfig)
+    ),
+)]
+
+pub async fn list_collectors(
+	secret_store: Arc<dyn storage::Storage>,
+) -> Result<ListCollectorConfig, PipelineErrors> {
+	let collectors = secret_store
+		.get_all_kv()
+		.await
+		.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to list sources: {:?}", e))
+		})
+		.unwrap();
+
+	let mut config_list = Vec::new();
+
+	for (_key, collector) in collectors {
+		let config: CollectorConfig = from_str(&collector)
+			.map_err(|e| {
+				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
+			})
+			.unwrap();
+		config_list.push(config);
+	}
+	Ok(ListCollectorConfig { config: config_list })
 }

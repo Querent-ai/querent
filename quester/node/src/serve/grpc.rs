@@ -10,7 +10,10 @@ use proto::{
 use tonic::transport::Server;
 use tracing::info;
 
-use crate::{DiscoveryAdapter, QuesterServices, SemanticsGrpcAdapter};
+use crate::{
+	discovery_api::grpc_discovery_adapter::DiscoveryAdapter,
+	insight_api::grpc_insight_adapter::InsightAdapter, QuesterServices, SemanticsGrpcAdapter,
+};
 
 /// Starts and binds gRPC services to `grpc_listen_addr`.
 pub(crate) async fn start_grpc_server(
@@ -43,10 +46,24 @@ pub(crate) async fn start_grpc_server(
 	} else {
 		None
 	};
+	let insights_grpc_service = if services.insight_service.is_some() {
+		let insight_service = services.insight_service.clone().unwrap();
+		let grpc_insight_adapater = InsightAdapter::from(insight_service);
+		Some(
+			proto::insights::insight_service_server::InsightServiceServer::new(
+				grpc_insight_adapater,
+			)
+			.max_decoding_message_size(max_message_size.0 as usize)
+			.max_encoding_message_size(max_message_size.0 as usize),
+		)
+	} else {
+		None
+	};
 	let server_router = server
 		.add_service(cluster_grpc_service)
 		.add_service(semantics_service_grpc_server)
-		.add_optional_service(discovery_grpc_service);
+		.add_optional_service(discovery_grpc_service)
+		.add_optional_service(insights_grpc_service);
 
 	info!(
 		grpc_listen_addr=?grpc_listen_addr,

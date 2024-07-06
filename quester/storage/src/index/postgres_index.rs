@@ -37,6 +37,7 @@ pub struct SemanticKnowledge {
 	pub collection_id: Option<String>,
 	pub image_id: Option<String>,
 	pub event_id: String,
+	pub source_id: String,
 }
 
 // #[derive(Debug, Clone, Copy, FromSqlRow, AsExpression, Serialize)]
@@ -191,6 +192,7 @@ impl Storage for PostgresStorage {
 						collection_id: Some(collection_id.clone()),
 						image_id: image_id.clone(),
 						event_id: item.event_id.clone(),
+						source_id: item.source_id.clone(),
 					};
 					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
 						.values(form)
@@ -229,6 +231,11 @@ impl Storage for PostgresStorage {
 	async fn delete_kv(&self, _key: &String) -> StorageResult<()> {
 		Ok(())
 	}
+
+	//Get all collectors key value pairs
+	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
+		Ok(Vec::new())
+	}
 }
 
 table! {
@@ -245,7 +252,8 @@ table! {
 		document_source -> Varchar,
 		collection_id -> Nullable<Varchar>,
 		image_id -> Nullable<VarChar>,
-		event_id -> Varchar
+		event_id -> Varchar,
+		source_id -> Varchar
 	}
 }
 
