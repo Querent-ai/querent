@@ -1,0 +1,60 @@
+name: 'Cargo Build Windows Binary'
+description: 'Build a binary for Windows using Cargo'
+inputs:
+  target:
+    description: 'The target platform'
+    required: true
+  version:
+    description: 'The release version'
+    required: true
+  token:
+    description: 'GitHub Token'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
+      shell: bash
+    - uses: actions/setup-node@v3
+      with:
+        node-version: 20
+        cache: "yarn"
+        cache-dependency-path: ui/yarn.lock
+    - run: yarn global add node-gyp
+      shell: bash
+    - run: cd quester && make build-ui
+      shell: bash
+    - name: copy build to quester/web/build
+      run: cp -r ui/build quester/web
+      shell: bash
+    - name: Install rustup
+      shell: bash
+      run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
+    - name: Install Rust Toolchain
+      run: rustup toolchain install nightly
+      shell: bash
+    - name: Add target x86_64-pc-windows-msvc
+      if: "${{ inputs.target == 'x86_64-pc-windows-msvc' }}"
+      run: rustup target add x86_64-pc-windows-msvc
+      shell: bash
+    - name: Install protoc
+      run: choco install protoc
+      shell: bash
+    - name: Install pq and postgres
+      shell: bash
+      run: choco install postgresql
+    - name: Retrieve and export commit date, hash, and tags
+      run: |
+        echo "QUERENT_COMMIT_DATE=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+        echo "QUERENT_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
+        echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
+      shell: bash
+    - name: Build binary
+      run: cargo build --release  --target ${{ inputs.target }} --bin querent
+      shell: bash
+      working-directory: ./quester
+      env:
+        QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
+        QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
+        QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
