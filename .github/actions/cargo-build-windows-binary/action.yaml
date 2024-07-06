@@ -47,7 +47,15 @@ runs:
       shell: bash
       run: choco install postgresql
     - name: Install nasm
-      run: choco install nasm
+      uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
+    - name: Install libvips
+      run: choco install vips
+      shell: bash
+    - name: Install libpq
+      run: choco install libpq
+      shell: bash
+    - name: Install libpq-dev
+      run: choco install libpq-dev
       shell: bash
 
     - name: Install cross
