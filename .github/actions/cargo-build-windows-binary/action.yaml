@@ -36,13 +36,23 @@ runs:
 
     # Add Windows-specific target
     - name: Add target x86_64-pc-windows-msvc
-      if: "${{ inputs.target == 'x86_64-pc-windows-msvc' }}"
+      if: ${{ inputs.target == 'x86_64-pc-windows-msvc' }}
       run: rustup target add x86_64-pc-windows-msvc
       shell: bash
 
     - name: Install protoc
       run: choco install protoc
       shell: bash
+
+    - name: Install Npcap (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        curl -LO https://nmap.org/npcap/dist/npcap-1.60.exe
+        start /wait npcap-1.60.exe /SILENT
+        echo "C:\Program Files\Npcap\Lib\x64" >> $GITHUB_PATH
+        setx LIB "C:\Program Files\Npcap\Lib\x64;%LIB%"
+    
     - name: Install postgres (Windows)
       if: runner.os == 'Windows'
       shell: bash
