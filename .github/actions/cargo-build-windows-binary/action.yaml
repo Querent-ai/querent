@@ -43,16 +43,16 @@ runs:
     - name: Install protoc
       run: choco install protoc
       shell: bash
-      - name: Install postgres (Windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          choco install postgresql12 --force --params '/Password:root'
-          echo "C:\Program Files\PostgreSQL\12\bin" >> $GITHUB_PATH
-          echo "C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_PATH
-          echo "PQ_LIB_DIR=C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_ENV
-          echo "PG_DATABASE_URL=postgres://postgres:root@localhost/" >> $GITHUB_ENV
-          echo "PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example" >> $GITHUB_ENV
+    - name: Install postgres (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        choco install postgresql12 --force --params '/Password:root'
+        echo "C:\Program Files\PostgreSQL\12\bin" >> $GITHUB_PATH
+        echo "C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_PATH
+        echo "PQ_LIB_DIR=C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_ENV
+        echo "PG_DATABASE_URL=postgres://postgres:root@localhost/" >> $GITHUB_ENV
+        echo "PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example" >> $GITHUB_ENV
     - name: Install nasm
       uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
     - name: Install cross
