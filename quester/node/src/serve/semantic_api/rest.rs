@@ -239,7 +239,7 @@ pub async fn start_pipeline(
 
 	let mut collectors_configs = Vec::new();
 	for collector_id in request.collectors {
-		let config_value = secret_store.get_kv(&collector_id).await.map_err(|e| {
+		let config_value = secret_store.get_secret(&collector_id).await.map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
 		});
 		if let Some(value) = config_value.unwrap() {
@@ -569,7 +569,7 @@ pub async fn set_collectors(
 			))
 		})?;
 
-	secret_store.store_kv(&id, &collector_string).await.map_err(|e| {
+	secret_store.store_secret(&id, &collector_string).await.map_err(|e| {
 		PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to store key: {:?}", e))
 	})?;
 
@@ -604,7 +604,7 @@ pub async fn delete_collectors(
 	secret_store: Arc<dyn storage::Storage>,
 ) -> Result<DeleteCollectorResponse, PipelineErrors> {
 	for key in collector.id.clone() {
-		secret_store.delete_kv(&key).await.map_err(|e| {
+		secret_store.delete_secret(&key).await.map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!(
 				"Failed to delete key {:?}: {:?}",
 				key,
@@ -639,7 +639,7 @@ pub async fn list_collectors(
 	secret_store: Arc<dyn storage::Storage>,
 ) -> Result<ListCollectorConfig, PipelineErrors> {
 	let collectors = secret_store
-		.get_all_kv()
+		.get_all_secrets()
 		.await
 		.map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to list sources: {:?}", e))

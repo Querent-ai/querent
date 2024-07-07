@@ -98,6 +98,56 @@ impl Storage for Neo4jStorage {
 		Ok(vec![])
 	}
 
+	/// Get all SemanticPipeline ran by this node
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<String>> {
+		Ok(Vec::new())
+	}
+
+	/// Set SemanticPipeline ran by this node
+	async fn set_pipeline(&self, _pipeline: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get semantic pipeline by id
+	async fn get_pipeline(&self, _pipeline_id: &String) -> StorageResult<Option<String>> {
+		Ok(None)
+	}
+
+	/// Delete semantic pipeline by id
+	async fn delete_pipeline(&self, _pipeline_id: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get all Discovery sessions ran by this node
+	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<String>> {
+		Ok(Vec::new())
+	}
+
+	/// Set Discovery session ran by this node
+	async fn set_discovery_session(&self, _session: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get Discovery session by id
+	async fn get_discovery_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
+		Ok(None)
+	}
+
+	/// Get all Insight sessions ran by this node
+	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<String>> {
+		Ok(Vec::new())
+	}
+
+	/// Set Insight session ran by this node
+	async fn set_insight_session(&self, _session: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get Insight session by id
+	async fn get_insight_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
+		Ok(None)
+	}
+
 	async fn insert_graph(
 		&self,
 		_collection_id: String,
@@ -168,7 +218,7 @@ impl Storage for Neo4jStorage {
 	}
 
 	/// Store key value pair
-	async fn store_kv(&self, _key: &String, _value: &String) -> StorageResult<()> {
+	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
 		Err(StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::anyhow!("Not implemented")),
@@ -176,7 +226,7 @@ impl Storage for Neo4jStorage {
 	}
 
 	/// Get value for key
-	async fn get_kv(&self, _key: &String) -> StorageResult<Option<String>> {
+	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
 		Err(StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::anyhow!("Not implemented")),
@@ -184,12 +234,12 @@ impl Storage for Neo4jStorage {
 	}
 
 	//Delete the key value pair
-	async fn delete_kv(&self, _key: &String) -> StorageResult<()> {
+	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
 		Ok(())
 	}
 
 	//Get all collectors key value pairs
-	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>> {
+	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
 		Ok(Vec::new())
 	}
 }

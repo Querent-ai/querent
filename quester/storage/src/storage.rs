@@ -122,16 +122,46 @@ pub trait Storage: Send + Sync + 'static {
 	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>>;
 
 	/// Store key value pair
-	async fn store_kv(&self, key: &String, value: &String) -> StorageResult<()>;
+	async fn store_secret(&self, key: &String, value: &String) -> StorageResult<()>;
 
 	/// Get value for key
-	async fn get_kv(&self, key: &String) -> StorageResult<Option<String>>;
+	async fn get_secret(&self, key: &String) -> StorageResult<Option<String>>;
 
 	/// Delete the key value pair
-	async fn delete_kv(&self, key: &String) -> StorageResult<()>;
+	async fn delete_secret(&self, key: &String) -> StorageResult<()>;
 
 	/// Get all key value pair
-	async fn get_all_kv(&self) -> StorageResult<Vec<(String, String)>>;
+	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>>;
+
+	/// Get all SemanticPipeline ran by this node
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<String>>;
+
+	/// Set SemanticPipeline ran by this node
+	async fn set_pipeline(&self, pipeline: &String) -> StorageResult<()>;
+
+	/// Get semantic pipeline by id
+	async fn get_pipeline(&self, pipeline_id: &String) -> StorageResult<Option<String>>;
+
+	/// Delete semantic pipeline by id
+	async fn delete_pipeline(&self, pipeline_id: &String) -> StorageResult<()>;
+
+	/// Get all Discovery sessions ran by this node
+	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<String>>;
+
+	/// Set Discovery session ran by this node
+	async fn set_discovery_session(&self, session: &String) -> StorageResult<()>;
+
+	/// Get Discovery session by id
+	async fn get_discovery_session(&self, session_id: &String) -> StorageResult<Option<String>>;
+
+	/// Get all Insight sessions ran by this node
+	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<String>>;
+
+	/// Set Insight session ran by this node
+	async fn set_insight_session(&self, session: &String) -> StorageResult<()>;
+
+	/// Get Insight session by id
+	async fn get_insight_session(&self, session_id: &String) -> StorageResult<Option<String>>;
 }
 
 impl Debug for dyn Storage {
