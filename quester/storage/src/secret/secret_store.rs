@@ -25,8 +25,10 @@ impl Debug for SecretStore {
 
 impl SecretStore {
 	pub fn new(dir_path: PathBuf) -> Self {
-		std::fs::create_dir_all(&dir_path)
-			.expect("Failed to create directory to init key value store");
+		if !dir_path.exists() {
+			std::fs::create_dir_all(&dir_path)
+				.expect("Failed to create directory to init key value store");
+		}
 		let db_path = dir_path.join("querent_secrets.redb");
 		let db = Database::create(db_path).expect("Failed to init key value store");
 

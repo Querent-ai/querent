@@ -144,7 +144,6 @@ impl CollectionBatch {
 pub enum EventType {
 	Graph,
 	Vector,
-	QueryResult,
 	Success,
 	Failure,
 }
