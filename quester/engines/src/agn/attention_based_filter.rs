@@ -1,107 +1,141 @@
 use crate::agn::attention_based_search::Entity;
 use std::collections::HashSet;
 
+/// Represents the relationship between a head and a tail entity, including associated relations and their scores.
 #[derive(Debug, Clone)]
 pub struct HeadTailRelations {
-	pub head: Entity,
-	pub tail: Entity,
-	pub relations: Vec<(String, f32)>,
+    /// The head entity in the relationship.
+    pub head: Entity,
+    /// The tail entity in the relationship.
+    pub tail: Entity,
+    /// A vector of tuples where each tuple contains a relation string and its corresponding score.
+    pub relations: Vec<(String, f32)>,
 }
 
+/// Represents a search beam used in the filtering process.
 #[derive(Debug, Clone)]
 pub struct SearchBeam {
-	pub rel_tokens: Vec<usize>,
-	pub score: f32,
+    /// A vector of token indices representing the relation tokens.
+    pub rel_tokens: Vec<usize>,
+    /// The score of the search beam.
+    pub score: f32,
 }
 
 impl SearchBeam {
-	pub fn mean_score(&self) -> f32 {
-		self.score / self.rel_tokens.len() as f32
-	}
+    /// Computes the mean score of the search beam by dividing the total score by the number of relation tokens.
+    pub fn mean_score(&self) -> f32 {
+        self.score / self.rel_tokens.len() as f32
+    }
 }
 
-pub struct IndividualFilter {
-	doc: Vec<Token>,
-	forward_relations: bool,
-	threshold: f32,
-}
-
+/// Represents a token with its text and lemma.
 #[derive(Debug, Clone)]
 pub struct Token {
-	pub text: String,
-	pub lemma: String,
+    /// The text of the token.
+    pub text: String,
+    /// The lemma of the token.
+    pub lemma: String,
+}
+
+/// A filter used to filter search beams based on document tokens, forward relations, and a score threshold.
+pub struct IndividualFilter {
+    /// A vector of tokens representing the document.
+    doc: Vec<Token>,
+    /// A flag indicating whether to use forward relations.
+    forward_relations: bool,
+    /// The threshold score for filtering search beams.
+    threshold: f32,
 }
 
 impl IndividualFilter {
-	pub fn new(doc: Vec<Token>, forward_relations: bool, threshold: f32) -> Self {
-		Self { doc, forward_relations, threshold }
-	}
+    /// Creates a new `IndividualFilter` with the specified document tokens, forward relations flag, and threshold score.
+    pub fn new(doc: Vec<Token>, forward_relations: bool, threshold: f32) -> Self {
+        Self { doc, forward_relations, threshold }
+    }
 
-	pub fn filter(
-		&self,
-		candidates: Vec<SearchBeam>,
-		head: &Entity,
-		tail: &Entity,
-	) -> HeadTailRelations {
-		let mut response =
-			HeadTailRelations { head: head.clone(), tail: tail.clone(), relations: Vec::new() };
+    /// Filters the given candidates and returns the head-tail relations that meet the criteria.
+    ///
+    /// # Arguments
+    ///
+    /// * `candidates` - A vector of search beams to filter.
+    /// * `head` - The head entity.
+    /// * `tail` - The tail entity.
+    ///
+    /// # Returns
+    ///
+    /// A `HeadTailRelations` struct containing the filtered relations.
+    pub fn filter(
+        &self,
+        candidates: Vec<SearchBeam>,
+        head: &Entity,
+        tail: &Entity,
+    ) -> HeadTailRelations {
+        let mut response = HeadTailRelations { head: head.clone(), tail: tail.clone(), relations: Vec::new() };
 
-		let mut seen_relations = HashSet::new();
+        let mut seen_relations = HashSet::new();
 
-		for candidate in candidates {
-			if candidate.mean_score() < self.threshold {
-				continue;
-			}
+        for candidate in candidates {
+            if candidate.mean_score() < self.threshold {
+                continue;
+            }
 
-			let mut rel_txt = String::new();
-			let mut last_index = None;
-			let mut valid = true;
+            let mut rel_txt = String::new();
+            let mut last_index = None;
+            let mut valid = true;
 
-			for &token_id in &candidate.rel_tokens {
-				let word_id = token_id;
-				let word = &self.doc[token_id].text;
-				if self.forward_relations && last_index.is_some() {
-					let last_idx = last_index.unwrap();
-					if word_id <= last_idx || word_id - last_idx != 1 {
-						valid = false;
-						break;
-					}
-				}
-				last_index = Some(word_id);
+            for &token_id in &candidate.rel_tokens {
+                let word_id = token_id;
+                let word = &self.doc[token_id].text;
+                if self.forward_relations && last_index.is_some() {
+                    let last_idx = last_index.unwrap();
+                    if word_id <= last_idx || word_id - last_idx != 1 {
+                        valid = false;
+                        break;
+                    }
+                }
+                last_index = Some(word_id);
 
-				if !rel_txt.is_empty() {
-					rel_txt.push(' ');
-				}
-				let lowered_word = word.to_lowercase();
+                if !rel_txt.is_empty() {
+                    rel_txt.push(' ');
+                }
+                let lowered_word = word.to_lowercase();
 
-				// Only skip if the entire word is equal to head or tail entity text
-				if !head.name.eq_ignore_ascii_case(&lowered_word) &&
-					!tail.name.eq_ignore_ascii_case(&lowered_word)
-				{
-					rel_txt.push_str(&lowered_word);
-				} else {
-				}
-			}
+                // Only skip if the entire word is equal to head or tail entity text
+                if !head.name.eq_ignore_ascii_case(&lowered_word) &&
+                    !tail.name.eq_ignore_ascii_case(&lowered_word)
+                {
+                    rel_txt.push_str(&lowered_word);
+                }
+            }
 
-			if valid {
-				let lemmatized_txt = self.simple_filter(&rel_txt);
-				if !lemmatized_txt.is_empty() && seen_relations.insert(lemmatized_txt.clone()) {
-					response.relations.push((lemmatized_txt, candidate.mean_score()));
-				}
-			}
-		}
+            if valid {
+                let lemmatized_txt = self.simple_filter(&rel_txt);
+                if !lemmatized_txt.is_empty() && seen_relations.insert(lemmatized_txt.clone()) {
+                    response.relations.push((lemmatized_txt, candidate.mean_score()));
+                }
+            }
+        }
 
-		response
-	}
+        response
+    }
 
-	fn simple_filter(&self, relation: &str) -> String {
-		let filtered_relation = relation
-			.split_whitespace()
-			.filter(|word| word.chars().all(char::is_alphanumeric))
-			.collect::<Vec<&str>>()
-			.join(" ");
-		filtered_relation
-	}
+    /// Applies a simple filter to the relation string, removing non-alphanumeric words.
+    ///
+    /// # Arguments
+    ///
+    /// * `relation` - The relation string to filter.
+    ///
+    /// # Returns
+    ///
+    /// A filtered relation string containing only alphanumeric words.
+    fn simple_filter(&self, relation: &str) -> String {
+        let filtered_relation = relation
+            .split_whitespace()
+            .filter(|word| word.chars().all(char::is_alphanumeric))
+            .collect::<Vec<&str>>()
+            .join(" ");
+        filtered_relation
+    }
 }
 
 // #[cfg(test)]
