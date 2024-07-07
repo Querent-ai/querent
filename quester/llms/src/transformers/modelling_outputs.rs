@@ -7,14 +7,14 @@ use candle_core::Tensor;
 #[derive(Debug)]
 #[records::record]
 pub struct SequenceClassifierOutput {
-    /// The loss value (optional).
-    loss: Option<Tensor>,
-    /// The logits (raw predictions) produced by the model.
-    logits: Tensor,
-    /// The hidden states from the model (optional).
-    hidden_states: Option<Tensor>,
-    /// The attention weights from the model (optional).
-    attentions: Option<Tensor>,
+	/// The loss value (optional).
+	loss: Option<Tensor>,
+	/// The logits (raw predictions) produced by the model.
+	logits: Tensor,
+	/// The hidden states from the model (optional).
+	hidden_states: Option<Tensor>,
+	/// The attention weights from the model (optional).
+	attentions: Option<Tensor>,
 }
 
 /// Output structure for token classification tasks.
@@ -24,14 +24,14 @@ pub struct SequenceClassifierOutput {
 #[derive(Debug)]
 #[records::record]
 pub struct TokenClassifierOutput {
-    /// The loss value (optional).
-    loss: Option<Tensor>,
-    /// The logits (raw predictions) produced by the model.
-    logits: Tensor,
-    /// The hidden states from the model (optional).
-    hidden_states: Option<Tensor>,
-    /// The attention weights from the model (optional).
-    attentions: Option<Tensor>,
+	/// The loss value (optional).
+	loss: Option<Tensor>,
+	/// The logits (raw predictions) produced by the model.
+	logits: Tensor,
+	/// The hidden states from the model (optional).
+	hidden_states: Option<Tensor>,
+	/// The attention weights from the model (optional).
+	attentions: Option<Tensor>,
 }
 
 /// Output structure for question answering tasks.
@@ -41,14 +41,14 @@ pub struct TokenClassifierOutput {
 #[derive(Debug)]
 #[records::record]
 pub struct QuestionAnsweringModelOutput {
-    /// The loss value (optional).
-    loss: Option<Tensor>,
-    /// The logits for the start positions of the answer span.
-    start_logits: Tensor,
-    /// The logits for the end positions of the answer span.
-    end_logits: Tensor,
-    /// The hidden states from the model (optional).
-    hidden_states: Option<Tensor>,
-    /// The attention weights from the model (optional).
-    attentions: Option<Tensor>,
+	/// The loss value (optional).
+	loss: Option<Tensor>,
+	/// The logits for the start positions of the answer span.
+	start_logits: Tensor,
+	/// The logits for the end positions of the answer span.
+	end_logits: Tensor,
+	/// The hidden states from the model (optional).
+	hidden_states: Option<Tensor>,
+	/// The attention weights from the model (optional).
+	attentions: Option<Tensor>,
 }
