@@ -68,7 +68,7 @@ runs:
     - name: Build binary
       run: |
         export LIB="C:\\Program Files\\Npcap\\Lib\\x64;$LIB"
-        cargo build --release --target ${{ inputs.target }} --bin querent
+        cargo build --release --target ${{ inputs.target }} --features windows-no-openssl --bin querent
       shell: bash
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
