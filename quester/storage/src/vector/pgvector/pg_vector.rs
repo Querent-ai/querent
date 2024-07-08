@@ -226,6 +226,85 @@ impl Storage for PGVector {
 		Ok(())
 	}
 
+	async fn get_discovered_data(
+		&self,
+		session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		// Ok(vec![])
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let results = conn.transaction::<_, diesel::result::Error, _>(|conn| {
+            async move {
+                let query_result = discovered_knowledge::dsl::discovered_knowledge
+                    .select((
+                        discovered_knowledge::dsl::doc_id,
+                        discovered_knowledge::dsl::doc_source,
+                        discovered_knowledge::dsl::sentence,
+                        discovered_knowledge::dsl::subject,
+                        discovered_knowledge::dsl::object,
+                        discovered_knowledge::dsl::cosine_distance,
+                        discovered_knowledge::dsl::session_id,
+                        discovered_knowledge::dsl::score,
+						discovered_knowledge::dsl::query,
+                        discovered_knowledge::dsl::query_embedding,
+                        discovered_knowledge::dsl::collection_id,
+                    ))
+                    .filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+                    .load::<(
+                        String,
+                        String,
+                        String,
+                        String,
+                        String,
+                        Option<f64>,
+                        Option<String>,
+                        Option<f64>,
+						Option<String>,
+						Option<Vector>,
+						String,
+                    )>(conn)
+                    .await;
+                
+                match query_result {
+                    Ok(result) => {
+                        let mut results: Vec<DiscoveredKnowledge> = Vec::new();
+                        for (doc_id, doc_source, sentence, subject, object, cosine_distance, session_id, score, query, query_embedding, collection_id) in result {
+                            let doc_payload = DiscoveredKnowledge {
+                                doc_id,
+                                doc_source,
+                                sentence,
+                                subject,
+                                object,
+                                cosine_distance,
+                                session_id: session_id,
+                                score,
+								query,
+								query_embedding,
+								collection_id
+                            };
+                            results.push(doc_payload);
+                        }
+                        Ok(results)
+                    }
+                    Err(e) => {
+                        eprintln!("Error querying semantic data: {:?}", e);
+                        Err(e)
+                    }
+                }
+            }
+            .scope_boxed()
+        })
+        .await
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+        
+        Ok(results)
+    }
+
 	async fn similarity_search_l2(
 		&self,
 		session_id: String,

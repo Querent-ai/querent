@@ -5,6 +5,7 @@ use crate::{
 };
 use async_stream::stream;
 use async_trait::async_trait;
+use common::EventType;
 use futures::{pin_mut, Stream, StreamExt};
 use llms::{OpenAI, OpenAIConfig, LLM};
 use serde_json::Value;
@@ -96,9 +97,24 @@ impl Insight for XAI {
 #[async_trait]
 impl InsightRunner for XAIRunner {
 	async fn run(&self, input: InsightInput) -> InsightResult<InsightOutput> {
+		if self.config.discovery_session_id.is_empty() && self.config.semantic_pipeline_id.is_empty() {
+            return Err(InsightError::new(
+                InsightErrorKind::NotSupported,
+                anyhow::anyhow!("Please start a discovery session first or provide a session_id.").into(),
+            ));
+        }
+		for (event_type, storages) in self.config.event_storages.iter() {
+			if event_type.clone() == EventType::Vector {
+				for storage in storages.iter() {
+					println!("Looping over storages.");
+				}
+			}
+		}
 		// Placeholder explanation logic.
 		let explanation = format!("Explanation for input: {:?}", input.data);
+		println!("------------{:?}",self.config.discovery_session_id);
 		Ok(InsightOutput { data: Value::String(explanation) })
+		
 	}
 
 	async fn run_stream(
@@ -118,4 +134,59 @@ impl InsightRunner for XAIRunner {
 		};
 		Ok(Box::pin(stream))
 	}
+}
+
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_x_ai() {
+        let config = InsightConfig {
+            id: "test_id".to_string(),
+            discovery_session_id: "123".to_string(),
+            semantic_pipeline_id: "".to_string(),
+            event_storages: HashMap::new(),
+            index_storages: vec![],
+            additional_options: {
+                let mut options = HashMap::new();
+                options.insert(
+                    "openai_api_key".to_string(),
+                    CustomInsightOption {
+                        id: "openai_api_key".to_string(),
+                        label: "OpenAI API Key".to_string(),
+                        default_value: Some(InsightCustomOptionValue::String {
+                            value: "your_openai_api_key".to_string(),
+                            hidden: Some(false),
+                        }),
+                        value: InsightCustomOptionValue::String {
+                            value: "your_openai_api_key".to_string(),
+                            hidden: Some(false),
+                        },
+                        tooltip: Some("OpenAI API Key".to_string()),
+                    },
+                );
+                options
+            },
+        };
+
+        let openai_api_key = "your_openai_api_key".to_string();
+        let default_openai_config: OpenAIConfig =
+            OpenAIConfig::default().with_api_key(openai_api_key);
+        let openai_llm = OpenAI::new(default_openai_config);
+
+        let runner = XAIRunner { config, llm: Arc::new(openai_llm) };
+
+        let input = InsightInput {
+            data: Value::String("test input".to_string()),
+        };
+
+        let result = runner.run(input).await;
+        // assert!(result.is_err());
+		println!("This is the result ---------{:?}", result);
+        // let err_msg = result.err().unwrap().to_string();
+        // assert!(err_msg.contains("Please start a discovery session first or provide a session_id."));
+    }
 }

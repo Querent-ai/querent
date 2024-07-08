@@ -8,7 +8,7 @@ use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
-use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 
 const TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("querent_secrets");
 
@@ -84,6 +84,14 @@ impl Storage for SecretStore {
 	) -> StorageResult<()> {
 		// Your insert_discovered_knowledge implementation here
 		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
 	}
 
 	async fn similarity_search_l2(

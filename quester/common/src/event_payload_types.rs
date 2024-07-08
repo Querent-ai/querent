@@ -24,6 +24,21 @@ pub struct VectorPayload {
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
+pub struct DiscoveredKnowledgePayload {
+	pub subject: String,
+	pub subject_type: String,
+	pub object: String,
+	pub object_type: String,
+	pub predicate: String,
+	pub predicate_type: String,
+	pub sentence: String,
+	pub image_id: Option<String>,
+	pub blob: Option<String>,
+	pub event_id: String,
+	pub source_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SemanticKnowledgePayload {
 	pub subject: String,
 	pub subject_type: String,

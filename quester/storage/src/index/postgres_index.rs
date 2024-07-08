@@ -7,6 +7,7 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
+use crate::DiscoveredKnowledge;
 use futures_util::{future::BoxFuture, FutureExt};
 use proto::semantics::PostgresConfig;
 use std::{sync::Arc, time::SystemTime};
@@ -131,6 +132,14 @@ impl Storage for PostgresStorage {
 		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
 	}
 
 	/// Insert DiscoveryPayload into storage

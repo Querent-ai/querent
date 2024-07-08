@@ -8,7 +8,7 @@ use milvus::{
 };
 use proto::semantics::MilvusConfig;
 
-use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{storage::Storage, DiscoveredKnowledge, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
 
 pub struct MilvusStorage {
@@ -68,6 +68,14 @@ impl Storage for MilvusStorage {
 			}
 		}
 		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
 	}
 
 	async fn similarity_search_l2(

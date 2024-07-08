@@ -1,4 +1,4 @@
-use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{storage::Storage, DiscoveredKnowledge, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
@@ -95,6 +95,14 @@ impl Storage for Neo4jStorage {
 		_offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		// Implement Neo4j similarity search logic (if needed)
+		Ok(vec![])
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
 	}
 
