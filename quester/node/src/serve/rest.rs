@@ -128,7 +128,6 @@ pub(crate) async fn start_rest_server(
 		.or(redirect_root_to_ui_route)
 		.or(health_check_routes)
 		.or(metrics_routes)
-		.or(ui_handler())
 		.with(request_counter)
 		.recover(recover_fn)
 		.with(extra_headers)
