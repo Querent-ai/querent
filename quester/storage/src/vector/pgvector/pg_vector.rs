@@ -40,7 +40,6 @@ pub struct EmbeddedKnowledge {
 	pub event_id: String,
 }
 
-
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = discovered_knowledge)]
 pub struct DiscoveredKnowledge {
