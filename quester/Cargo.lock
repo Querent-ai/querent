@@ -3777,6 +3777,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "http_req"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1dab1fb99f5163b9b25805e4c191ea9425ae311442688bfe03c97e8a2ba66e9d"
+dependencies = [
+ "native-tls",
+ "unicase",
+]
+
+[[package]]
 name = "httparse"
 version = "1.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5093,6 +5103,7 @@ dependencies = [
  "fastembed",
  "futures",
  "futures-util",
+ "http_req",
  "humantime",
  "hyper 0.14.29",
  "indicatif",
@@ -5138,6 +5149,7 @@ dependencies = [
  "utoipa-swagger-ui",
  "uuid",
  "warp",
+ "zip 0.5.13",
 ]
 
 [[package]]

@@ -54,10 +54,11 @@ fn commit_info() {
 }
 
 #[cfg(target_os = "windows")]
-fn download_windows_npcap_sdk() -> anyhow::Result<()> {
+fn download_windows_npcap_sdk() {
 	use std::{
 		fs,
 		io::{self, Write},
+		path::PathBuf,
 	};
 
 	use http_req::request;
@@ -69,7 +70,7 @@ fn download_windows_npcap_sdk() -> anyhow::Result<()> {
 	const NPCAP_SDK: &str = "npcap-sdk-1.13.zip";
 
 	let npcap_sdk_download_url = format!("https://npcap.com/dist/{NPCAP_SDK}");
-	let cache_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?).join("target");
+	let cache_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("target");
 	let npcap_sdk_cache_path = cache_dir.join(NPCAP_SDK);
 
 	let npcap_zip = match fs::read(&npcap_sdk_cache_path) {
@@ -87,9 +88,9 @@ fn download_windows_npcap_sdk() -> anyhow::Result<()> {
 			let _res = request::get(npcap_sdk_download_url, &mut zip_data)?;
 
 			// write cache
-			fs::create_dir_all(cache_dir)?;
-			let mut cache = fs::File::create(npcap_sdk_cache_path)?;
-			cache.write_all(&zip_data)?;
+			fs::create_dir_all(cache_dir).unwrap();
+			let mut cache = fs::File::create(npcap_sdk_cache_path).unwrap();
+			cache.write_all(&zip_data).unwrap();
 
 			zip_data
 		},
@@ -109,16 +110,11 @@ fn download_windows_npcap_sdk() -> anyhow::Result<()> {
 	let mut npcap_lib = archive.by_name(lib_path)?;
 
 	// write DLL
-	let lib_dir = PathBuf::from(env::var("OUT_DIR")?).join("npcap_sdk");
+	let lib_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("npcap_sdk");
 	let lib_path = lib_dir.join("Packet.lib");
-	fs::create_dir_all(&lib_dir)?;
-	let mut lib_file = fs::File::create(lib_path)?;
-	io::copy(&mut npcap_lib, &mut lib_file)?;
+	fs::create_dir_all(&lib_dir).unwrap();
+	let mut lib_file = fs::File::create(lib_path).unwrap();
+	io::copy(&mut npcap_lib, &mut lib_file).unwrap();
 
-	println!(
-		"cargo:rustc-link-search=native={}",
-		lib_dir.to_str().ok_or(anyhow!("{lib_dir:?} is not valid UTF-8"))?
-	);
-
-	Ok(())
+	println!("cargo:rustc-link-search=native={}", lib_dir.to_str().unwrap());
 }
