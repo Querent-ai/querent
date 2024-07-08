@@ -23,6 +23,7 @@ runs:
         curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-1.13.zip
         7z x npcap-sdk.zip -oC:\npcap-sdk
         echo "LIB=$LIB;C:\npcap-sdk\Lib\x64" >> $GITHUB_ENV
+      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
