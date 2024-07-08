@@ -20,6 +20,7 @@ runs:
       shell: powershell
     - name: Install Npcap
       run: C:\npcap-1.79.exe /S /winpcap_mode=yes
+      shell: powershell
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
