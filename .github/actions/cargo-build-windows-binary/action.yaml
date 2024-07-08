@@ -15,12 +15,15 @@ runs:
   steps:
     - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
-    - name: Download Npcap
-      run: Invoke-WebRequest -Uri 'https://npcap.com/dist/npcap-1.79.exe' -OutFile 'C:\npcap-1.71.exe 
-      shell: powershell
-    - name: Install Npcap
-      run: C:\npcap-1.79.exe /S /winpcap_mode=yes
-      shell: powershell
+    - name: Install dependencies (windows only)
+      # Install npcap for pcap rust
+      run: |
+        curl -L -o npcap-installer.exe https://npcap.com/dist/npcap-1.79.exe
+        ./npcap-installer.exe /S
+        curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-1.13.zip
+        7z x npcap-sdk.zip -oC:\npcap-sdk
+        echo "LIB=$LIB;C:\npcap-sdk\Lib\x64" >> $GITHUB_ENV
+      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
