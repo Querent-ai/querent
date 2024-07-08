@@ -15,18 +15,6 @@ runs:
   steps:
     - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 20
-        cache: "yarn"
-        cache-dependency-path: ui/yarn.lock
-    - run: yarn global add node-gyp
-      shell: bash
-    - run: cd quester && make build-ui
-      shell: bash
-    - name: copy build to quester/web/build
-      run: cp -r ui/build quester/web
-      shell: bash
     - name: Install protoc
       run: brew install protobuf
       shell: bash

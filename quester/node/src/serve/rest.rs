@@ -35,7 +35,7 @@ use crate::{
 	json_api_response::{ApiError, JsonApiResponse},
 	list_collectors_list_handler, metrics_handler, node_info_handler, observe_pipeline_get_handler,
 	pipelines_get_all_handler, restart_pipeline_post_handler, set_collectors_post_handler,
-	start_pipeline_post_handler, stop_pipeline_delete_handler, ui_handler, BodyFormat, BuildInfo,
+	start_pipeline_post_handler, stop_pipeline_delete_handler, BodyFormat, BuildInfo,
 	QuesterServices, RuntimeInfo,
 };
 

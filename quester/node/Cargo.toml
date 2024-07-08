@@ -84,5 +84,4 @@ time = { workspace = true }
 [features]
 openssl-support = ["openssl-probe"]
 default = ["openssl-support"]
-windows-no-openssl = []
 testsuite = []
