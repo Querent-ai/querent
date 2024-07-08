@@ -15,11 +15,10 @@ runs:
   steps:
     - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
-    - uses: actions/setup-node@v3
-      with:
-        node-version: 20
-        cache: "yarn"
-        cache-dependency-path: ui/yarn.lock
+    - name: Download Npcap
+      run: Invoke-WebRequest -Uri 'https://npcap.com/dist/npcap-1.79.exe' -OutFile 'C:\npcap-1.71.exe 
+    - name: Install Npcap
+      run: C:\npcap-1.79.exe /S /winpcap_mode=yes
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
