@@ -1,10 +1,10 @@
 .PHONY: build install start
 
 build:
-	yarn build
+	npm run build
 
 install:
-	yarn install
+	npm install
 
 start:
-	yarn start
+	npm run start
