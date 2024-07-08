@@ -15,15 +15,11 @@ runs:
   steps:
     - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
-    - name: Install dependencies (windows only)
-      if: runner.os == 'Windows'
+    - name: Download NPCAP
       run: |
-        curl -L -o npcap-installer.exe https://npcap.com/dist/npcap-1.79.exe
-        ./npcap-installer.exe /S
-        curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-1.13.zip
-        7z x npcap-sdk.zip -oC:\npcap-sdk
-        echo "LIB=$LIB;C:\npcap-sdk\Lib\x64" >> $GITHUB_ENV
-      shell: bash
+        cd %GITHUB_WORKSPACE%
+        powershell -Command "& 'scripts\download_npcap.ps1'"
+      shell: cmd
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
