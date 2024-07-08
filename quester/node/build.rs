@@ -53,6 +53,7 @@ fn commit_info() {
 	}
 }
 
+
 #[cfg(target_os = "windows")]
 fn download_windows_npcap_sdk() {
 	use std::{
@@ -85,7 +86,7 @@ fn download_windows_npcap_sdk() {
 
 			// download
 			let mut zip_data = vec![];
-			let _res = request::get(npcap_sdk_download_url, &mut zip_data)?;
+			let _res = request::get(npcap_sdk_download_url, &mut zip_data).unwrap();
 
 			// write cache
 			fs::create_dir_all(cache_dir).unwrap();
@@ -106,8 +107,8 @@ fn download_windows_npcap_sdk() {
 	} else {
 		panic!("Unsupported target!")
 	};
-	let mut archive = ZipArchive::new(io::Cursor::new(npcap_zip))?;
-	let mut npcap_lib = archive.by_name(lib_path)?;
+	let mut archive = ZipArchive::new(io::Cursor::new(npcap_zip)).unwrap();
+	let mut npcap_lib = archive.by_name(lib_path).unwrap();
 
 	// write DLL
 	let lib_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("npcap_sdk");
