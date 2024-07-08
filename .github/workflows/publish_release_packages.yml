@@ -52,9 +52,9 @@ jobs:
   build-windows-binaries:
     strategy:
       matrix:
-        target: [x86_64-pc-windows-msvc]
+        target: [windows-x64-msvc]
     name: Build ${{ matrix.target }}
-    runs-on: windows-2019
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cargo-build-windows-binary
