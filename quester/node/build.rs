@@ -13,7 +13,7 @@ fn main() {
 	println!("cargo:rustc-env=BUILD_TARGET={}", env::var("TARGET").unwrap());
 	commit_info();
 	#[cfg(target_os = "windows")]
-	download_windows_npcap_sdk().unwrap();
+	download_windows_npcap_sdk();
 }
 
 /// Extracts commit date, hash, and tags
