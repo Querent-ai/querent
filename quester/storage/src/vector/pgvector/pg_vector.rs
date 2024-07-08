@@ -40,10 +40,6 @@ pub struct EmbeddedKnowledge {
 	pub event_id: String,
 }
 
-// #[derive(Debug, Clone, Copy, FromSqlRow, AsExpression)]
-// #[diesel(sql_type = BigInt)]
-// pub struct EventId(pub u64);
-
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = discovered_knowledge)]
 pub struct DiscoveredKnowledge {
