@@ -57,6 +57,7 @@ pub struct DiscoveredKnowledge {
 	pub query: Option<String>,
 	pub session_id: Option<String>,
 	pub score: Option<f64>,
+	pub collection_id: String,
 }
 
 impl DiscoveredKnowledge {
@@ -72,6 +73,7 @@ impl DiscoveredKnowledge {
 			query: payload.query,
 			session_id: payload.session_id,
 			score: Some(payload.score as f64),
+			collection_id: payload.collection_id,
 		}
 	}
 }
@@ -228,7 +230,7 @@ impl Storage for PGVector {
 		&self,
 		session_id: String,
 		query: String,
-		_collection_id: String,
+		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
@@ -287,6 +289,7 @@ impl Storage for PGVector {
 								doc_payload.session_id = Some(session_id.clone());
 								doc_payload.query_embedding = Some(payload.clone());
 								doc_payload.query = Some(query.clone());
+								doc_payload.collection_id = collection_id.clone();
 								results.push(doc_payload);
 							}
 						},
@@ -470,6 +473,7 @@ table! {
 		query -> Nullable<Text>,
 		session_id -> Nullable<Text>,
 		score -> Nullable<Float8>,
+		collection_id -> Text,
 	}
 }
 
