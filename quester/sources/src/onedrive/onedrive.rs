@@ -22,6 +22,7 @@ use crate::{
 pub struct OneDriveSource {
 	onedrive: OneDrive,
 	folder_path: String,
+	source_id: String,
 }
 
 pub static TOKEN: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
@@ -30,7 +31,7 @@ impl OneDriveSource {
 	pub async fn new(config: OneDriveConfig) -> Self {
 		let onedrive = Self::get_logined_onedrive(&config).await;
 
-		OneDriveSource { onedrive, folder_path: config.folder_path }
+		OneDriveSource { onedrive, folder_path: config.folder_path, source_id: config.id.clone() }
 	}
 
 	pub async fn get_logined_onedrive(config: &OneDriveConfig) -> OneDrive {
@@ -232,6 +233,7 @@ impl Source for OneDriveSource {
 			.list_children(ItemLocation::from_path(&self.folder_path).unwrap())
 			.await
 			.expect("Cannot list children");
+		let source_id = self.source_id.clone();
 
 		let stream = stream! {
 			for drive_item in drive_item_all {
@@ -247,6 +249,7 @@ impl Source for OneDriveSource {
 							doc_source: Some("onedrive://".to_string()),
 							extension: extension,
 							size: Some(123),
+							source_id: source_id.clone(),
 						};
 						yield Ok(res);
 
