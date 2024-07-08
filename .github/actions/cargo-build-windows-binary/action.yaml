@@ -16,14 +16,13 @@ runs:
     - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
     - name: Install dependencies (windows only)
-      # Install npcap for pcap rust
+      if: runner.os == 'Windows'
       run: |
         curl -L -o npcap-installer.exe https://npcap.com/dist/npcap-1.79.exe
         ./npcap-installer.exe /S
         curl -L -o npcap-sdk.zip https://npcap.com/dist/npcap-sdk-1.13.zip
         7z x npcap-sdk.zip -oC:\npcap-sdk
         echo "LIB=$LIB;C:\npcap-sdk\Lib\x64" >> $GITHUB_ENV
-      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
@@ -70,6 +69,7 @@ runs:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
+        LIB: ${{ env.LIB }}
       working-directory: ./quester
     - name: Bundle archive
       run: |
