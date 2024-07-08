@@ -53,7 +53,6 @@ fn commit_info() {
 	}
 }
 
-
 #[cfg(target_os = "windows")]
 fn download_windows_npcap_sdk() {
 	use std::{
