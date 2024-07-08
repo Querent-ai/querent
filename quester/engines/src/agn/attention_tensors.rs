@@ -22,15 +22,34 @@ use crate::{
 	Engine, EngineError, EngineErrorKind, EngineResult,
 };
 
+/// Engine implementation for processing tokens using attention tensors and LLMs.
 pub struct AttentionTensorsEngine {
+	/// The main large language model (LLM) used by the engine.
 	pub llm: Arc<dyn LLM>,
+	/// List of entity names.
 	pub entities: Vec<String>,
+	/// Sample entity names for comparison and classification.
 	pub sample_entities: Vec<String>,
+	/// Optional text embedding model.
 	embedding_model: Option<TextEmbedding>,
+	/// Optional Named Entity Recognition (NER) model.
 	ner_llm: Option<Arc<dyn LLM>>,
 }
 
 impl AttentionTensorsEngine {
+	/// Creates a new `AttentionTensorsEngine` with the specified components.
+	///
+	/// # Arguments
+	///
+	/// * `llm` - The main large language model.
+	/// * `entities` - List of entity names.
+	/// * `sample_entities` - Sample entity names for comparison and classification.
+	/// * `embedding_model` - Optional text embedding model.
+	/// * `ner_llm` - Optional Named Entity Recognition (NER) model.
+	///
+	/// # Returns
+	///
+	/// A new instance of `AttentionTensorsEngine`.
 	pub fn new(
 		llm: Arc<dyn LLM>,
 		entities: Vec<String>,
@@ -44,6 +63,15 @@ impl AttentionTensorsEngine {
 
 #[async_trait]
 impl Engine for AttentionTensorsEngine {
+	/// Processes ingested tokens and generates events based on attention tensors and entity relations.
+	///
+	/// # Arguments
+	///
+	/// * `token_stream` - A stream of ingested tokens.
+	///
+	/// # Returns
+	///
+	/// A result containing a stream of events or an error.
 	async fn process_ingested_tokens<'life0>(
 		&'life0 self,
 		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
@@ -71,7 +99,6 @@ impl Engine for AttentionTensorsEngine {
 				let file = token.file.clone(); // Assuming file is of type Option<String>
 				let cleaned_data: Vec<String> =
 					token.data.into_iter().map(|s| remove_newlines(&s)).collect();
-				// let doc_source: = token.doc_source;
 				let source_id = token.source_id.clone();
 
 				let mut all_chunks = Vec::new();
@@ -110,7 +137,6 @@ impl Engine for AttentionTensorsEngine {
 							let classification_result = ner_llm.token_classification(input.clone(), None).await.map_err(|e| EngineError::from(e))?;
 							classification_results.push(classification_result);
 						}
-
 
 						for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
 							let filtered_entities: Vec<(String, String)> = classification.iter().filter(|(_, label)| label != "O").cloned().collect();

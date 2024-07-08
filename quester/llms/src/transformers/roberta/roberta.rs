@@ -28,31 +28,6 @@ enum WeightSource {
 	Pytorch,
 }
 
-// #[derive(Debug, Clone, Hash, PartialEq, Eq)]
-// pub struct EmbedderOptions {
-// 	pub model: String,
-// 	pub revision: Option<String>,
-// 	pub distribution: Option<DistributionShift>,
-// 	local_dir: Option<String>,
-// }
-
-// impl EmbedderOptions {
-// 	pub fn new() -> Self {
-// 		Self {
-// 			model: "roberta-base".to_string(),
-// 			revision: None,
-// 			distribution: None,
-// 			local_dir: None,
-// 		}
-// 	}
-// }
-
-// impl Default for EmbedderOptions {
-// 	fn default() -> Self {
-// 		Self::new()
-// 	}
-// }
-
 /// Perform embedding of documents and queries
 pub struct RobertaLLM {
 	model: Option<CandleRobertaModel>,

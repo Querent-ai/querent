@@ -11,5 +11,6 @@ CREATE TABLE discovered_knowledge(
     query_embedding vector(384),
     query VARCHAR,
     session_id VARCHAR,
-    score FLOAT8
+    score FLOAT8, 
+    collection_id VARCHAR
 );
