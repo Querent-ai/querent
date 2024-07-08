@@ -17,6 +17,7 @@ runs:
       shell: bash
     - name: Download Npcap
       run: Invoke-WebRequest -Uri 'https://npcap.com/dist/npcap-1.79.exe' -OutFile 'C:\npcap-1.71.exe 
+      shell: powershell
     - name: Install Npcap
       run: C:\npcap-1.79.exe /S /winpcap_mode=yes
     - name: Install rustup
