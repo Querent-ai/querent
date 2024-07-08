@@ -9,29 +9,46 @@ use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
 
+/// Represents a classified sentence with identified entities.
 #[derive(Debug, Serialize)]
 pub struct ClassifiedSentence {
+	/// The classified sentence as a string.
 	pub sentence: String,
+	/// A vector of tuples representing entities in the sentence. Each tuple contains:
+	/// (entity text, entity label, start index, end index).
 	pub entities: Vec<(String, String, usize, usize)>,
 }
 
+/// Represents a classified sentence with identified entity pairs.
 #[derive(Debug, Serialize, Clone)]
 pub struct ClassifiedSentenceWithPairs {
+	/// The classified sentence as a string.
 	pub sentence: String,
-	pub entities: Vec<(String, String, usize, usize)>, // (entity, label, start, end)
-	pub pairs: Vec<(String, usize, usize, String, usize, usize)>, // (entity1, start1, end1, entity2, start2, end2)
+	/// A vector of tuples representing entities in the sentence. Each tuple contains:
+	/// (entity text, entity label, start index, end index).
+	pub entities: Vec<(String, String, usize, usize)>,
+	/// A vector of tuples representing pairs of entities in the sentence. Each tuple contains:
+	/// (entity1 text, start index of entity1, end index of entity1, entity2 text, start index of entity2, end index of entity2).
+	pub pairs: Vec<(String, usize, usize, String, usize, usize)>,
 }
 
+/// Represents a classified sentence with attention matrix.
 #[derive(Debug, Serialize, Clone)]
 pub struct ClassifiedSentenceWithAttention {
+	/// The classified sentence with pairs.
 	pub classified_sentence: ClassifiedSentenceWithPairs,
+	/// The attention matrix for the sentence (optional).
 	pub attention_matrix: Option<Vec<Vec<f32>>>,
 }
 
+/// Represents a classified sentence with identified relations and attention matrix.
 #[derive(Debug, Clone)]
 pub struct ClassifiedSentenceWithRelations {
+	/// The classified sentence with pairs.
 	pub classified_sentence: ClassifiedSentenceWithPairs,
+	/// The attention matrix for the sentence (optional).
 	pub attention_matrix: Option<Vec<Vec<f32>>>,
+	/// A vector of head-tail relations found in the sentence.
 	pub relations: Vec<HeadTailRelations>,
 }
 
@@ -42,7 +59,7 @@ pub fn remove_newlines(text: &str) -> String {
 	re.replace_all(&sanitized_text, " ").to_string()
 }
 
-/// Remove null bytes and any other invalid UTF-8 sequences
+/// Removes null bytes and any other invalid UTF-8 sequences from the given text.
 fn sanitize_text(input: &str) -> String {
 	input.chars().filter(|&c| c != '\0').collect()
 }
@@ -55,7 +72,7 @@ pub fn split_into_sentences(text: &str) -> Vec<String> {
 		.collect()
 }
 
-/// Splits the provided tokens into chunks based on the maximum token length.
+/// Splits the provided text into chunks based on the maximum token length.
 pub fn split_into_chunks(max_tokens: usize, tokens: &str) -> Vec<String> {
 	let sentences = split_into_sentences(tokens);
 	let mut chunks = Vec::new();
@@ -101,6 +118,7 @@ pub fn split_into_chunks(max_tokens: usize, tokens: &str) -> Vec<String> {
 	chunks
 }
 
+/// Labels entities in the provided sentences based on the list of entities.
 pub fn label_entities_in_sentences(
 	entities: &[String],
 	sentences: &[String],
@@ -120,6 +138,7 @@ pub fn label_entities_in_sentences(
 	classified_sentences
 }
 
+/// Finds the start and end indices of the given entity in the sentence.
 fn find_entity_indices(sentence: &str, entity: &str) -> Vec<(usize, usize)> {
 	let sentence_lower = sentence.to_lowercase();
 	let entity_lower = entity.to_lowercase();
@@ -131,10 +150,10 @@ fn find_entity_indices(sentence: &str, entity: &str) -> Vec<(usize, usize)> {
 		positions.push((start, end));
 		start_pos = end; // Move past this occurrence
 	}
-
 	positions
 }
 
+/// Converts tokens to words using the provided LLM.
 pub async fn tokens_to_words(llm: &dyn LLM, tokens: &[Vec<i32>]) -> Vec<Vec<String>> {
 	let mut words_list = Vec::new();
 	for token_seq in tokens {
@@ -144,6 +163,7 @@ pub async fn tokens_to_words(llm: &dyn LLM, tokens: &[Vec<i32>]) -> Vec<Vec<Stri
 	words_list
 }
 
+/// Matches entities with tokens in the provided sentences.
 pub fn match_entities_with_tokens(
 	tokenized_sentences: &[Vec<String>],
 	classified_sentences: &[ClassifiedSentence],
@@ -173,6 +193,7 @@ pub fn match_entities_with_tokens(
 	results
 }
 
+/// Finds all token indices for the given entity in the token list.
 fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)> {
 	let entity_tokens: Vec<String> = entity.split_whitespace().map(|s| s.to_lowercase()).collect();
 	let mut indices = Vec::new();
@@ -190,6 +211,7 @@ fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)
 	indices
 }
 
+/// Creates binary pairs of entities in the provided sentences.
 pub fn create_binary_pairs(
 	classified_sentences: &[ClassifiedSentence],
 ) -> Vec<ClassifiedSentenceWithPairs> {
@@ -225,7 +247,7 @@ pub fn create_binary_pairs(
 					// Calculate the character distance between entity1 and entity2
 					let char_distance = (*start1 as isize - *start2 as isize).abs();
 
-					// Skip pairs where the distance is greater than 15 characters
+					// Skip pairs where the distance is greater than 25 characters
 					if char_distance > 25 {
 						continue;
 					}
@@ -251,6 +273,7 @@ pub fn create_binary_pairs(
 	results
 }
 
+/// Adds attention matrices to the classified sentences with pairs using the provided LLM.
 pub async fn add_attention_to_classified_sentences(
 	llm: &dyn LLM,
 	classified_sentences_with_pairs: &[ClassifiedSentenceWithPairs],
@@ -295,6 +318,7 @@ pub async fn add_attention_to_classified_sentences(
 	Ok(extended_classified_sentences_with_attention)
 }
 
+/// Merges similar relations in the provided sentences with relations.
 pub fn merge_similar_relations(sentences_with_relations: &mut [ClassifiedSentenceWithRelations]) {
 	for sentence in sentences_with_relations {
 		for relation in &mut sentence.relations {
@@ -331,7 +355,7 @@ pub fn merge_similar_relations(sentences_with_relations: &mut [ClassifiedSentenc
 	}
 }
 
-/// Utility function to calculate biased sentence embedding
+/// Utility function to calculate biased sentence embedding.
 pub async fn calculate_biased_sentence_embedding(
 	embedder: &TextEmbedding,
 	attention_matrix: &Vec<Vec<f32>>,
@@ -400,6 +424,7 @@ pub async fn calculate_biased_sentence_embedding(
 	Ok(normalized_biased_sentence_embedding)
 }
 
+/// Generates a custom UUID based on the current time and a random number.
 pub fn generate_custom_comb_uuid() -> String {
 	let custom_epoch = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
 	let now = Utc::now();
@@ -418,6 +443,7 @@ pub fn generate_custom_comb_uuid() -> String {
 	uuid_int.to_string()
 }
 
+/// Extracts entities and their types from classified sentences with relations.
 pub fn extract_entities_and_types(
 	all_sentences_with_relations: Vec<ClassifiedSentenceWithRelations>,
 ) -> (Vec<String>, Vec<String>) {

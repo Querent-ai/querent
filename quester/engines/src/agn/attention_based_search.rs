@@ -1,28 +1,42 @@
 use std::collections::HashSet;
 
+/// Represents an entity with a name and its start and end indices in the text.
 #[derive(Debug, Clone)]
 pub struct Entity {
+	/// The name of the entity.
 	pub name: String,
+	/// The start index of the entity in the text.
 	pub start_idx: usize,
+	/// The end index of the entity in the text.
 	pub end_idx: usize,
 }
 
+/// Represents a pair of entities (head and tail) within a context.
 #[derive(Debug, Clone)]
 pub struct EntityPair {
+	/// The head entity.
 	pub head_entity: Entity,
+	/// The tail entity.
 	pub tail_entity: Entity,
+	/// The context in which the entities appear.
 	pub context: String,
 }
 
+/// Represents a contextual relationship search with a score and visited tokens.
 #[derive(Debug, Clone)]
 pub struct SearchContextualRelationship {
+	/// The current token being processed.
 	pub current_token: usize,
+	/// The total score of the relationship path.
 	pub total_score: f32,
+	/// The tokens that have been visited in this path.
 	pub visited_tokens: Vec<usize>,
+	/// The tokens that form the relationship.
 	pub relation_tokens: Vec<usize>,
 }
 
 impl SearchContextualRelationship {
+	/// Creates a new `SearchContextualRelationship` starting from the given initial token.
 	pub fn new(initial_token_id: usize) -> Self {
 		Self {
 			current_token: initial_token_id,
@@ -32,6 +46,12 @@ impl SearchContextualRelationship {
 		}
 	}
 
+	/// Adds a token to the relationship path, updating the score and visited tokens.
+	///
+	/// # Arguments
+	///
+	/// * `token_id` - The ID of the token to add.
+	/// * `score` - The score associated with the token.
 	pub fn add_token(&mut self, token_id: usize, score: f32) {
 		self.current_token = token_id;
 		self.visited_tokens.push(token_id);
@@ -39,14 +59,21 @@ impl SearchContextualRelationship {
 		self.relation_tokens.push(token_id);
 	}
 
+	/// Checks if the relationship has any tokens.
 	pub fn has_relation(&self) -> bool {
 		!self.relation_tokens.is_empty()
 	}
 
+	/// Finalizes the relationship path by adding the given score.
+	///
+	/// # Arguments
+	///
+	/// * `score` - The score to add.
 	pub fn finalize_path(&mut self, score: f32) {
 		self.total_score += score;
 	}
 
+	/// Computes the mean score of the relationship path.
 	pub fn mean_score(&self) -> f32 {
 		if self.relation_tokens.is_empty() {
 			0.0
@@ -56,10 +83,32 @@ impl SearchContextualRelationship {
 	}
 }
 
+/// Sorts search contextual relationships by their mean score.
+///
+/// # Arguments
+///
+/// * `path` - The relationship path to compute the mean score for.
+///
+/// # Returns
+///
+/// The mean score of the relationship path.
 pub fn sort_by_mean_score(path: &SearchContextualRelationship) -> f32 {
 	path.mean_score()
 }
 
+/// Checks if a token is valid for inclusion in a relationship path.
+///
+/// # Arguments
+///
+/// * `token_id` - The ID of the token to check.
+/// * `pair` - The entity pair being considered.
+/// * `candidate_paths` - The current list of candidate paths.
+/// * `current_path` - The current relationship path.
+/// * `score` - The score associated with the token.
+///
+/// # Returns
+///
+/// A boolean indicating whether the token is valid for inclusion.
 pub fn is_valid_token(
 	token_id: usize,
 	pair: &EntityPair,
@@ -79,6 +128,20 @@ pub fn is_valid_token(
 		!(pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id)
 }
 
+/// Performs a search for contextual relationships between entities using an attention matrix.
+///
+/// # Arguments
+///
+/// * `entity_start_index` - The starting index of the entity in the attention matrix.
+/// * `attention_matrix` - The attention matrix used to compute scores between tokens.
+/// * `entity_pair` - The pair of entities to find relationships for.
+/// * `search_candidates` - The number of search candidates to consider.
+/// * `require_contiguous` - Whether the tokens in the relationship must be contiguous.
+/// * `max_relation_length` - The maximum length of the relationship in tokens.
+///
+/// # Returns
+///
+/// A result containing a vector of `SearchContextualRelationship` or an error.
 pub fn perform_search(
 	entity_start_index: usize,
 	attention_matrix: &[Vec<f32>],

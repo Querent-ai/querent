@@ -1,42 +1,69 @@
 use crate::agn::attention_based_search::Entity;
 use std::collections::HashSet;
 
+/// Represents the relationship between a head and a tail entity, including associated relations and their scores.
 #[derive(Debug, Clone)]
 pub struct HeadTailRelations {
+	/// The head entity in the relationship.
 	pub head: Entity,
+	/// The tail entity in the relationship.
 	pub tail: Entity,
+	/// A vector of tuples where each tuple contains a relation string and its corresponding score.
 	pub relations: Vec<(String, f32)>,
 }
 
+/// Represents a search beam used in the filtering process.
 #[derive(Debug, Clone)]
 pub struct SearchBeam {
+	/// A vector of token indices representing the relation tokens.
 	pub rel_tokens: Vec<usize>,
+	/// The score of the search beam.
 	pub score: f32,
 }
 
 impl SearchBeam {
+	/// Computes the mean score of the search beam by dividing the total score by the number of relation tokens.
 	pub fn mean_score(&self) -> f32 {
 		self.score / self.rel_tokens.len() as f32
 	}
 }
 
-pub struct IndividualFilter {
-	doc: Vec<Token>,
-	forward_relations: bool,
-	threshold: f32,
-}
-
+/// Represents a token with its text and lemma.
 #[derive(Debug, Clone)]
 pub struct Token {
+	/// The text of the token.
 	pub text: String,
+	/// The lemma of the token.
 	pub lemma: String,
 }
 
+/// A filter used to filter search beams based on document tokens, forward relations, and a score threshold.
+pub struct IndividualFilter {
+	/// A vector of tokens representing the document.
+	doc: Vec<Token>,
+	/// A flag indicating whether to use forward relations.
+	forward_relations: bool,
+	/// The threshold score for filtering search beams.
+	threshold: f32,
+}
+
 impl IndividualFilter {
+	/// Creates a new `IndividualFilter` with the specified document tokens, forward relations flag, and threshold score.
 	pub fn new(doc: Vec<Token>, forward_relations: bool, threshold: f32) -> Self {
 		Self { doc, forward_relations, threshold }
 	}
 
+	/// Filters the given candidates and returns the head-tail relations that meet the criteria.
+	///
+	/// # Arguments
+	///
+	/// * `candidates` - A vector of search beams to filter.
+	/// * `head` - The head entity.
+	/// * `tail` - The tail entity.
+	///
+	/// # Returns
+	///
+	/// A `HeadTailRelations` struct containing the filtered relations.
 	pub fn filter(
 		&self,
 		candidates: Vec<SearchBeam>,
@@ -79,7 +106,6 @@ impl IndividualFilter {
 					!tail.name.eq_ignore_ascii_case(&lowered_word)
 				{
 					rel_txt.push_str(&lowered_word);
-				} else {
 				}
 			}
 
@@ -94,6 +120,15 @@ impl IndividualFilter {
 		response
 	}
 
+	/// Applies a simple filter to the relation string, removing non-alphanumeric words.
+	///
+	/// # Arguments
+	///
+	/// * `relation` - The relation string to filter.
+	///
+	/// # Returns
+	///
+	/// A filtered relation string containing only alphanumeric words.
 	fn simple_filter(&self, relation: &str) -> String {
 		let filtered_relation = relation
 			.split_whitespace()

@@ -13,6 +13,7 @@ pub struct DocumentPayload {
 	pub query: Option<String>,
 	pub session_id: Option<String>,
 	pub score: f32,
+	pub collection_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Default)]
