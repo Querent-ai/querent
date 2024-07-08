@@ -328,6 +328,8 @@ message OneDriveConfig {
   string auth_code = 4;
   /// Folder path of the app
   string folder_path = 5;
+  /// Id for the collector
+  string id = 6;
 }
 
 // Storage
@@ -393,4 +395,11 @@ message Neo4jConfig {
   int32 fetch_size = 7;
   // Maximum connection pool size for the Neo4j storage.
   int32 max_connection_pool_size = 8;
+}
+
+message SurrealDBConfig {
+  // Username for SurrealDB instance
+  string username = 1;
+  // Password for SurrealDB instance
+  string password = 2;
 }

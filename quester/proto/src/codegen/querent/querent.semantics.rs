@@ -508,6 +508,9 @@ pub struct OneDriveConfig {
     /// / Folder path of the app
     #[prost(string, tag = "5")]
     pub folder_path: ::prost::alloc::string::String,
+    /// / Id for the collector
+    #[prost(string, tag = "6")]
+    pub id: ::prost::alloc::string::String,
 }
 /// StorageConfig is a message to hold configuration for a storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -589,6 +592,17 @@ pub struct Neo4jConfig {
     /// Maximum connection pool size for the Neo4j storage.
     #[prost(int32, tag = "8")]
     pub max_connection_pool_size: i32,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SurrealDbConfig {
+    /// Username for SurrealDB instance
+    #[prost(string, tag = "1")]
+    pub username: ::prost::alloc::string::String,
+    /// Password for SurrealDB instance
+    #[prost(string, tag = "2")]
+    pub password: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
