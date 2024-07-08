@@ -52,7 +52,7 @@ jobs:
   build-windows-binaries:
     strategy:
       matrix:
-        target: [windows-x64-msvc]
+        target: [x86_64-pc-windows-msvc]
     name: Build ${{ matrix.target }}
     runs-on: windows-latest
     steps:
