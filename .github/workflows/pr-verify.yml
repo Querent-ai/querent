@@ -5,8 +5,7 @@ concurrency:
 on:
   pull_request:
     branches:
-      - some
-
+      - main
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
