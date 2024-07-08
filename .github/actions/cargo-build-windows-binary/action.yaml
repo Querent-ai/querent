@@ -44,15 +44,6 @@ runs:
       run: choco install protoc
       shell: bash
 
-    - name: Install Npcap (Windows)
-      if: runner.os == 'Windows'
-      shell: cmd
-      run: |
-        curl -LO https://nmap.org/npcap/dist/npcap-1.60.exe
-        start /wait npcap-1.60.exe /SILENT
-        echo "C:\Program Files\Npcap\Lib\x64" >> $GITHUB_PATH
-        setx LIB "C:\Program Files\Npcap\Lib\x64;%LIB%"
-    
     - name: Install postgres (Windows)
       if: runner.os == 'Windows'
       shell: bash
