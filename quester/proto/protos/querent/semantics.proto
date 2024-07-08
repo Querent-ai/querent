@@ -317,6 +317,19 @@ message NewsCollectorConfig {
   string id = 9;
 }
 
+message OneDriveConfig {
+  // Client ID of the app
+  string client_id = 1;
+  // Client secret of the app
+  string client_secret = 2;
+  // Redirect URI
+  string redirect_uri = 3;
+  // Auth code of the app
+  string auth_code = 4;
+  /// Folder path of the app
+  string folder_path = 5;
+}
+
 // Storage
 
 

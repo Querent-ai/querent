@@ -13,6 +13,7 @@ pub mod drive;
 pub mod email;
 pub mod filesystem;
 pub mod gcs;
+pub mod onedrive;
 pub mod s3;
 
 async fn default_copy_to_file<S: Source + ?Sized>(

@@ -1175,9 +1175,9 @@ dependencies = [
 
 [[package]]
 name = "candle-core"
-version = "0.6.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d5b18de020c2729dbf7ac390325312644808b6ba9b7962f1f724e9185b1d53c7"
+checksum = "311d8dbe293aa3b5c34f6a57727fafd67d17a74fa8b65276501237c233b34ffd"
 dependencies = [
  "byteorder",
  "gemm",
@@ -1196,9 +1196,9 @@ dependencies = [
 
 [[package]]
 name = "candle-nn"
-version = "0.6.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b006b30f66a0d94fc9cef0ac4de6ce510565f35ae2c6c35ce5d4aacfb0fc8eeb"
+checksum = "1efb293365959fc5feacbd93fa918980df2d9f2fb89853af02e33a830c10b49b"
 dependencies = [
  "candle-core",
  "half",
@@ -1211,9 +1211,9 @@ dependencies = [
 
 [[package]]
 name = "candle-transformers"
-version = "0.6.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f0d4eb6a0d9279d5829b06b2bf3caa117904eefd6dcf879d16e687c4a84034c"
+checksum = "b28968e2643d21c259d045f5eb42de07b0a3b7fc86ec8571aeb852721f9c189e"
 dependencies = [
  "byteorder",
  "candle-core",
@@ -4277,8 +4277,8 @@ dependencies = [
  "prost 0.11.9",
  "serde",
  "serde_json",
- "strum",
- "strum_macros",
+ "strum 0.24.1",
+ "strum_macros 0.24.3",
  "thiserror",
  "tokio",
  "tonic 0.8.3",
@@ -4808,6 +4808,21 @@ name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fdb12b2476b595f9358c5161aa467c2438859caa136dec86c26fdd2efe17b92"
+
+[[package]]
+name = "onedrive-api"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02cb54e564518e5b74c12dd7472d322297d491c0891d8cdb4d8052566d538dd3"
+dependencies = [
+ "bytes",
+ "reqwest 0.12.5",
+ "serde",
+ "serde_json",
+ "strum 0.26.3",
+ "thiserror",
+ "url 2.5.2",
+]
 
 [[package]]
 name = "onig"
@@ -6430,6 +6445,7 @@ version = "0.12.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7d6d2a27d57148378eb5e111173f4276ad26340ecc5c49a4a2152167a2d6a37"
 dependencies = [
+ "async-compression",
  "base64 0.22.1",
  "bytes",
  "encoding_rs",
@@ -7276,11 +7292,13 @@ dependencies = [
  "neo4rs",
  "oauth2",
  "once_cell",
+ "onedrive-api",
  "opendal",
  "pgvector",
  "proto",
  "redb",
  "regex",
+ "reqwest 0.12.5",
  "rmp-serde",
  "rustls 0.21.12",
  "serde",
@@ -7429,6 +7447,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 
 [[package]]
+name = "strum"
+version = "0.26.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
+dependencies = [
+ "strum_macros 0.26.4",
+]
+
+[[package]]
 name = "strum_macros"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7439,6 +7466,19 @@ dependencies = [
  "quote",
  "rustversion",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "strum_macros"
+version = "0.26.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.69",
 ]
 
 [[package]]
