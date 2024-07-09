@@ -24,6 +24,7 @@ pub fn tokio_runtime() -> Result<&'static Runtime, anyhow::Error> {
 
 fn main() -> Result<(), anyhow::Error> {
 	let runtime = tokio_runtime();
+	rustls::crypto::ring::default_provider();
 	match runtime {
 		Ok(runtime) => {
 			info!("⚙️ Querent Runtime initialized.");
