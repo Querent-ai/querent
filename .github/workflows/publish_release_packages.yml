@@ -12,6 +12,9 @@ on:
       release-version:
         description: 'Release version (v#.#.#[-rc#])'
         required: true
+  pull_request:
+    branches:
+      - main
 
 env:
   ## use tags to determine the release version
