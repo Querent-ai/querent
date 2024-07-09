@@ -258,7 +258,7 @@ ollama-rs = { version = "0.2.0", features = [
     "stream",
     "chat-history",
 ] }
-surrealdb = "1.5.3"
+surrealdb = { version = "1.5.3", features = ["kv-rocksdb"] }
 
 [profile.release]
 panic = "unwind"
