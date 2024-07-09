@@ -71,23 +71,20 @@ runs:
       working-directory: ./quester
     - name: Bundle archive
       run: |
-        cp target/$TARGET/release/querent.exe .
-        zip -r $ASSET_FULL_NAME.zip querent.exe
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent \
+          BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
-      env:
-        ASSET_FULL_NAME: ${{ env.ASSET_FULL_NAME }}
-      working-directory: ./quester
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.ASSET_FULL_NAME }}
+        name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+        path: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
         retention-days: 3
-        path: quester/$ASSET_FULL_NAME.zip
     - name: Upload archive
       uses: quickwit-inc/upload-to-github-release@v1
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       with:
-        file: quester/$ASSET_FULL_NAME.zip
+        file: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
         overwrite: true
         tag_name: ${{ inputs.version }}
