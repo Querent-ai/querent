@@ -2,10 +2,11 @@
 
 use std::sync::Arc;
 
-use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use common::{DocumentPayload, SemanticKnowledgePayload};
+use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::semantics::SurrealDbConfig;
+use serde::Deserialize;
 use surrealdb::engine::remote::ws::Ws;
 use surrealdb::opt::auth::Root;
 use surrealdb::opt::Config;
@@ -18,6 +19,12 @@ const DATABASE: &str = "querent";
 
 pub struct SurrealDB {
     pub db: Surreal<Db>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Record {
+    #[allow(dead_code)]
+    id: Thing,
 }
 
 impl SurrealDB {
@@ -46,6 +53,41 @@ impl Storage for SurrealDB {
 
 		Ok(())
 	}
+
+	async fn insert_vector(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
+	async fn insert_discovered_knowledge(
+		&self,
+		_payload: &Vec<DocumentPayload>,
+	) -> StorageResult<()> {
+		// Your insert_discovered_knowledge implementation here
+		Ok(())
+	}
+
+	async fn similarity_search_l2(
+		&self,
+		_session_id: String,
+		_query: String,
+		_collection_id: String,
+		_payload: &Vec<f32>,
+		_max_results: i32,
+		_offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
+	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: Vec<(String, String)>,
+	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
     
 
 
@@ -59,11 +101,34 @@ impl Storage for SurrealDB {
 
 	async fn index_knowledge(
 		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
+		collection_id: String,
+		payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
-		// Semantic Knowledge
+		for (document_id, document_source, image_id, item) in payload {
+			let form = SemanticKnowledge {
+				subject: item.subject.clone(),
+				subject_type: item.subject_type.clone(),
+				object: item.object.clone(),
+				object_type: item.object_type.clone(),
+				sentence: item.sentence.clone(),
+				document_id: document_id.clone(),
+				document_source: document_source.clone(),
+				collection_id: Some(collection_id.clone()),
+				image_id: image_id.clone(),
+				event_id: item.event_id.clone(),
+				source_id: item.source_id.clone(),
+			};
+			let created: Vec<Record> = self.db
+				.create("semantic_knowledge")
+				.content(form).await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			dbg!(created);
+		}
 
+		Ok(())
+		
 	}
 
 	/// Store key value pair
