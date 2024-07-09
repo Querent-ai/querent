@@ -13,7 +13,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
+    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}.exe" >> $GITHUB_ENV
       shell: bash
     - name: Download Npcap
       run: Invoke-WebRequest -Uri 'https://npcap.com/dist/npcap-1.79.exe' -OutFile 'C:\npcap-1.79.exe'
@@ -71,9 +71,10 @@ runs:
       working-directory: ./quester
     - name: Bundle archive
       run: |
-        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent \
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent.exe \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
+      working-directory: ./quester
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
       with:
