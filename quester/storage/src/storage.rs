@@ -5,6 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -41,6 +42,8 @@ pub enum StorageErrorKind {
 	Io,
 	/// A index creation error for pgvector.
 	IndexCreation,
+	/// Serialization error.
+	Serialization,
 }
 
 /// Generic StorageError.
@@ -142,34 +145,55 @@ pub trait Storage: Send + Sync + 'static {
 	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>>;
 
 	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<String>>;
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<SemanticPipelineRequest>>;
 
 	/// Set SemanticPipeline ran by this node
-	async fn set_pipeline(&self, pipeline: &String) -> StorageResult<()>;
+	async fn set_pipeline(
+		&self,
+		pipeline_id: &String,
+		pipeline: SemanticPipelineRequest,
+	) -> StorageResult<()>;
 
 	/// Get semantic pipeline by id
-	async fn get_pipeline(&self, pipeline_id: &String) -> StorageResult<Option<String>>;
+	async fn get_pipeline(
+		&self,
+		pipeline_id: &String,
+	) -> StorageResult<Option<SemanticPipelineRequest>>;
 
 	/// Delete semantic pipeline by id
 	async fn delete_pipeline(&self, pipeline_id: &String) -> StorageResult<()>;
 
 	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<String>>;
+	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<DiscoverySessionRequest>>;
 
 	/// Set Discovery session ran by this node
-	async fn set_discovery_session(&self, session: &String) -> StorageResult<()>;
+	async fn set_discovery_session(
+		&self,
+		session_id: &String,
+		session: DiscoverySessionRequest,
+	) -> StorageResult<()>;
 
 	/// Get Discovery session by id
-	async fn get_discovery_session(&self, session_id: &String) -> StorageResult<Option<String>>;
+	async fn get_discovery_session(
+		&self,
+		session_id: &String,
+	) -> StorageResult<Option<DiscoverySessionRequest>>;
 
 	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<String>>;
+	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<InsightAnalystRequest>>;
 
 	/// Set Insight session ran by this node
-	async fn set_insight_session(&self, session: &String) -> StorageResult<()>;
+	async fn set_insight_session(
+		&self,
+		session_id: &String,
+		session: InsightAnalystRequest,
+	) -> StorageResult<()>;
 
 	/// Get Insight session by id
-	async fn get_insight_session(&self, session_id: &String) -> StorageResult<Option<String>>;
+	async fn get_insight_session(
+		&self,
+		session_id: &String,
+	) -> StorageResult<Option<InsightAnalystRequest>>;
 }
 
 impl Debug for dyn Storage {

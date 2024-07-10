@@ -183,6 +183,7 @@ pub async fn start_pipeline(
 	mut event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	mut index_storages: Vec<Arc<dyn storage::Storage>>,
 	secret_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::Storage>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 	if request.storage_configs.is_empty() && event_storages.is_empty() && index_storages.is_empty()
@@ -238,7 +239,7 @@ pub async fn start_pipeline(
 	};
 
 	let mut collectors_configs = Vec::new();
-	for collector_id in request.collectors {
+	for collector_id in request.clone().collectors {
 		let config_value = secret_store.get_secret(&collector_id).await.map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
 		});
@@ -298,6 +299,10 @@ pub async fn start_pipeline(
 			result_pipe_obs.unwrap_err()
 		)));
 	}
+	metadata_store
+		.set_pipeline(&id.clone(), request)
+		.await
+		.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
 	//call secret store and get the credentials
 	Ok(SemanticPipelineResponse { pipeline_id: id })
 }
@@ -307,6 +312,7 @@ pub fn start_pipeline_post_handler(
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
 	secret_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::Storage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics")
 		.and(warp::body::json())
@@ -315,6 +321,7 @@ pub fn start_pipeline_post_handler(
 		.and(require(Some(event_storages)))
 		.and(require(Some(index_storages)))
 		.and(require(Some(secret_store)))
+		.and(require(Some(metadata_store)))
 		.then(start_pipeline)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)

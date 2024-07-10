@@ -24,6 +24,7 @@ pub async fn start_discovery_service(
 	cluster: &Cluster,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
+	metadata_store: Arc<dyn Storage>,
 ) -> anyhow::Result<Arc<dyn DiscoveryService>> {
 	let discovery_agent_service = DiscoveryAgentService::new(
 		node_config.node_id.clone(),
@@ -36,6 +37,7 @@ pub async fn start_discovery_service(
 	let discovery_service = Arc::new(service::DiscoveryImpl::new(
 		event_storages,
 		index_storages,
+		metadata_store,
 		discovery_service_mailbox,
 	));
 	Ok(discovery_service)
