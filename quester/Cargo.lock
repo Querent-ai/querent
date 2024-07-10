@@ -8313,6 +8313,7 @@ version = "4.0.0"
 dependencies = [
  "anyhow",
  "async-trait",
+ "bincode",
  "chrono",
  "common",
  "deadpool 0.10.0",

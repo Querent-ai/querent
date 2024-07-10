@@ -12,7 +12,9 @@ pub mod index;
 pub use index::*;
 pub mod secret;
 pub use secret::*;
+pub mod metastore;
 pub mod surrealdb;
+pub use metastore::*;
 
 use diesel::result::{Error as DieselError, Error::QueryBuilderError};
 

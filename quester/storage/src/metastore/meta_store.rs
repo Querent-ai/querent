@@ -5,6 +5,7 @@ use std::{
 
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
@@ -125,55 +126,318 @@ impl Storage for MetaStore {
 
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<SemanticPipelineRequest>> {
-		Ok(Vec::new())
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let mut pipelines = Vec::new();
+		{
+			let table = read_txn.open_table(TABLE_PIPELINES).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			let iter = table.iter().map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+			for result in iter {
+				let (key_access_guard, value_access_guard) =
+					result.map_err(|err| StorageError {
+						kind: StorageErrorKind::Internal,
+						source: Arc::new(anyhow::Error::from(err)),
+					})?;
+				let _key = key_access_guard.value();
+				let value = value_access_guard.value();
+				let pipeline: SemanticPipelineRequest =
+					bincode::deserialize(value).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?;
+				pipelines.push(pipeline);
+			}
+		}
+		Ok(pipelines)
 	}
 
 	/// Set SemanticPipeline ran by this node
-		async fn set_pipeline(&self, pipeline_id: &String, pipeline: SemanticPipelineRequest)
-		-> StorageResult<()> {
-		Ok(())
+	async fn set_pipeline(
+		&self,
+		pipeline_id: &String,
+		pipeline: SemanticPipelineRequest,
+	) -> StorageResult<()> {
+		let encoded_data = bincode::serialize(&pipeline).map_err(|e| StorageError {
+			kind: StorageErrorKind::Serialization,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let write_txn = self.db.begin_write().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		{
+			let mut table = write_txn.open_table(TABLE_PIPELINES).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			table.insert(pipeline_id.as_str(), encoded_data.as_slice()).map_err(|e| {
+				StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				}
+			})?;
+		}
+		write_txn.commit().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})
 	}
 
 	/// Get semantic pipeline by id
 	async fn get_pipeline(
 		&self,
-		_pipeline_id: &String,
+		pipeline_id: &String,
 	) -> StorageResult<Option<SemanticPipelineRequest>> {
-		Ok(None)
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let pipeline = {
+			let table = read_txn.open_table(TABLE_PIPELINES).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			let value = table.get(pipeline_id.as_str()).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			match value {
+				Some(value) =>
+					Some(bincode::deserialize(value.value()).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?),
+				None => None,
+			}
+		};
+		Ok(pipeline)
 	}
 
 	/// Delete semantic pipeline by id
-	async fn delete_pipeline(&self, _pipeline_id: &String) -> StorageResult<()> {
-		Ok(())
+	async fn delete_pipeline(&self, pipeline_id: &String) -> StorageResult<()> {
+		let write_txn = self.db.begin_write().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		{
+			let mut table = write_txn.open_table(TABLE_PIPELINES).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			table.remove(pipeline_id.as_str()).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		}
+		write_txn.commit().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})
 	}
 
 	/// Get all Discovery sessions ran by this node
 	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<DiscoverySessionRequest>> {
-		Ok(Vec::new())
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let mut sessions = Vec::new();
+		{
+			let table =
+				read_txn.open_table(TABLE_DISCOVERY_SESSIONS).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			let iter = table.iter().map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+			for result in iter {
+				let (key_access_guard, value_access_guard) =
+					result.map_err(|err| StorageError {
+						kind: StorageErrorKind::Internal,
+						source: Arc::new(anyhow::Error::from(err)),
+					})?;
+				let _key = key_access_guard.value();
+				let value = value_access_guard.value();
+				let session: DiscoverySessionRequest =
+					bincode::deserialize(value).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?;
+				sessions.push(session);
+			}
+		}
+		Ok(sessions)
 	}
 
 	/// Set Discovery session ran by this node
-	async fn set_discovery_session(&self, _session_id: &String, _session: DiscoverySessionRequest) -> StorageResult<()> {
-		Ok(())
+	async fn set_discovery_session(
+		&self,
+		session_id: &String,
+		session: DiscoverySessionRequest,
+	) -> StorageResult<()> {
+		let encoded_data = bincode::serialize(&session).map_err(|e| StorageError {
+			kind: StorageErrorKind::Serialization,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let write_txn = self.db.begin_write().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		{
+			let mut table =
+				write_txn.open_table(TABLE_DISCOVERY_SESSIONS).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			table.insert(session_id.as_str(), encoded_data.as_slice()).map_err(|e| {
+				StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				}
+			})?;
+		}
+		write_txn.commit().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})
 	}
 
 	/// Get Discovery session by id
-	async fn get_discovery_session(&self, _session_id: &String) -> StorageResult<Option<DiscoverySessionRequest>> {
-		Ok(None)
+	async fn get_discovery_session(
+		&self,
+		session_id: &String,
+	) -> StorageResult<Option<DiscoverySessionRequest>> {
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let session = {
+			let table =
+				read_txn.open_table(TABLE_DISCOVERY_SESSIONS).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			let value = table.get(session_id.as_str()).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			match value {
+				Some(value) =>
+					Some(bincode::deserialize(value.value()).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?),
+				None => None,
+			}
+		};
+		Ok(session)
 	}
 
 	/// Get all Insight sessions ran by this node
 	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<InsightAnalystRequest>> {
-		Ok(Vec::new())
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let mut sessions = Vec::new();
+		{
+			let table = read_txn.open_table(TABLE_INSIGHT_SESSIONS).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			let iter = table.iter().map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+			for result in iter {
+				let (key_access_guard, value_access_guard) =
+					result.map_err(|err| StorageError {
+						kind: StorageErrorKind::Internal,
+						source: Arc::new(anyhow::Error::from(err)),
+					})?;
+				let _key = key_access_guard.value();
+				let value = value_access_guard.value();
+				let session: InsightAnalystRequest =
+					bincode::deserialize(value).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?;
+				sessions.push(session);
+			}
+		}
+		Ok(sessions)
 	}
 
 	/// Set Insight session ran by this node
-	async fn set_insight_session(&self, _session_id: &String, _session: InsightAnalystRequest) -> StorageResult<()> {
-		Ok(())
+	async fn set_insight_session(
+		&self,
+		session_id: &String,
+		session: InsightAnalystRequest,
+	) -> StorageResult<()> {
+		let encoded_data = bincode::serialize(&session).map_err(|e| StorageError {
+			kind: StorageErrorKind::Serialization,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let write_txn = self.db.begin_write().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		{
+			let mut table =
+				write_txn.open_table(TABLE_INSIGHT_SESSIONS).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			table.insert(session_id.as_str(), encoded_data.as_slice()).map_err(|e| {
+				StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				}
+			})?;
+		}
+		write_txn.commit().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})
 	}
 
 	/// Get Insight session by id
-	async fn get_insight_session(&self, _session_id: &String) -> StorageResult<Option<InsightAnalystRequest>> {
-		Ok(None)
+	async fn get_insight_session(
+		&self,
+		session_id: &String,
+	) -> StorageResult<Option<InsightAnalystRequest>> {
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let session = {
+			let table = read_txn.open_table(TABLE_INSIGHT_SESSIONS).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			let value = table.get(session_id.as_str()).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			match value {
+				Some(value) =>
+					Some(bincode::deserialize(value.value()).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?),
+				None => None,
+			}
+		};
+		Ok(session)
 	}
 }

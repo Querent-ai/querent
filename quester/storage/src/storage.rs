@@ -40,6 +40,8 @@ pub enum StorageErrorKind {
 	Io,
 	/// A index creation error for pgvector.
 	IndexCreation,
+	/// Serialization error.
+	Serialization,
 }
 
 /// Generic StorageError.
