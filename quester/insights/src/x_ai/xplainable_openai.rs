@@ -97,6 +97,7 @@ impl Insight for XAI {
 #[async_trait]
 impl InsightRunner for XAIRunner {
 	async fn run(&self, input: InsightInput) -> InsightResult<InsightOutput> {
+		println!("Inside Run-----------");
         if self.config.discovery_session_id.is_empty() && self.config.semantic_pipeline_id.is_empty() {
             return Err(InsightError::new(
                 InsightErrorKind::NotSupported,

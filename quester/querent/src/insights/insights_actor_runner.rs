@@ -93,10 +93,11 @@ impl Handler<InsightQuery> for InsightAgent {
 		message: InsightQuery,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
+
 		let runner = self.runner.clone();
 		let agent_id = self.agent_id.clone();
-
-		let data_to_send = serde_json::from_str(&message.query);
+		let json_string = format!("\"{}\"", message.query);
+		let data_to_send = serde_json::from_str(&json_string);
 		if data_to_send.is_err() {
 			return Ok(Err(InsightError::new(
 				InsightErrorKind::Inference,
@@ -105,8 +106,8 @@ impl Handler<InsightQuery> for InsightAgent {
 		}
 		let data_to_send: Value = data_to_send.unwrap();
 		let insight_input = InsightInput { data: data_to_send };
-
 		let response = tokio::spawn(async move {
+			
 			let insight_output = runner.run(insight_input).await;
 			match insight_output {
 				Ok(output) => Ok(InsightQueryResponse {
