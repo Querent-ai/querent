@@ -398,8 +398,4 @@ message Neo4jConfig {
 }
 
 message SurrealDBConfig {
-  // Username for SurrealDB instance
-  string username = 1;
-  // Password for SurrealDB instance
-  string password = 2;
 }

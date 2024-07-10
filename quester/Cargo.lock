@@ -8485,6 +8485,7 @@ dependencies = [
  "tokio-postgres",
  "tokio-postgres-rustls",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

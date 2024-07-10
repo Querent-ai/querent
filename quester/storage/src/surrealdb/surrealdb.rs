@@ -1,6 +1,10 @@
-use std::sync::Arc;
+use std::{fs, sync::Arc};
 
-use crate::{SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{
+	SemanticKnowledge, Storage, StorageError, StorageErrorKind,
+	StorageResult,
+};
+use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::semantics::SurrealDbConfig;
@@ -21,6 +25,23 @@ pub struct EmbeddedKnowledgeSurrealDb {
 	pub event_id: String,
 }
 
+#[derive(Serialize, Debug, Clone, Deserialize)]
+struct QueryResultEmbedded {
+	embeddings: Option<Vec<f32>>,
+	score: f32,
+	event_id: String,
+	cosine_distance: f64,
+}
+
+#[derive(Serialize, Debug, Clone, Deserialize)]
+
+struct QueryResultSemantic {
+	document_id: String,
+	subject: String,
+	object: String,
+	document_source: String,
+	sentence: String,
+}
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
 pub struct DiscoveredKnowledgeSurrealDb {
@@ -57,24 +78,47 @@ pub struct SurrealDB {
 	pub db: Surreal<Db>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 struct Record {
 	#[allow(dead_code)]
-	id: Thing,
+	pub id: Thing,
 }
 
 impl SurrealDB {
 	async fn new(_config: SurrealDbConfig) -> StorageResult<Self> {
 		// port = "127.0.0.1:8000"
 		let config = Config::default().strict();
-		let db_path = "../../../db".to_string();
+		let db_path = "../../../../db".to_string();
 		let db = Surreal::new::<RocksDb>((db_path, config)).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 
-		// Select a specific namespace / database
-		let _ = db.use_ns(NAMESPACE).use_db(DATABASE).await;
+		// Use the correct namespace and database
+		let _ = db.use_ns(NAMESPACE).use_db(DATABASE).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		// Ensure namespace and database exist
+		let create_ns_db_query =
+			format!("DEFINE NAMESPACE {}; DEFINE DATABASE {};", NAMESPACE, DATABASE);
+		db.query(&create_ns_db_query).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		let sql_file_path =
+			"./storage/src/surrealdb/tables-definition.sql";
+		let sql = fs::read_to_string(sql_file_path).map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(Error::from(e)),
+		})?;
+
+		db.query(&sql).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(Error::from(e)),
+		})?;
 
 		Ok(SurrealDB { db })
 	}
@@ -140,15 +184,14 @@ impl Storage for SurrealDB {
 		_collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
-		offset: i64,
+		_offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let query_string = format!(
-			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS distance 
+			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance 
 			FROM embedded_knowledge 
-			WHERE vector::similarity::cosine(embeddings, $payload) <= 0.2 
-			ORDER BY distance 
-			LIMIT {} OFFSET {}",
-			max_results, offset
+			ORDER BY cosine_distance 
+			LIMIT {}",
+			max_results
 		);
 
 		let mut response: Response =
@@ -159,24 +202,20 @@ impl Storage for SurrealDB {
 				}
 			})?;
 
-		let query_result =
-			response.take::<Vec<(Option<Vec<f32>>, f32, String, f64)>>(0).map_err(|e| {
-				StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				}
+		let query_results =
+			response.take::<Vec<QueryResultEmbedded>>(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-
 		let mut results: Vec<DocumentPayload> = Vec::new();
 
-		for (_embeddings, score, event_id, distance) in query_result {
+		for query_result in query_results {
 			// Step 2: Query the semantic knowledge table
 			let query_string_semantic = format!(
 				"SELECT document_id, subject, object, document_source, sentence 
 				FROM semantic_knowledge 
-				WHERE event_id = '{}' 
-				OFFSET {}",
-				event_id, offset
+				WHERE event_id = '{}' ",
+				query_result.event_id.clone()
 			);
 
 			let mut response_semantic: Response =
@@ -185,22 +224,22 @@ impl Storage for SurrealDB {
 					source: Arc::new(anyhow::Error::from(e)),
 				})?;
 
-			let query_result_semantic = response_semantic
-				.take::<Vec<(String, String, String, String, String)>>(0)
+			let query_results_semantic = response_semantic
+				.take::<Vec<QueryResultSemantic>>(0)
 				.map_err(|e| StorageError {
 					kind: StorageErrorKind::Internal,
 					source: Arc::new(anyhow::Error::from(e)),
 				})?;
 
-			for (doc_id, subject, object, document_store, sentence) in query_result_semantic {
+			for query_result_semantic in query_results_semantic {
 				let mut doc_payload = DocumentPayload::default();
-				doc_payload.doc_id = doc_id.clone();
-				doc_payload.subject = subject.clone();
-				doc_payload.object = object.clone();
-				doc_payload.doc_source = document_store.clone();
-				doc_payload.cosine_distance = Some(distance);
-				doc_payload.score = score;
-				doc_payload.sentence = sentence.clone();
+				doc_payload.doc_id = query_result_semantic.document_id.clone();
+				doc_payload.subject = query_result_semantic.subject.clone();
+				doc_payload.object = query_result_semantic.object.clone();
+				doc_payload.doc_source = query_result_semantic.document_source.clone();
+				doc_payload.cosine_distance = Some(query_result.cosine_distance.clone());
+				doc_payload.score = query_result.score.clone();
+				doc_payload.sentence = query_result_semantic.sentence.clone();
 				doc_payload.session_id = Some(session_id.clone());
 				doc_payload.query_embedding = Some(payload.clone());
 				doc_payload.query = Some(query.clone());
@@ -331,5 +370,79 @@ impl Storage for SurrealDB {
 	/// Get Insight session by id
 	async fn get_insight_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
 		Ok(None)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+
+	use crate::{
+		surrealdb::surrealdb::SurrealDB,
+		Storage,
+	};
+	use common::{SemanticKnowledgePayload, VectorPayload};
+	use proto::semantics::SurrealDbConfig;
+
+	#[tokio::test]
+	async fn test_surrealdb_integration() -> Result<(), Box<dyn std::error::Error>> {
+		// Step 1: Create a new instance of SurrealDB
+		let config = SurrealDbConfig {};
+		let surreal_db = SurrealDB::new(config).await?;
+
+		// Step 2: Insert data into semantic_knowledge table
+		let semantic_payload = vec![(
+			"doc1".to_string(),
+			"source1".to_string(),
+			Some("".to_string()),
+			SemanticKnowledgePayload {
+				sentence: "sentence1".to_string(),
+				subject: "subject1".to_string(),
+				object: "object1".to_string(),
+				subject_type: "type 1".to_string(),
+				object_type: "type 2".to_string(),
+				predicate: "abcd".to_string(),
+				predicate_type: "type 3".to_string(),
+				blob: Some("blob".to_string()),
+				image_id: Some("".to_string()),
+				event_id: "event1".to_string(),
+				source_id: "source_id".to_string(),
+			},
+		)];
+		surreal_db.index_knowledge("collection1".to_string(), &semantic_payload).await?;
+
+		// Step 3: Insert data into embedded_knowledge table
+		let vector_payload = vec![(
+			"doc1".to_string(),
+			"source1".to_string(),
+			None,
+			VectorPayload {
+				embeddings: vec![0.1, 0.2, 0.3],
+				score: 1.0,
+				event_id: "event1".to_string(),
+			},
+		)];
+		surreal_db.insert_vector("collection1".to_string(), &vector_payload).await?;
+
+		// Step 4: Perform a similarity search
+		let query_embeddings = vec![0.1, 0.2, 0.3];
+		let results = surreal_db
+			.similarity_search_l2(
+				"session1".to_string(),
+				"query1".to_string(),
+				"collection1".to_string(),
+				&query_embeddings,
+				10,
+				0,
+			)
+			.await?;
+
+		println!("Results: {:?}", results);
+
+		// Assertions
+		assert!(!results.is_empty());
+		assert_eq!(results[0].doc_id, "doc1");
+		assert_eq!(results[0].subject, "subject1");
+
+		Ok(())
 	}
 }
