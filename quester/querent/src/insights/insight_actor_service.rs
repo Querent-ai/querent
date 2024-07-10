@@ -69,9 +69,11 @@ impl Handler<InsightAnalystRequest> for InsightAgentService {
 		request: InsightAnalystRequest,
 		ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
+		println!("This is the truth---------------");
 		let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 		let current_timestamp = chrono::Utc::now().timestamp();
 		let event_storages = self.event_storages.clone();
+		println!("event storages-------------{:?}", event_storages);
 		let index_storages = self.index_storages.clone();
 		if event_storages.is_empty() && index_storages.is_empty() {
 			return Err(anyhow::anyhow!("No storage configurations provided").into());

@@ -210,8 +210,9 @@ impl<A: Actor> MessageBus<A> {
 	where
 		A: DeferableReplyHandler<M>,
 		M: fmt::Debug + Send + 'static,
-	{
+	{	
 		let (envelope, response_rx) = self.wrap_in_envelope(message);
+		println!("This is the message-------{:?}", envelope);
 		match self.inner.tx.try_send_low_priority(envelope) {
 			Ok(()) => Ok(response_rx),
 			Err(TrySendError::Full(envelope)) => {

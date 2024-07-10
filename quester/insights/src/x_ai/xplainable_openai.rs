@@ -97,25 +97,30 @@ impl Insight for XAI {
 #[async_trait]
 impl InsightRunner for XAIRunner {
 	async fn run(&self, input: InsightInput) -> InsightResult<InsightOutput> {
-		if self.config.discovery_session_id.is_empty() && self.config.semantic_pipeline_id.is_empty() {
+        if self.config.discovery_session_id.is_empty() && self.config.semantic_pipeline_id.is_empty() {
             return Err(InsightError::new(
                 InsightErrorKind::NotSupported,
                 anyhow::anyhow!("Please start a discovery session first or provide a session_id.").into(),
             ));
         }
-		for (event_type, storages) in self.config.event_storages.iter() {
-			if event_type.clone() == EventType::Vector {
-				for storage in storages.iter() {
-					println!("Looping over storages.");
-				}
-			}
-		}
-		// Placeholder explanation logic.
-		let explanation = format!("Explanation for input: {:?}", input.data);
-		println!("------------{:?}",self.config.discovery_session_id);
-		Ok(InsightOutput { data: Value::String(explanation) })
-		
-	}
+
+        for (event_type, storages) in self.config.event_storages.iter() {
+            if *event_type == EventType::Vector {
+                for storage in storages.iter() {
+                    let results = storage.get_discovered_data(self.config.discovery_session_id.clone()).await;
+                    match results {
+                        Ok(discovered_data) => println!("Looping over storages: {:?}", discovered_data),
+                        Err(e) => println!("Error retrieving discovered data: {:?}", e),
+                    }
+                }
+            }
+        }
+
+        // Placeholder explanation logic.
+        let explanation = format!("Explanation for input: {:?}", input.data);
+        println!("------------{:?}", self.config.discovery_session_id);
+        Ok(InsightOutput { data: Value::String(explanation) })
+    }
 
 	async fn run_stream(
 		&self,
