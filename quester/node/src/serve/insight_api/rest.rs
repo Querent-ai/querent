@@ -4,7 +4,8 @@ use insights::{
 };
 use proto::{
 	InsightAnalystRequest, InsightAnalystResponse, InsightQuery, InsightQueryResponse,
-	StopInsightSessionRequest, StopInsightSessionResponse,
+	InsightRequestInfo, InsightRequestInfoList, StopInsightSessionRequest,
+	StopInsightSessionResponse,
 };
 use std::sync::Arc;
 use warp::{reject::Rejection, Filter};
@@ -20,7 +21,8 @@ use crate::{
 		list_insights,
 		start_insight_session_handler,
 		insights_prompt_handler,
-		stop_insight_session_handler
+		stop_insight_session_handler,
+		get_pipelines_history
 	),
 	components(schemas(
 		InsightInfo,
@@ -32,6 +34,8 @@ use crate::{
 		InsightQueryResponse,
 		StopInsightSessionRequest,
 		StopInsightSessionResponse,
+		InsightRequestInfoList,
+		InsightRequestInfo
 	),)
 )]
 pub struct InsightsApi;
@@ -39,7 +43,7 @@ pub struct InsightsApi;
 #[utoipa::path(
     get,
     tag = "Insights",
-    path = "/insights/list",
+    path = "/insights/installed",
     responses(
         (status = 200, description = "Successfully retrived list of Querent insights.", body = Vec<InsightInfo>)
     )
@@ -51,7 +55,7 @@ pub async fn list_insights() -> Result<Vec<InsightInfo>, InsightError> {
 /// list insights handler.
 pub fn list_insights_handler(
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("insights" / "list")
+	warp::path!("insights" / "installed")
 		.and(warp::path::end())
 		.and(warp::get())
 		.then(list_insights)
@@ -172,6 +176,41 @@ pub fn stop_insight_session_filter(
 		.and(warp::post())
 		.and(require(Some(insight_service)))
 		.then(stop_insight_session_handler)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+		.boxed()
+}
+
+#[utoipa::path(
+	get,
+	tag = "Insights",
+	path = "/insights/list",
+	responses(
+		(status = 200, description = "Get pipelines metadata", body = InsightRequestInfoList)
+	),
+)]
+
+/// Get pipelines metadata
+pub async fn get_pipelines_history(
+	insight_service: Option<Arc<dyn InsightService>>,
+) -> Result<proto::insights::InsightRequestInfoList, InsightError> {
+	if insight_service.is_none() {
+		return Err(InsightError::new(
+			InsightErrorKind::NotSupported,
+			Arc::new(anyhow::anyhow!("Insight service is not available")),
+		));
+	}
+	let response = insight_service.unwrap().get_insight_request_list().await?;
+	Ok(response)
+}
+
+pub fn get_insights_history_handler(
+	insight_service: Option<Arc<dyn InsightService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("insights" / "list")
+		.and(warp::get())
+		.and(require(Some(insight_service)))
+		.then(get_pipelines_history)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 		.boxed()
