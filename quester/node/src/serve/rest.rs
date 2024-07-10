@@ -22,15 +22,15 @@ use crate::{
 	cluster_api::cluster_handler,
 	delete_collectors_delete_handler,
 	discovery_api::{
-		discover_get_filter, discover_post_filter, start_discovery_session_filter,
-		stop_discovery_session_filter,
+		discover_get_filter, discover_post_filter, get_discovery_history_handler,
+		start_discovery_session_filter, stop_discovery_session_filter,
 	},
-	get_pipelines_metadata_handler,
+	get_pipelines_history_handler, get_pipelines_metadata_handler,
 	health_check_api::health_check_handlers,
 	ingest_token_handler, ingest_tokens_put_handler,
 	insight_api::rest::{
-		insights_prompt_filter, list_insights_handler, start_insights_session_filter,
-		stop_insight_session_filter,
+		get_insights_history_handler, insights_prompt_filter, list_insights_handler,
+		start_insights_session_filter, stop_insight_session_filter,
 	},
 	json_api_response::{ApiError, JsonApiResponse},
 	list_collectors_list_handler, metrics_handler, node_info_handler, observe_pipeline_get_handler,
@@ -208,7 +208,10 @@ fn api_v1_routes(
 				.or(start_insights_session_filter(services.insight_service.clone()))
 				.or(stop_insight_session_filter(services.insight_service.clone()))
 				.or(insights_prompt_filter(services.insight_service.clone()))
-				.or(list_insights_handler()),
+				.or(list_insights_handler())
+				.or(get_pipelines_history_handler(services.metadata_store.clone()))
+				.or(get_insights_history_handler(services.insight_service.clone()))
+				.or(get_discovery_history_handler(services.discovery_service.clone())),
 		)
 		.boxed()
 }

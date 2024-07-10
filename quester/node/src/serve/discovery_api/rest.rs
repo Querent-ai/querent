@@ -5,6 +5,7 @@ use proto::{
 		StopDiscoverySessionRequest, StopDiscoverySessionResponse, StorageConfig,
 	},
 	semantics::StorageType,
+	DiscoverySessionRequestInfo, DiscoverySessionRequestInfoList,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -23,6 +24,7 @@ use crate::{
 		discovery_get_handler,
 		start_discovery_session_handler,
 		stop_discovery_session_handler,
+		get_pipelines_history
 	),
 	components(schemas(
 		DiscoveryRequest,
@@ -39,13 +41,15 @@ use crate::{
 		StopDiscoverySessionRequest,
 		StopDiscoverySessionResponse,
 		DiscoveryAgentType,
+		DiscoverySessionRequestInfoList,
+		DiscoverySessionRequestInfo,
 	),)
 )]
 pub struct DiscoveryApi;
 
 #[utoipa::path(
 	post,
-	tag = "Discover",
+	tag = "Discovery",
 	path = "/discovery/session",
 	request_body = DiscoverySessionRequest,
 	responses(
@@ -80,7 +84,7 @@ pub fn start_discovery_session_filter(
 
 #[utoipa::path(
     post,
-    tag = "Discover",
+    tag = "Discovery",
     path = "/discovery/search",
     request_body = DiscoveryRequest,
     responses(
@@ -117,7 +121,7 @@ pub fn discover_post_filter(
 }
 #[utoipa::path(
     get,
-    tag = "Discover",
+    tag = "Discovery",
     path = "/discovery/search",
     responses(
         (status = 200, description = "Successfully discovered valuable information.", body = DiscoveryResponse)
@@ -169,7 +173,7 @@ pub struct DiscoveryRequestParam {
 
 #[utoipa::path(
 	post,
-	tag = "Discover",
+	tag = "Discovery",
 	path = "/discovery/session/stop",
 	request_body = StopDiscoverySessionRequest,
 	responses(
@@ -197,6 +201,38 @@ pub fn stop_discovery_session_filter(
 		.and(warp::post())
 		.and(require(Some(discovery_service)))
 		.then(stop_discovery_session_handler)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+		.boxed()
+}
+
+#[utoipa::path(
+	get,
+	tag = "Discovery",
+	path = "/discovery/list",
+	responses(
+		(status = 200, description = "Get pipelines metadata", body = DiscoverySessionRequestInfoList)
+	),
+)]
+
+/// Get pipelines metadata
+pub async fn get_pipelines_history(
+	discovery_service: Option<Arc<dyn DiscoveryService>>,
+) -> Result<proto::discovery::DiscoverySessionRequestInfoList, DiscoveryError> {
+	if discovery_service.is_none() {
+		return Err(DiscoveryError::Unavailable("Discovery service is not available".to_string()));
+	}
+	let response = discovery_service.unwrap().get_discovery_session_list().await?;
+	Ok(response)
+}
+
+pub fn get_discovery_history_handler(
+	discovery_service: Option<Arc<dyn DiscoveryService>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("discovery" / "list")
+		.and(warp::get())
+		.and(require(Some(discovery_service)))
+		.then(get_pipelines_history)
 		.and(extract_format_from_qs())
 		.map(make_json_api_response)
 		.boxed()

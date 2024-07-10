@@ -18,9 +18,10 @@ use proto::{
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
 		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, MilvusConfig, Neo4jConfig,
-		NewsCollectorConfig, PipelineMetadata, PipelinesMetadata, PostgresConfig,
-		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
-		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
+		NewsCollectorConfig, PipelineMetadata, PipelineRequestInfo, PipelineRequestInfoList,
+		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
+		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
+		SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };
 use serde_json::from_str;
@@ -50,6 +51,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		set_collectors,
 		delete_collectors,
 		list_collectors,
+		get_pipelines_history,
 	),
 	components(schemas(
 		SemanticPipelineRequest,
@@ -85,6 +87,8 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		DeleteCollectorResponse,
 		ListCollectorRequest,
 		ListCollectorConfig,
+		PipelineRequestInfoList,
+		PipelineRequestInfo,
 	))
 )]
 pub struct SemanticApi;
@@ -104,6 +108,46 @@ async fn semantic_endpoint(
 	let counters = semantic_service_mailbox.ask(Observe).await?;
 	semantic_service_mailbox.ask(Observe).await?;
 	Ok(counters)
+}
+
+#[utoipa::path(
+	get,
+	tag = "Semantic Service",
+	path = "/semantics/list",
+	responses(
+		(status = 200, description = "Get pipelines metadata", body = PipelineRequestInfoList)
+	),
+)]
+
+/// Get pipelines metadata
+pub async fn get_pipelines_history(
+	metadata_store: Arc<dyn storage::Storage>,
+) -> Result<proto::semantics::PipelineRequestInfoList, PipelineErrors> {
+	let pipelines = metadata_store
+		.get_all_pipelines()
+		.await
+		.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
+	let mut requests = Vec::new();
+	for (pipeline_id, pipeline) in pipelines {
+		let pipeline_metadata = proto::semantics::PipelineRequestInfo {
+			pipeline_id: pipeline_id.clone(),
+			request: Some(pipeline.clone()),
+		};
+		requests.push(pipeline_metadata);
+	}
+	Ok(proto::semantics::PipelineRequestInfoList { requests })
+}
+
+pub fn get_pipelines_history_handler(
+	metadata_store: Arc<dyn storage::Storage>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
+	warp::path!("semantics" / "list")
+		.and(warp::get())
+		.and(require(Some(metadata_store)))
+		.then(get_pipelines_history)
+		.and(extract_format_from_qs())
+		.map(make_json_api_response)
+		.boxed()
 }
 
 #[utoipa::path(
