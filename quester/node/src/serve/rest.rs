@@ -191,6 +191,7 @@ fn api_v1_routes(
 					services.event_storages.clone(),
 					services.index_storages.clone(),
 					services.secret_store.clone(),
+					services.metadata_store.clone(),
 				))
 				.or(get_pipelines_metadata_handler(Some(services.semantic_service_bus.clone())))
 				.or(stop_pipeline_delete_handler(Some(services.semantic_service_bus.clone())))

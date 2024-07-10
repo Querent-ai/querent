@@ -8,7 +8,11 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
-use proto::semantics::PostgresConfig;
+use proto::{
+	discovery::DiscoverySessionRequest,
+	insights::InsightAnalystRequest,
+	semantics::{PostgresConfig, SemanticPipelineRequest},
+};
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
 
@@ -348,17 +352,24 @@ impl Storage for PGVector {
 	}
 
 	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<String>> {
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<SemanticPipelineRequest>> {
 		Ok(Vec::new())
 	}
 
 	/// Set SemanticPipeline ran by this node
-	async fn set_pipeline(&self, _pipeline: &String) -> StorageResult<()> {
+	async fn set_pipeline(
+		&self,
+		_pipeline_id: &String,
+		_pipeline: SemanticPipelineRequest,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	/// Get semantic pipeline by id
-	async fn get_pipeline(&self, _pipeline_id: &String) -> StorageResult<Option<String>> {
+	async fn get_pipeline(
+		&self,
+		_pipeline_id: &String,
+	) -> StorageResult<Option<SemanticPipelineRequest>> {
 		Ok(None)
 	}
 
@@ -368,32 +379,46 @@ impl Storage for PGVector {
 	}
 
 	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<String>> {
+	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<DiscoverySessionRequest>> {
 		Ok(Vec::new())
 	}
 
 	/// Set Discovery session ran by this node
-	async fn set_discovery_session(&self, _session: &String) -> StorageResult<()> {
+	async fn set_discovery_session(
+		&self,
+		_session_id: &String,
+		_session: DiscoverySessionRequest,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	/// Get Discovery session by id
-	async fn get_discovery_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
+	async fn get_discovery_session(
+		&self,
+		_session_id: &String,
+	) -> StorageResult<Option<DiscoverySessionRequest>> {
 		Ok(None)
 	}
 
 	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<String>> {
+	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<InsightAnalystRequest>> {
 		Ok(Vec::new())
 	}
 
 	/// Set Insight session ran by this node
-	async fn set_insight_session(&self, _session: &String) -> StorageResult<()> {
+	async fn set_insight_session(
+		&self,
+		_session_id: &String,
+		_session: InsightAnalystRequest,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	/// Get Insight session by id
-	async fn get_insight_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
+	async fn get_insight_session(
+		&self,
+		_session_id: &String,
+	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
 	}
 }

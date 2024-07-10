@@ -36,6 +36,7 @@ pub trait InsightService: 'static + Send + Sync {
 pub struct InsightImpl {
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
+	pub metadata_store: Arc<dyn Storage>,
 	pub insight_agent_service_message_bus: MessageBus<InsightAgentService>,
 }
 
@@ -43,9 +44,15 @@ impl InsightImpl {
 	pub fn new(
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
+		metadata_store: Arc<dyn Storage>,
 		insight_agent_service_message_bus: MessageBus<InsightAgentService>,
 	) -> Self {
-		InsightImpl { event_storages, index_storages, insight_agent_service_message_bus }
+		InsightImpl {
+			event_storages,
+			index_storages,
+			insight_agent_service_message_bus,
+			metadata_store,
+		}
 	}
 }
 
@@ -56,15 +63,28 @@ impl InsightService for InsightImpl {
 		&self,
 		request: InsightAnalystRequest,
 	) -> InsightResult<InsightAnalystResponse> {
-		let response = self.insight_agent_service_message_bus.ask(request).await.map_err(|e| {
-			log::error!("Failed to start insight session: {}", e);
-			InsightError::new(
-				InsightErrorKind::Internal,
-				Arc::new(anyhow::anyhow!("Failed to start insight session: {}", e)),
-			)
-		})?;
+		let response =
+			self.insight_agent_service_message_bus.ask(request.clone()).await.map_err(|e| {
+				log::error!("Failed to start insight session: {}", e);
+				InsightError::new(
+					InsightErrorKind::Internal,
+					Arc::new(anyhow::anyhow!("Failed to start insight session: {}", e)),
+				)
+			})?;
 		match response {
-			Ok(response) => Ok(response),
+			Ok(response) => {
+				self.metadata_store
+					.set_insight_session(&response.session_id, request.clone())
+					.await
+					.map_err(|e| {
+						log::error!("Failed to set insight session: {}", e);
+						InsightError::new(
+							InsightErrorKind::Internal,
+							Arc::new(anyhow::anyhow!("Failed to set insight session: {}", e)),
+						)
+					})?;
+				Ok(response)
+			},
 			_ => Err(InsightError::new(
 				InsightErrorKind::Internal,
 				Arc::new(anyhow::anyhow!("Failed to start insight session")),

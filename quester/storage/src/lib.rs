@@ -12,7 +12,9 @@ pub mod index;
 pub use index::*;
 pub mod secret;
 pub use secret::*;
+pub mod metastore;
 pub mod surrealdb;
+pub use metastore::*;
 
 use diesel::result::{Error as DieselError, Error::QueryBuilderError};
 
@@ -98,6 +100,13 @@ pub async fn create_secret_store(path: std::path::PathBuf) -> anyhow::Result<Arc
 	secret_store.check_connectivity().await?;
 	let secret_store = Arc::new(secret_store);
 	Ok(secret_store)
+}
+
+pub async fn create_metadata_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+	let metastore = MetaStore::new(path);
+	metastore.check_connectivity().await?;
+	let metastore = Arc::new(metastore);
+	Ok(metastore)
 }
 
 pub type ActualDbPool = Pool<AsyncPgConnection>;
