@@ -12,7 +12,7 @@ use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig};
 use proto::config::NodeConfig;
 use querent::{start_semantic_service, SemanticService};
-use storage::{create_secret_store, create_storages, Storage};
+use storage::{create_metadata_store, create_secret_store, create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info};
 
@@ -34,6 +34,7 @@ pub struct QuesterServices {
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn Storage>,
+	pub metadata_store: Arc<dyn Storage>,
 }
 
 pub async fn serve_quester(
@@ -44,6 +45,9 @@ pub async fn serve_quester(
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Quester::new();
+	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
+	let metadata_store = create_metadata_store(secert_store_path.to_path_buf()).await?;
+
 	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
 
 	info!("Serving Querent Node 🚀");
@@ -60,6 +64,7 @@ pub async fn serve_quester(
 		&cluster,
 		event_storages.clone(),
 		index_storages.clone(),
+		metadata_store.clone(),
 	)
 	.await?;
 
@@ -69,6 +74,7 @@ pub async fn serve_quester(
 		&cluster,
 		event_storages.clone(),
 		index_storages.clone(),
+		metadata_store.clone(),
 	)
 	.await?;
 
@@ -93,7 +99,6 @@ pub async fn serve_quester(
 
 	info!("Creating storages 🗄️");
 	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
-	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
 	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
@@ -105,6 +110,7 @@ pub async fn serve_quester(
 		discovery_service: Some(discovery_service),
 		insight_service: Some(insight_service),
 		secret_store,
+		metadata_store,
 	});
 	info!("Starting REST server 📡: check /api-doc.json for available APIs");
 	info!("Rest server listening on {}", rest_listen_addr);

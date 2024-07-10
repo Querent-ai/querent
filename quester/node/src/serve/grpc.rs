@@ -30,6 +30,7 @@ pub(crate) async fn start_grpc_server(
 		services.event_storages.clone(),
 		services.index_storages.clone(),
 		services.secret_store.clone(),
+		services.metadata_store.clone(),
 	);
 
 	let semantics_service_grpc_server = SemanticsServiceGrpcServer::new(grpc_semantic_adapater)

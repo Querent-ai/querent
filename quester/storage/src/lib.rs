@@ -102,6 +102,13 @@ pub async fn create_secret_store(path: std::path::PathBuf) -> anyhow::Result<Arc
 	Ok(secret_store)
 }
 
+pub async fn create_metadata_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+	let metastore = MetaStore::new(path);
+	metastore.check_connectivity().await?;
+	let metastore = Arc::new(metastore);
+	Ok(metastore)
+}
+
 pub type ActualDbPool = Pool<AsyncPgConnection>;
 pub enum DbPool<'a> {
 	Pool(&'a ActualDbPool),
