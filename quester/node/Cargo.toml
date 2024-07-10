@@ -77,9 +77,14 @@ futures-util = { workspace = true }
 utoipa-swagger-ui = { workspace = true }
 fastembed =  { workspace = true }
 log = { workspace = true }
+rustls = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
+
+[target.'cfg(target_os="windows")'.build-dependencies]
+http_req = "0.7.0"
+zip = { workspace = true }
 
 [features]
 openssl-support = ["openssl-probe"]

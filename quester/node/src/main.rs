@@ -24,6 +24,9 @@ pub fn tokio_runtime() -> Result<&'static Runtime, anyhow::Error> {
 
 fn main() -> Result<(), anyhow::Error> {
 	let runtime = tokio_runtime();
+	rustls::crypto::ring::default_provider()
+		.install_default()
+		.expect("Failed to install ring as the default crypto provider");
 	match runtime {
 		Ok(runtime) => {
 			info!("⚙️ Querent Runtime initialized.");
