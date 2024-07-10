@@ -7,10 +7,10 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::EventType;
 use futures::{pin_mut, Stream, StreamExt};
-use llms::{OpenAI, OpenAIConfig, LLM};
+use llms::{Message, OpenAI, OpenAIConfig, LLM};
 use serde_json::Value;
 use std::{collections::HashMap, pin::Pin, sync::Arc};
-
+use crate::insight_utils::unique_sentences;
 /// XAI Insight struct.
 pub struct XAI {
 	info: InsightInfo,
@@ -104,19 +104,25 @@ impl InsightRunner for XAIRunner {
                 anyhow::anyhow!("Please start a discovery session first or provide a session_id.").into(),
             ));
         }
-
-        for (event_type, storages) in self.config.event_storages.iter() {
+		let mut all_discovered_data = Vec::new();
+		for (event_type, storages) in self.config.event_storages.iter() {
             if *event_type == EventType::Vector {
                 for storage in storages.iter() {
-                    let results = storage.get_discovered_data(self.config.discovery_session_id.clone()).await;
-                    match results {
-                        Ok(discovered_data) => println!("Looping over storages: {:?}", discovered_data),
+                    match storage.get_discovered_data(self.config.discovery_session_id.clone()).await {
+                        Ok(discovered_data) => {
+                            println!("Looping over storages: {:?}", discovered_data);
+                            all_discovered_data.extend(discovered_data);
+                        },
                         Err(e) => println!("Error retrieving discovered data: {:?}", e),
                     }
                 }
             }
         }
 
+        let prompt = unique_sentences(&all_discovered_data);
+        let human_message = vec![Message::new_human_message(&prompt)];
+		println!("These are the unique sentences  {:?}",human_message);
+        println!("This is the config param {:?}", self.llm.generate(&human_message).await);
         // Placeholder explanation logic.
         let explanation = format!("Explanation for input: {:?}", input.data);
         println!("------------{:?}", self.config.discovery_session_id);
