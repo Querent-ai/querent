@@ -48,4 +48,16 @@ impl grpc::Discovery for DiscoveryAdapter {
 			self.0.stop_discovery_session(req).await;
 		convert_to_grpc_result(res)
 	}
+
+	#[instrument(skip(self, empty))]
+	async fn list_discovery_sessions(
+		&self,
+		empty: tonic::Request<proto::discovery::Empty>,
+	) -> Result<tonic::Response<proto::discovery::DiscoverySessionRequestInfoList>, tonic::Status>
+	{
+		let _req = empty.into_inner();
+		let res: Result<proto::DiscoverySessionRequestInfoList, DiscoveryError> =
+			self.0.get_discovery_session_list().await;
+		convert_to_grpc_result(res)
+	}
 }

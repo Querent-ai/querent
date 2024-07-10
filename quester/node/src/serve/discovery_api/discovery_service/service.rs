@@ -2,8 +2,9 @@ use actors::MessageBus;
 use async_trait::async_trait;
 use common::EventType;
 use proto::{
-	DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionResponse,
-	StopDiscoverySessionRequest, StopDiscoverySessionResponse,
+	DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionRequestInfo,
+	DiscoverySessionRequestInfoList, DiscoverySessionResponse, StopDiscoverySessionRequest,
+	StopDiscoverySessionResponse,
 };
 use querent::discovery_service::DiscoveryAgentService;
 use std::{collections::HashMap, sync::Arc};
@@ -30,6 +31,9 @@ pub trait DiscoveryService: 'static + Send + Sync {
 		&self,
 		request: StopDiscoverySessionRequest,
 	) -> super::Result<StopDiscoverySessionResponse>;
+
+	/// Get list of all sessions
+	async fn get_discovery_session_list(&self) -> super::Result<DiscoverySessionRequestInfoList>;
 }
 
 #[derive(Clone)]
@@ -122,5 +126,22 @@ impl DiscoveryService for DiscoveryImpl {
 			_ =>
 				Err(DiscoveryError::Internal("Failed to stop discovery session".to_string()).into()),
 		}
+	}
+
+	async fn get_discovery_session_list(&self) -> super::Result<DiscoverySessionRequestInfoList> {
+		let metadata = self.metadata_store.get_all_discovery_sessions().await.map_err(|e| {
+			log::error!("Failed to get discovery session list: {}", e);
+			DiscoveryError::Internal("Failed to get discovery session list".to_string())
+		})?;
+
+		let mut requests: Vec<DiscoverySessionRequestInfo> = Vec::new();
+		metadata.iter().for_each(|(session_id, session)| {
+			requests.push(DiscoverySessionRequestInfo {
+				session_id: session_id.clone(),
+				request: Some(session.clone()),
+			});
+		});
+		let response = DiscoverySessionRequestInfoList { requests };
+		Ok(response)
 	}
 }

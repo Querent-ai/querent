@@ -1,7 +1,10 @@
 use actors::{MessageBus, Observe};
 use async_trait::async_trait;
 use common::EventType;
-use proto::semantics::{semantics_service_grpc_server as grpc, BooleanResponse, IngestedTokens};
+use proto::semantics::{
+	semantics_service_grpc_server as grpc, BooleanResponse, IngestedTokens, PipelineRequestInfo,
+	PipelineRequestInfoList,
+};
 use querent::{PipelineErrors, SemanticService};
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
@@ -205,5 +208,28 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 			Ok(response) => Ok(tonic::Response::new(response)),
 			Err(err) => Err(tonic::Status::from(err)),
 		}
+	}
+
+	#[instrument(skip(self, request))]
+	async fn list_pipeline_info(
+		&self,
+		request: tonic::Request<proto::semantics::EmptyList>,
+	) -> GrpcResult<tonic::Response<proto::semantics::PipelineRequestInfoList>, tonic::Status> {
+		let _req = request.into_inner();
+
+		let metadata = self.metadata_store.get_all_pipelines().await.map_err(|e| {
+			log::error!("Failed to get discovery session list: {}", e);
+			tonic::Status::from(PipelineErrors::UnknownError(e.to_string()))
+		})?;
+
+		let mut requests: Vec<PipelineRequestInfo> = Vec::new();
+		metadata.iter().for_each(|(session_id, session)| {
+			requests.push(PipelineRequestInfo {
+				pipeline_id: session_id.clone(),
+				request: Some(session.clone()),
+			});
+		});
+		let response = PipelineRequestInfoList { requests };
+		Ok(tonic::Response::new(response))
 	}
 }

@@ -4,9 +4,12 @@ use actors::MessageBus;
 use async_trait::async_trait;
 use common::EventType;
 use insights::{InsightError, InsightErrorKind, InsightResult};
-use proto::insights::{
-	InsightAnalystRequest, InsightAnalystResponse, InsightQuery, InsightQueryResponse,
-	StopInsightSessionRequest, StopInsightSessionResponse,
+use proto::{
+	insights::{
+		InsightAnalystRequest, InsightAnalystResponse, InsightQuery, InsightQueryResponse,
+		StopInsightSessionRequest, StopInsightSessionResponse,
+	},
+	InsightRequestInfo, InsightRequestInfoList,
 };
 use querent::InsightAgentService;
 use storage::Storage;
@@ -30,6 +33,9 @@ pub trait InsightService: 'static + Send + Sync {
 		&self,
 		request: StopInsightSessionRequest,
 	) -> InsightResult<StopInsightSessionResponse>;
+
+	/// List all sessions
+	async fn get_insight_request_list(&self) -> InsightResult<InsightRequestInfoList>;
 }
 
 #[derive(Clone)]
@@ -132,5 +138,25 @@ impl InsightService for InsightImpl {
 				Arc::new(anyhow::anyhow!("Failed to send input to insight")),
 			)),
 		}
+	}
+
+	async fn get_insight_request_list(&self) -> InsightResult<InsightRequestInfoList> {
+		let metadata = self.metadata_store.get_all_insight_sessions().await.map_err(|e| {
+			log::error!("Failed to get discovery session list: {}", e);
+			InsightError::new(
+				InsightErrorKind::Internal,
+				Arc::new(anyhow::anyhow!("Failed to send input to insight")),
+			)
+		})?;
+
+		let mut requests: Vec<InsightRequestInfo> = Vec::new();
+		metadata.iter().for_each(|(session_id, session)| {
+			requests.push(InsightRequestInfo {
+				session_id: session_id.clone(),
+				request: Some(session.clone()),
+			});
+		});
+		let response = InsightRequestInfoList { requests };
+		Ok(response)
 	}
 }

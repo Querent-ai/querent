@@ -142,15 +142,28 @@ message Insight {
 
 }
 
+message DiscoverySessionRequestInfo{
+  string session_id = 1;
+  DiscoverySessionRequest request = 2;
+}
+
+message DiscoverySessionRequestInfoList{
+  repeated DiscoverySessionRequestInfo requests = 1;
+}
+
+message Empty {}
+
 // The Discovery service provides a method to query insights from data
 service Discovery {
   // Start a discovery session to query insights from data
   rpc StartDiscoverySession(DiscoverySessionRequest) returns (DiscoverySessionResponse) {}
   
   // Query insights from data
-  rpc DiscoverInsights(DiscoveryRequest) returns (DiscoveryResponse);
+  rpc DiscoverInsights(DiscoveryRequest) returns (DiscoveryResponse) {}
 
   // Stop the discovery session
-  rpc StopDiscoverySession(StopDiscoverySessionRequest) returns (StopDiscoverySessionResponse);
+  rpc StopDiscoverySession(StopDiscoverySessionRequest) returns (StopDiscoverySessionResponse) {}
 
+  // List all discovery sessions
+  rpc ListDiscoverySessions(Empty) returns (DiscoverySessionRequestInfoList) {}
 }

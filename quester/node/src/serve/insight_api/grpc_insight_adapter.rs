@@ -49,4 +49,15 @@ impl grpc::InsightService for InsightAdapter {
 			self.0.stop_insight_session(req).await;
 		convert_to_grpc_result(res)
 	}
+
+	#[instrument(skip(self, request))]
+	async fn list_insight_requests(
+		&self,
+		request: tonic::Request<proto::insights::EmptyInput>,
+	) -> Result<tonic::Response<proto::insights::InsightRequestInfoList>, tonic::Status> {
+		let _req = request.into_inner();
+		let res: Result<proto::InsightRequestInfoList, InsightError> =
+			self.0.get_insight_request_list().await;
+		convert_to_grpc_result(res)
+	}
 }
