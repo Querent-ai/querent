@@ -109,7 +109,7 @@ impl InsightService for InsightImpl {
 			Ok(response) => Ok(response),
 			_ => Err(InsightError::new(
 				InsightErrorKind::Internal,
-				Arc::new(anyhow::anyhow!("Failed to send input to insight")),
+				Arc::new(anyhow::anyhow!("Received empty response from the insight")),
 			)),
 		}
 	}
