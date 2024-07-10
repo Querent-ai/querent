@@ -9,7 +9,7 @@ use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, Insight
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
-use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 
 const TABLE_PIPELINES: TableDefinition<&str, &[u8]> = TableDefinition::new("querent_pipelines");
 const TABLE_DISCOVERY_SESSIONS: TableDefinition<&str, &[u8]> =
@@ -67,6 +67,14 @@ impl Storage for MetaStore {
 		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
 	}
 
 	async fn index_knowledge(
