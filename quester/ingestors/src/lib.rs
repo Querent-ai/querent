@@ -3,6 +3,7 @@ pub use ingestor::*;
 pub mod audio;
 pub mod code;
 pub mod csv;
+pub mod doc;
 pub mod docx;
 pub mod html;
 pub mod image;
