@@ -5,7 +5,6 @@ use insights::{
 	Insight, InsightConfig, InsightError, InsightErrorKind, InsightInput, InsightRunner,
 };
 use proto::{InsightQuery, InsightQueryResponse};
-use serde_json::Value;
 use std::sync::Arc;
 use tokio::runtime::Handle;
 
