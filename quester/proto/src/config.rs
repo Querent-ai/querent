@@ -102,6 +102,31 @@ pub struct NodeConfig {
 	pub tracing: Tracing,
 }
 
+impl Default for NodeConfig {
+	fn default() -> Self {
+		let rest_config = RestConfig {
+			listen_port: 10074,
+			cors_allow_origins: vec!["*".to_string()],
+			extra_headers: HeaderMap::new(),
+		};
+
+		let grpc_config = GrpcConfig::default();
+		Self {
+			cluster_id: "querent-default".to_string(),
+			node_id: "querent-default".to_string(),
+			listen_address: "0.0.0.0".to_string(),
+			advertise_address: "0.0.0.0".to_string(),
+			gossip_listen_port: 10076,
+			rest_config,
+			grpc_config,
+			peer_seeds: Vec::new(),
+			cpu_capacity: 5,
+			storage_configs: StorageConfigs(Vec::new()),
+			tracing: Tracing { jaeger: JaegerConfig::default() },
+		}
+	}
+}
+
 impl NodeConfig {
 	/// Returns the list of peer seed addresses. The addresses MUST NOT be resolved. Otherwise, the
 	/// DNS-based discovery mechanism implemented in Chitchat will not work correctly.
@@ -165,6 +190,6 @@ impl GrpcConfig {
 
 impl Default for GrpcConfig {
 	fn default() -> Self {
-		Self { max_message_size: Self::default_max_message_size(), listen_port: 50051 }
+		Self { max_message_size: Self::default_max_message_size(), listen_port: 10075 }
 	}
 }
