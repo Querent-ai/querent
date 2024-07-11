@@ -1,7 +1,27 @@
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PipelineRequestInfoList {
+    #[prost(message, repeated, tag = "1")]
+    pub requests: ::prost::alloc::vec::Vec<PipelineRequestInfo>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct PipelineRequestInfo {
+    #[prost(string, tag = "1")]
+    pub pipeline_id: ::prost::alloc::string::String,
+    #[prost(message, optional, tag = "2")]
+    pub request: ::core::option::Option<SemanticPipelineRequest>,
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EmptyObserve {}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct EmptyList {}
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -683,6 +703,11 @@ impl RpcName for ListCollectorRequest {
         "list_collectors"
     }
 }
+impl RpcName for EmptyList {
+    fn rpc_name() -> &'static str {
+        "list_pipeline_info"
+    }
+}
 #[cfg_attr(any(test, feature = "testsuite"), mockall::automock)]
 #[async_trait::async_trait]
 pub trait SemanticsService: std::fmt::Debug + dyn_clone::DynClone + Send + Sync + 'static {
@@ -726,6 +751,10 @@ pub trait SemanticsService: std::fmt::Debug + dyn_clone::DynClone + Send + Sync 
         &mut self,
         request: ListCollectorRequest,
     ) -> crate::semantics::SemanticsResult<ListCollectorConfig>;
+    async fn list_pipeline_info(
+        &mut self,
+        request: EmptyList,
+    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList>;
 }
 dyn_clone::clone_trait_object!(SemanticsService);
 #[cfg(any(test, feature = "testsuite"))]
@@ -874,6 +903,12 @@ impl SemanticsService for SemanticsServiceClient {
     ) -> crate::semantics::SemanticsResult<ListCollectorConfig> {
         self.inner.list_collectors(request).await
     }
+    async fn list_pipeline_info(
+        &mut self,
+        request: EmptyList,
+    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
+        self.inner.list_pipeline_info(request).await
+    }
 }
 #[cfg(any(test, feature = "testsuite"))]
 pub mod semantics_service_mock {
@@ -943,6 +978,12 @@ pub mod semantics_service_mock {
             request: super::ListCollectorRequest,
         ) -> crate::semantics::SemanticsResult<super::ListCollectorConfig> {
             self.inner.lock().await.list_collectors(request).await
+        }
+        async fn list_pipeline_info(
+            &mut self,
+            request: super::EmptyList,
+        ) -> crate::semantics::SemanticsResult<super::PipelineRequestInfoList> {
+            self.inner.lock().await.list_pipeline_info(request).await
         }
     }
     impl From<MockSemanticsService> for SemanticsServiceClient {
@@ -1117,6 +1158,22 @@ impl tower::Service<ListCollectorRequest> for Box<dyn SemanticsService> {
         Box::pin(fut)
     }
 }
+impl tower::Service<EmptyList> for Box<dyn SemanticsService> {
+    type Response = PipelineRequestInfoList;
+    type Error = crate::semantics::SemanticsError;
+    type Future = BoxFuture<Self::Response, Self::Error>;
+    fn poll_ready(
+        &mut self,
+        _cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Result<(), Self::Error>> {
+        std::task::Poll::Ready(Ok(()))
+    }
+    fn call(&mut self, request: EmptyList) -> Self::Future {
+        let mut svc = self.clone();
+        let fut = async move { svc.list_pipeline_info(request).await };
+        Box::pin(fut)
+    }
+}
 /// A tower service stack is a set of tower services.
 #[derive(Debug)]
 struct SemanticsServiceTowerServiceStack {
@@ -1171,6 +1228,11 @@ struct SemanticsServiceTowerServiceStack {
         ListCollectorConfig,
         crate::semantics::SemanticsError,
     >,
+    list_pipeline_info_svc: common::tower::BoxService<
+        EmptyList,
+        PipelineRequestInfoList,
+        crate::semantics::SemanticsError,
+    >,
 }
 impl Clone for SemanticsServiceTowerServiceStack {
     fn clone(&self) -> Self {
@@ -1186,6 +1248,7 @@ impl Clone for SemanticsServiceTowerServiceStack {
             post_collectors_svc: self.post_collectors_svc.clone(),
             delete_collectors_svc: self.delete_collectors_svc.clone(),
             list_collectors_svc: self.list_collectors_svc.clone(),
+            list_pipeline_info_svc: self.list_pipeline_info_svc.clone(),
         }
     }
 }
@@ -1250,6 +1313,12 @@ impl SemanticsService for SemanticsServiceTowerServiceStack {
         request: ListCollectorRequest,
     ) -> crate::semantics::SemanticsResult<ListCollectorConfig> {
         self.list_collectors_svc.ready().await?.call(request).await
+    }
+    async fn list_pipeline_info(
+        &mut self,
+        request: EmptyList,
+    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
+        self.list_pipeline_info_svc.ready().await?.call(request).await
     }
 }
 type StartPipelineLayer = common::tower::BoxLayer<
@@ -1352,6 +1421,16 @@ type ListCollectorsLayer = common::tower::BoxLayer<
     ListCollectorConfig,
     crate::semantics::SemanticsError,
 >;
+type ListPipelineInfoLayer = common::tower::BoxLayer<
+    common::tower::BoxService<
+        EmptyList,
+        PipelineRequestInfoList,
+        crate::semantics::SemanticsError,
+    >,
+    EmptyList,
+    PipelineRequestInfoList,
+    crate::semantics::SemanticsError,
+>;
 #[derive(Debug, Default)]
 pub struct SemanticsServiceTowerLayerStack {
     start_pipeline_layers: Vec<StartPipelineLayer>,
@@ -1364,6 +1443,7 @@ pub struct SemanticsServiceTowerLayerStack {
     post_collectors_layers: Vec<PostCollectorsLayer>,
     delete_collectors_layers: Vec<DeleteCollectorsLayer>,
     list_collectors_layers: Vec<ListCollectorsLayer>,
+    list_pipeline_info_layers: Vec<ListPipelineInfoLayer>,
 }
 impl SemanticsServiceTowerLayerStack {
     pub fn stack_layer<L>(mut self, layer: L) -> Self
@@ -1620,6 +1700,31 @@ impl SemanticsServiceTowerLayerStack {
                 crate::semantics::SemanticsError,
             >,
         >>::Service as tower::Service<ListCollectorRequest>>::Future: Send + 'static,
+        L: tower::Layer<
+                common::tower::BoxService<
+                    EmptyList,
+                    PipelineRequestInfoList,
+                    crate::semantics::SemanticsError,
+                >,
+            > + Clone + Send + Sync + 'static,
+        <L as tower::Layer<
+            common::tower::BoxService<
+                EmptyList,
+                PipelineRequestInfoList,
+                crate::semantics::SemanticsError,
+            >,
+        >>::Service: tower::Service<
+                EmptyList,
+                Response = PipelineRequestInfoList,
+                Error = crate::semantics::SemanticsError,
+            > + Clone + Send + Sync + 'static,
+        <<L as tower::Layer<
+            common::tower::BoxService<
+                EmptyList,
+                PipelineRequestInfoList,
+                crate::semantics::SemanticsError,
+            >,
+        >>::Service as tower::Service<EmptyList>>::Future: Send + 'static,
     {
         self.start_pipeline_layers.push(common::tower::BoxLayer::new(layer.clone()));
         self.observe_pipeline_layers.push(common::tower::BoxLayer::new(layer.clone()));
@@ -1632,6 +1737,7 @@ impl SemanticsServiceTowerLayerStack {
         self.post_collectors_layers.push(common::tower::BoxLayer::new(layer.clone()));
         self.delete_collectors_layers.push(common::tower::BoxLayer::new(layer.clone()));
         self.list_collectors_layers.push(common::tower::BoxLayer::new(layer.clone()));
+        self.list_pipeline_info_layers.push(common::tower::BoxLayer::new(layer.clone()));
         self
     }
     pub fn stack_start_pipeline_layer<L>(mut self, layer: L) -> Self
@@ -1826,6 +1932,25 @@ impl SemanticsServiceTowerLayerStack {
         self.list_collectors_layers.push(common::tower::BoxLayer::new(layer));
         self
     }
+    pub fn stack_list_pipeline_info_layer<L>(mut self, layer: L) -> Self
+    where
+        L: tower::Layer<
+                common::tower::BoxService<
+                    EmptyList,
+                    PipelineRequestInfoList,
+                    crate::semantics::SemanticsError,
+                >,
+            > + Send + Sync + 'static,
+        L::Service: tower::Service<
+                EmptyList,
+                Response = PipelineRequestInfoList,
+                Error = crate::semantics::SemanticsError,
+            > + Clone + Send + Sync + 'static,
+        <L::Service as tower::Service<EmptyList>>::Future: Send + 'static,
+    {
+        self.list_pipeline_info_layers.push(common::tower::BoxLayer::new(layer));
+        self
+    }
     pub fn build<T>(self, instance: T) -> SemanticsServiceClient
     where
         T: SemanticsService,
@@ -1952,6 +2077,14 @@ impl SemanticsServiceTowerLayerStack {
                 common::tower::BoxService::new(boxed_instance.clone()),
                 |svc, layer| layer.layer(svc),
             );
+        let list_pipeline_info_svc = self
+            .list_pipeline_info_layers
+            .into_iter()
+            .rev()
+            .fold(
+                common::tower::BoxService::new(boxed_instance.clone()),
+                |svc, layer| layer.layer(svc),
+            );
         let tower_svc_stack = SemanticsServiceTowerServiceStack {
             inner: boxed_instance.clone(),
             start_pipeline_svc,
@@ -1964,6 +2097,7 @@ impl SemanticsServiceTowerLayerStack {
             post_collectors_svc,
             delete_collectors_svc,
             list_collectors_svc,
+            list_pipeline_info_svc,
         };
         SemanticsServiceClient::new(tower_svc_stack)
     }
@@ -2101,6 +2235,12 @@ where
             Response = ListCollectorConfig,
             Error = crate::semantics::SemanticsError,
             Future = BoxFuture<ListCollectorConfig, crate::semantics::SemanticsError>,
+        >
+        + tower::Service<
+            EmptyList,
+            Response = PipelineRequestInfoList,
+            Error = crate::semantics::SemanticsError,
+            Future = BoxFuture<PipelineRequestInfoList, crate::semantics::SemanticsError>,
         >,
 {
     async fn start_pipeline(
@@ -2161,6 +2301,12 @@ where
         &mut self,
         request: ListCollectorRequest,
     ) -> crate::semantics::SemanticsResult<ListCollectorConfig> {
+        self.call(request).await
+    }
+    async fn list_pipeline_info(
+        &mut self,
+        request: EmptyList,
+    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
         self.call(request).await
     }
 }
@@ -2298,6 +2444,16 @@ where
             .map(|response| response.into_inner())
             .map_err(crate::error::grpc_status_to_service_error)
     }
+    async fn list_pipeline_info(
+        &mut self,
+        request: EmptyList,
+    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
+        self.inner
+            .list_pipeline_info(request)
+            .await
+            .map(|response| response.into_inner())
+            .map_err(crate::error::grpc_status_to_service_error)
+    }
 }
 #[derive(Debug)]
 pub struct SemanticsServiceGrpcServerAdapter {
@@ -2420,6 +2576,17 @@ for SemanticsServiceGrpcServerAdapter {
         self.inner
             .clone()
             .list_collectors(request.into_inner())
+            .await
+            .map(tonic::Response::new)
+            .map_err(crate::error::grpc_error_to_grpc_status)
+    }
+    async fn list_pipeline_info(
+        &self,
+        request: tonic::Request<EmptyList>,
+    ) -> Result<tonic::Response<PipelineRequestInfoList>, tonic::Status> {
+        self.inner
+            .clone()
+            .list_pipeline_info(request.into_inner())
             .await
             .map(tonic::Response::new)
             .map_err(crate::error::grpc_error_to_grpc_status)
@@ -2804,6 +2971,36 @@ pub mod semantics_service_grpc_client {
                 );
             self.inner.unary(req, path, codec).await
         }
+        pub async fn list_pipeline_info(
+            &mut self,
+            request: impl tonic::IntoRequest<super::EmptyList>,
+        ) -> std::result::Result<
+            tonic::Response<super::PipelineRequestInfoList>,
+            tonic::Status,
+        > {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/querent.semantics.SemanticsService/ListPipelineInfo",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(
+                    GrpcMethod::new(
+                        "querent.semantics.SemanticsService",
+                        "ListPipelineInfo",
+                    ),
+                );
+            self.inner.unary(req, path, codec).await
+        }
     }
 }
 /// Generated server implementations.
@@ -2872,6 +3069,13 @@ pub mod semantics_service_grpc_server {
             request: tonic::Request<super::ListCollectorRequest>,
         ) -> std::result::Result<
             tonic::Response<super::ListCollectorConfig>,
+            tonic::Status,
+        >;
+        async fn list_pipeline_info(
+            &self,
+            request: tonic::Request<super::EmptyList>,
+        ) -> std::result::Result<
+            tonic::Response<super::PipelineRequestInfoList>,
             tonic::Status,
         >;
     }
@@ -3400,6 +3604,52 @@ pub mod semantics_service_grpc_server {
                     let fut = async move {
                         let inner = inner.0;
                         let method = ListCollectorsSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/querent.semantics.SemanticsService/ListPipelineInfo" => {
+                    #[allow(non_camel_case_types)]
+                    struct ListPipelineInfoSvc<T: SemanticsServiceGrpc>(pub Arc<T>);
+                    impl<
+                        T: SemanticsServiceGrpc,
+                    > tonic::server::UnaryService<super::EmptyList>
+                    for ListPipelineInfoSvc<T> {
+                        type Response = super::PipelineRequestInfoList;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::EmptyList>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                (*inner).list_pipeline_info(request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = ListPipelineInfoSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

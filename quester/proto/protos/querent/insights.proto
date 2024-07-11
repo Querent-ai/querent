@@ -44,6 +44,17 @@ message StopInsightSessionResponse {
     string session_id = 1;
 }
 
+message EmptyInput {}
+
+message InsightRequestInfo {
+    string session_id = 1;
+    InsightAnalystRequest request = 2;
+}
+
+message InsightRequestInfoList {
+    repeated InsightRequestInfo requests = 1;
+}
+
 // InsightService is a service that provides insights from data
 service InsightService {
     // Request creation of an insight session
@@ -52,4 +63,6 @@ service InsightService {
     rpc ProvideInsightInput(InsightQuery) returns (InsightQueryResponse) {}
     // Stop an insight session
     rpc StopInsightSession(StopInsightSessionRequest) returns (StopInsightSessionResponse) {}
+    // List all insights requests stored 
+    rpc ListInsightRequests(EmptyInput) returns (InsightRequestInfoList) {}
 }

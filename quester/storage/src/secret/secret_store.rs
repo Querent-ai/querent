@@ -218,7 +218,7 @@ impl Storage for SecretStore {
 	}
 
 	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<SemanticPipelineRequest>> {
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
 		Ok(Vec::new())
 	}
 
@@ -245,7 +245,9 @@ impl Storage for SecretStore {
 	}
 
 	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<DiscoverySessionRequest>> {
+	async fn get_all_discovery_sessions(
+		&self,
+	) -> StorageResult<Vec<(String, DiscoverySessionRequest)>> {
 		Ok(Vec::new())
 	}
 
@@ -267,7 +269,9 @@ impl Storage for SecretStore {
 	}
 
 	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<InsightAnalystRequest>> {
+	async fn get_all_insight_sessions(
+		&self,
+	) -> StorageResult<Vec<(String, InsightAnalystRequest)>> {
 		Ok(Vec::new())
 	}
 

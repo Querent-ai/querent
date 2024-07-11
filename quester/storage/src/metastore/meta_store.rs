@@ -125,7 +125,7 @@ impl Storage for MetaStore {
 	}
 
 	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<SemanticPipelineRequest>> {
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
 		let read_txn = self.db.begin_read().map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -146,14 +146,14 @@ impl Storage for MetaStore {
 						kind: StorageErrorKind::Internal,
 						source: Arc::new(anyhow::Error::from(err)),
 					})?;
-				let _key = key_access_guard.value();
+				let key = key_access_guard.value();
 				let value = value_access_guard.value();
 				let pipeline: SemanticPipelineRequest =
 					bincode::deserialize(value).map_err(|e| StorageError {
 						kind: StorageErrorKind::Serialization,
 						source: Arc::new(anyhow::Error::from(e)),
 					})?;
-				pipelines.push(pipeline);
+				pipelines.push((key.to_string(), pipeline));
 			}
 		}
 		Ok(pipelines)
@@ -244,7 +244,9 @@ impl Storage for MetaStore {
 	}
 
 	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<DiscoverySessionRequest>> {
+	async fn get_all_discovery_sessions(
+		&self,
+	) -> StorageResult<Vec<(String, DiscoverySessionRequest)>> {
 		let read_txn = self.db.begin_read().map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -266,14 +268,14 @@ impl Storage for MetaStore {
 						kind: StorageErrorKind::Internal,
 						source: Arc::new(anyhow::Error::from(err)),
 					})?;
-				let _key = key_access_guard.value();
+				let key = key_access_guard.value();
 				let value = value_access_guard.value();
 				let session: DiscoverySessionRequest =
 					bincode::deserialize(value).map_err(|e| StorageError {
 						kind: StorageErrorKind::Serialization,
 						source: Arc::new(anyhow::Error::from(e)),
 					})?;
-				sessions.push(session);
+				sessions.push((key.to_string(), session));
 			}
 		}
 		Ok(sessions)
@@ -344,7 +346,9 @@ impl Storage for MetaStore {
 	}
 
 	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<InsightAnalystRequest>> {
+	async fn get_all_insight_sessions(
+		&self,
+	) -> StorageResult<Vec<(String, InsightAnalystRequest)>> {
 		let read_txn = self.db.begin_read().map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -365,14 +369,14 @@ impl Storage for MetaStore {
 						kind: StorageErrorKind::Internal,
 						source: Arc::new(anyhow::Error::from(err)),
 					})?;
-				let _key = key_access_guard.value();
+				let key = key_access_guard.value();
 				let value = value_access_guard.value();
 				let session: InsightAnalystRequest =
 					bincode::deserialize(value).map_err(|e| StorageError {
 						kind: StorageErrorKind::Serialization,
 						source: Arc::new(anyhow::Error::from(e)),
 					})?;
-				sessions.push(session);
+				sessions.push((key.to_string(), session));
 			}
 		}
 		Ok(sessions)

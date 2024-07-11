@@ -13,10 +13,20 @@ service SemanticsService {
   rpc PostCollectors(CollectorConfig) returns (CollectorConfigResponse) {}
   rpc DeleteCollectors(DeleteCollectorRequest) returns (DeleteCollectorResponse) {}
   rpc ListCollectors(ListCollectorRequest) returns (ListCollectorConfig) {}
+  rpc ListPipelineInfo(EmptyList) returns (PipelineRequestInfoList) {}
+}
+
+message PipelineRequestInfoList {
+  repeated PipelineRequestInfo requests = 1;
+}
+
+message PipelineRequestInfo { 
+  string pipeline_id = 1;
+  SemanticPipelineRequest request = 2;  
 }
 
 message EmptyObserve{}
-
+message EmptyList{}
 message EmptyGetPipelinesMetadata{}
 
 message StopPipelineRequest {
