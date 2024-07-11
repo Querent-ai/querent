@@ -1,4 +1,4 @@
-use anyhow::{bail, Context};
+use anyhow::Context;
 use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 use tracing::Level;
 
@@ -45,7 +45,7 @@ impl CliCommand {
 			matches.remove_subcommand().context("failed to parse command")?;
 		match subcommand.as_str() {
 			"serve" => Serve::parse_cli_args(submatches).map(CliCommand::Serve),
-			_ => bail!("unknown command `{subcommand}`"),
+			_ => Serve::parse_cli_args(submatches).map(CliCommand::Serve),
 		}
 	}
 

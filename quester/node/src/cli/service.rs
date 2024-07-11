@@ -98,7 +98,7 @@ impl Serve {
 	pub async fn execute(&self) -> anyhow::Result<()> {
 		debug!(args = ?self, "run-querent-service");
 		busy_detector::set_enabled(true);
-		let node_config = load_node_config(&self.node_config_uri).await?;
+		let node_config = load_node_config(&self.node_config_uri).await.unwrap_or_default();
 
 		let runtimes_config = RuntimesConfig::default();
 		initialize_runtimes(runtimes_config)?;
