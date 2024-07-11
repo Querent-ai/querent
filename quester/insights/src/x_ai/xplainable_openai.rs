@@ -103,8 +103,9 @@ impl InsightRunner for XAIRunner {
 
 	async fn run_stream(
 		&self,
-		input: Pin<Box<dyn Stream<Item = InsightInput> + Send>>,
-	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<InsightOutput>> + Send>>> {
+		input: Pin<Box<dyn Stream<Item = InsightInput> + Send + 'static>>,
+	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<InsightOutput>> + Send + 'static>>>
+	{
 		let stream = stream! {
 			pin_mut!(input);
 			while let Some(input) = input.next().await {
