@@ -81,6 +81,16 @@ impl Storage for MilvusStorage {
 		Ok(vec![])
 	}
 
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		_query: Option<String>,
+		_session_id: Option<String>,
+		_response: Option<String>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,

@@ -194,6 +194,14 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>>;
+
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		query: Option<String>,
+		session_id: Option<String>,
+		response: Option<String>,
+	) -> StorageResult<()>;
 }
 
 impl Debug for dyn Storage {

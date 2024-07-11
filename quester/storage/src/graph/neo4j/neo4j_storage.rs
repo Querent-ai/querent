@@ -101,6 +101,16 @@ impl Storage for Neo4jStorage {
 		Ok(vec![])
 	}
 
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		_query: Option<String>,
+		_session_id: Option<String>,
+		_response: Option<String>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,

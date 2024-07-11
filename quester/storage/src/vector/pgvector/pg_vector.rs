@@ -37,6 +37,14 @@ pub struct EmbeddedKnowledge {
 }
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[diesel(table_name = insight_knowledge)]
+pub struct InsightKnowledge {
+	pub query: Option<String>,
+	pub session_id: Option<String>,
+	pub response: Option<String>,
+}
+
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = discovered_knowledge)]
 pub struct DiscoveredKnowledge {
 	pub doc_id: String,
@@ -170,6 +178,36 @@ impl Storage for PGVector {
 						.execute(conn)
 						.await?;
 				}
+				Ok(())
+			}
+			.scope_boxed()
+		})
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		Ok(())
+	}
+
+	async fn insert_insight_knowledge(
+		&self,
+		query: Option<String>,
+		session_id: Option<String>,
+		response: Option<String>,
+	) -> StorageResult<()> {
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		conn.transaction::<_, diesel::result::Error, _>(|conn| {
+			async move {
+				let new_knowledge = InsightKnowledge { query, session_id, response };
+				diesel::insert_into(insight_knowledge::table)
+					.values(&new_knowledge)
+					.execute(conn)
+					.await?;
 				Ok(())
 			}
 			.scope_boxed()
@@ -525,6 +563,19 @@ table! {
 		embeddings -> Nullable<Vector>,
 		score -> Float4,
 		event_id -> VarChar,
+	}
+}
+
+table! {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	insight_knowledge (id) {
+		id -> Int4,
+		query -> Nullable<Text>,
+		session_id -> Nullable<Text>,
+		response -> Nullable<Text>,
+
 	}
 }
 
