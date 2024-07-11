@@ -228,6 +228,6 @@ pub trait InsightRunner: Send + Sync {
 	/// Run the insight with the given input stream.
 	async fn run_stream(
 		&self,
-		input: Pin<Box<dyn Stream<Item = InsightInput> + Send + 'static>>,
-	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<InsightOutput>> + Send + 'static>>>;
+		input: Pin<Box<dyn Stream<Item = InsightInput> + Send>>,
+	) -> InsightResult<Pin<Box<dyn Stream<Item = InsightResult<InsightOutput>> + Send>>>;
 }
