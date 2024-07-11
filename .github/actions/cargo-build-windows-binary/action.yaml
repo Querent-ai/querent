@@ -1,0 +1,91 @@
+name: "Build Querent binary for Windows with cargo cross"
+description: "Build Quester Dashboard and Rust binary for Windows with cargo cross."
+inputs:
+  target:
+    description: 'The target platform'
+    required: true
+  version:
+    description: 'The release version'
+    required: true
+  token:
+    description: 'GitHub Token'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}.exe" >> $GITHUB_ENV
+      shell: bash
+    - name: Download Npcap
+      run: Invoke-WebRequest -Uri 'https://npcap.com/dist/npcap-1.79.exe' -OutFile 'C:\npcap-1.79.exe'
+      shell: pwsh
+    - name: Install Npcap
+      run: C:\npcap-1.79.exe /S /winpcap_mode=yes
+      shell: pwsh
+    - name: Install rustup
+      shell: bash
+      run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
+    - name: Install Rust Toolchain
+      run: rustup toolchain install nightly
+      shell: bash
+
+    # Add Windows-specific target
+    - name: Add target x86_64-pc-windows-msvc
+      if: ${{ inputs.target == 'x86_64-pc-windows-msvc' }}
+      run: rustup target add x86_64-pc-windows-msvc
+      shell: bash
+
+    - name: Install protoc
+      run: choco install protoc
+      shell: bash
+    
+    - name: Install postgres (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      run: |
+        choco install postgresql12 --force --params '/Password:root'
+        echo "C:\Program Files\PostgreSQL\12\bin" >> $GITHUB_PATH
+        echo "C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_PATH
+        echo "PQ_LIB_DIR=C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_ENV
+        echo "PG_DATABASE_URL=postgres://postgres:root@localhost/" >> $GITHUB_ENV
+        echo "PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example" >> $GITHUB_ENV
+    - name: Install nasm
+      uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
+    - name: Install cross
+      run: cargo install cross
+      shell: bash
+    - name: Retrieve and export commit date, hash, and tags
+      run: |
+        echo "QUERENT_COMMIT_DATE=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
+        echo "QUERENT_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
+        echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
+      shell: bash
+    - name: Build binary
+      run: |
+        cargo build --release --target ${{ inputs.target }} --bin querent
+      shell: bash
+      env:
+        QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
+        QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
+        QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
+        LIB: ${{ env.LIB }}
+      working-directory: ./quester
+    - name: Bundle archive
+      run: |
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent.exe \
+          BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
+      shell: bash
+      working-directory: ./quester
+    - name: Save binary archive for three days
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+        path: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
+        retention-days: 3
+    - name: Upload archive
+      uses: quickwit-inc/upload-to-github-release@v1
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
+      with:
+        file: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
+        overwrite: true
+        tag_name: ${{ inputs.version }}

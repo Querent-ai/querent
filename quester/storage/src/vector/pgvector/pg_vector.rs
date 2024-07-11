@@ -1,19 +1,19 @@
 use crate::{utils::traverse_node, DieselError};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use diesel::{
-	result::{ConnectionError, ConnectionResult},
-	ExpressionMethods, QueryDsl,
-};
+use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::{
 	pg::AsyncPgConnection,
-	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager, ManagerConfig},
+	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
-use futures_util::{future::BoxFuture, FutureExt};
-use proto::semantics::PostgresConfig;
-use std::{collections::HashSet, sync::Arc, time::SystemTime};
+use proto::{
+	discovery::DiscoverySessionRequest,
+	insights::InsightAnalystRequest,
+	semantics::{PostgresConfig, SemanticPipelineRequest},
+};
+use std::{collections::HashSet, sync::Arc};
 use tracing::error;
 
 use crate::{
@@ -26,10 +26,6 @@ use deadpool::Runtime;
 use diesel::{table, Insertable, Queryable, QueryableByName, Selectable};
 use diesel_async::AsyncConnection;
 use pgvector::VectorExpressionMethods;
-use rustls::{
-	client::{ServerCertVerified, ServerCertVerifier},
-	ServerName,
-};
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = embedded_knowledge)]
@@ -53,6 +49,7 @@ pub struct DiscoveredKnowledge {
 	pub query: Option<String>,
 	pub session_id: Option<String>,
 	pub score: Option<f64>,
+	pub collection_id: String,
 }
 
 impl DiscoveredKnowledge {
@@ -68,6 +65,7 @@ impl DiscoveredKnowledge {
 			query: payload.query,
 			session_id: payload.session_id,
 			score: Some(payload.score as f64),
+			collection_id: payload.collection_id,
 		}
 	}
 }
@@ -77,35 +75,21 @@ pub struct PGVector {
 	pub config: PostgresConfig,
 }
 
-struct NoCertVerifier {}
-
-impl ServerCertVerifier for NoCertVerifier {
-	fn verify_server_cert(
-		&self,
-		_end_entity: &rustls::Certificate,
-		_intermediates: &[rustls::Certificate],
-		_server_name: &ServerName,
-		_scts: &mut dyn Iterator<Item = &[u8]>,
-		_ocsp_response: &[u8],
-		_now: SystemTime,
-	) -> Result<ServerCertVerified, rustls::Error> {
-		// Will verify all (even invalid) certs without any checks (sslmode=require)
-		Ok(ServerCertVerified::assertion())
-	}
-}
-
 impl PGVector {
 	pub async fn new(config: PostgresConfig) -> StorageResult<Self> {
-		let mut d_config = ManagerConfig::default();
 		let tls_enabled = config.url.contains("sslmode=require");
 		let manager = if tls_enabled {
-			// diesel-async does not support any TLS connections out of the box, so we need to manually
-			// provide a setup function which handles creating the connection
-			d_config.custom_setup = Box::new(establish_connection);
-			AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(
-				config.url.clone(),
-				d_config,
-			)
+			// // diesel-async does not support any TLS connections out of the box, so we need to manually
+			// // provide a setup function which handles creating the connection
+			// let mut d_config = ManagerConfig::default();
+			// d_config.custom_setup = Box::new(establish_connection);
+			// AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(
+			// 	config.url.clone(),
+			// 	d_config,
+			// )
+			// TODO: Support for TLS
+			log::warn!("TLS in pg connection directly is not supported yet");
+			AsyncDieselConnectionManager::<AsyncPgConnection>::new(config.url.clone())
 		} else {
 			AsyncDieselConnectionManager::<AsyncPgConnection>::new(config.url.clone())
 		};
@@ -123,27 +107,6 @@ impl PGVector {
 
 		Ok(PGVector { pool, config })
 	}
-}
-
-fn establish_connection(config: &str) -> BoxFuture<ConnectionResult<AsyncPgConnection>> {
-	let fut = async {
-		let rustls_config = rustls::ClientConfig::builder()
-			.with_safe_defaults()
-			.with_custom_certificate_verifier(Arc::new(NoCertVerifier {}))
-			.with_no_client_auth();
-
-		let tls = tokio_postgres_rustls::MakeRustlsConnect::new(rustls_config);
-		let (client, conn) = tokio_postgres::connect(config, tls)
-			.await
-			.map_err(|e| ConnectionError::BadConnection(e.to_string()))?;
-		tokio::spawn(async move {
-			if let Err(e) = conn.await {
-				error!("Database connection failed: {e}");
-			}
-		});
-		AsyncPgConnection::try_from(client).await
-	};
-	fut.boxed()
 }
 
 #[async_trait]
@@ -224,7 +187,7 @@ impl Storage for PGVector {
 		&self,
 		session_id: String,
 		query: String,
-		_collection_id: String,
+		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
@@ -283,6 +246,7 @@ impl Storage for PGVector {
 								doc_payload.session_id = Some(session_id.clone());
 								doc_payload.query_embedding = Some(payload.clone());
 								doc_payload.query = Some(query.clone());
+								doc_payload.collection_id = collection_id.clone();
 								results.push(doc_payload);
 							}
 						},
@@ -388,17 +352,24 @@ impl Storage for PGVector {
 	}
 
 	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<String>> {
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<SemanticPipelineRequest>> {
 		Ok(Vec::new())
 	}
 
 	/// Set SemanticPipeline ran by this node
-	async fn set_pipeline(&self, _pipeline: &String) -> StorageResult<()> {
+	async fn set_pipeline(
+		&self,
+		_pipeline_id: &String,
+		_pipeline: SemanticPipelineRequest,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	/// Get semantic pipeline by id
-	async fn get_pipeline(&self, _pipeline_id: &String) -> StorageResult<Option<String>> {
+	async fn get_pipeline(
+		&self,
+		_pipeline_id: &String,
+	) -> StorageResult<Option<SemanticPipelineRequest>> {
 		Ok(None)
 	}
 
@@ -408,32 +379,46 @@ impl Storage for PGVector {
 	}
 
 	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<String>> {
+	async fn get_all_discovery_sessions(&self) -> StorageResult<Vec<DiscoverySessionRequest>> {
 		Ok(Vec::new())
 	}
 
 	/// Set Discovery session ran by this node
-	async fn set_discovery_session(&self, _session: &String) -> StorageResult<()> {
+	async fn set_discovery_session(
+		&self,
+		_session_id: &String,
+		_session: DiscoverySessionRequest,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	/// Get Discovery session by id
-	async fn get_discovery_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
+	async fn get_discovery_session(
+		&self,
+		_session_id: &String,
+	) -> StorageResult<Option<DiscoverySessionRequest>> {
 		Ok(None)
 	}
 
 	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<String>> {
+	async fn get_all_insight_sessions(&self) -> StorageResult<Vec<InsightAnalystRequest>> {
 		Ok(Vec::new())
 	}
 
 	/// Set Insight session ran by this node
-	async fn set_insight_session(&self, _session: &String) -> StorageResult<()> {
+	async fn set_insight_session(
+		&self,
+		_session_id: &String,
+		_session: InsightAnalystRequest,
+	) -> StorageResult<()> {
 		Ok(())
 	}
 
 	/// Get Insight session by id
-	async fn get_insight_session(&self, _session_id: &String) -> StorageResult<Option<String>> {
+	async fn get_insight_session(
+		&self,
+		_session_id: &String,
+	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
 	}
 }
@@ -466,6 +451,7 @@ table! {
 		query -> Nullable<Text>,
 		session_id -> Nullable<Text>,
 		score -> Nullable<Float8>,
+		collection_id -> Text,
 	}
 }
 

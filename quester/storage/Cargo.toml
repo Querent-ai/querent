@@ -37,4 +37,4 @@ redb = { workspace = true }
 rmp-serde = { workspace = true }
 fastembed = { workspace = true }
 surrealdb = { workspace = true }
-uuid = { workspace = true }
+bincode = { workspace = true }

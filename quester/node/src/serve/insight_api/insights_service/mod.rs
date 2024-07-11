@@ -20,6 +20,7 @@ pub async fn start_insight_service(
 	cluster: &Cluster,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
+	metadata_store: Arc<dyn Storage>,
 ) -> anyhow::Result<Arc<dyn InsightService>> {
 	let insight_agent_service = InsightAgentService::new(
 		node_config.node_id.clone(),
@@ -33,6 +34,7 @@ pub async fn start_insight_service(
 	let insight_service = Arc::new(service::InsightImpl::new(
 		event_storages,
 		index_storages,
+		metadata_store,
 		insight_service_mailbox,
 	));
 	Ok(insight_service)

@@ -36,6 +36,7 @@ pub trait DiscoveryService: 'static + Send + Sync {
 pub struct DiscoveryImpl {
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
+	pub metadata_store: Arc<dyn Storage>,
 	pub discovery_agent_service_message_bus: MessageBus<DiscoveryAgentService>,
 }
 
@@ -43,9 +44,15 @@ impl DiscoveryImpl {
 	pub fn new(
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
+		metadata_store: Arc<dyn Storage>,
 		discovery_agent_service_message_bus: MessageBus<DiscoveryAgentService>,
 	) -> Self {
-		DiscoveryImpl { event_storages, index_storages, discovery_agent_service_message_bus }
+		DiscoveryImpl {
+			event_storages,
+			index_storages,
+			discovery_agent_service_message_bus,
+			metadata_store,
+		}
 	}
 }
 
@@ -55,8 +62,11 @@ impl DiscoveryService for DiscoveryImpl {
 		&self,
 		request: DiscoveryRequest,
 	) -> super::Result<DiscoveryResponse> {
-		let response =
-			self.discovery_agent_service_message_bus.ask(request).await.map_err(|e| {
+		let response = self
+			.discovery_agent_service_message_bus
+			.ask(request.clone())
+			.await
+			.map_err(|e| {
 				log::error!("Failed to discover insights: {}", e);
 				DiscoveryError::Internal("Failed to discover insights".to_string())
 			})?;
@@ -71,14 +81,26 @@ impl DiscoveryService for DiscoveryImpl {
 		&self,
 		request: DiscoverySessionRequest,
 	) -> super::Result<DiscoverySessionResponse> {
-		let response =
-			self.discovery_agent_service_message_bus.ask(request).await.map_err(|e| {
+		let response = self
+			.discovery_agent_service_message_bus
+			.ask(request.clone())
+			.await
+			.map_err(|e| {
 				log::error!("Failed to start discovery session: {}", e);
 				DiscoveryError::Internal("Failed to start discovery session".to_string())
 			})?;
 
 		match response {
-			Ok(response) => Ok(response),
+			Ok(response) => {
+				self.metadata_store
+					.set_discovery_session(&response.session_id, request.clone())
+					.await
+					.map_err(|e| {
+						log::error!("Failed to set insight session: {}", e);
+						DiscoveryError::Internal("Failed to set insight session".to_string())
+					})?;
+				Ok(response)
+			},
 			_ =>
 				Err(DiscoveryError::Internal("Failed to start discovery session".to_string())
 					.into()),

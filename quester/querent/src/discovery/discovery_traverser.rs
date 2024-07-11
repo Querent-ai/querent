@@ -190,6 +190,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 										current_query_embedding.clone(),
 										message.query.clone(),
 										message.session_id.clone(),
+										self.discovery_agent_params.semantic_pipeline_id.clone(),
 									);
 
 									tokio::spawn(insert_discovered_knowledge_async(
@@ -268,6 +269,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 										current_query_embedding.clone(),
 										message.query.clone(),
 										message.session_id.clone(),
+										self.discovery_agent_params.semantic_pipeline_id.clone(),
 									);
 
 									tokio::spawn(insert_discovered_knowledge_async(
@@ -310,6 +312,7 @@ fn process_documents(
 	current_query_embedding: Vec<f32>,
 	query: String,
 	session_id: String,
+	coll_id: String,
 ) {
 	for document in traverser_results {
 		let tags = format!(
@@ -339,6 +342,7 @@ fn process_documents(
 			query: Some(query.clone()),
 			session_id: Some(session_id.clone()),
 			score: document.7, // Use the correct field for score if different
+			collection_id: coll_id.clone(),
 		};
 
 		document_payloads.push(document_payload);

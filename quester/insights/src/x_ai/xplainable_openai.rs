@@ -115,7 +115,6 @@ impl InsightRunner for XAIRunner {
 				yield Ok(output);
 			}
 		};
-
 		Ok(Box::pin(stream))
 	}
 }

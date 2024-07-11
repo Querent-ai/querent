@@ -26,25 +26,28 @@ pub enum LLMErrorKind {
 	// Add more error kinds here if needed
 }
 
-/// Generic IngestorError.
+/// A generic error type for LLM operations, encapsulating an error kind and its source.
 #[derive(Debug, Clone, Error)]
 #[error("source error(kind={kind:?}, source={source})")]
 #[allow(missing_docs)]
 pub struct LLMError {
+	/// The kind of error.
 	pub kind: LLMErrorKind,
+	/// The source of the error.
 	#[source]
 	pub source: Arc<anyhow::Error>,
 }
 
-/// Generic Result type for source type operations.
+/// A type alias for results returned by LLM operations.
 pub type LLMResult<T> = Result<T, LLMError>;
 
 impl LLMError {
+	/// Creates a new `LLMError` with the specified kind and source.
 	pub fn new(kind: LLMErrorKind, source: Arc<anyhow::Error>) -> Self {
 		LLMError { kind, source }
 	}
 
-	/// Add some context to the wrapper error.
+	/// Adds some context to the existing error.
 	pub fn add_context<C>(self, ctx: C) -> Self
 	where
 		C: fmt::Display + Send + Sync + 'static,
@@ -55,7 +58,7 @@ impl LLMError {
 		}
 	}
 
-	/// Returns the corresponding `IngestorErrorKind` for this error.
+	/// Returns the kind of this error.
 	pub fn kind(&self) -> LLMErrorKind {
 		self.kind.clone()
 	}
@@ -88,32 +91,56 @@ impl From<OllamaError> for LLMError {
 	}
 }
 
+/// An asynchronous trait defining the operations for a Large Language Model (LLM).
 #[async_trait]
 pub trait LLM: Send + Sync {
+	/// Initializes the token to word mapping for the document.
 	async fn init_token_idx_2_word_doc_idx(&self) -> Vec<(String, i32)>;
+
+	/// Returns the number of start tokens.
 	async fn num_start_tokens(&self) -> usize;
+
+	/// Appends the last token to the listing.
 	async fn append_last_token(&self, listing: &mut Vec<(String, i32)>);
+
+	/// Prepares the model input using a tokenized sequence.
 	async fn model_input(
 		&self,
 		tokenized_sequence: Vec<i32>,
 	) -> LLMResult<std::collections::HashMap<String, Tensor>>;
+
+	/// Tokenizes a given word.
 	async fn tokenize(&self, word: &str) -> LLMResult<Vec<i32>>;
+
+	/// Performs inference using attention mechanism on the model input.
 	async fn inference_attention(
 		&self,
 		model_input: std::collections::HashMap<String, Tensor>,
 	) -> LLMResult<Tensor>;
+
+	/// Returns the maximum number of tokens allowed.
 	async fn maximum_tokens(&self) -> usize;
+
+	/// Converts a sequence of tokens to their corresponding words.
 	async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String>;
+
+	/// Converts the attention tensor to a 2D vector.
 	async fn attention_tensor_to_2d_vector(
 		&self,
 		attention_weights: &Tensor,
 	) -> LLMResult<Vec<Vec<f32>>>;
+
+	/// Classifies tokens based on the model input and optional labels.
 	async fn token_classification(
 		&self,
 		model_input: std::collections::HashMap<String, Tensor>,
 		labels: Option<&Tensor>,
 	) -> LLMResult<Vec<(String, String)>>;
+
+	/// Generates a response based on the provided messages.
 	async fn generate(&self, messages: &[Message]) -> LLMResult<GenerateResult>;
+
+	/// Invokes the model with a prompt and returns the generated result.
 	async fn invoke(&self, prompt: &str) -> Result<String, LLMError> {
 		self.generate(&[Message::new_human_message(prompt)])
 			.await
