@@ -93,21 +93,15 @@ impl Handler<InsightQuery> for InsightAgent {
 		message: InsightQuery,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-
 		let runner = self.runner.clone();
 		let agent_id = self.agent_id.clone();
-		let json_string = format!("\"{}\"", message.query);
-		let data_to_send = serde_json::from_str(&json_string);
-		if data_to_send.is_err() {
-			return Ok(Err(InsightError::new(
-				InsightErrorKind::Inference,
-				Arc::new(anyhow::anyhow!("Error parsing query data: {:?}", data_to_send.err())),
-			)));
-		}
-		let data_to_send: Value = data_to_send.unwrap();
+		// Create a JSON object with session_id and query
+		let data_to_send =
+			serde_json::json!({ "session_id": message.session_id, "query": message.query });
+
+		// Directly use the JSON object as InsightInput
 		let insight_input = InsightInput { data: data_to_send };
 		let response = tokio::spawn(async move {
-			
 			let insight_output = runner.run(insight_input).await;
 			match insight_output {
 				Ok(output) => Ok(InsightQueryResponse {

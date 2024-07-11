@@ -1,12 +1,13 @@
 use std::collections::HashSet;
-use storage::DiscoveredKnowledge;
 
-pub fn unique_sentences(discovered_knowledge: &[DiscoveredKnowledge]) -> String {
-    let mut unique_sentences_set = HashSet::new();
+pub fn unique_sentences(
+	discovered_knowledge: &[(i32, String, String, String, String, String, String, f32)],
+) -> Vec<String> {
+	let mut unique_sentences_set = HashSet::new();
 
-    for dk in discovered_knowledge {
-        unique_sentences_set.insert(dk.sentence.clone());
-    }
+	for (_, _, _, _, _, sentence, _, _) in discovered_knowledge {
+		unique_sentences_set.insert(sentence.clone());
+	}
 
-    unique_sentences_set.into_iter().collect::<Vec<String>>().join(" ")
+	unique_sentences_set.into_iter().collect::<Vec<String>>()
 }

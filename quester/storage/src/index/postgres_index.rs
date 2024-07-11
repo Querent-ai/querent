@@ -1,3 +1,4 @@
+use crate::DiscoveredKnowledge;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel_async::{
@@ -6,8 +7,6 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
-use crate::DiscoveredKnowledge;
-use futures_util::{future::BoxFuture, FutureExt};
 use proto::{
 	discovery::DiscoverySessionRequest,
 	insights::InsightAnalystRequest,
