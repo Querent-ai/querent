@@ -188,6 +188,7 @@ impl Storage for SurrealDB {
 		let query_string = format!(
 			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance 
 			FROM embedded_knowledge 
+			WHERE vector::similarity::cosine(embeddings, $payload) <= 0.2 
 			ORDER BY cosine_distance 
 			LIMIT {}",
 			max_results
