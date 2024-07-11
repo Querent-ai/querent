@@ -1,4 +1,3 @@
-use anyhow::Context;
 use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 use tracing::Level;
 
@@ -23,9 +22,7 @@ pub fn build_cli() -> Command {
             .required(false)
         )
         .subcommand(build_serve_command().display_order(1))
-        .arg_required_else_help(true)
         .disable_help_subcommand(true)
-        .subcommand_required(true)
 }
 
 #[derive(Debug, PartialEq)]
@@ -41,11 +38,15 @@ impl CliCommand {
 	}
 
 	pub fn parse_cli_args(mut matches: ArgMatches) -> anyhow::Result<Self> {
-		let (subcommand, submatches) =
-			matches.remove_subcommand().context("failed to parse command")?;
-		match subcommand.as_str() {
-			"serve" => Serve::parse_cli_args(submatches).map(CliCommand::Serve),
-			_ => Serve::parse_cli_args(submatches).map(CliCommand::Serve),
+		// Check if no subcommand is provided and default to `serve`
+		if matches.subcommand_name().is_none() {
+			Serve::parse_cli_args(ArgMatches::default()).map(CliCommand::Serve)
+		} else {
+			let (subcommand, submatches) = matches.remove_subcommand().unwrap_or_default();
+			match subcommand.as_str() {
+				"serve" => Serve::parse_cli_args(submatches).map(CliCommand::Serve),
+				_ => Serve::parse_cli_args(submatches).map(CliCommand::Serve),
+			}
 		}
 	}
 
