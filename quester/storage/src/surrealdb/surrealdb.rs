@@ -46,24 +46,24 @@ struct QueryResultSemantic {
 
 #[derive(Debug, Deserialize)]
 struct CsvRecord {
-    pub document_id: String,
-    pub document_source: String,
-    pub image_id: Option<String>,
-    pub subject: String,
-    pub subject_type: String,
-    pub object: String,
-    pub object_type: String,
-    pub sentence: String,
-    pub event_id: String,
-    pub source_id: String,
+	pub document_id: String,
+	pub document_source: String,
+	pub image_id: Option<String>,
+	pub subject: String,
+	pub subject_type: String,
+	pub object: String,
+	pub object_type: String,
+	pub sentence: String,
+	pub event_id: String,
+	pub source_id: String,
 }
 
 #[derive(Debug, Deserialize)]
 struct VectorRecord {
-    pub id: i32,
-    pub embeddings: String,
-    pub score: f32,
-    pub event_id: String,
+	pub id: i32,
+	pub embeddings: String,
+	pub score: f32,
+	pub event_id: String,
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
@@ -111,10 +111,13 @@ struct Record {
 impl SurrealDB {
 	pub async fn new(surreal_config: SurrealDbConfig) -> StorageResult<Self> {
 		let config = Config::default().strict();
-		let db = Surreal::new::<RocksDb>((surreal_config.path.clone(), config)).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+		let db =
+			Surreal::new::<RocksDb>((surreal_config.path.clone(), config))
+				.await
+				.map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
 
 		let _ = db.use_ns(NAMESPACE).use_db(DATABASE).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -281,24 +284,11 @@ impl Storage for SurrealDB {
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
 
 		for (head, tail) in filtered_pairs {
-
 			// Traverse depth 1
-			traverse_node(
-				&self.db,
-				head.clone(),
-				&mut combined_results,
-				&mut visited_pairs,
-				1,
-			)
-			.await?;
-			traverse_node(
-				&self.db,
-				tail.clone(),
-				&mut combined_results,
-				&mut visited_pairs,
-				1,
-			)
-			.await?;
+			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 1)
+				.await?;
+			traverse_node(&self.db, tail.clone(), &mut combined_results, &mut visited_pairs, 1)
+				.await?;
 		}
 
 		Ok(combined_results)
@@ -445,192 +435,191 @@ impl Storage for SurrealDB {
 	}
 }
 
-
 pub async fn traverse_node<'a>(
-    db: &'a Surreal<Db>,
-    node: String,
-    combined_results: &'a mut Vec<(i32, String, String, String, String, String, String, f32)>,
-    visited_pairs: &'a mut HashSet<(String, String)>,
-    depth: usize,
+	db: &'a Surreal<Db>,
+	node: String,
+	combined_results: &'a mut Vec<(i32, String, String, String, String, String, String, f32)>,
+	visited_pairs: &'a mut HashSet<(String, String)>,
+	depth: usize,
 ) -> StorageResult<()> {
-		if depth > 2 {
-			return Ok(());
-		}
+	if depth > 2 {
+		return Ok(());
+	}
 
-		// Fetch inward edges
-		let inward_query = format!(
+	// Fetch inward edges
+	let inward_query = format!(
 			"SELECT id, document_id, subject, object, document_source, sentence, event_id FROM semantic_knowledge WHERE object = '{}'", 
 			node
 		);
 
-		let mut response: Response = db.query(inward_query).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		let inward_results: Vec<Value> = response.take(0).map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+	let mut response: Response = db.query(inward_query).await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	let inward_results: Vec<Value> = response.take(0).map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
 
-		for result in inward_results {
-			if let Value::Object(obj) = result {
-				let id = match obj.get("id") {
-					Some(Value::Number(Number::Int(i))) => *i as i32,
-					_ => continue,
-				};
-				let doc_id = match obj.get("document_id") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let subject = match obj.get("subject") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let object = match obj.get("object") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let doc_source = match obj.get("document_source") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let sentence = match obj.get("sentence") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let event_id = match obj.get("event_id") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
+	for result in inward_results {
+		if let Value::Object(obj) = result {
+			let id = match obj.get("id") {
+				Some(Value::Number(Number::Int(i))) => *i as i32,
+				_ => continue,
+			};
+			let doc_id = match obj.get("document_id") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let subject = match obj.get("subject") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let object = match obj.get("object") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let doc_source = match obj.get("document_source") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let sentence = match obj.get("sentence") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let event_id = match obj.get("event_id") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
 
-				let score_query = format!(
-					"SELECT score FROM embedded_knowledge WHERE event_id = '{}'", 
-					event_id
-				);
+			let score_query =
+				format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", event_id);
 
-				let mut score_response: Response = db.query(score_query).await.map_err(|e| StorageError {
+			let mut score_response: Response =
+				db.query(score_query).await.map_err(|e| StorageError {
 					kind: StorageErrorKind::Internal,
 					source: Arc::new(anyhow::Error::from(e)),
 				})?;
-				let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
+			let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 
-				let score = match score_result.first() {
-					Some(Value::Object(obj)) => match obj.get("score") {
-						Some(Value::Number(Number::Float(f))) => *f,
-						_ => continue,
-					},
+			let score = match score_result.first() {
+				Some(Value::Object(obj)) => match obj.get("score") {
+					Some(Value::Number(Number::Float(f))) => *f,
 					_ => continue,
-				};
-				let score = score as f32;
+				},
+				_ => continue,
+			};
+			let score = score as f32;
 
-				if visited_pairs.insert((subject.clone(), object.clone())) {
-					combined_results.push((
-						id, doc_id, subject.clone(), object.clone(), doc_source, sentence, event_id, score,
-					));
-					Box::pin(traverse_node(
-						db,
-						subject,
-						combined_results,
-						visited_pairs,
-						depth + 1,
-					)).await?;
-				}
+			if visited_pairs.insert((subject.clone(), object.clone())) {
+				combined_results.push((
+					id,
+					doc_id,
+					subject.clone(),
+					object.clone(),
+					doc_source,
+					sentence,
+					event_id,
+					score,
+				));
+				Box::pin(traverse_node(db, subject, combined_results, visited_pairs, depth + 1))
+					.await?;
 			}
 		}
+	}
 
-		// Fetch outward edges
-		let outward_query = format!(
+	// Fetch outward edges
+	let outward_query = format!(
 			"SELECT id, document_id, subject, object, document_source, sentence, event_id FROM semantic_knowledge WHERE subject = '{}'", 
 			node
 		);
 
-		let mut response: Response = db.query(outward_query).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+	let mut response: Response = db.query(outward_query).await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
 
-		let outward_results: Vec<Value> = response.take(0).map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+	let outward_results: Vec<Value> = response.take(0).map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
 
+	for result in outward_results {
+		if let Value::Object(obj) = result {
+			let id = match obj.get("id") {
+				Some(Value::Number(Number::Int(i))) => *i as i32,
+				_ => continue,
+			};
+			let doc_id = match obj.get("document_id") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let subject = match obj.get("subject") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let object = match obj.get("object") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let doc_source = match obj.get("document_source") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let sentence = match obj.get("sentence") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
+			let event_id = match obj.get("event_id") {
+				Some(Value::Strand(s)) => s.to_string(),
+				_ => continue,
+			};
 
-		for result in outward_results {
-			if let Value::Object(obj) = result {
-				let id = match obj.get("id") {
-					Some(Value::Number(Number::Int(i))) => *i as i32,
-					_ => continue,
-				};
-				let doc_id = match obj.get("document_id") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let subject = match obj.get("subject") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let object = match obj.get("object") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let doc_source = match obj.get("document_source") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let sentence = match obj.get("sentence") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
-				let event_id = match obj.get("event_id") {
-					Some(Value::Strand(s)) => s.to_string(),
-					_ => continue,
-				};
+			let score_query =
+				format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", event_id);
 
-				let score_query = format!(
-					"SELECT score FROM embedded_knowledge WHERE event_id = '{}'", 
-					event_id
-				);
-
-				let mut score_response: Response = db.query(score_query).await.map_err(|e| StorageError {
+			let mut score_response: Response =
+				db.query(score_query).await.map_err(|e| StorageError {
 					kind: StorageErrorKind::Internal,
 					source: Arc::new(anyhow::Error::from(e)),
 				})?;
 
-				let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
+			let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 
-				let score = match score_result.first() {
-					Some(Value::Object(obj)) => match obj.get("score") {
-						Some(Value::Number(Number::Float(f))) => *f,
-						_ => continue,
-					},
+			let score = match score_result.first() {
+				Some(Value::Object(obj)) => match obj.get("score") {
+					Some(Value::Number(Number::Float(f))) => *f,
 					_ => continue,
-				};
-				let score = score as f32;
+				},
+				_ => continue,
+			};
+			let score = score as f32;
 
-				if visited_pairs.insert((subject.clone(), object.clone())) {
-					combined_results.push((
-						id, doc_id, subject.clone(), object.clone(), doc_source, sentence, event_id, score,
-					));
-					Box::pin(traverse_node(
-						db,
-						subject,
-						combined_results,
-						visited_pairs,
-						depth + 1,
-					)).await?;
-				}
+			if visited_pairs.insert((subject.clone(), object.clone())) {
+				combined_results.push((
+					id,
+					doc_id,
+					subject.clone(),
+					object.clone(),
+					doc_source,
+					sentence,
+					event_id,
+					score,
+				));
+				Box::pin(traverse_node(db, subject, combined_results, visited_pairs, depth + 1))
+					.await?;
 			}
 		}
+	}
 
-		Ok(())
+	Ok(())
 }
-
 
 // #[cfg(test)]
 // mod tests {
@@ -649,7 +638,7 @@ pub async fn traverse_node<'a>(
 // 		let config = SurrealDbConfig {path: "../../../../db".to_string()};
 // 		let surrealdb = SurrealDB::new(config).await?;
 
-// 		// Read the CSV file		
+// 		// Read the CSV file
 // 		let file_path = "/home/ansh/Downloads/semantic_knowledge (3).csv";
 // 		let mut rdr = Reader::from_path(file_path)?;
 
@@ -678,21 +667,20 @@ pub async fn traverse_node<'a>(
 // 		Ok(())
 // 	}
 
-
 // 	#[tokio::test]
 // 	async fn test_vector_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
 
 // 		let config = SurrealDbConfig {path: "../../../../db".to_string()};
 // 		let surrealdb = SurrealDB::new(config).await?;
 
-// 		// Read the CSV file		
+// 		// Read the CSV file
 // 		let file_path = "/home/ansh/Downloads/embedded_knowledge.csv";
 // 		let mut rdr = Reader::from_path(file_path)?;
 
 // 		let mut payload = Vec::new();
 // 		for result in rdr.deserialize() {
 // 			let record: VectorRecord = result?;
-			
+
 // 			// Parse embeddings
 // 			let embeddings: Vec<f32> = record.embeddings
 // 				.trim_matches(|p| p == '[' || p == ']')
