@@ -54,6 +54,7 @@ impl XAI {
 				icon: &[], // Add your icon bytes here.
 				additional_options,
 				conversational: true,
+				premium: false,
 			},
 		}
 	}
