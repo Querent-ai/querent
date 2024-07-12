@@ -28,6 +28,8 @@ pub struct InsightInfo {
 	pub icon: &'static [u8],
 	/// Insight options
 	pub additional_options: HashMap<String, CustomInsightOption>,
+	/// Is a premium insight.
+	pub premium: bool,
 }
 
 /// Possible custom option values for insights.
