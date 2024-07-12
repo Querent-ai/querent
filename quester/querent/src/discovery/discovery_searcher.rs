@@ -75,7 +75,7 @@ impl Actor for DiscoverySearch {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(self.discovery_agent_params.max_message_memory_size as usize)
+		QueueCapacity::Unbounded
 	}
 
 	fn runtime_handle(&self) -> Handle {

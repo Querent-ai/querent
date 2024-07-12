@@ -14,7 +14,7 @@ use std::{
 	path::Path,
 	sync::Arc,
 };
-use storage::{create_storages, Storage};
+use storage::Storage;
 
 /// Traverser via discovery
 struct DiscoveryTraverseHandle {
@@ -80,24 +80,7 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 	) -> Result<Self::Reply, ActorExitStatus> {
 		let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 		let current_timestamp = chrono::Utc::now().timestamp();
-		let mut event_storages = self.event_storages.clone();
-
-		if request.storage_configs.is_empty() && event_storages.is_empty() {
-			return Err(anyhow::anyhow!("No storage configurations provided").into());
-		}
-		let surreal_db_path = Path::new("/tmp/querent_surreal_db").to_path_buf();
-
-		if !request.storage_configs.is_empty() {
-			let (extra_events_storage, _) =
-				create_storages(&request.storage_configs.clone(), surreal_db_path)
-					.await
-					.map_err(|e| {
-						log::error!("Failed to create storages: {}", e);
-						e
-					})?;
-
-			event_storages.extend(extra_events_storage);
-		}
+		let event_storages = self.event_storages.clone();
 
 		match request.session_type.clone().unwrap_or(DiscoveryAgentType::Retriever) {
 			DiscoveryAgentType::Retriever => {

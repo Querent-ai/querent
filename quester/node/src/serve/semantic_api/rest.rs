@@ -31,8 +31,7 @@ use querent::{
 	create_dynamic_sources, ObservePipeline, PipelineErrors, PipelineSettings, RestartPipeline,
 	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };
-use std::{collections::HashMap, convert::Infallible, path::Path, sync::Arc};
-use storage::create_storages;
+use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tracing::{error, warn};
 use warp::{filters::ws::WebSocket, reject::Rejection, Filter};
 
@@ -224,32 +223,12 @@ pub fn observe_pipeline_get_handler(
 pub async fn start_pipeline(
 	request: SemanticPipelineRequest,
 	semantic_service_mailbox: MessageBus<SemanticService>,
-	mut event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
-	mut index_storages: Vec<Arc<dyn storage::Storage>>,
+	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
+	index_storages: Vec<Arc<dyn storage::Storage>>,
 	secret_store: Arc<dyn storage::Storage>,
 	metadata_store: Arc<dyn storage::Storage>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
-	if request.storage_configs.is_empty() && event_storages.is_empty() && index_storages.is_empty()
-	{
-		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
-			"Storage configs are missing and no event storages are provided."
-		)));
-	}
-	let surreal_db_path = Path::new("/tmp/querent_surreal_db").to_path_buf();
-
-	if !request.storage_configs.is_empty() {
-		(event_storages, index_storages) =
-			create_storages(&request.storage_configs.clone(), surreal_db_path)
-				.await
-				.map_err(|e| {
-					PipelineErrors::InvalidParams(anyhow::anyhow!(
-						"Failed to create storages: {:?}",
-						e
-					))
-				})?;
-	}
-
 	// Extract entities from request.fixed_entities or use a default
 	let entities = match &request.fixed_entities {
 		Some(fixed_entities) => fixed_entities.entities.clone(),

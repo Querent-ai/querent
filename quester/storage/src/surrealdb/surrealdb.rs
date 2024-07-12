@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fs, path::PathBuf, sync::Arc};
 
-use crate::{SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
@@ -413,6 +413,24 @@ impl Storage for SurrealDB {
 		_session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
+	}
+
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		_query: Option<String>,
+		_session_id: Option<String>,
+		_response: Option<String>,
+	) -> StorageResult<()> {
+		Ok(())
 	}
 }
 

@@ -4287,6 +4287,7 @@ dependencies = [
  "diesel",
  "diesel-async",
  "docx-rust",
+ "fastembed",
  "futures",
  "futures-util",
  "google-drive3",

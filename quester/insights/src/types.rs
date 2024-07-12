@@ -28,6 +28,8 @@ pub struct InsightInfo {
 	pub icon: &'static [u8],
 	/// Insight options
 	pub additional_options: HashMap<String, CustomInsightOption>,
+	/// Is a premium insight.
+	pub premium: bool,
 }
 
 /// Possible custom option values for insights.
@@ -170,7 +172,7 @@ pub enum ConfigCallbackResponse {
 #[derive(Clone)]
 pub struct InsightConfig {
 	pub id: String,
-	pub discovery_sesssion_id: String,
+	pub discovery_session_id: String,
 	pub semantic_pipeline_id: String,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
@@ -180,7 +182,7 @@ pub struct InsightConfig {
 impl InsightConfig {
 	pub fn new(
 		id: String,
-		discovery_sesssion_id: String,
+		discovery_session_id: String,
 		semantic_pipeline_id: String,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
@@ -188,7 +190,7 @@ impl InsightConfig {
 	) -> InsightConfig {
 		InsightConfig {
 			id,
-			discovery_sesssion_id,
+			discovery_session_id,
 			semantic_pipeline_id,
 			event_storages,
 			index_storages,

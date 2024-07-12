@@ -9,6 +9,8 @@ use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, Insight
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::DiscoveredKnowledge;
+
 /// Storage error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum StorageErrorKind {
@@ -124,6 +126,12 @@ pub trait Storage: Send + Sync + 'static {
 		filtered_pairs: Vec<(String, String)>,
 	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>>;
 
+	/// Get discovered data based on session_id
+	async fn get_discovered_data(
+		&self,
+		session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>>;
+
 	/// Store key value pair
 	async fn store_secret(&self, key: &String, value: &String) -> StorageResult<()>;
 
@@ -189,6 +197,14 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>>;
+
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		query: Option<String>,
+		session_id: Option<String>,
+		response: Option<String>,
+	) -> StorageResult<()>;
 }
 
 impl Debug for dyn Storage {
