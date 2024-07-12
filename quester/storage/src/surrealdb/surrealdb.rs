@@ -110,22 +110,17 @@ struct Record {
 
 impl SurrealDB {
 	pub async fn new(surreal_config: SurrealDbConfig) -> StorageResult<Self> {
-		// port = "127.0.0.1:8000"
 		let config = Config::default().strict();
 		let db = Surreal::new::<RocksDb>((surreal_config.path.clone(), config)).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 
-		println!("Inside surreal db new");
-
-		// Use the correct namespace and database
 		let _ = db.use_ns(NAMESPACE).use_db(DATABASE).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 
-		// Ensure namespace and database exist
 		let create_ns_db_query =
 			format!("DEFINE NAMESPACE {}; DEFINE DATABASE {};", NAMESPACE, DATABASE);
 		db.query(&create_ns_db_query).await.map_err(|e| StorageError {
@@ -161,8 +156,8 @@ impl Storage for SurrealDB {
 		_collection_id: String,
 		payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
+		let _ = self.db.query("Delete * from embedded_knowledge").await;
 
-		println!("Reached here zfvhdbzfhjvbf");
 		for (_document_id, _source, _image_id, item) in payload {
 			let form = EmbeddedKnowledgeSurrealDb {
 				embeddings: item.embeddings.clone(), // Assuming embeddings is a Vec<f32>
@@ -652,14 +647,12 @@ mod tests {
 	async fn test_insert_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
 
 		let config = SurrealDbConfig {path: "../../../../db".to_string()};
-		println!("Here tooo 12345");
 		let surrealdb = SurrealDB::new(config).await?;
 
 		// Read the CSV file		
 		let file_path = "/home/ansh/Downloads/semantic_knowledge (3).csv";
 		let mut rdr = Reader::from_path(file_path)?;
 
-		println!("Reached gere 123");
 		let mut payload = Vec::new();
 		for result in rdr.deserialize() {
 			let record: CsvRecord = result?;
@@ -693,7 +686,7 @@ mod tests {
 		let surrealdb = SurrealDB::new(config).await?;
 
 		// Read the CSV file		
-		let file_path = "/home/nishantg/Downloads/surreal/embedded_knowledge.csv";
+		let file_path = "/home/ansh/Downloads/embedded_knowledge.csv";
 		let mut rdr = Reader::from_path(file_path)?;
 
 		let mut payload = Vec::new();
@@ -706,7 +699,6 @@ mod tests {
 				.split(',')
 				.filter_map(|s| s.trim().parse().ok())
 				.collect();
-			println!("Deserialized record atleast");
 			let vector_payload = VectorPayload {
 				embeddings: embeddings,
 				score: record.score.clone(),
@@ -779,39 +771,13 @@ async fn test_vector_dimensions() -> Result<(), Box<dyn std::error::Error>> {
     let embeddings = embedder.embed(vec![query.clone()], None)?;
     let current_query_embedding = embeddings[0].clone();
 
-    let vector_payload = vec![(
-        "doc1".to_string(),
-        "source1".to_string(),
-        None,
-        VectorPayload {
-            embeddings: current_query_embedding.clone(),
-            score: 1.0,
-            event_id: "event1".to_string(),
-        },
-    )];
-    surreal_db.insert_vector("collection1".to_string(), &vector_payload).await?;
-
-    // Check dimensions
-    let query_embeddings = vec![0.1, 0.2, 0.3];
-    if current_query_embedding.len() != query_embeddings.len() {
-        println!(
-            "Dimension mismatch: inserted vector length = {}, query vector length = {}",
-            current_query_embedding.len(),
-            query_embeddings.len()
-        );
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Dimension mismatch between inserted vector and query vector",
-        )) as Box<dyn std::error::Error>);
-    }
-
     // Perform a similarity search
     let results = surreal_db
         .similarity_search_l2(
             "session1".to_string(),
             "query1".to_string(),
             "collection1".to_string(),
-            &query_embeddings,
+            &current_query_embedding,
             10,
             0,
         )

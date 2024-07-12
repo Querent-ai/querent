@@ -54,6 +54,7 @@ async fn main_impl() -> Result<(), anyhow::Error> {
 		"{} ({} {})",
 		build_info.version, build_info.commit_short_hash, build_info.build_date
 	);
+	log::error!("Querent version: {}", version);
 	let app = build_cli().about(about_text).version(version);
 	let matches = app.get_matches();
 	let command = match CliCommand::parse_cli_args(matches) {

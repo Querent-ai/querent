@@ -91,14 +91,14 @@ pub mod busy_detector {
 
 impl Serve {
 	pub fn parse_cli_args(mut matches: ArgMatches) -> anyhow::Result<Self> {
-		let config_uri = matches.remove_one::<String>("config").expect("`node config required");
-		Ok(Serve { node_config_uri: config_uri })
+		let config_uri = matches.try_remove_one::<String>("config").unwrap_or_default();
+		Ok(Serve { node_config_uri: config_uri.unwrap_or_default() })
 	}
 
 	pub async fn execute(&self) -> anyhow::Result<()> {
 		debug!(args = ?self, "run-querent-service");
 		busy_detector::set_enabled(true);
-		let node_config = load_node_config(&self.node_config_uri).await?;
+		let node_config = load_node_config(&self.node_config_uri).await.unwrap_or_default();
 
 		let runtimes_config = RuntimesConfig::default();
 		initialize_runtimes(runtimes_config)?;
