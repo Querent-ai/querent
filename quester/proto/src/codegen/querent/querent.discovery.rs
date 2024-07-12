@@ -8,23 +8,11 @@ pub struct DiscoverySessionRequest {
     /// Name of the discovery agent
     #[prost(string, tag = "1")]
     pub agent_name: ::prost::alloc::string::String,
-    /// Optional storage storage_configs
-    #[prost(message, repeated, tag = "5")]
-    pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
-    /// Max message memory size
-    #[prost(int32, tag = "6")]
-    pub max_message_memory_size: i32,
-    /// Max query tokens size
-    #[prost(int32, tag = "7")]
-    pub max_query_tokens_size: i32,
     /// Semantic pipeline ID
-    #[prost(string, tag = "8")]
+    #[prost(string, tag = "2")]
     pub semantic_pipeline_id: ::prost::alloc::string::String,
-    /// OpenAI API key
-    #[prost(string, tag = "9")]
-    pub openai_api_key: ::prost::alloc::string::String,
     /// Discovery Session Type
-    #[prost(message, optional, tag = "10")]
+    #[prost(message, optional, tag = "3")]
     pub session_type: ::core::option::Option<DiscoveryAgentType>,
 }
 /// Session AgentID as a response
