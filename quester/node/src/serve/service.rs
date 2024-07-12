@@ -45,8 +45,10 @@ pub async fn serve_quester(
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Quester::new();
-	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
+	info!("Creating storages 🗄️");
 	let surreal_db_path = std::path::Path::new("/tmp/querent_surreal_db");
+	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
+	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
 	let metadata_store = create_metadata_store(secert_store_path.to_path_buf()).await?;
 
 	let (event_storages, index_storages) =
@@ -99,10 +101,6 @@ pub async fn serve_quester(
 		}
 	});
 
-	info!("Creating storages 🗄️");
-	let (event_storages, index_storages) =
-		create_storages(&node_config.storage_configs.0, surreal_db_path.to_path_buf()).await?;
-	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
 		cluster: cluster.clone(),

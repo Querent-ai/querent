@@ -11,7 +11,6 @@ use proto::{
 use std::{
 	collections::HashMap,
 	fmt::{Debug, Formatter},
-	path::Path,
 	sync::Arc,
 };
 use storage::Storage;
