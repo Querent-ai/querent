@@ -1,9 +1,11 @@
-use std::{fs, sync::Arc};
+use std::{collections::HashSet, fs, sync::Arc};
 
 use crate::{SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use diesel::sql_types::{Float, Integer};
+use futures_util::future::BoxFuture;
 use proto::{
 	semantics::{SemanticPipelineRequest, SurrealDbConfig},
 	DiscoverySessionRequest, InsightAnalystRequest,
@@ -12,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use surrealdb::{
 	engine::local::{Db, RocksDb},
 	opt::Config,
-	sql::Thing,
+	sql::{Number, Thing, Value},
 	Response, Surreal,
 };
 const NAMESPACE: &str = "querent";
@@ -42,6 +44,28 @@ struct QueryResultSemantic {
 	document_source: String,
 	sentence: String,
 }
+
+#[derive(Debug, Deserialize)]
+struct CsvRecord {
+    pub document_id: String,
+    pub document_source: String,
+    pub image_id: Option<String>,
+    pub subject: String,
+    pub subject_type: String,
+    pub object: String,
+    pub object_type: String,
+    pub sentence: String,
+    pub event_id: String,
+    pub source_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct VectorRecord {
+    pub embeddings: Vec<f32>,
+	pub score: f32,
+	pub event_id: String,
+}
+
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
 pub struct DiscoveredKnowledgeSurrealDb {
@@ -85,14 +109,17 @@ struct Record {
 }
 
 impl SurrealDB {
-	async fn new(_config: SurrealDbConfig) -> StorageResult<Self> {
+	pub async fn new(_config: SurrealDbConfig) -> StorageResult<Self> {
 		// port = "127.0.0.1:8000"
 		let config = Config::default().strict();
-		let db_path = "../../../../db".to_string();
+		let db_path = "/home/ansh/querent/quester/quester/db".to_string();
+		println!("Inside surreal db new");
 		let db = Surreal::new::<RocksDb>((db_path, config)).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+
+		println!("Inside surreal db new");
 
 		// Use the correct namespace and database
 		let _ = db.use_ns(NAMESPACE).use_db(DATABASE).await.map_err(|e| StorageError {
@@ -108,7 +135,7 @@ impl SurrealDB {
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 
-		let sql_file_path = "./storage/src/surrealdb/tables-definition.sql";
+		let sql_file_path = "/home/ansh/querent/quester/quester/storage/src/surrealdb/tables-definition.sql";
 		let sql = fs::read_to_string(sql_file_path).map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(Error::from(e)),
@@ -136,6 +163,8 @@ impl Storage for SurrealDB {
 		_collection_id: String,
 		payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
+
+		println!("Reached here zfvhdbzfhjvbf");
 		for (_document_id, _source, _image_id, item) in payload {
 			let form = EmbeddedKnowledgeSurrealDb {
 				embeddings: item.embeddings.clone(), // Assuming embeddings is a Vec<f32>
@@ -188,7 +217,7 @@ impl Storage for SurrealDB {
 		let query_string = format!(
 			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance 
 			FROM embedded_knowledge 
-			WHERE vector::similarity::cosine(embeddings, $payload) <= 0.2 
+			WHERE vector::similarity::cosine(embeddings, $payload) > 0.8
 			ORDER BY cosine_distance 
 			LIMIT {}",
 			max_results
@@ -398,47 +427,270 @@ impl Storage for SurrealDB {
 	}
 }
 
+
+pub fn traverse_node<'a>(
+    db: &'a Surreal<Db>,
+    node: String,
+    combined_results: &'a mut Vec<(i32, String, String, String, String, String, String, f32)>,
+    visited_pairs: &'a mut HashSet<(String, String)>,
+    depth: usize,
+) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
+    Box::pin(async move {
+		if depth > 2 {
+			return Ok(());
+		}
+
+		// Fetch inward edges
+		let inward_query = format!(
+			"SELECT id, document_id, subject, object, document_source, sentence, event_id FROM semantic_knowledge WHERE object = '{}'", 
+			node
+		);
+
+		let mut response: Response = db.query(inward_query).await?;
+		let inward_results: Vec<Value> = response.take(0)?;
+
+		for result in inward_results {
+			if let Value::Object(obj) = result {
+				let id = match obj.get("id") {
+					Some(Value::Number(Number::Int(i))) => *i as i32,
+					_ => continue,
+				};
+				let doc_id = match obj.get("document_id") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let subject = match obj.get("subject") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let object = match obj.get("object") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let doc_source = match obj.get("document_source") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let sentence = match obj.get("sentence") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let event_id = match obj.get("event_id") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+
+				let score_query = format!(
+					"SELECT score FROM embedded_knowledge WHERE event_id = '{}'", 
+					event_id
+				);
+
+				let mut score_response: Response = db.query(score_query).await?;
+				let score_result: Vec<Value> = score_response.take(0)?;
+				let score = match score_result.first() {
+					Some(Value::Object(obj)) => match obj.get("score") {
+						Some(Value::Number(Number::Float(f))) => *f,
+						_ => continue,
+					},
+					_ => continue,
+				};
+				let score = score as f32;
+
+				if visited_pairs.insert((subject.clone(), object.clone())) {
+					combined_results.push((
+						id, doc_id, subject.clone(), object.clone(), doc_source, sentence, event_id, score,
+					));
+					traverse_node(
+						db,
+						subject,
+						combined_results,
+						visited_pairs,
+						depth + 1,
+					).await?;
+				}
+			}
+		}
+
+		// Fetch outward edges
+		let outward_query = format!(
+			"SELECT id, document_id, subject, object, document_source, sentence, event_id FROM semantic_knowledge WHERE subject = '{}'", 
+			node
+		);
+
+		let mut response: Response = db.query(outward_query).await?;
+		let outward_results: Vec<Value> = response.take(0)?;
+
+		for result in outward_results {
+			if let Value::Object(obj) = result {
+				let id = match obj.get("id") {
+					Some(Value::Number(Number::Int(i))) => *i as i32,
+					_ => continue,
+				};
+				let doc_id = match obj.get("document_id") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let subject = match obj.get("subject") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let object = match obj.get("object") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let doc_source = match obj.get("document_source") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let sentence = match obj.get("sentence") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+				let event_id = match obj.get("event_id") {
+					Some(Value::Strand(s)) => s.to_string(),
+					_ => continue,
+				};
+
+				let score_query = format!(
+					"SELECT score FROM embedded_knowledge WHERE event_id = '{}'", 
+					event_id
+				);
+
+				let mut score_response: Response = db.query(score_query).await?;
+				let score_result: Vec<Value> = score_response.take(0)?;
+				let score = match score_result.first() {
+					Some(Value::Object(obj)) => match obj.get("score") {
+						Some(Value::Number(Number::Float(f))) => *f,
+						_ => continue,
+					},
+					_ => continue,
+				};
+				let score = score as f32;
+
+				if visited_pairs.insert((subject.clone(), object.clone())) {
+					combined_results.push((
+						id, doc_id, subject.clone(), object.clone(), doc_source, sentence, event_id, score,
+					));
+					traverse_node(
+						db,
+						object,
+						combined_results,
+						visited_pairs,
+						depth + 1,
+					).await?;
+				}
+			}
+		}
+
+		Ok(())
+	})
+}
+
+
 #[cfg(test)]
 mod tests {
 
-	use crate::{surrealdb::surrealdb::SurrealDB, Storage};
+	use crate::{surrealdb::surrealdb::{CsvRecord, SurrealDB, VectorRecord}, Storage};
 	use common::{SemanticKnowledgePayload, VectorPayload};
 	use proto::semantics::SurrealDbConfig;
+	use csv::Reader;
+	use fastembed::TextEmbedding;
+	use fastembed::InitOptions;
+	use fastembed::EmbeddingModel;
+
+	#[tokio::test]
+	async fn test_insert_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
+
+		let config = SurrealDbConfig {path: "../../../../db".to_string()};
+		println!("Here tooo 12345");
+		let surrealdb = SurrealDB::new(config).await?;
+
+		// Read the CSV file		
+		let file_path = "/home/ansh/Downloads/semantic_knowledge (3).csv";
+		let mut rdr = Reader::from_path(file_path)?;
+
+		println!("Reached gere 123");
+		let mut payload = Vec::new();
+		for result in rdr.deserialize() {
+			let record: CsvRecord = result?;
+			let semantic_payload = SemanticKnowledgePayload {
+				subject: record.subject,
+				subject_type: record.subject_type,
+				object: record.object,
+				object_type: record.object_type,
+				sentence: record.sentence,
+				event_id: record.event_id,
+				source_id: record.source_id,
+				predicate: "abbc".to_string(),
+				predicate_type: "abbc".to_string(),
+				image_id: None,
+				blob: None,
+			};
+			payload.push(("doc1".to_string(), "source1".to_string(), Some("".to_string()), semantic_payload));
+		}
+
+		// Insert into SurrealDB
+		surrealdb.index_knowledge("abcd".to_string(), &payload).await?;
+
+		Ok(())
+	}
+
+
+	#[tokio::test]
+	async fn test_vector_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
+
+		let config = SurrealDbConfig {path: "../../../../db".to_string()};
+		println!("Here tooo 12345");
+		let surrealdb = SurrealDB::new(config).await?;
+
+		// Read the CSV file		
+		let file_path = "/home/ansh/Downloads/embedded_knowledge.csv";
+		let mut rdr = Reader::from_path(file_path)?;
+
+		let mut payload = Vec::new();
+		for result in rdr.deserialize() {
+			let record: VectorRecord = result?;
+			println!("Deserialized record atleast");
+			let vector_payload = VectorPayload {
+				embeddings: record.embeddings.clone(),
+				score: record.score.clone(),
+				event_id: record.event_id.clone(),
+			};
+			payload.push(("doc1".to_string(), "source1".to_string(), Some("".to_string()), vector_payload));
+		}
+
+		// Insert into SurrealDB
+		surrealdb.insert_vector("abcd".to_string(), &payload).await?;
+
+		Ok(())
+	}
 
 	#[tokio::test]
 	async fn test_surrealdb_integration() -> Result<(), Box<dyn std::error::Error>> {
-		// Step 1: Create a new instance of SurrealDB
-		let config = SurrealDbConfig {};
+		let config = SurrealDbConfig {
+			path: "../../../../db".to_string()
+		};
 		let surreal_db = SurrealDB::new(config).await?;
 
-		// Step 2: Insert data into semantic_knowledge table
-		let semantic_payload = vec![(
-			"doc1".to_string(),
-			"source1".to_string(),
-			Some("".to_string()),
-			SemanticKnowledgePayload {
-				sentence: "sentence1".to_string(),
-				subject: "subject1".to_string(),
-				object: "object1".to_string(),
-				subject_type: "type 1".to_string(),
-				object_type: "type 2".to_string(),
-				predicate: "abcd".to_string(),
-				predicate_type: "type 3".to_string(),
-				blob: Some("blob".to_string()),
-				image_id: Some("".to_string()),
-				event_id: "event1".to_string(),
-				source_id: "source_id".to_string(),
-			},
-		)];
-		surreal_db.index_knowledge("collection1".to_string(), &semantic_payload).await?;
+		let mut current_query_embedding: Vec<f32> = Vec::new();
 
-		// Step 3: Insert data into embedded_knowledge table
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		});
+		let embedder = embedding_model?;
+
+		let query = "What is the fluid type in eagle ford shale?".to_string();
+		let embeddings = embedder.embed(vec![query.clone()], None)?;
+		current_query_embedding = embeddings[0].clone();
+
 		let vector_payload = vec![(
 			"doc1".to_string(),
 			"source1".to_string(),
 			None,
 			VectorPayload {
-				embeddings: vec![0.1, 0.2, 0.3],
+				embeddings: current_query_embedding,
 				score: 1.0,
 				event_id: "event1".to_string(),
 			},
@@ -467,4 +719,5 @@ mod tests {
 
 		Ok(())
 	}
+
 }

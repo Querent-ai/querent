@@ -616,7 +616,11 @@ pub struct Neo4jConfig {
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct SurrealDbConfig {}
+pub struct SurrealDbConfig {
+    /// path of the database
+    #[prost(string, tag = "1")]
+    pub path: ::prost::alloc::string::String,
+}
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

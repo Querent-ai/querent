@@ -408,4 +408,6 @@ message Neo4jConfig {
 }
 
 message SurrealDBConfig {
+  //path of the database
+  string path = 1;
 }

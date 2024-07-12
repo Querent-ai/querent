@@ -8479,6 +8479,7 @@ dependencies = [
  "bincode",
  "chrono",
  "common",
+ "csv",
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
