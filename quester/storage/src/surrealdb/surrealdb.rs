@@ -61,9 +61,10 @@ struct CsvRecord {
 
 #[derive(Debug, Deserialize)]
 struct VectorRecord {
-    pub embeddings: Vec<f32>,
-	pub score: f32,
-	pub event_id: String,
+    pub id: i32,
+    pub embeddings: String,
+    pub score: f32,
+    pub event_id: String,
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
@@ -640,7 +641,6 @@ mod tests {
 	async fn test_vector_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
 
 		let config = SurrealDbConfig {path: "../../../../db".to_string()};
-		println!("Here tooo 12345");
 		let surrealdb = SurrealDB::new(config).await?;
 
 		// Read the CSV file		
@@ -650,9 +650,16 @@ mod tests {
 		let mut payload = Vec::new();
 		for result in rdr.deserialize() {
 			let record: VectorRecord = result?;
+			
+			// Parse embeddings
+			let embeddings: Vec<f32> = record.embeddings
+				.trim_matches(|p| p == '[' || p == ']')
+				.split(',')
+				.filter_map(|s| s.trim().parse().ok())
+				.collect();
 			println!("Deserialized record atleast");
 			let vector_payload = VectorPayload {
-				embeddings: record.embeddings.clone(),
+				embeddings: embeddings,
 				score: record.score.clone(),
 				event_id: record.event_id.clone(),
 			};
