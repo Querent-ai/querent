@@ -1,8 +1,9 @@
 pub mod storage;
 use common::EventType;
 use proto::semantics::{StorageConfig, StorageType};
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 pub use storage::*;
+use surrealdb::surrealdb::SurrealDB;
 pub mod vector;
 use tracing::info;
 pub use vector::*;
@@ -31,9 +32,21 @@ pub use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
 
 pub async fn create_storages(
 	storage_configs: &[StorageConfig],
+	path_buf: PathBuf,
 ) -> anyhow::Result<(HashMap<EventType, Vec<Arc<dyn Storage>>>, Vec<Arc<dyn Storage>>)> {
 	let mut event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
+
+	if storage_configs.len() == 0 {
+		let surreal_db = create_default_storage(path_buf).await.map_err(|err| err)?;
+
+		event_storages
+			.entry(EventType::Vector)
+			.or_insert_with(Vec::new)
+			.push(surreal_db.clone());
+
+		index_storages.push(surreal_db);
+	}
 
 	for storage_config in storage_configs {
 		match storage_config {
@@ -93,6 +106,16 @@ pub async fn create_storages(
 
 	info!("Storages created successfully ✅");
 	Ok((event_storages, index_storages))
+}
+
+pub async fn create_default_storage(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+	let surreal_db = SurrealDB::new(path).await.map_err(|err| {
+		log::error!("Surreal client creation failed: {:?}", err);
+		err
+	})?;
+	let _ = surreal_db.check_connectivity().await;
+	let surreal_db = Arc::new(surreal_db);
+	Ok(surreal_db)
 }
 
 pub async fn create_secret_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {

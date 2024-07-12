@@ -1,9 +1,10 @@
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, fs, path::PathBuf, sync::Arc};
 
 use crate::{SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use csv::Writer;
 use proto::{
 	semantics::{SemanticPipelineRequest, SurrealDbConfig},
 	DiscoverySessionRequest, InsightAnalystRequest,
@@ -35,6 +36,13 @@ struct QueryResultEmbedded {
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
+struct QueryResultEmbedded1 {
+	embeddings: Option<Vec<f32>>,
+	score: f32,
+	event_id: String,
+}
+
+#[derive(Serialize, Debug, Clone, Deserialize)]
 
 struct QueryResultSemantic {
 	document_id: String,
@@ -42,28 +50,6 @@ struct QueryResultSemantic {
 	object: String,
 	document_source: String,
 	sentence: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct CsvRecord {
-	pub document_id: String,
-	pub document_source: String,
-	pub image_id: Option<String>,
-	pub subject: String,
-	pub subject_type: String,
-	pub object: String,
-	pub object_type: String,
-	pub sentence: String,
-	pub event_id: String,
-	pub source_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct VectorRecord {
-	pub id: i32,
-	pub embeddings: String,
-	pub score: f32,
-	pub event_id: String,
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
@@ -109,15 +95,12 @@ struct Record {
 }
 
 impl SurrealDB {
-	pub async fn new(surreal_config: SurrealDbConfig) -> StorageResult<Self> {
+	pub async fn new(path: PathBuf) -> StorageResult<Self> {
 		let config = Config::default().strict();
-		let db =
-			Surreal::new::<RocksDb>((surreal_config.path.clone(), config))
-				.await
-				.map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
+		let db = Surreal::new::<RocksDb>((path, config)).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 
 		let _ = db.use_ns(NAMESPACE).use_db(DATABASE).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -159,8 +142,6 @@ impl Storage for SurrealDB {
 		_collection_id: String,
 		payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
-		let _ = self.db.query("Delete * from embedded_knowledge").await;
-
 		for (_document_id, _source, _image_id, item) in payload {
 			let form = EmbeddedKnowledgeSurrealDb {
 				embeddings: item.embeddings.clone(), // Assuming embeddings is a Vec<f32>
@@ -621,164 +602,192 @@ pub async fn traverse_node<'a>(
 	Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
+#[cfg(test)]
+mod tests {
 
-// 	use crate::{surrealdb::surrealdb::{CsvRecord, SurrealDB, VectorRecord}, Storage};
-// 	use common::{SemanticKnowledgePayload, VectorPayload};
-// 	use proto::semantics::SurrealDbConfig;
-// 	use csv::Reader;
-// 	use fastembed::TextEmbedding;
-// 	use fastembed::InitOptions;
-// 	use fastembed::EmbeddingModel;
+	use std::path::Path;
 
-// 	#[tokio::test]
-// 	async fn test_insert_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
+	use crate::{surrealdb::surrealdb::SurrealDB, Storage};
+	use common::{SemanticKnowledgePayload, VectorPayload};
+	use csv::Reader;
+	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+	use proto::semantics::SurrealDbConfig;
+	use serde::Deserialize;
 
-// 		let config = SurrealDbConfig {path: "../../../../db".to_string()};
-// 		let surrealdb = SurrealDB::new(config).await?;
+	#[derive(Debug, Deserialize)]
+	struct CsvRecord {
+		pub document_id: String,
+		pub document_source: String,
+		pub image_id: Option<String>,
+		pub subject: String,
+		pub subject_type: String,
+		pub object: String,
+		pub object_type: String,
+		pub sentence: String,
+		pub event_id: String,
+		pub source_id: String,
+	}
 
-// 		// Read the CSV file
-// 		let file_path = "/home/ansh/Downloads/semantic_knowledge (3).csv";
-// 		let mut rdr = Reader::from_path(file_path)?;
+	#[derive(Debug, Deserialize)]
+	struct VectorRecord {
+		pub id: i32,
+		pub embeddings: String,
+		pub score: f32,
+		pub event_id: String,
+	}
 
-// 		let mut payload = Vec::new();
-// 		for result in rdr.deserialize() {
-// 			let record: CsvRecord = result?;
-// 			let semantic_payload = SemanticKnowledgePayload {
-// 				subject: record.subject,
-// 				subject_type: record.subject_type,
-// 				object: record.object,
-// 				object_type: record.object_type,
-// 				sentence: record.sentence,
-// 				event_id: record.event_id,
-// 				source_id: record.source_id,
-// 				predicate: "abbc".to_string(),
-// 				predicate_type: "abbc".to_string(),
-// 				image_id: None,
-// 				blob: None,
-// 			};
-// 			payload.push(("doc1".to_string(), "source1".to_string(), Some("".to_string()), semantic_payload));
-// 		}
+	#[tokio::test]
+	async fn test_insert_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
+		let path = Path::new("../../../../db").to_path_buf();
+		let surrealdb = SurrealDB::new(path).await?;
 
-// 		// Insert into SurrealDB
-// 		surrealdb.index_knowledge("abcd".to_string(), &payload).await?;
+		// Read the CSV file
+		let file_path = "/home/ansh/Downloads/semantic_knowledge (3).csv";
+		let mut rdr = Reader::from_path(file_path)?;
 
-// 		Ok(())
-// 	}
+		let mut payload = Vec::new();
+		for result in rdr.deserialize() {
+			let record: CsvRecord = result?;
+			let semantic_payload = SemanticKnowledgePayload {
+				subject: record.subject,
+				subject_type: record.subject_type,
+				object: record.object,
+				object_type: record.object_type,
+				sentence: record.sentence,
+				event_id: record.event_id,
+				source_id: record.source_id,
+				predicate: "abbc".to_string(),
+				predicate_type: "abbc".to_string(),
+				image_id: None,
+				blob: None,
+			};
+			payload.push((
+				"doc1".to_string(),
+				"source1".to_string(),
+				Some("".to_string()),
+				semantic_payload,
+			));
+		}
 
-// 	#[tokio::test]
-// 	async fn test_vector_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
+		// Insert into SurrealDB
+		surrealdb.index_knowledge("abcd".to_string(), &payload).await?;
 
-// 		let config = SurrealDbConfig {path: "../../../../db".to_string()};
-// 		let surrealdb = SurrealDB::new(config).await?;
+		Ok(())
+	}
 
-// 		// Read the CSV file
-// 		let file_path = "/home/ansh/Downloads/embedded_knowledge.csv";
-// 		let mut rdr = Reader::from_path(file_path)?;
+	#[tokio::test]
+	async fn test_vector_csv_data_into_surrealdb() -> Result<(), Box<dyn std::error::Error>> {
+		let path = Path::new("../../../../db").to_path_buf();
+		let surrealdb = SurrealDB::new(path).await?;
 
-// 		let mut payload = Vec::new();
-// 		for result in rdr.deserialize() {
-// 			let record: VectorRecord = result?;
+		// Read the CSV file
+		let file_path = "/home/ansh/Downloads/embedded_knowledge.csv";
+		let mut rdr = Reader::from_path(file_path)?;
 
-// 			// Parse embeddings
-// 			let embeddings: Vec<f32> = record.embeddings
-// 				.trim_matches(|p| p == '[' || p == ']')
-// 				.split(',')
-// 				.filter_map(|s| s.trim().parse().ok())
-// 				.collect();
-// 			let vector_payload = VectorPayload {
-// 				embeddings: embeddings,
-// 				score: record.score.clone(),
-// 				event_id: record.event_id.clone(),
-// 			};
-// 			payload.push(("doc1".to_string(), "source1".to_string(), Some("".to_string()), vector_payload));
-// 		}
+		let mut payload = Vec::new();
+		for result in rdr.deserialize() {
+			let record: VectorRecord = result?;
 
-// 		// Insert into SurrealDB
-// 		surrealdb.insert_vector("abcd".to_string(), &payload).await?;
+			// Parse embeddings
+			let embeddings: Vec<f32> = record
+				.embeddings
+				.trim_matches(|p| p == '[' || p == ']')
+				.split(',')
+				.filter_map(|s| s.trim().parse().ok())
+				.collect();
+			let vector_payload = VectorPayload {
+				embeddings,
+				score: record.score.clone(),
+				event_id: record.event_id.clone(),
+			};
+			payload.push((
+				"doc1".to_string(),
+				"source1".to_string(),
+				Some("".to_string()),
+				vector_payload,
+			));
+		}
 
-// 		Ok(())
-// 	}
+		// Insert into SurrealDB
+		surrealdb.insert_vector("abcd".to_string(), &payload).await?;
 
-// 	#[tokio::test]
-// 	async fn test_surrealdb_integration() -> Result<(), Box<dyn std::error::Error>> {
-// 		let config = SurrealDbConfig {
-// 			path: "../../../../db".to_string()
-// 		};
-// 		let surreal_db = SurrealDB::new(config).await?;
+		Ok(())
+	}
 
-// 		let mut current_query_embedding: Vec<f32> = Vec::new();
+	#[tokio::test]
+	async fn test_surrealdb_integration() -> Result<(), Box<dyn std::error::Error>> {
+		let path = Path::new("../../../../db").to_path_buf();
+		let surreal_db = SurrealDB::new(path).await?;
 
-// 		let embedding_model = TextEmbedding::try_new(InitOptions {
-// 			model_name: EmbeddingModel::AllMiniLML6V2,
-// 			show_download_progress: true,
-// 			..Default::default()
-// 		});
-// 		let embedder = embedding_model?;
+		let mut current_query_embedding: Vec<f32> = Vec::new();
 
-// 		let query = "What is the fluid type in eagle ford shale?".to_string();
-// 		let embeddings = embedder.embed(vec![query.clone()], None)?;
-// 		current_query_embedding = embeddings[0].clone();
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		});
+		let embedder = embedding_model?;
 
-// 		// Step 4: Perform a similarity search
-// 		let results = surreal_db
-// 			.similarity_search_l2(
-// 				"session1".to_string(),
-// 				query,
-// 				"collection1".to_string(),
-// 				&current_query_embedding,
-// 				10,
-// 				0,
-// 			)
-// 			.await?;
+		let query = "What is the fluid type in eagle ford shale?".to_string();
+		let embeddings = embedder.embed(vec![query.clone()], None)?;
+		current_query_embedding = embeddings[0].clone();
+		println!("Dimensions {:?}", current_query_embedding.len());
 
-// 		println!("Results: {:?}", results);
+		// Step 4: Perform a similarity search
+		let results = surreal_db
+			.similarity_search_l2(
+				"session1".to_string(),
+				query,
+				"collection1".to_string(),
+				&current_query_embedding,
+				10,
+				0,
+			)
+			.await?;
 
-// 		// Assertions
-// 		assert!(!results.is_empty());
+		println!("Results: {:?}", results);
 
-// 		Ok(())
-// 	}
+		// Assertions
+		assert!(!results.is_empty());
 
-// 	#[tokio::test]
-// async fn test_vector_dimensions() -> Result<(), Box<dyn std::error::Error>> {
-//     let config = SurrealDbConfig {
-//         path: "../../../../db".to_string(),
-//     };
-//     let surreal_db = SurrealDB::new(config).await?;
+		Ok(())
+	}
 
-//     let embedding_model = TextEmbedding::try_new(InitOptions {
-//         model_name: EmbeddingModel::AllMiniLML6V2,
-//         show_download_progress: true,
-//         ..Default::default()
-//     });
-//     let embedder = embedding_model?;
+	#[tokio::test]
+	async fn test_vector_dimensions() -> Result<(), Box<dyn std::error::Error>> {
+		let path = Path::new("../../../../db").to_path_buf();
+		let surreal_db = SurrealDB::new(path).await?;
 
-//     let query = "What is the fluid type in eagle ford shale?".to_string();
-//     let embeddings = embedder.embed(vec![query.clone()], None)?;
-//     let current_query_embedding = embeddings[0].clone();
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		});
+		let embedder = embedding_model?;
 
-//     // Perform a similarity search
-//     let results = surreal_db
-//         .similarity_search_l2(
-//             "session1".to_string(),
-//             "query1".to_string(),
-//             "collection1".to_string(),
-//             &current_query_embedding,
-//             10,
-//             0,
-//         )
-//         .await?;
+		let query = "What is the fluid type in eagle ford shale?".to_string();
+		let embeddings = embedder.embed(vec![query.clone()], None)?;
+		let current_query_embedding = embeddings[0].clone();
 
-//     println!("Results: {:?}", results);
+		// Perform a similarity search
+		let results = surreal_db
+			.similarity_search_l2(
+				"session1".to_string(),
+				"query1".to_string(),
+				"collection1".to_string(),
+				&current_query_embedding,
+				10,
+				0,
+			)
+			.await?;
 
-//     // Assertions
-//     assert!(!results.is_empty());
-//     assert_eq!(results[0].doc_id, "doc1");
-//     assert_eq!(results[0].subject, "subject1");
+		println!("Results: {:?}", results);
 
-//     Ok(())
-// }
+		// Assertions
+		assert!(!results.is_empty());
+		assert_eq!(results[0].doc_id, "doc1");
+		assert_eq!(results[0].subject, "subject1");
 
-// }
+		Ok(())
+	}
+}
