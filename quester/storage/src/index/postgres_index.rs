@@ -1,3 +1,4 @@
+use crate::DiscoveredKnowledge;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel_async::{
@@ -11,6 +12,7 @@ use proto::{
 	insights::InsightAnalystRequest,
 	semantics::{PostgresConfig, SemanticPipelineRequest},
 };
+
 use std::sync::Arc;
 
 use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
@@ -86,12 +88,30 @@ impl Storage for PostgresStorage {
 		Ok(())
 	}
 
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		_query: Option<String>,
+		_session_id: Option<String>,
+		_response: Option<String>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
 		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
 	}
 
 	/// Insert DiscoveryPayload into storage

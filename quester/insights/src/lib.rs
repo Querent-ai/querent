@@ -5,6 +5,8 @@ pub mod types;
 pub use types::*;
 pub mod x_ai;
 pub use x_ai::*;
+pub mod insight_utils;
+pub use insight_utils::*;
 
 pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
