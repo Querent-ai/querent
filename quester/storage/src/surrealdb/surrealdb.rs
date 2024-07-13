@@ -1,13 +1,12 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
-use crate::{DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{
+	DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
+};
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use proto::{
-	semantics::SemanticPipelineRequest,
-	DiscoverySessionRequest, InsightAnalystRequest,
-};
+use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use serde::{Deserialize, Serialize};
 use surrealdb::{
 	engine::local::{Db, RocksDb},
