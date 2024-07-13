@@ -275,20 +275,20 @@ pub fn create_binary_pairs(
 
 /// Selects the relationship with highest score for a entity pair
 pub fn select_highest_score_relation(head_tail_relations: &HeadTailRelations) -> HeadTailRelations {
-    // Find the relation with the highest score
-    let highest_relation = head_tail_relations.relations.iter()
-        .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
-        .unwrap();
+	// Find the relation with the highest score
+	let highest_relation = head_tail_relations
+		.relations
+		.iter()
+		.max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+		.unwrap();
 
-    // Create a new HeadTailRelations with only the highest scored relation
-    HeadTailRelations {
-        head: head_tail_relations.head.clone(),
-        tail: head_tail_relations.tail.clone(),
-        relations: vec![highest_relation.clone()],
-    }
+	// Create a new HeadTailRelations with only the highest scored relation
+	HeadTailRelations {
+		head: head_tail_relations.head.clone(),
+		tail: head_tail_relations.tail.clone(),
+		relations: vec![highest_relation.clone()],
+	}
 }
-
-
 
 /// Adds attention matrices to the classified sentences with pairs using the provided LLM.
 pub async fn add_attention_to_classified_sentences(

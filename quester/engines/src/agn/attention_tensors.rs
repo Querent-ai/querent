@@ -1,5 +1,9 @@
 use crate::utils::{
-	add_attention_to_classified_sentences, calculate_biased_sentence_embedding, create_binary_pairs, extract_entities_and_types, generate_custom_comb_uuid, label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations, remove_newlines, select_highest_score_relation, split_into_chunks, tokens_to_words, ClassifiedSentence, ClassifiedSentenceWithRelations
+	add_attention_to_classified_sentences, calculate_biased_sentence_embedding,
+	create_binary_pairs, extract_entities_and_types, generate_custom_comb_uuid,
+	label_entities_in_sentences, match_entities_with_tokens, merge_similar_relations,
+	remove_newlines, select_highest_score_relation, split_into_chunks, tokens_to_words,
+	ClassifiedSentence, ClassifiedSentenceWithRelations,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -215,10 +219,10 @@ impl Engine for AttentionTensorsEngine {
 
 						// Use select_highest_score_relation function here
 						let highest_scored_relation = select_highest_score_relation(&head_tail_relations);
-						
+
 						sentence_relations.push(highest_scored_relation);
 					}
-					
+
 					all_sentences_with_relations.push(ClassifiedSentenceWithRelations {
 						classified_sentence: classified.classified_sentence.clone(),
 						attention_matrix: Some(attention_matrix),
@@ -227,7 +231,7 @@ impl Engine for AttentionTensorsEngine {
 				}
 
 				merge_similar_relations(&mut all_sentences_with_relations);
-				
+
 				if !all_sentences_with_relations.is_empty()  && entities.is_empty(){
 					(entities, sample_entities) = extract_entities_and_types(all_sentences_with_relations.clone());
 				}
