@@ -94,6 +94,7 @@ impl IndexingStatistics {
 		ingestor_counters: &IngestorCounters,
 		collection_counters: Vec<serde_json::Value>,
 	) -> Self {
+		self.total_docs = 0;
 		let qflow_counters: EventsCounter =
 			serde_json::from_value(qflow_counters.clone()).unwrap_or_default();
 		for counter in collection_counters {
