@@ -273,8 +273,13 @@ pub fn create_binary_pairs(
 	results
 }
 
-/// Selects the relationship with highest score for a entity pair
+/// Selects the relationship with the highest score for an entity pair
 pub fn select_highest_score_relation(head_tail_relations: &HeadTailRelations) -> HeadTailRelations {
+	// Check if the relations vector is empty
+	if head_tail_relations.relations.is_empty() {
+		return head_tail_relations.clone();
+	}
+
 	// Find the relation with the highest score
 	let highest_relation = head_tail_relations
 		.relations
