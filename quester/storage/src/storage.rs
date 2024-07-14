@@ -11,6 +11,8 @@ use thiserror::Error;
 
 use crate::DiscoveredKnowledge;
 
+pub const RIAN_API_KEY: &str = "RIAN_API_KEY";
+
 /// Storage error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum StorageErrorKind {
@@ -205,6 +207,12 @@ pub trait Storage: Send + Sync + 'static {
 		session_id: Option<String>,
 		response: Option<String>,
 	) -> StorageResult<()>;
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()>;
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>>;
 }
 
 impl Debug for dyn Storage {
