@@ -40,26 +40,6 @@ pub async fn start_semantic_service(
 	Ok(semantic_service_mailbox)
 }
 
-const _CODE_CONFIG_EVENT_HANDLER: &str = r#"
-import asyncio
-import json
-
-async def print_querent(config, text: str):
-    print(text + ": Engine Bot 🤖") 
-    querent_started = False
-
-    try:
-        import querent
-        print("✨ Querent imported successfully for ai engines✨")
-        querent_started = True
-        await querent.workflow.start_workflow(config)
-        return
-    except Exception as e:
-        querent_started = False
-        print("❌ Failed to import querent:  " + str(e))
-
-"#;
-
 pub async fn create_dynamic_sources(
 	collectors_configs: Vec<CollectorConfig>,
 ) -> Result<Vec<Arc<dyn sources::Source>>, PipelineErrors> {

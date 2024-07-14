@@ -7,9 +7,20 @@ use node::{
 use once_cell::sync::OnceCell;
 use opentelemetry::global;
 use tokio::runtime::{Builder, Runtime};
-use tracing::{error, info, trace};
+
+/// The main tokio runtime takes num_cores / 3 threads by default, and can be overridden by the
+/// QUERENT_RUNTIME_NUM_THREADS environment variable.
+fn get_main_runtime_num_threads() -> usize {
+	let default_num_runtime_threads = num_cpus::get() / 3;
+	std::env::var("QUERENT_RUNTIME_NUM_THREADS")
+		.ok()
+		.and_then(|num_threads_str| num_threads_str.parse().ok())
+		.unwrap_or(default_num_runtime_threads)
+}
 
 pub fn tokio_runtime() -> Result<&'static Runtime, anyhow::Error> {
+	let main_runtime_num_threads: usize = get_main_runtime_num_threads();
+
 	static RUNTIME: OnceCell<Runtime> = OnceCell::new();
 
 	RUNTIME.get_or_try_init(|| {
@@ -17,6 +28,7 @@ pub fn tokio_runtime() -> Result<&'static Runtime, anyhow::Error> {
 			.enable_all()
 			.on_thread_unpark(busy_detector::thread_unpark)
 			.on_thread_park(busy_detector::thread_park)
+			.worker_threads(main_runtime_num_threads)
 			.build()
 			.map_err(|err| anyhow::anyhow!("Failed to create tokio runtime: {}", err))
 	})
@@ -29,22 +41,20 @@ fn main() -> Result<(), anyhow::Error> {
 		.expect("Failed to install ring as the default crypto provider");
 	match runtime {
 		Ok(runtime) => {
-			info!("⚙️ Querent Runtime initialized.");
-			trace!("Starting main loop");
 			let _ = runtime
 				.block_on(main_impl())
 				.map_err(|e| anyhow::anyhow!("Main loop failed: {:?}", e));
-			info!("Querent node stopped.");
 			Ok(())
 		},
 		Err(e) => {
-			error!("Failed to initialize tokio runtime: {:?}", e);
+			log::error!("Failed to initialize tokio runtime: {:?}", e);
 			Err(e)
 		},
 	}
 }
 
 async fn main_impl() -> Result<(), anyhow::Error> {
+	setup_logging_and_tracing();
 	#[cfg(feature = "openssl-support")]
 	openssl_probe::init_ssl_cert_env_vars();
 
@@ -54,7 +64,7 @@ async fn main_impl() -> Result<(), anyhow::Error> {
 		"{} ({} {})",
 		build_info.version, build_info.commit_short_hash, build_info.build_date
 	);
-	log::error!("Querent version: {}", version);
+	log::info!("Starting Querent RIAN Immersive Intelligence Node 🧠 {}", version);
 	let app = build_cli().about(about_text).version(version);
 	let matches = app.get_matches();
 	let command = match CliCommand::parse_cli_args(matches) {
@@ -64,8 +74,6 @@ async fn main_impl() -> Result<(), anyhow::Error> {
 			std::process::exit(1);
 		},
 	};
-	setup_logging_and_tracing(command.default_log_level(), true, build_info)
-		.map_err(|e| anyhow::anyhow!("Failed to set up logging and tracing: {:?}", e))?;
 
 	let return_code: i32 = if let Err(err) = command.execute().await {
 		eprintln!("{} Command failed: {:?}\n", "✘".color(RED_COLOR), err);

@@ -66,7 +66,7 @@ impl Actor for Indexer {
 	}
 
 	fn runtime_handle(&self) -> Handle {
-		RuntimeType::Blocking.get_runtime_handle()
+		RuntimeType::NonBlocking.get_runtime_handle()
 	}
 
 	#[inline]

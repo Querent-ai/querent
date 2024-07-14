@@ -90,3 +90,4 @@ zip = { workspace = true }
 openssl-support = ["openssl-probe"]
 default = ["openssl-support"]
 testsuite = []
+console = ["console-subscriber"]
