@@ -106,6 +106,7 @@ pub(crate) async fn start_rest_server(
 	let health_check_routes = health_check_handlers(
 		services.cluster.clone(),
 		Some(services.semantic_service_bus.clone()),
+		services.secret_store.clone(),
 	);
 
 	// `/metrics` route.
