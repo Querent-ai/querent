@@ -40,3 +40,11 @@ DEFINE FIELD query_embedding ON TABLE discovered_knowledge TYPE array<float>;
 DEFINE FIELD query ON TABLE discovered_knowledge TYPE string;
 DEFINE FIELD session_id ON TABLE discovered_knowledge TYPE string;
 DEFINE FIELD score ON TABLE discovered_knowledge TYPE float;
+
+
+DEFINE TABLE insight_knowledge SCHEMAFULL;
+
+DEFINE FIELD id ON TABLE insight_knowledge TYPE any;
+DEFINE FIELD session_id ON TABLE insight_knowledge TYPE string;
+DEFINE FIELD query ON TABLE insight_knowledge TYPE string;
+DEFINE FIELD response ON TABLE insight_knowledge TYPE string;

@@ -40,6 +40,14 @@ struct QueryResultEmbedded1 {
 	event_id: String,
 }
 
+
+#[derive(Serialize, Debug, Clone, Deserialize)]
+
+pub struct InsightKnowledgeSurrealDb {
+	pub session_id: String,
+	pub query: String,
+	pub response: String
+}
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
 struct QueryResultSemantic {
@@ -131,6 +139,30 @@ impl SurrealDB {
 impl Storage for SurrealDB {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _query_response = self.db.query("SELECT * FROM non_existing_table LIMIT 1;").await;
+
+		Ok(())
+	}
+
+    async fn insert_insight_knowledge(
+		&self,
+		query: Option<String>,
+		session_id: Option<String>,
+		response: Option<String>,
+	) -> StorageResult<()> {
+		let form = InsightKnowledgeSurrealDb {
+			session_id: session_id.unwrap().clone(),
+			query: query.unwrap().clone(),
+			response: response.unwrap().clone(),
+		};
+
+		let created: Vec<Record> =
+			self.db.create("insight_knowledge").content(form).await.map_err(|e| {
+				StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				}
+			})?;
+		dbg!(created);
 
 		Ok(())
 	}
@@ -421,15 +453,7 @@ impl Storage for SurrealDB {
 		Ok(vec![])
 	}
 
-	/// Insert InsightKnowledge into storage
-	async fn insert_insight_knowledge(
-		&self,
-		_query: Option<String>,
-		_session_id: Option<String>,
-		_response: Option<String>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
+
 }
 
 pub async fn traverse_node<'a>(
