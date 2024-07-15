@@ -273,6 +273,31 @@ pub fn create_binary_pairs(
 	results
 }
 
+/// Selects the relationship with the highest score for an entity pair
+/// Selects the relationship with the highest score for an entity pair
+pub fn select_highest_score_relation(head_tail_relations: &HeadTailRelations) -> HeadTailRelations {
+	// Check if the relations vector is empty
+	if head_tail_relations.relations.is_empty() {
+		return head_tail_relations.clone();
+	}
+
+	// Find the relation with the highest score
+	let highest_relation = head_tail_relations
+		.relations
+		.iter()
+		.max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
+
+	// Handle the case where no relation is found
+	match highest_relation {
+		Some(relation) => HeadTailRelations {
+			head: head_tail_relations.head.clone(),
+			tail: head_tail_relations.tail.clone(),
+			relations: vec![relation.clone()],
+		},
+		None => head_tail_relations.clone(),
+	}
+}
+
 /// Adds attention matrices to the classified sentences with pairs using the provided LLM.
 pub async fn add_attention_to_classified_sentences(
 	llm: &dyn LLM,
