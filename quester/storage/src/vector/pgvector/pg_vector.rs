@@ -37,6 +37,14 @@ pub struct EmbeddedKnowledge {
 }
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[diesel(table_name = insight_knowledge)]
+pub struct InsightKnowledge {
+	pub query: Option<String>,
+	pub session_id: Option<String>,
+	pub response: Option<String>,
+}
+
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = discovered_knowledge)]
 pub struct DiscoveredKnowledge {
 	pub doc_id: String,
@@ -181,6 +189,129 @@ impl Storage for PGVector {
 		})?;
 
 		Ok(())
+	}
+
+	async fn insert_insight_knowledge(
+		&self,
+		query: Option<String>,
+		session_id: Option<String>,
+		response: Option<String>,
+	) -> StorageResult<()> {
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		conn.transaction::<_, diesel::result::Error, _>(|conn| {
+			async move {
+				let new_knowledge = InsightKnowledge { query, session_id, response };
+				diesel::insert_into(insight_knowledge::table)
+					.values(&new_knowledge)
+					.execute(conn)
+					.await?;
+				Ok(())
+			}
+			.scope_boxed()
+		})
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		Ok(())
+	}
+
+	async fn get_discovered_data(
+		&self,
+		session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		// Ok(vec![])
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let results = conn
+			.transaction::<_, diesel::result::Error, _>(|conn| {
+				async move {
+					let query_result = discovered_knowledge::dsl::discovered_knowledge
+						.select((
+							discovered_knowledge::dsl::doc_id,
+							discovered_knowledge::dsl::doc_source,
+							discovered_knowledge::dsl::sentence,
+							discovered_knowledge::dsl::subject,
+							discovered_knowledge::dsl::object,
+							discovered_knowledge::dsl::cosine_distance,
+							discovered_knowledge::dsl::session_id,
+							discovered_knowledge::dsl::score,
+							discovered_knowledge::dsl::query,
+							discovered_knowledge::dsl::query_embedding,
+							discovered_knowledge::dsl::collection_id,
+						))
+						.filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+						.load::<(
+							String,
+							String,
+							String,
+							String,
+							String,
+							Option<f64>,
+							Option<String>,
+							Option<f64>,
+							Option<String>,
+							Option<Vector>,
+							String,
+						)>(conn)
+						.await;
+
+					match query_result {
+						Ok(result) => {
+							let mut results: Vec<DiscoveredKnowledge> = Vec::new();
+							for (
+								doc_id,
+								doc_source,
+								sentence,
+								subject,
+								object,
+								cosine_distance,
+								session_id,
+								score,
+								query,
+								query_embedding,
+								collection_id,
+							) in result
+							{
+								let doc_payload = DiscoveredKnowledge {
+									doc_id,
+									doc_source,
+									sentence,
+									subject,
+									object,
+									cosine_distance,
+									session_id,
+									score,
+									query,
+									query_embedding,
+									collection_id,
+								};
+								results.push(doc_payload);
+							}
+							Ok(results)
+						},
+						Err(e) => {
+							eprintln!("Error querying semantic data: {:?}", e);
+							Err(e)
+						},
+					}
+				}
+				.scope_boxed()
+			})
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		Ok(results)
 	}
 
 	async fn similarity_search_l2(
@@ -425,6 +556,16 @@ impl Storage for PGVector {
 	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
 	}
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
+		Ok(None)
+	}
 }
 
 table! {
@@ -436,6 +577,19 @@ table! {
 		embeddings -> Nullable<Vector>,
 		score -> Float4,
 		event_id -> VarChar,
+	}
+}
+
+table! {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	insight_knowledge (id) {
+		id -> Int4,
+		query -> Nullable<Text>,
+		session_id -> Nullable<Text>,
+		response -> Nullable<Text>,
+
 	}
 }
 

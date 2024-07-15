@@ -9,7 +9,9 @@ use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, Insight
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
-use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{
+	DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, RIAN_API_KEY,
+};
 
 const TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("querent_secrets");
 
@@ -85,6 +87,24 @@ impl Storage for SecretStore {
 	) -> StorageResult<()> {
 		// Your insert_discovered_knowledge implementation here
 		Ok(())
+	}
+
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		_query: Option<String>,
+		_session_id: Option<String>,
+		_response: Option<String>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
 	}
 
 	async fn similarity_search_l2(
@@ -290,5 +310,18 @@ impl Storage for SecretStore {
 		_session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
+	}
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()> {
+		// Inner Key: RIAN_API_KEY
+		self.store_secret(&RIAN_API_KEY.to_string(), api_key).await?;
+		Ok(())
+	}
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
+		// Inner Key: RIAN_API_KEY
+		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 }

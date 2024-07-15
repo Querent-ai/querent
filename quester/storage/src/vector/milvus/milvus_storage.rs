@@ -11,7 +11,7 @@ use proto::{
 	DiscoverySessionRequest, InsightAnalystRequest,
 };
 
-use crate::{storage::Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{storage::Storage, DiscoveredKnowledge, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
 
 pub struct MilvusStorage {
@@ -71,6 +71,34 @@ impl Storage for MilvusStorage {
 			}
 		}
 		Ok(())
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
+	}
+
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
+		&self,
+		_query: Option<String>,
+		_session_id: Option<String>,
+		_response: Option<String>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
+		Ok(None)
 	}
 
 	async fn similarity_search_l2(

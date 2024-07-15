@@ -8,18 +8,10 @@ package querent.discovery;
 message DiscoverySessionRequest {
   // Name of the discovery agent
   string agent_name = 1;
-  // Optional storage storage_configs
-  repeated StorageConfig storage_configs = 5;
-  // Max message memory size
-  int32 max_message_memory_size = 6;
-  // Max query tokens size 
-  int32 max_query_tokens_size = 7;
   // Semantic pipeline ID
-  string semantic_pipeline_id = 8;
-  // OpenAI API key
-  string openai_api_key = 9;
+  string semantic_pipeline_id = 2;
   // Discovery Session Type
-  DiscoveryAgentType session_type = 10;
+  DiscoveryAgentType session_type = 3;
 }
 
 // Enum for DiscoverySessionType, either Retriever or Traverser
@@ -32,69 +24,6 @@ message DiscoveryAgentType {
 message DiscoverySessionResponse {
   // The ID of the discovery session
   string session_id = 1;
-}
-
-// StorageConfig is a message to hold configuration for a storage.
-message StorageConfig {
-  // Postgres configuration.
-  PostgresConfig postgres = 1;
-  // Milvus configuration.
-  MilvusConfig milvus = 2;
-  // Neo4j configuration.
-  Neo4jConfig neo4j = 3;
-}
-
-// The corresponding Rust struct [`crate::types::StorageType`] is defined manually and
-// externally provided during code generation (see `build.rs`).
-//
-// Modify at your own risk.
-message StorageType {
-  bytes storage_type = 1;
-}
-
-
-// PostgresConfig is a message to hold configuration for a Postgres storage.
-message PostgresConfig {
-  // Name of the Postgres storage.
-  string name = 1;
-  // Type of the storage.
-  StorageType storage_type = 2;
-  // URL of the Postgres storage.
-  string url = 3;
-}
-
-// MilvusConfig is a message to hold configuration for a Milvus storage.
-message MilvusConfig {
-  // Name of the Milvus storage.
-  string name = 1;
-  // Type of the storage.
-  StorageType storage_type = 2;
-  // URL of the Milvus storage.
-  string url = 3;
-  // Username for the Milvus storage.
-  string username = 4;
-  // Password for the Milvus storage.
-  string password = 5;
-}
-
-// Neo4jConfig is a message to hold configuration for a Neo4j storage.
-message Neo4jConfig {
-  // Name of the Neo4j storage.
-  string name = 1;
-  // Type of the storage.
-  StorageType storage_type = 2;
-  // URL of the Neo4j storage.
-  string url = 3;
-  // Username for the Neo4j storage.
-  string username = 4;
-  // Password for the Neo4j storage.
-  string password = 5;
-  // Name of the database in the Neo4j storage.
-  string db_name = 6;
-  // Fetch size for the Neo4j storage.
-  int32 fetch_size = 7;
-  // Maximum connection pool size for the Neo4j storage.
-  int32 max_connection_pool_size = 8;
 }
 
 // Request message for querying insights from data
@@ -139,7 +68,6 @@ message Insight {
   string sentence = 4;
    // The tags of the search result, comma separated subject, object , predicate
   string tags = 5;
-
 }
 
 message DiscoverySessionRequestInfo{

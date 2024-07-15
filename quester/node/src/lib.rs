@@ -1,8 +1,12 @@
 pub mod cli;
 pub mod serve;
+use std::sync::Arc;
+
 use clap::Arg;
 use proto::config::DEFAULT_CONFIG_PATH;
 pub use serve::*;
+
+pub type EnvFilterReloadFn = Arc<dyn Fn(&str) -> anyhow::Result<()> + Send + Sync>;
 
 fn config_cli_arg() -> Arg {
 	Arg::new("config")

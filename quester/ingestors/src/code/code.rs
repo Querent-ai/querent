@@ -107,8 +107,7 @@ mod tests {
 
 		let mut stream = result_stream;
 		while let Some(tokens) = stream.next().await {
-			let tokens = tokens.unwrap();
-			println!("These are the tokens in file --------------{:?}", tokens);
+			let _tokens = tokens.unwrap();
 		}
 	}
 }

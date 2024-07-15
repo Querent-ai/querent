@@ -45,19 +45,25 @@ pub async fn serve_quester(
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Quester::new();
+	info!("Creating storages 🗄️");
+	let surreal_db_path = std::path::Path::new("/tmp/querent_surreal_db");
 	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
+	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
 	let metadata_store = create_metadata_store(secert_store_path.to_path_buf()).await?;
 
-	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
+	let (event_storages, index_storages) =
+		create_storages(&node_config.storage_configs.0, surreal_db_path.to_path_buf()).await?;
 
-	info!("Serving Querent Node 🚀");
+	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);
-	info!("Starting Querent Base 🏁");
+	info!("Starting Querent RIAN 🏁");
+	log::info!("Node ID: {}", node_config.node_id);
 	let semantic_service_bus: MessageBus<SemanticService> =
 		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
 			.await
 			.expect("Failed to start semantic service");
 
+	info!("Starting Discovery Service 🕵️");
 	let discovery_service = start_discovery_service(
 		&node_config,
 		&quester_cloud,
@@ -68,6 +74,7 @@ pub async fn serve_quester(
 	)
 	.await?;
 
+	log::info!("Starting Insight Service 🧠");
 	let insight_service = start_insight_service(
 		&node_config,
 		&quester_cloud,
@@ -97,9 +104,6 @@ pub async fn serve_quester(
 		}
 	});
 
-	info!("Creating storages 🗄️");
-	let (event_storages, index_storages) = create_storages(&node_config.storage_configs.0).await?;
-	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
 	let services = Arc::new(QuesterServices {
 		node_config,
 		cluster: cluster.clone(),

@@ -37,6 +37,7 @@ utoipa = { workspace = true }
 tonic = { workspace = true }
 tower = { workspace = true }
 tokio = { workspace = true }
+fastembed =  { workspace = true }
 futures = { workspace = true }
 futures-util = { workspace = true }
 chrono = { workspace = true }

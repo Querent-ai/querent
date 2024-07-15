@@ -5,7 +5,6 @@ use insights::{
 	Insight, InsightConfig, InsightError, InsightErrorKind, InsightInput, InsightRunner,
 };
 use proto::{InsightQuery, InsightQueryResponse};
-use serde_json::Value;
 use std::sync::Arc;
 use tokio::runtime::Handle;
 
@@ -95,17 +94,12 @@ impl Handler<InsightQuery> for InsightAgent {
 	) -> Result<Self::Reply, ActorExitStatus> {
 		let runner = self.runner.clone();
 		let agent_id = self.agent_id.clone();
+		// Create a JSON object with session_id and query
+		let data_to_send =
+			serde_json::json!({ "session_id": message.session_id, "query": message.query });
 
-		let data_to_send = serde_json::from_str(&message.query);
-		if data_to_send.is_err() {
-			return Ok(Err(InsightError::new(
-				InsightErrorKind::Inference,
-				Arc::new(anyhow::anyhow!("Error parsing query data: {:?}", data_to_send.err())),
-			)));
-		}
-		let data_to_send: Value = data_to_send.unwrap();
+		// Directly use the JSON object as InsightInput
 		let insight_input = InsightInput { data: data_to_send };
-
 		let response = tokio::spawn(async move {
 			let insight_output = runner.run(insight_input).await;
 			match insight_output {

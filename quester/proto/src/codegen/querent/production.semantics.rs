@@ -83,18 +83,16 @@ pub struct ListCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SemanticPipelineRequest {
-	#[prost(string, repeated, tag = "1")]
-	pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-	#[prost(message, repeated, tag = "2")]
-	pub storage_configs: ::prost::alloc::vec::Vec<StorageConfig>,
-	#[prost(message, optional, tag = "3")]
-	pub fixed_entities: ::core::option::Option<FixedEntities>,
-	#[prost(message, optional, tag = "4")]
-	pub sample_entities: ::core::option::Option<SampleEntities>,
-	#[prost(enumeration = "Model", optional, tag = "5")]
-	pub model: ::core::option::Option<i32>,
-	#[prost(float, optional, tag = "6")]
-	pub attention_threshold: ::core::option::Option<f32>,
+    #[prost(string, repeated, tag = "1")]
+    pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    #[prost(message, optional, tag = "2")]
+    pub fixed_entities: ::core::option::Option<FixedEntities>,
+    #[prost(message, optional, tag = "3")]
+    pub sample_entities: ::core::option::Option<SampleEntities>,
+    #[prost(enumeration = "Model", optional, tag = "4")]
+    pub model: ::core::option::Option<i32>,
+    #[prost(float, optional, tag = "5")]
+    pub attention_threshold: ::core::option::Option<f32>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -615,12 +613,9 @@ pub struct Neo4jConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SurrealDbConfig {
-	/// Username for SurrealDB instance
-	#[prost(string, tag = "1")]
-	pub username: ::prost::alloc::string::String,
-	/// Password for SurrealDB instance
-	#[prost(string, tag = "2")]
-	pub password: ::prost::alloc::string::String,
+    /// path of the database
+    #[prost(string, tag = "1")]
+    pub path: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
