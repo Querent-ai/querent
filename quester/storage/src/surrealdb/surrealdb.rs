@@ -58,6 +58,18 @@ struct QueryResultSemantic {
 	sentence: String,
 }
 
+
+#[derive(Serialize, Debug, Clone, Deserialize)]
+struct QueryResultTraverser {
+	id: String,
+	document_id: String,
+	subject: String,
+	object: String,
+	document_source: String,
+	sentence: String,
+	event_id: String
+}
+
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
 pub struct DiscoveredKnowledgeSurrealDb {
@@ -490,78 +502,47 @@ pub async fn traverse_node<'a>(
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-	let inward_results: Vec<Value> = response.take(0).map_err(|e| StorageError {
+	let inward_results = response.take::<Vec<QueryResultTraverser>>(0).map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 
 	for result in inward_results {
-		if let Value::Object(obj) = result {
-			let id = match obj.get("id") {
-				Some(Value::Number(Number::Int(i))) => *i as i32,
-				_ => continue,
-			};
-			let doc_id = match obj.get("document_id") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let subject = match obj.get("subject") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let object = match obj.get("object") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let doc_source = match obj.get("document_source") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let sentence = match obj.get("sentence") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let event_id = match obj.get("event_id") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
+		let score_query =
+			format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", result.event_id.clone());
 
-			let score_query =
-				format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", event_id);
-
-			let mut score_response: Response =
-				db.query(score_query).await.map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
-			let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+		let mut score_response: Response =
+			db.query(score_query).await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
+		let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 
-			let score = match score_result.first() {
-				Some(Value::Object(obj)) => match obj.get("score") {
-					Some(Value::Number(Number::Float(f))) => *f,
-					_ => continue,
-				},
+		let score = match score_result.first() {
+			Some(Value::Object(obj)) => match obj.get("score") {
+				Some(Value::Number(Number::Float(f))) => *f,
 				_ => continue,
-			};
-			let score = score as f32;
+			},
+			_ => continue,
+		};
+		let score = score as f32;
 
-			if visited_pairs.insert((subject.clone(), object.clone())) {
-				combined_results.push((
-					id,
-					doc_id,
-					subject.clone(),
-					object.clone(),
-					doc_source,
-					sentence,
-					event_id,
-					score,
-				));
-				Box::pin(traverse_node(db, subject, combined_results, visited_pairs, depth + 1))
-					.await?;
-			}
+		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
+			combined_results.push((
+				123,
+				result.document_id,
+				result.subject.clone(),
+				result.object.clone(),
+				result.document_source,
+				result.sentence,
+				result.event_id,
+				score,
+			));
+			Box::pin(traverse_node(db, result.subject, combined_results, visited_pairs, depth + 1))
+				.await?;
 		}
 	}
 
@@ -576,79 +557,48 @@ pub async fn traverse_node<'a>(
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 
-	let outward_results: Vec<Value> = response.take(0).map_err(|e| StorageError {
+	let outward_results = response.take::<Vec<QueryResultTraverser>>(0).map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 
 	for result in outward_results {
-		if let Value::Object(obj) = result {
-			let id = match obj.get("id") {
-				Some(Value::Number(Number::Int(i))) => *i as i32,
-				_ => continue,
-			};
-			let doc_id = match obj.get("document_id") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let subject = match obj.get("subject") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let object = match obj.get("object") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let doc_source = match obj.get("document_source") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let sentence = match obj.get("sentence") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
-			let event_id = match obj.get("event_id") {
-				Some(Value::Strand(s)) => s.to_string(),
-				_ => continue,
-			};
+		let score_query =
+			format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", result.event_id);
 
-			let score_query =
-				format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", event_id);
-
-			let mut score_response: Response =
-				db.query(score_query).await.map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
-
-			let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+		let mut score_response: Response =
+			db.query(score_query).await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-			let score = match score_result.first() {
-				Some(Value::Object(obj)) => match obj.get("score") {
-					Some(Value::Number(Number::Float(f))) => *f,
-					_ => continue,
-				},
-				_ => continue,
-			};
-			let score = score as f32;
+		let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 
-			if visited_pairs.insert((subject.clone(), object.clone())) {
-				combined_results.push((
-					id,
-					doc_id,
-					subject.clone(),
-					object.clone(),
-					doc_source,
-					sentence,
-					event_id,
-					score,
-				));
-				Box::pin(traverse_node(db, subject, combined_results, visited_pairs, depth + 1))
-					.await?;
-			}
+		let score = match score_result.first() {
+			Some(Value::Object(obj)) => match obj.get("score") {
+				Some(Value::Number(Number::Float(f))) => *f,
+				_ => continue,
+			},
+			_ => continue,
+		};
+		let score = score as f32;
+
+		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
+			combined_results.push((
+				123,
+				result.document_id,
+				result.subject.clone(),
+				result.object.clone(),
+				result.document_source,
+				result.sentence,
+				result.event_id,
+				score,
+			));
+			Box::pin(traverse_node(db, result.subject, combined_results, visited_pairs, depth + 1))
+				.await?;
 		}
 	}
 
