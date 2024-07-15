@@ -8,7 +8,7 @@ DEFINE FIELD object_type ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD sentence ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD document_id ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD document_source ON TABLE semantic_knowledge TYPE string;
-DEFINE FIELD collection_id ON TABLE semantic_knowledge TYPE string;
+DEFINE FIELD collection_id ON TABLE semantic_knowledge TYPE option<string>;
 DEFINE FIELD image_id ON TABLE semantic_knowledge TYPE option<string>;
 DEFINE FIELD event_id ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD source_id ON TABLE semantic_knowledge TYPE string;
@@ -20,7 +20,7 @@ DEFINE FIELD source_id ON TABLE semantic_knowledge TYPE string;
 DEFINE TABLE  embedded_knowledge SCHEMAFULL;
 
 DEFINE FIELD id ON TABLE embedded_knowledge TYPE any;
-DEFINE FIELD embeddings ON TABLE embedded_knowledge TYPE array<float>;
+DEFINE FIELD embeddings ON TABLE embedded_knowledge TYPE option<array<float>>;
 DEFINE FIELD score ON TABLE embedded_knowledge TYPE float;
 DEFINE FIELD event_id ON TABLE embedded_knowledge TYPE string;
 
@@ -35,16 +35,16 @@ DEFINE FIELD doc_source ON TABLE discovered_knowledge TYPE string;
 DEFINE FIELD sentence ON TABLE discovered_knowledge TYPE string;
 DEFINE FIELD subject ON TABLE discovered_knowledge TYPE string;
 DEFINE FIELD object ON TABLE discovered_knowledge TYPE string;
-DEFINE FIELD cosine_distance ON TABLE discovered_knowledge TYPE float;
-DEFINE FIELD query_embedding ON TABLE discovered_knowledge TYPE array<float>;
-DEFINE FIELD query ON TABLE discovered_knowledge TYPE string;
-DEFINE FIELD session_id ON TABLE discovered_knowledge TYPE string;
-DEFINE FIELD score ON TABLE discovered_knowledge TYPE float;
+DEFINE FIELD cosine_distance ON TABLE discovered_knowledge TYPE option<float>;
+DEFINE FIELD query_embedding ON TABLE discovered_knowledge TYPE option<array<float>>;
+DEFINE FIELD query ON TABLE discovered_knowledge TYPE option<string>;
+DEFINE FIELD session_id ON TABLE discovered_knowledge TYPE option<string>;
+DEFINE FIELD score ON TABLE discovered_knowledge TYPE option<float>;
 
 
 DEFINE TABLE insight_knowledge SCHEMAFULL;
 
 DEFINE FIELD id ON TABLE insight_knowledge TYPE any;
-DEFINE FIELD session_id ON TABLE insight_knowledge TYPE string;
-DEFINE FIELD query ON TABLE insight_knowledge TYPE string;
-DEFINE FIELD response ON TABLE insight_knowledge TYPE string;
+DEFINE FIELD session_id ON TABLE insight_knowledge TYPE option<string>;
+DEFINE FIELD query ON TABLE insight_knowledge TYPE option<string>;
+DEFINE FIELD response ON TABLE insight_knowledge TYPE option<string>;
