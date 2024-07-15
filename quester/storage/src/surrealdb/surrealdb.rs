@@ -1,7 +1,7 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::{
-	DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
+	DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, RIAN_API_KEY
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -451,6 +451,19 @@ impl Storage for SurrealDB {
 		_session_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
+	}
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()> {
+		// Inner Key: RIAN_API_KEY
+		self.store_secret(&RIAN_API_KEY.to_string(), api_key).await?;
+		Ok(())
+	}
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
+		// Inner Key: RIAN_API_KEY
+		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 
 
