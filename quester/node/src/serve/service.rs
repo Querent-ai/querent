@@ -54,14 +54,16 @@ pub async fn serve_quester(
 	let (event_storages, index_storages) =
 		create_storages(&node_config.storage_configs.0, surreal_db_path.to_path_buf()).await?;
 
-	info!("Serving Querent Node 🚀");
+	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);
-	info!("Starting Querent Base 🏁");
+	info!("Starting Querent RIAN 🏁");
+	log::info!("Node ID: {}", node_config.node_id);
 	let semantic_service_bus: MessageBus<SemanticService> =
 		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
 			.await
 			.expect("Failed to start semantic service");
 
+	info!("Starting Discovery Service 🕵️");
 	let discovery_service = start_discovery_service(
 		&node_config,
 		&quester_cloud,
@@ -72,6 +74,7 @@ pub async fn serve_quester(
 	)
 	.await?;
 
+	log::info!("Starting Insight Service 🧠");
 	let insight_service = start_insight_service(
 		&node_config,
 		&quester_cloud,

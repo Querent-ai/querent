@@ -9,7 +9,9 @@ use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, Insight
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
-use crate::{DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
+use crate::{
+	DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, RIAN_API_KEY,
+};
 
 const TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("querent_secrets");
 
@@ -308,5 +310,18 @@ impl Storage for SecretStore {
 		_session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
+	}
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()> {
+		// Inner Key: RIAN_API_KEY
+		self.store_secret(&RIAN_API_KEY.to_string(), api_key).await?;
+		Ok(())
+	}
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
+		// Inner Key: RIAN_API_KEY
+		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 }

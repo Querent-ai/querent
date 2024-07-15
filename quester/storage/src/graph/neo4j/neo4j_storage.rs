@@ -54,6 +54,16 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
+		Ok(None)
+	}
+
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
