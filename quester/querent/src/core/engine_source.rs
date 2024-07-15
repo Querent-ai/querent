@@ -189,10 +189,8 @@ impl Source for EngineRunner {
 						// check if the event type is already in the map
 						if events_collected.contains_key(&event_type) {
 							let event_vec: &mut Vec<EventState> = events_collected.get_mut(&event_type).unwrap();
-							println!("This is the event data {:?}", event_data);
 							event_vec.push(event_data);
 						} else {
-							println!("This is in else the event data {:?}", event_data);
 							events_collected.insert(event_type, vec![event_data]);
 						}
 						counter += 1;
@@ -209,7 +207,6 @@ impl Source for EngineRunner {
 				}
 			}
 		}
-		println!("T----------------------------------{:?}", events_collected);
 		if !events_collected.is_empty() {
 			let events_batch = EventsBatch::new(
 				self.id.clone(),

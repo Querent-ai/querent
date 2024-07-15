@@ -152,8 +152,7 @@ impl Source for AzureBlobStorage {
 				},
 			}
 		} else {
-			println!("Failed to get first blob result");
-			Err(anyhow::anyhow!("Failed to connect to Azure Blob Storage"))
+			Err(anyhow::anyhow!("Failed to get first blob result"))
 		}
 	}
 
