@@ -9,7 +9,7 @@ DEFINE FIELD sentence ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD document_id ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD document_source ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD collection_id ON TABLE semantic_knowledge TYPE string;
-DEFINE FIELD image_id ON TABLE semantic_knowledge TYPE string;
+DEFINE FIELD image_id ON TABLE semantic_knowledge TYPE option<string>;
 DEFINE FIELD event_id ON TABLE semantic_knowledge TYPE string;
 DEFINE FIELD source_id ON TABLE semantic_knowledge TYPE string;
 
