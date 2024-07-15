@@ -1,7 +1,8 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::{
-	DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, RIAN_API_KEY
+	DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
+	RIAN_API_KEY,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -11,17 +12,16 @@ use serde::{Deserialize, Serialize};
 use surrealdb::{
 	engine::local::{Db, RocksDb},
 	opt::Config,
-	sql::{Number, Thing, Value},
+	sql::Thing,
 	Response, Surreal,
 };
 
 const NAMESPACE: &str = "querent";
 const DATABASE: &str = "querent";
 
-
 #[derive(Serialize, Debug, Clone, Deserialize)]
 struct ScoreResponse {
-    score: f32,
+	score: f32,
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
@@ -46,13 +46,12 @@ struct QueryResultEmbedded1 {
 	event_id: String,
 }
 
-
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
 pub struct InsightKnowledgeSurrealDb {
 	pub session_id: String,
 	pub query: String,
-	pub response: String
+	pub response: String,
 }
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
@@ -64,7 +63,6 @@ struct QueryResultSemantic {
 	sentence: String,
 }
 
-
 #[derive(Serialize, Debug, Clone, Deserialize)]
 struct QueryResultTraverser {
 	document_id: String,
@@ -72,7 +70,7 @@ struct QueryResultTraverser {
 	object: String,
 	document_source: String,
 	sentence: String,
-	event_id: String
+	event_id: String,
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
@@ -106,7 +104,6 @@ impl DiscoveredKnowledgeSurrealDb {
 		}
 	}
 }
-
 
 pub struct SurrealDB {
 	pub db: Surreal<Db>,
@@ -161,7 +158,7 @@ impl Storage for SurrealDB {
 		Ok(())
 	}
 
-    async fn insert_insight_knowledge(
+	async fn insert_insight_knowledge(
 		&self,
 		query: Option<String>,
 		session_id: Option<String>,
@@ -173,12 +170,14 @@ impl Storage for SurrealDB {
 			response: response.unwrap().clone(),
 		};
 
-		let created: Vec<Record> =
-			self.db.create("insight_knowledge").content(form).await.map_err(|e| {
-				StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				}
+		let created: Vec<Record> = self
+			.db
+			.create("insight_knowledge")
+			.content(form)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 		dbg!(created);
 
@@ -482,8 +481,6 @@ impl Storage for SurrealDB {
 		// Inner Key: RIAN_API_KEY
 		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
-
-
 }
 
 pub async fn traverse_node<'a>(
@@ -505,25 +502,27 @@ pub async fn traverse_node<'a>(
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-	let inward_results = response.take::<Vec<QueryResultTraverser>>(0).map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
-		source: Arc::new(anyhow::Error::from(e)),
+	let inward_results = response.take::<Vec<QueryResultTraverser>>(0).map_err(|e| {
+		StorageError { kind: StorageErrorKind::Internal, source: Arc::new(anyhow::Error::from(e)) }
 	})?;
-	
+
 	for result in inward_results {
-		let score_query =
-			format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", result.event_id.clone());
-		
+		let score_query = format!(
+			"SELECT score FROM embedded_knowledge WHERE event_id = '{}'",
+			result.event_id.clone()
+		);
+
 		let mut score_response: Response =
 			db.query(score_query).await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-		let score_result = score_response.take::<Vec<ScoreResponse>>(0).map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-	
+		let score_result =
+			score_response.take::<Vec<ScoreResponse>>(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
 		let score = score_result[0].score;
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
@@ -551,9 +550,8 @@ pub async fn traverse_node<'a>(
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 
-	let outward_results = response.take::<Vec<QueryResultTraverser>>(0).map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
-		source: Arc::new(anyhow::Error::from(e)),
+	let outward_results = response.take::<Vec<QueryResultTraverser>>(0).map_err(|e| {
+		StorageError { kind: StorageErrorKind::Internal, source: Arc::new(anyhow::Error::from(e)) }
 	})?;
 
 	for result in outward_results {
@@ -566,11 +564,12 @@ pub async fn traverse_node<'a>(
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		let score_result = score_response.take::<Vec<ScoreResponse>>(0).map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-	
+		let score_result =
+			score_response.take::<Vec<ScoreResponse>>(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
 		let score = score_result[0].score;
 
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
