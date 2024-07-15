@@ -18,6 +18,12 @@ use surrealdb::{
 const NAMESPACE: &str = "querent";
 const DATABASE: &str = "querent";
 
+
+#[derive(Serialize, Debug, Clone, Deserialize)]
+struct ScoreResponse {
+    score: f32,
+}
+
 #[derive(Serialize, Debug, Clone, Deserialize)]
 pub struct EmbeddedKnowledgeSurrealDb {
 	pub embeddings: Vec<f32>,
@@ -61,7 +67,6 @@ struct QueryResultSemantic {
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
 struct QueryResultTraverser {
-	id: String,
 	document_id: String,
 	subject: String,
 	object: String,
@@ -101,6 +106,7 @@ impl DiscoveredKnowledgeSurrealDb {
 		}
 	}
 }
+
 
 pub struct SurrealDB {
 	pub db: Surreal<Db>,
@@ -305,7 +311,6 @@ impl Storage for SurrealDB {
 		let mut combined_results: Vec<(i32, String, String, String, String, String, String, f32)> =
 			Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-
 		for (head, tail) in filtered_pairs {
 			// Traverse depth 1
 			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 1)
@@ -491,13 +496,11 @@ pub async fn traverse_node<'a>(
 	if depth > 2 {
 		return Ok(());
 	}
-
 	// Fetch inward edges
 	let inward_query = format!(
 			"SELECT id, document_id, subject, object, document_source, sentence, event_id FROM semantic_knowledge WHERE object = '{}'", 
 			node
 		);
-
 	let mut response: Response = db.query(inward_query).await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
@@ -506,30 +509,22 @@ pub async fn traverse_node<'a>(
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-
+	
 	for result in inward_results {
 		let score_query =
 			format!("SELECT score FROM embedded_knowledge WHERE event_id = '{}'", result.event_id.clone());
-
+		
 		let mut score_response: Response =
 			db.query(score_query).await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-		let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+		let score_result = score_response.take::<Vec<ScoreResponse>>(0).map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-
-		let score = match score_result.first() {
-			Some(Value::Object(obj)) => match obj.get("score") {
-				Some(Value::Number(Number::Float(f))) => *f,
-				_ => continue,
-			},
-			_ => continue,
-		};
-		let score = score as f32;
-
+	
+		let score = score_result[0].score;
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
 				123,
@@ -545,7 +540,6 @@ pub async fn traverse_node<'a>(
 				.await?;
 		}
 	}
-
 	// Fetch outward edges
 	let outward_query = format!(
 			"SELECT id, document_id, subject, object, document_source, sentence, event_id FROM semantic_knowledge WHERE subject = '{}'", 
@@ -572,19 +566,12 @@ pub async fn traverse_node<'a>(
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		let score_result: Vec<Value> = score_response.take(0).map_err(|e| StorageError {
+		let score_result = score_response.take::<Vec<ScoreResponse>>(0).map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-
-		let score = match score_result.first() {
-			Some(Value::Object(obj)) => match obj.get("score") {
-				Some(Value::Number(Number::Float(f))) => *f,
-				_ => continue,
-			},
-			_ => continue,
-		};
-		let score = score as f32;
+	
+		let score = score_result[0].score;
 
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
