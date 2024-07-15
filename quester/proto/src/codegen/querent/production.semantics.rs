@@ -613,12 +613,9 @@ pub struct Neo4jConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SurrealDbConfig {
-	/// Username for SurrealDB instance
-	#[prost(string, tag = "1")]
-	pub username: ::prost::alloc::string::String,
-	/// Password for SurrealDB instance
-	#[prost(string, tag = "2")]
-	pub password: ::prost::alloc::string::String,
+    /// path of the database
+    #[prost(string, tag = "1")]
+    pub path: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
