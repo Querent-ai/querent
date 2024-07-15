@@ -144,7 +144,7 @@ async fn set_api_key(
 pub fn set_api_key_handler(
 	secret_store: Arc<dyn Storage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("apikey")
+	warp::path!("health" / "apikey")
 		.and(warp::body::json())
 		.and(warp::post())
 		.and(require(Some(secret_store)))
@@ -182,7 +182,7 @@ pub async fn get_api_key(secret_store: Arc<dyn Storage>) -> Result<ApiKeyRespons
 pub fn get_api_key_handler(
 	secret_store: Arc<dyn Storage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
-	warp::path!("apikey")
+	warp::path!("health" / "apikey")
 		.and(warp::get())
 		.and(require(Some(secret_store)))
 		.then(get_api_key)
