@@ -10,7 +10,7 @@ checksum = "8b5ace29ee3216de37c0546865ad08edef58b0f9e76838ed8959a84a990e58c5"
 
 [[package]]
 name = "actors"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1739,7 +1739,7 @@ checksum = "4b82cf0babdbd58558212896d1a4272303a57bdb245c2bf1147185fb45640e70"
 
 [[package]]
 name = "cluster"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1811,7 +1811,7 @@ dependencies = [
 
 [[package]]
 name = "codegen"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "futures",
@@ -1850,7 +1850,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -2718,7 +2718,7 @@ checksum = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
 
 [[package]]
 name = "engines"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -4191,7 +4191,7 @@ checksum = "64e9829a50b42bb782c1df523f78d332fe371b10c661e78b7a3c34b0198e9fac"
 
 [[package]]
 name = "ingestors"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -4264,7 +4264,7 @@ dependencies = [
 
 [[package]]
 name = "insights"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -4640,7 +4640,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "llms"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -5207,7 +5207,7 @@ checksum = "43794a0ace135be66a25d3ae77d41b91615fb68ae937f904090203e81f755b65"
 
 [[package]]
 name = "node"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -6641,7 +6641,7 @@ dependencies = [
 
 [[package]]
 name = "proto"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -6753,7 +6753,7 @@ dependencies = [
 
 [[package]]
 name = "querent"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "actors",
  "anyhow",
@@ -8339,7 +8339,7 @@ dependencies = [
 
 [[package]]
 name = "sources"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -8473,7 +8473,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "4.0.0"
+version = "4.2.0"
 dependencies = [
  "anyhow",
  "async-trait",
