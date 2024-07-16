@@ -37,6 +37,7 @@ impl BaseIngestor for DocIngestor {
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
 		// collect all the bytes into a single buffer
+		println!("Inside ingest function: ");
 		let mut buffer = Vec::new();
 		let mut file = String::new();
 		let mut doc_source = String::new();
@@ -88,7 +89,7 @@ impl BaseIngestor for DocIngestor {
 				}
 
 				if xml_data.is_empty() {
-					error!("No document.xml found in the archive");
+					error!("No document.xml found in the archive or the file is empty");
 					return;
 				}
 
@@ -99,7 +100,7 @@ impl BaseIngestor for DocIngestor {
 				for e in reader {
 					match e {
 						Ok(XmlEvent::StartElement { name, .. }) => {
-							if name.local_name == "w:t" {
+							if name.local_name == "t" {
 								to_read = true;
 							}
 						}
@@ -110,7 +111,7 @@ impl BaseIngestor for DocIngestor {
 							}
 						}
 						Ok(XmlEvent::EndElement { name }) => {
-							if name.local_name == "w:p" {
+							if name.local_name == "p" {
 								text.push_str("\n\n");
 							}
 						}
@@ -143,3 +144,38 @@ impl BaseIngestor for DocIngestor {
 		Ok(Box::pin(processed_stream))
 	}
 }
+
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use std::path::Path;
+// 	use futures::StreamExt;
+
+//     #[tokio::test]
+//     async fn test_csv_ingestor() {
+
+//         let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Eagle Ford Shale variability_ Sedimentologic influences on source and reservoir character in an unconventional resource unit.doc").unwrap();
+
+//         // Create a CollectedBytes instance
+//         let collected_bytes = CollectedBytes {
+//             data: Some(bytes),
+//             file: Some(Path::new("Eagle Ford Shale variability_ Sedimentologic influences on source and reservoir character in an unconventional resource unit.doc").to_path_buf()),
+//             doc_source: Some("test_source".to_string()),
+// 			eof: false,
+// 			extension: Some("doc".to_string()),
+// 			size: Some(10),
+//          source_id: "Filesystem".to_string(),
+//         };
+
+//         let ingestor = DocIngestor::new();
+
+//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+// 		let mut stream = result_stream;
+//         while let Some(tokens) = stream.next().await {
+// 			let tokens = tokens.unwrap();
+// 			println!("These are the tokens in file --------------{:?}", tokens);
+// 		}
+// 	}
+// }
