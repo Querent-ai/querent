@@ -11,7 +11,10 @@ use tokio::runtime::{Builder, Runtime};
 /// The main tokio runtime takes num_cores / 3 threads by default, and can be overridden by the
 /// QUERENT_RUNTIME_NUM_THREADS environment variable.
 fn get_main_runtime_num_threads() -> usize {
-	let default_num_runtime_threads = num_cpus::get() / 3;
+	let mut default_num_runtime_threads = num_cpus::get() / 3;
+	if default_num_runtime_threads == 0 {
+		default_num_runtime_threads = 1;
+	}
 	std::env::var("QUERENT_RUNTIME_NUM_THREADS")
 		.ok()
 		.and_then(|num_threads_str| num_threads_str.parse().ok())
