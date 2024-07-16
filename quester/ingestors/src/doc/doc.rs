@@ -145,7 +145,6 @@ impl BaseIngestor for DocIngestor {
 	}
 }
 
-
 // #[cfg(test)]
 // mod tests {
 //     use super::*;
