@@ -152,7 +152,7 @@ impl BaseIngestor for DocIngestor {
 // 	use futures::StreamExt;
 
 //     #[tokio::test]
-//     async fn test_csv_ingestor() {
+//     async fn test_doc_ingestor() {
 
 //         let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Eagle Ford Shale variability_ Sedimentologic influences on source and reservoir character in an unconventional resource unit.doc").unwrap();
 

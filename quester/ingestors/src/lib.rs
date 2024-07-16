@@ -14,3 +14,4 @@ pub mod processors;
 pub mod txt;
 pub mod xlsx;
 pub mod xml;
+pub mod odp;

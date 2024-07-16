@@ -8,10 +8,7 @@ use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{
-	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor,
-	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
-	json::json::JsonIngestor, pdf::pdfv1::PdfIngestor, pptx::pptx::PptxIngestor,
-	txt::txt::TxtIngestor, xml::xml::XmlIngestor,
+	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor, docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor, json::json::JsonIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor, pptx::pptx::PptxIngestor, txt::txt::TxtIngestor, xml::xml::XmlIngestor
 };
 use tracing::info;
 
@@ -211,6 +208,7 @@ pub async fn resolve_ingestor_with_extension(
 		"png" => Ok(Arc::new(ImageIngestor::new())),
 		"json" => Ok(Arc::new(JsonIngestor::new())),
 		"pptx" => Ok(Arc::new(PptxIngestor::new())),
+		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 		// _ => Err(IngestorError::new(
 		// 	IngestorErrorKind::NotSupported,
