@@ -55,89 +55,89 @@ impl BaseIngestor for OdpIngestor {
 
 		let buffer = Arc::new(buffer);
 		let stream = {
-            let buffer = Arc::clone(&buffer);
-            stream! {
-                let cursor = Cursor::new(buffer.as_ref());
+			let buffer = Arc::clone(&buffer);
+			stream! {
+				let cursor = Cursor::new(buffer.as_ref());
 
-                let mut archive = match ZipArchive::new(cursor) {
-                    Ok(archive) => archive,
-                    Err(e) => {
-                        error!("Failed to read zip archive: {:?}", e);
-                        return;
-                    }
-                };
+				let mut archive = match ZipArchive::new(cursor) {
+					Ok(archive) => archive,
+					Err(e) => {
+						error!("Failed to read zip archive: {:?}", e);
+						return;
+					}
+				};
 
-                let mut xml_data = String::new();
+				let mut xml_data = String::new();
 
-                for i in 0..archive.len() {
-                    let mut file = match archive.by_index(i) {
-                        Ok(file) => file,
-                        Err(e) => {
-                            error!("Failed to access file in archive: {:?}", e);
-                            return;
-                        }
-                    };
+				for i in 0..archive.len() {
+					let mut file = match archive.by_index(i) {
+						Ok(file) => file,
+						Err(e) => {
+							error!("Failed to access file in archive: {:?}", e);
+							return;
+						}
+					};
 
 
-                    if file.name() == "content.xml" {
-                        if let Err(e) = file.read_to_string(&mut xml_data) {
-                            error!("Failed to read XML data: {:?}", e);
-                            return;
-                        }
-                        break;
-                    }
-                }
+					if file.name() == "content.xml" {
+						if let Err(e) = file.read_to_string(&mut xml_data) {
+							error!("Failed to read XML data: {:?}", e);
+							return;
+						}
+						break;
+					}
+				}
 
-                if xml_data.is_empty() {
-                    error!("No content.xml found in the archive or the file is empty");
-                    return;
-                }
+				if xml_data.is_empty() {
+					error!("No content.xml found in the archive or the file is empty");
+					return;
+				}
 
-                let reader = EventReader::from_str(&xml_data);
-                let mut text = String::new();
-                let mut to_read = false;
+				let reader = EventReader::from_str(&xml_data);
+				let mut text = String::new();
+				let mut to_read = false;
 
-                for e in reader {
-                    match e {
-                        Ok(XmlEvent::StartElement { name, .. }) => {
-                            if name.local_name == "p" || name.local_name == "span" {
-                                to_read = true;
-                            }
-                        }
-                        Ok(XmlEvent::Characters(data)) => {
-                            if to_read {
-                                text.push_str(&data);
-                            }
-                        }
-                        Ok(XmlEvent::EndElement { name }) => {
-                            if name.local_name == "p" {
-                                text.push_str("\n\n");
-                                to_read = false;
-                            }
-                        }
-                        Err(e) => {
-                            error!("Error reading XML: {:?}", e);
-                            return;
-                        }
-                        _ => {}
-                    }
-                }
+				for e in reader {
+					match e {
+						Ok(XmlEvent::StartElement { name, .. }) => {
+							if name.local_name == "p" || name.local_name == "span" {
+								to_read = true;
+							}
+						}
+						Ok(XmlEvent::Characters(data)) => {
+							if to_read {
+								text.push_str(&data);
+							}
+						}
+						Ok(XmlEvent::EndElement { name }) => {
+							if name.local_name == "p" {
+								text.push_str("\n\n");
+								to_read = false;
+							}
+						}
+						Err(e) => {
+							error!("Error reading XML: {:?}", e);
+							return;
+						}
+						_ => {}
+					}
+				}
 
-                if text.is_empty() {
-                    error!("No text found in the document");
-                    return;
-                }
+				if text.is_empty() {
+					error!("No text found in the document");
+					return;
+				}
 
-                let ingested_tokens = IngestedTokens {
-                    data: vec![text],
-                    file: file.clone(),
-                    doc_source: doc_source.clone(),
-                    is_token_stream: false,
-                    source_id: source_id.clone(),
-                };
-                yield Ok(ingested_tokens);
-            }
-        };
+				let ingested_tokens = IngestedTokens {
+					data: vec![text],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+				};
+				yield Ok(ingested_tokens);
+			}
+		};
 
 		let processed_stream =
 			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
