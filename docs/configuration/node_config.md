@@ -8,7 +8,7 @@ The node configuration allows you to customize and optimize the settings for ind
 - Common configuration settings: shared top-level properties
 - Storage settings: defined in the [storage](#storage-configuration) section
 
-A commented example is available here: [quester.config.yaml](https://github.com/querent-ai/quester/blob/main/config/quester.config.yaml).
+A commented example is available here: [querent.config.yaml](https://github.com/querent-ai/querent/blob/main/config/querent.config.yaml).
 
 ## Common configuration
 

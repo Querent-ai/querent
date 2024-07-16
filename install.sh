@@ -12,8 +12,8 @@
 set -u
 
 # If PACKAGE_ROOT is unset or empty, default it.
-PACKAGE_ROOT="${PACKAGE_ROOT:-"https://github.com/querent-ai/quester/releases/download"}"
-PACKAGE_RELEASE_API="${PACKAGE_RELEASE_API:-"https://api.github.com/repos/querent-ai/quester/releases"}"
+PACKAGE_ROOT="${PACKAGE_ROOT:-"https://github.com/querent-ai/querent/releases/download"}"
+PACKAGE_RELEASE_API="${PACKAGE_RELEASE_API:-"https://api.github.com/repos/querent-ai/querent/releases"}"
 PACKAGE_NAME="querent"
 _divider="--------------------------------------------------------------------------------"
 _prompt=">>>"

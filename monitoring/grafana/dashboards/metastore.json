@@ -340,8 +340,8 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "Quester Metastore",
-  "uid": "quester-metastore",
+  "title": "Querent Metastore",
+  "uid": "querent-metastore",
   "version": 1,
   "weekStart": ""
 }

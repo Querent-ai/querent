@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       release-version:
-        description: 'Release version (v#.#.#[-rc#])'
+        description: "Release version (v#.#.#[-rc#])"
         required: true
 
 env:
@@ -63,7 +63,7 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-      - name: Build and Push Quester Image
+      - name: Build and Push Querent Image
         uses: docker/build-push-action@v4
         with:
           context: .

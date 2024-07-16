@@ -20,4 +20,4 @@ models/
 querent-*
 model/
 dev-env/
-quester/.fastembed_cache/
+querent/.fastembed_cache/

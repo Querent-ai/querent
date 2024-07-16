@@ -1,5 +1,5 @@
 name: "Build Querent binary with cargo cross"
-description: "Build Quester Dashboard and Rust binary with cargo cross."
+description: "Build Querent Dashboard and Rust binary with cargo cross."
 inputs:
   target:
     description: "Target"
@@ -48,24 +48,24 @@ runs:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
-      working-directory: ./quester
+      working-directory: ./querent
     - name: Bundle archive
       run: |
         make archive BINARY_FILE=target/${{ inputs.target }}/release/querent \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
-      working-directory: ./quester
+      working-directory: ./querent
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.ASSET_FULL_NAME }}.tar.gz
-        path: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
+        path: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
         retention-days: 3
     - name: Upload archive
       uses: quickwit-inc/upload-to-github-release@v1
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       with:
-        file: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
+        file: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
         overwrite: true
         tag_name: ${{ inputs.version }}

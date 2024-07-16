@@ -31,31 +31,31 @@ Support of aarch64 is currently experimental.
 <RenderIf condition={useDocsVersion().version == 'current'}>
 
 Version: nightly -
-License: [BSL 1.1](https://github.com/querent-ai/quester/blob/main/LICENSE.md) -
+License: [BSL 1.1](https://github.com/querent-ai/querent/blob/main/LICENSE.md) -
 Downloads `.tar.gz`:
 
-- [Linux ARM64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-aarch64-unknown-linux-gnu.tar.gz)
-- [Linux x86_64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-x86_64-unknown-linux-gnu.tar.gz)
-- [macOS aarch64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-aarch64-apple-darwin.tar.gz)
-- [macOS x86_64](https://github.com/querent-ai/quester/releases/download/nightly/querent-nightly-x86_64-apple-darwin.tar.gz)
+- [Linux ARM64](https://github.com/querent-ai/querent/releases/download/nightly/querent-nightly-aarch64-unknown-linux-gnu.tar.gz)
+- [Linux x86_64](https://github.com/querent-ai/querent/releases/download/nightly/querent-nightly-x86_64-unknown-linux-gnu.tar.gz)
+- [macOS aarch64](https://github.com/querent-ai/querent/releases/download/nightly/querent-nightly-aarch64-apple-darwin.tar.gz)
+- [macOS x86_64](https://github.com/querent-ai/querent/releases/download/nightly/querent-nightly-x86_64-apple-darwin.tar.gz)
 
 </RenderIf>
 
 <!-- Bellow is the set of links to edit when a new version is released -->
 <RenderIf condition={useDocsVersion().version != 'current'}>
 
-version: 0.7.1 - [Release notes](https://github.com/querent-ai/quester/releases/tag/v0.7.1) - [Changelog](https://github.com/querent-ai/quester/blob/main/CHANGELOG.md)
-License: [AGPL V3](https://github.com/querent-ai/quester/blob/main/LICENSE.md)
+version: 0.7.1 - [Release notes](https://github.com/querent-ai/querent/releases/tag/v0.7.1) - [Changelog](https://github.com/querent-ai/querent/blob/main/CHANGELOG.md)
+License: [AGPL V3](https://github.com/querent-ai/querent/blob/main/LICENSE.md)
 Downloads `.tar.gz`:
 
-- [Linux ARM64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-aarch64-unknown-linux-gnu.tar.gz)
-- [Linux x86_64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-x86_64-unknown-linux-gnu.tar.gz)
-- [macOS aarch64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-aarch64-apple-darwin.tar.gz)
-- [macOS x86_64](https://github.com/querent-ai/quester/releases/download/v0.7.1/querent-v0.7.1-x86_64-apple-darwin.tar.gz)
+- [Linux ARM64](https://github.com/querent-ai/querent/releases/download/v0.7.1/querent-v0.7.1-aarch64-unknown-linux-gnu.tar.gz)
+- [Linux x86_64](https://github.com/querent-ai/querent/releases/download/v0.7.1/querent-v0.7.1-x86_64-unknown-linux-gnu.tar.gz)
+- [macOS aarch64](https://github.com/querent-ai/querent/releases/download/v0.7.1/querent-v0.7.1-aarch64-apple-darwin.tar.gz)
+- [macOS x86_64](https://github.com/querent-ai/querent/releases/download/v0.7.1/querent-v0.7.1-x86_64-apple-darwin.tar.gz)
 
 </RenderIf>
 
-Check out the available builds in greater detail on [GitHub](https://github.com/querent-ai/quester/releases)
+Check out the available builds in greater detail on [GitHub](https://github.com/querent-ai/querent/releases)
 
 ### Note on external dependencies
 
@@ -146,7 +146,7 @@ The script detects the architecture and then downloads the correct binary archiv
 curl -L https://install.querent.io | sh
 ```
 
-All this script does is download the correct binary archive for your machine and extracts it in the current working directory. This means you can download any desired archive from [github](https://github.com/querent-ai/quester/releases) that matches your OS architecture and manually extract it anywhere.
+All this script does is download the correct binary archive for your machine and extracts it in the current working directory. This means you can download any desired archive from [github](https://github.com/querent-ai/querent/releases) that matches your OS architecture and manually extract it anywhere.
 
 Once installed or extracted, all of Querent's installation files can be found in a directory named `querent-{version}` where `version` is the corresponding version of Querent. This directory has the following layout:
 
