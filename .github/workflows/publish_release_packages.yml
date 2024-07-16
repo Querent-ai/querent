@@ -12,39 +12,42 @@ on:
       release-version:
         description: 'Release version (v#.#.#[-rc#])'
         required: true
+  pull_request:
+    branches:
+      - main
 
 env:
   ## use tags to determine the release version
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
 jobs:
-  build-macos-binaries:
-    name: Build ${{ matrix.target }}
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+  # build-macos-binaries:
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: macos-latest
+  #   strategy:
+  #     matrix:
+  #       target: [x86_64-apple-darwin, aarch64-apple-darwin]
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/cargo-build-macos-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/cargo-build-macos-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-linux-binaries:
-    strategy:
-      matrix:
-        target: [x86_64-unknown-linux-gnu]
-    name: Build ${{ matrix.target }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/cross-build-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+  # build-linux-binaries:
+  #   strategy:
+  #     matrix:
+  #       target: [x86_64-unknown-linux-gnu]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: ./.github/actions/cross-build-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows-binaries:
     strategy:
@@ -57,5 +60,5 @@ jobs:
       - uses: ./.github/actions/cargo-build-windows-binary
         with:
           target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
+          version: "v4.2.0"
           token: ${{ secrets.GITHUB_TOKEN }}
