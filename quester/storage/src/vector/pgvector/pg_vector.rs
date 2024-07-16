@@ -405,9 +405,17 @@ impl Storage for PGVector {
 	async fn traverse_metadata_table(
 		&self,
 		filtered_pairs: Vec<(String, String)>,
-	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
-		let mut combined_results: Vec<(i32, String, String, String, String, String, String, f32)> =
-			Vec::new();
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		let mut combined_results: Vec<(
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			f32,
+		)> = Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
 
 		for (head, tail) in filtered_pairs {
