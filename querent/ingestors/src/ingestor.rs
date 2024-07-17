@@ -11,7 +11,7 @@ use crate::{
 	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor,
 	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
 	json::json::JsonIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor,
-	pptx::pptx::PptxIngestor, txt::txt::TxtIngestor, xml::xml::XmlIngestor,
+	pptx::pptx::PptxIngestor, txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor, xml::xml::XmlIngestor,
 };
 use tracing::info;
 
@@ -212,6 +212,7 @@ pub async fn resolve_ingestor_with_extension(
 		"json" => Ok(Arc::new(JsonIngestor::new())),
 		"pptx" => Ok(Arc::new(PptxIngestor::new())),
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
+		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 		// _ => Err(IngestorError::new(
 		// 	IngestorErrorKind::NotSupported,

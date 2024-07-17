@@ -126,7 +126,7 @@ pub trait Storage: Send + Sync + 'static {
 	async fn traverse_metadata_table(
 		&self,
 		filtered_pairs: Vec<(String, String)>,
-	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>>;
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>>;
 
 	/// Get discovered data based on session_id
 	async fn get_discovered_data(

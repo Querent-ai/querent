@@ -152,7 +152,7 @@ impl InsightRunner for XAIRunner {
 		let query_embedding = &embeddings[0];
 
 		let mut all_discovered_data: Vec<(
-			i32,
+			String,
 			String,
 			String,
 			String,
@@ -204,7 +204,7 @@ impl InsightRunner for XAIRunner {
 							} else {
 								// If previous_query_results is not empty, parse and combine with current results
 								let previous_results: Vec<(
-									i32,
+									String,
 									String,
 									String,
 									String,
@@ -386,7 +386,7 @@ impl InsightRunner for XAIRunner {
 					};
 					let query_embedding = &embeddings[0];
 
-					let mut all_discovered_data: Vec<(i32, String, String, String, String, String, String, f32)> = Vec::new();
+					let mut all_discovered_data: Vec<(String, String, String, String, String, String, String, f32)> = Vec::new();
 					for (event_type, storages) in config.event_storages.iter() {
 						if *event_type == EventType::Vector {
 							for storage in storages.iter() {
@@ -420,7 +420,7 @@ impl InsightRunner for XAIRunner {
 											}
 										} else {
 											let previous_results: Vec<(
-												i32,
+												String,
 												String,
 												String,
 												String,

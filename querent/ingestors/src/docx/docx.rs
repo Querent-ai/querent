@@ -57,7 +57,13 @@ impl BaseIngestor for DocxIngestor {
 				let cursor = Cursor::new(buffer.as_ref());
 
 				let docx = DocxFile::from_reader(cursor).unwrap();
-				let docx = docx.parse().unwrap();
+				let docx = match docx.parse() {
+					Ok(parsed) => parsed,
+					Err(e) => {
+						eprintln!("Failed to parse DOCX: {:?}", e);
+						return;
+					}
+				};
 
 				let body = docx.document.body;
 

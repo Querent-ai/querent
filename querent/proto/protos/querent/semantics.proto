@@ -237,11 +237,9 @@ message GoogleDriveCollectorConfig {
   // Refresh token of the Google Drive collector.
   string drive_refresh_token = 3;
   // Folder to crawl of the Google Drive collector.
-  string folder_to_crawl = 6;
-  // Specific file type of the Google Drive collector.
-  string specific_file_type = 7;
+  string folder_to_crawl = 4;
   // Id for the collector
-  string id = 8;
+  string id = 5;
 }
 
 // EmailCollectorConfig is a message to hold configuration for an Email collector.
@@ -333,8 +331,8 @@ message OneDriveConfig {
   string client_secret = 2;
   // Redirect URI
   string redirect_uri = 3;
-  // Auth code of the app
-  string auth_code = 4;
+  // Refresh token of the app
+  string refresh_token = 4;
   /// Folder path of the app
   string folder_path = 5;
   /// Id for the collector

@@ -71,6 +71,23 @@ pub async fn create_dynamic_sources(
 				let azure_source = sources::azure::AzureBlobStorage::new(config.clone());
 				sources.push(Arc::new(azure_source));
 			},
+			Some(proto::semantics::Backend::Drive(config)) => {
+				let drive_source =
+					sources::drive::drive::GoogleDriveSource::new(config.clone()).await;
+				sources.push(Arc::new(drive_source));
+			},
+			Some(proto::semantics::Backend::Email(config)) =>
+				match sources::email::email::EmailSource::new(config.clone()).await {
+					Ok(email_source) => {
+						sources.push(Arc::new(email_source) as Arc<dyn sources::Source>);
+					},
+					Err(e) => {
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+							"Failed to initialize email source: {:?} ",
+							e
+						)));
+					},
+				},
 			_ =>
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Invalid source type: {}",

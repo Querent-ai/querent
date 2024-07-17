@@ -28,13 +28,16 @@ pub struct OneDriveSource {
 pub static TOKEN: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
 
 impl OneDriveSource {
-	pub async fn new(config: OneDriveConfig) -> Self {
-		let onedrive = Self::get_logined_onedrive(&config).await;
+	pub async fn new(config: OneDriveConfig) -> anyhow::Result<Self> {
+		let onedrive = match Self::get_logined_onedrive(&config).await {
+            Ok(logged_in_drive) => logged_in_drive,
+            Err(e) => return Err(anyhow::anyhow!("Failed to log in to OneDrive: {}", e)),
+        };
 
-		OneDriveSource { onedrive, folder_path: config.folder_path, source_id: config.id.clone() }
+		Ok(OneDriveSource { onedrive, folder_path: config.folder_path, source_id: config.id.clone() })
 	}
 
-	pub async fn get_logined_onedrive(config: &OneDriveConfig) -> OneDrive {
+	pub async fn get_logined_onedrive(config: &OneDriveConfig) -> Result<OneDrive, anyhow::Error> {
 		let token = TOKEN
 			.get_or_init(|| async {
 				let auth = Auth::new(
@@ -43,62 +46,16 @@ impl OneDriveSource {
 					config.redirect_uri.clone(),
 					Tenant::Consumers,
 				);
-				let refresh_token = Self::get_refresh_token(
-					&config.client_id,
-					&config.client_secret,
-					&config.redirect_uri,
-					&config.auth_code,
-				)
-				.await
-				.unwrap();
 				auth.login_with_refresh_token(
-					&refresh_token,
+					&config.refresh_token,
 					&ClientCredential::Secret(config.client_secret.clone()),
 				)
 				.await
-				.expect("Login failed")
+				.map_err(|e| anyhow!("Login failed: {}", e)).unwrap()
 				.access_token
 			})
 			.await;
-		OneDrive::new(token.clone(), DriveLocation::me())
-	}
-
-	async fn get_refresh_token(
-		client_id: &str,
-		client_secret: &str,
-		redirect_uri: &str,
-		authorization_code: &str,
-	) -> Result<String, anyhow::Error> {
-		let client = Client::new();
-		let mut params = HashMap::new();
-		params.insert("client_id", client_id);
-		params.insert("scope", "openid offline_access Files.ReadWrite");
-		params.insert("code", authorization_code);
-		params.insert("redirect_uri", redirect_uri);
-		params.insert("grant_type", "authorization_code");
-		params.insert("client_secret", client_secret);
-
-		let res = client
-			.post("https://login.microsoftonline.com/common/oauth2/v2.0/token")
-			.form(&params)
-			.send()
-			.await?;
-
-		if res.status().is_success() {
-			let token_response: TokenResponse =
-				res.json().await.map_err(|e| anyhow!("Failed to parse token response: {}", e))?;
-
-			match token_response.refresh_token {
-				Some(refresh_token) => Ok(refresh_token),
-				None => Err(anyhow!("No refresh token found")),
-			}
-		} else {
-			let status = res.status();
-			let error_text =
-				res.text().await.unwrap_or_else(|_| "Failed to read response text".to_string());
-			println!("Error response body: {:?}", error_text);
-			Err(anyhow!("Failed to get refresh token: {}", status))
-		}
+		Ok(OneDrive::new(token.clone(), DriveLocation::me()))
 	}
 
 	async fn download_file(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -325,11 +282,11 @@ impl Source for OneDriveSource {
 // 			client_id: "c7c05424-b4d5-4af9-8f97-9e2de234b1b4".to_string(),
 //             client_secret: "I-08Q~fZ~Vsbm6Mc7rj4sqyzgjlYIA5WN5jG.cLn".to_string(),
 //             redirect_uri: "http://localhost:8000/callback".to_string(),
-//             auth_code: "M.C540_BAY.2.U.525c207a-eee3-20cd-f48e-0df779c53199".to_string(),
+//             refresh_token: M.C540_BAY.0.U.-Cg3wuI8L3FPX!LmwIHH1W8ChFNgervWiVAwuppNW9EC1W8iXHE797KeL!OU6*ywNfZD1*FVuVNroTPyH3HrzaP3ZiG!xepBUpmDKq1NjmXDFya6rlBABG*ahheNyOHv*WV9gYb*voX11ic00XJmxYyzEnHCxjbZ5SU75rWqzAgltIilcVoQm8VhLSeMYpRkUzDWS*Jeg6Ht8AuPJHpmetwdME7b33pOiKupGlFKn7OH1SoO7Xsc6JYcp96hneg8TS8mLg1!tVN9NkRcv1q1JjxxgLPPRXn*Xub7Y61rew91E9GdaXTAzJzFiRAL8ISH2*vq4gEzxmAG*wtfV9nMzT85JH2xxpdMvrvaXsrMrqJUm".to_string(),
 //             folder_path: "/testing".to_string(),
 // 		};
 
-// 		let drive_storage = OneDriveSource::new(google_config).await;
+// 		let drive_storage = OneDriveSource::new(google_config).await.unwwrap();
 // 		let connectivity = drive_storage.check_connectivity().await;
 
 // 		println!("Connectivity: {:?}", connectivity);
