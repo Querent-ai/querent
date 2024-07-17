@@ -331,8 +331,8 @@ message OneDriveConfig {
   string client_secret = 2;
   // Redirect URI
   string redirect_uri = 3;
-  // Auth code of the app
-  string auth_code = 4;
+  // Refresh token of the app
+  string refresh_token = 4;
   /// Folder path of the app
   string folder_path = 5;
   /// Id for the collector

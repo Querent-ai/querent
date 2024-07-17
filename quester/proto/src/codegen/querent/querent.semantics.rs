@@ -517,9 +517,9 @@ pub struct OneDriveConfig {
     /// Redirect URI
     #[prost(string, tag = "3")]
     pub redirect_uri: ::prost::alloc::string::String,
-    /// Auth code of the app
+    /// Refresh token of the app
     #[prost(string, tag = "4")]
-    pub auth_code: ::prost::alloc::string::String,
+    pub refresh_token: ::prost::alloc::string::String,
     /// / Folder path of the app
     #[prost(string, tag = "5")]
     pub folder_path: ::prost::alloc::string::String,
