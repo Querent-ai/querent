@@ -101,7 +101,7 @@ services:
       start_period: 3s
 
   querent:
-    image: querent/querent:v2.0.0
+    image: querent/rian:v4.3.0
     ports:
       - "1111:1111"
       - "2222:2222"

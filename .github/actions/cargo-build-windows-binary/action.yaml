@@ -61,7 +61,7 @@ runs:
       shell: bash
     - name: Build binary
       run: |
-        cargo build --release --target ${{ inputs.target }} --bin querent
+        cargo build --release --target ${{ inputs.target }} --bin rian
       shell: bash
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
@@ -71,7 +71,7 @@ runs:
       working-directory: ./querent
     - name: Bundle archive
       run: |
-        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent.exe \
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/rian.exe \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
       working-directory: ./querent

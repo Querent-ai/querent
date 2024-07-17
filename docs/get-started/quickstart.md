@@ -174,7 +174,7 @@ docker-compose up
 <TabItem value="cli" label="CLI">
 
 ```bash
-./querent serve --config ./config/querent.config.yaml
+./rian serve --config ./config/querent.config.yaml
 ```
 
 </TabItem>
