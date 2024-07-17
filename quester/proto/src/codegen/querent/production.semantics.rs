@@ -363,24 +363,24 @@ pub struct JiraCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GoogleDriveCollectorConfig {
-	/// Client ID of the Google Drive collector.
-	#[prost(string, tag = "1")]
-	pub drive_client_id: ::prost::alloc::string::String,
-	/// Client secret of the Google Drive collector.
-	#[prost(string, tag = "2")]
-	pub drive_client_secret: ::prost::alloc::string::String,
-	/// Refresh token of the Google Drive collector.
-	#[prost(string, tag = "3")]
-	pub drive_refresh_token: ::prost::alloc::string::String,
-	/// Folder to crawl of the Google Drive collector.
-	#[prost(string, tag = "6")]
-	pub folder_to_crawl: ::prost::alloc::string::String,
-	/// Specific file type of the Google Drive collector.
-	#[prost(string, tag = "7")]
-	pub specific_file_type: ::prost::alloc::string::String,
-	/// Id for the collector
-	#[prost(string, tag = "8")]
-	pub id: ::prost::alloc::string::String,
+    /// Client ID of the Google Drive collector.
+    #[prost(string, tag = "1")]
+    pub drive_client_id: ::prost::alloc::string::String,
+    /// Client secret of the Google Drive collector.
+    #[prost(string, tag = "2")]
+    pub drive_client_secret: ::prost::alloc::string::String,
+    /// Refresh token of the Google Drive collector.
+    #[prost(string, tag = "3")]
+    pub drive_refresh_token: ::prost::alloc::string::String,
+    /// Folder to crawl of the Google Drive collector.
+    #[prost(string, tag = "4")]
+    pub folder_to_crawl: ::prost::alloc::string::String,
+    /// Specific file type of the Google Drive collector.
+    #[prost(string, tag = "5")]
+    pub specific_file_type: ::prost::alloc::string::String,
+    /// Id for the collector
+    #[prost(string, tag = "6")]
+    pub id: ::prost::alloc::string::String,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
