@@ -57,7 +57,13 @@ impl BaseIngestor for DocxIngestor {
 				let cursor = Cursor::new(buffer.as_ref());
 
 				let docx = DocxFile::from_reader(cursor).unwrap();
-				let docx = docx.parse().unwrap();
+				let docx = match docx.parse() {
+					Ok(parsed) => parsed,
+					Err(e) => {
+						eprintln!("Failed to parse DOCX: {:?}", e);
+						return;
+					}
+				};
 
 				let body = docx.document.body;
 
@@ -116,39 +122,39 @@ impl BaseIngestor for DocxIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+	use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_docx_ingestor() {
+    #[tokio::test]
+    async fn test_docx_ingestor() {
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Assessment of Eagle Ford shale oil and gas resources.docx").unwrap();
+        let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Reservoir Pressure Mapping from Well-Test Data_ An Eagle Ford Example.docx").unwrap();
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("Assessment of Eagle Ford shale oil and gas resources.docx").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("docx".to_string()),
-// 			size: Some(10),
-//          source_id: "Filesystem".to_string(),
-//         };
+        // Create a CollectedBytes instance
+        let collected_bytes = CollectedBytes {
+            data: Some(bytes),
+            file: Some(Path::new("Reservoir Pressure Mapping from Well-Test Data_ An Eagle Ford Example.docx").to_path_buf()),
+            doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("docx".to_string()),
+			size: Some(10),
+         source_id: "Filesystem".to_string(),
+        };
 
-//         // Create a TxtIngestor instance
-//         let ingestor = DocxIngestor::new();
+        // Create a TxtIngestor instance
+        let ingestor = DocxIngestor::new();
 
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+        // Ingest the file
+        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
-//         // Collect the stream into a Vec
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+        // Collect the stream into a Vec
+		let mut stream = result_stream;
+        while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			println!("These are the tokens in file --------------{:?}", tokens);
+		}
+	}
+}
