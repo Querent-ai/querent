@@ -13,7 +13,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
+    - run: echo "ASSET_FULL_NAME=rian-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
     - name: Install protoc
       run: brew install protobuf

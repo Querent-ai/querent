@@ -19,8 +19,8 @@ curl -L https://install.querent.xyz | sh
 ```
 
 ```bash
-cd ./querent-v*/
-./querent --version
+cd ./rian-v*/
+./rian --version
 ```
 
 You can now move this executable directory wherever sensible for your environment and possibly add it to your `PATH` environment.

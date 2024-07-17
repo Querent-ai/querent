@@ -13,7 +13,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
+    - run: echo "ASSET_FULL_NAME=rian-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
     - name: Install rustup
       shell: bash
@@ -42,7 +42,7 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build Qurent binary
-      run: cargo build --release --target ${{ inputs.target }} --bin querent
+      run: cargo build --release --target ${{ inputs.target }} --bin rian
       shell: bash
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
@@ -51,7 +51,7 @@ runs:
       working-directory: ./querent
     - name: Bundle archive
       run: |
-        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent \
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/rian \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
       working-directory: ./querent
