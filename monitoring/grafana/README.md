@@ -1,4 +1,4 @@
-# Grafana dashboards for monitoring Quester
+# Grafana dashboards for monitoring Querent
 
 The list of featured dashboards:
 

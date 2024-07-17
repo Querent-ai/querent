@@ -9,12 +9,12 @@ if [ -f "$QUERENT_NODE_CONFIG" ]; then
   echo "Using user-defined configuration file: $QUERENT_NODE_CONFIG"
   # Print the content of the configuration file
   # cat "$QUERENT_NODE_CONFIG"
-  # Execute quester serve with the user-defined configuration
-  exec querent serve --config "$QUERENT_NODE_CONFIG"
+  # Execute rian serve with the user-defined configuration
+  exec rian serve --config "$QUERENT_NODE_CONFIG"
 else
   echo "Using default configuration file: $QUERENT_CONFIG"
   # Print the content of the default configuration file
   cat "$QUERENT_CONFIG"
-  # Execute quester serve with the default configuration
-  exec querent serve --config "$QUERENT_CONFIG"
+  # Execute rian serve with the default configuration
+  exec rian serve --config "$QUERENT_CONFIG"
 fi

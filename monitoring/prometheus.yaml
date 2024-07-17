@@ -3,7 +3,7 @@ global:
   scrape_timeout: 1s
 
 scrape_configs:
-  - job_name: quester
+  - job_name: querent
     metrics_path: /metrics
     static_configs:
       - targets:

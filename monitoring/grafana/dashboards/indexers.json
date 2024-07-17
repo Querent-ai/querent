@@ -1160,7 +1160,7 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["quester", "indexer"],
+  "tags": ["querent", "indexer"],
   "templating": {
     "list": [
       {
@@ -1363,8 +1363,8 @@
   },
   "timepicker": {},
   "timezone": "utc",
-  "title": "Quester Indexers",
-  "uid": "quester-indexers",
+  "title": "Querent Indexers",
+  "uid": "querent-indexers",
   "version": 50,
   "weekStart": ""
 }

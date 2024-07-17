@@ -7,14 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       release-version:
-        description: 'Release version (v#.#.#[-rc#])'
+        description: "Release version (v#.#.#[-rc#])"
         required: true
 
 env:
   NEW_RELEASE_TAG_FROM_UI: ${{github.event.inputs.release-version || github.ref_name}}
   TEST_RUN: ${{startsWith(github.event.inputs.release-version || github.ref_name, 'v0.0.1')}}
   DOCKER_HUB_PROFILE: querent
-  IMAGE_NAME: querent
+  IMAGE_NAME: rian
 
 jobs:
   build-and-publish-container-image:
@@ -37,7 +37,7 @@ jobs:
       - name: Check Out Repo
         uses: actions/checkout@v3
       - name: Set up tags for cp image
-        id: querent-tags
+        id: rian-tags
         uses: docker/metadata-action@v4
         with:
           flavor: |
@@ -63,7 +63,7 @@ jobs:
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-      - name: Build and Push Quester Image
+      - name: Build and Push Querent RIAN Image
         uses: docker/build-push-action@v4
         with:
           context: .

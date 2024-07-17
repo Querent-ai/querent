@@ -19,8 +19,8 @@ curl -L https://install.querent.xyz | sh
 ```
 
 ```bash
-cd ./querent-v*/
-./querent --version
+cd ./rian-v*/
+./rian --version
 ```
 
 You can now move this executable directory wherever sensible for your environment and possibly add it to your `PATH` environment.
@@ -133,7 +133,7 @@ services:
       start_period: 3s
   
   querent:
-    image: querent/quester:v0.0.3-rc9
+    image: querent/querent:v0.0.3-rc9
     ports:
       - "1111:1111"
       - "2222:2222"
@@ -174,7 +174,7 @@ docker-compose up
 <TabItem value="cli" label="CLI">
 
 ```bash
-./querent serve --config ./config/querent.config.yaml
+./rian serve --config ./config/querent.config.yaml
 ```
 
 </TabItem>

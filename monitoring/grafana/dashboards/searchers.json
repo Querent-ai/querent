@@ -1097,7 +1097,7 @@
   "refresh": "10s",
   "schemaVersion": 38,
   "style": "dark",
-  "tags": ["quester", "searcher"],
+  "tags": ["querent", "searcher"],
   "templating": {
     "list": [
       {
@@ -1173,8 +1173,8 @@
   },
   "timepicker": {},
   "timezone": "utc",
-  "title": "Quester searchers",
-  "uid": "quester-searchers",
+  "title": "Querent searchers",
+  "uid": "querent-searchers",
   "version": 39,
   "weekStart": ""
 }

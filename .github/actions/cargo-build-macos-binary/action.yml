@@ -13,7 +13,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: echo "ASSET_FULL_NAME=querent-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
+    - run: echo "ASSET_FULL_NAME=rian-${{ inputs.version }}-${{ inputs.target }}" >> $GITHUB_ENV
       shell: bash
     - name: Install protoc
       run: brew install protobuf
@@ -31,12 +31,12 @@ runs:
       if: "${{ inputs.target == 'aarch64-apple-darwin' }}"
       run: rustup target add aarch64-apple-darwin
       shell: bash
-      working-directory: ./quester
+      working-directory: ./querent
     - name: Add target x86_64-apple-darwin
       if: "${{ inputs.target == 'x86_64-apple-darwin' }}"
       run: rustup target add x86_64-apple-darwin
       shell: bash
-      working-directory: ./quester
+      working-directory: ./querent
     - name: Retrieve and export commit date, hash, and tags
       run: |
         echo "QUERENT_COMMIT_DATE=$(TZ=UTC0 git log -1 --format=%cd --date=format-local:%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_ENV
@@ -44,30 +44,30 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build binary
-      run: cargo build --release  --target ${{ matrix.target }} --bin querent
+      run: cargo build --release  --target ${{ matrix.target }} --bin rian
       shell: bash
-      working-directory: ./quester
+      working-directory: ./querent
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
     - name: Bundle archive
       run: |
-        make archive BINARY_FILE=target/${{ inputs.target }}/release/querent \
+        make archive BINARY_FILE=target/${{ inputs.target }}/release/rian \
           BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
       shell: bash
-      working-directory: ./quester
+      working-directory: ./querent
     - name: Save binary archive for three days
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.ASSET_FULL_NAME }}.tar.gz
-        path: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
+        path: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
         retention-days: 3
     - name: Deploy archive to GitHub release
       uses: quickwit-inc/upload-to-github-release@v1
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       with:
-        file: ./quester/${{ env.ASSET_FULL_NAME }}.tar.gz
+        file: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
         overwrite: true
         tag_name: ${{ inputs.version }}

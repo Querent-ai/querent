@@ -1,0 +1,60 @@
+[package]
+name = "rian"
+version = "4.2.0"
+authors = ["Querent AI LLC <contact@querent.xyz>"]
+edition = "2021"
+license = "BSL-1.1"
+description = "Real-time Information Aggregation Network (RIAN) by Querent AI"
+repository = "https://github.com/querent-ai/querent"
+homepage = "https://querent.xyz/"
+documentation = "https://querent.xyz/docs/"
+
+
+[dependencies]
+actors = { workspace = true }
+common = { workspace = true }
+storage = { workspace = true }
+cluster = { workspace = true }
+proto = { workspace = true }
+insights = { workspace = true }
+ingestors = { workspace = true }
+engines = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace =true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+chrono = { workspace = true }
+tracing = { workspace = true }
+crossbeam-channel = { workspace = true }
+thiserror = { workspace = true }
+tonic = { workspace = true }
+uuid = { workspace = true }
+utoipa = { workspace = true }
+futures = { workspace = true }
+futures-util = { workspace = true }
+reqwest-eventsource = { workspace = true }
+regex = { workspace = true }
+async-stream = { workspace = true }
+async-openai = { workspace = true }
+url = { workspace = true }
+lopdf = { workspace = true }
+tiktoken-rs = { workspace = true }
+csv = { workspace = true }
+readability = { workspace = true }
+text-splitter = { workspace = true }
+reqwest = { workspace = true }
+urlencoding = { workspace = true }
+tokenizers = { workspace = true }
+fastembed =  { workspace = true }
+sources = { workspace = true}
+tokio-stream = { workspace = true }
+
+[dev-dependencies]
+actors = { workspace = true, features = ["testsuite"] }
+common = { workspace = true, features = ["testsuite"] }
+
+[features]
+testsuite = []
+
