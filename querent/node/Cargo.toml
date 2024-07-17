@@ -11,7 +11,7 @@ documentation = "https://querent.xyz/docs/"
 default-run = "querent"
 
 [[bin]]
-name = "querent"
+name = "rian"
 path = "src/main.rs"
 
 [dependencies]
