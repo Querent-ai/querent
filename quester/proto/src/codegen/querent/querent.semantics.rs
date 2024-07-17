@@ -377,11 +377,8 @@ pub struct GoogleDriveCollectorConfig {
     /// Folder to crawl of the Google Drive collector.
     #[prost(string, tag = "4")]
     pub folder_to_crawl: ::prost::alloc::string::String,
-    /// Specific file type of the Google Drive collector.
-    #[prost(string, tag = "5")]
-    pub specific_file_type: ::prost::alloc::string::String,
     /// Id for the collector
-    #[prost(string, tag = "6")]
+    #[prost(string, tag = "5")]
     pub id: ::prost::alloc::string::String,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.

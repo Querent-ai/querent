@@ -238,10 +238,8 @@ message GoogleDriveCollectorConfig {
   string drive_refresh_token = 3;
   // Folder to crawl of the Google Drive collector.
   string folder_to_crawl = 4;
-  // Specific file type of the Google Drive collector.
-  string specific_file_type = 5;
   // Id for the collector
-  string id = 6;
+  string id = 5;
 }
 
 // EmailCollectorConfig is a message to hold configuration for an Email collector.
