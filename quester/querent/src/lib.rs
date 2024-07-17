@@ -71,6 +71,10 @@ pub async fn create_dynamic_sources(
 				let azure_source = sources::azure::AzureBlobStorage::new(config.clone());
 				sources.push(Arc::new(azure_source));
 			},
+			Some(proto::semantics::Backend::Drive(config)) => {
+				let drive_source = sources::drive::drive::GoogleDriveSource::new(config.clone()).await;
+				sources.push(Arc::new(drive_source));
+			}
 			_ =>
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Invalid source type: {}",
