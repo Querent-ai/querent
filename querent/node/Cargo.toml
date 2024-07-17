@@ -8,7 +8,7 @@ description = "Querent Node: A node for the Querent network with CLI and REST AP
 repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
 documentation = "https://querent.xyz/docs/"
-default-run = "querent"
+default-run = "rian"
 
 [[bin]]
 name = "rian"
