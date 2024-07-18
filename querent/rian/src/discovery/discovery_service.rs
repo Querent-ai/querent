@@ -1,7 +1,6 @@
-use crate::{
-	discovery_searcher::DiscoverySearch, discovery_traverser::DiscoveryTraverse,
-	is_discovery_agent_type_allowed,
-};
+#[cfg(feature = "license-check")]
+use crate::is_discovery_agent_type_allowed;
+use crate::{discovery_searcher::DiscoverySearch, discovery_traverser::DiscoveryTraverse};
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
