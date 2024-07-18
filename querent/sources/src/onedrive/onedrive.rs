@@ -198,33 +198,36 @@ impl Source for OneDriveSource {
 
 		let stream = stream! {
 			for drive_item in drive_item_all {
-				println!("Inside the stream of one drive fucking finally");
 				if let Some(_file) = &drive_item.file {
 					let name = drive_item.name.unwrap();
-					println!("Name - {:?}", name.clone());
 					let extension = Self::get_file_extension(&name);
-					println!("Extension - {:?}", extension);
 					if let Some(download_url) = &drive_item.download_url {
 						let bytes = Self::download_file(download_url).await.unwrap();
-						println!("Got the bytes finally ");
 						let res = CollectedBytes {
 							data: Some(bytes),
 							file: Some(Path::new(&name).to_path_buf()),
 							eof: false,
 							doc_source: Some("onedrive://".to_string()),
-							extension: extension,
+							extension: extension.clone(),
 							size: Some(123),
 							source_id: source_id.clone(),
 						};
-
-						println!("Collected bytes {:?}", res.file);
 						yield Ok(res);
+
+						yield(Ok(CollectedBytes {
+							data: None,
+							file: Some(Path::new(&name).to_path_buf()),
+							eof: true,
+							doc_source: Some("onedrive://".to_string()),
+							extension: extension,
+							size: Some(123),
+							source_id: source_id.clone(),
+						}))
 
 					}
 				}
 			}
 		};
-		println!("About to leave the stream");
 		Ok(Box::pin(stream))
 	}
 

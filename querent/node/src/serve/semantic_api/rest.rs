@@ -15,12 +15,12 @@ use proto::{
 	semantics::{
 		AzureCollectorConfig, Backend, CollectorConfig, CollectorConfigResponse,
 		DeleteCollectorRequest, DeleteCollectorResponse, DropBoxCollectorConfig,
-		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, OneDriveConfig, FixedEntities,
+		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
 		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, MilvusConfig, Neo4jConfig,
-		NewsCollectorConfig, PipelineMetadata, PipelineRequestInfo, PipelineRequestInfoList,
-		PipelinesMetadata, PostgresConfig, S3CollectorConfig, SampleEntities,
-		SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
+		NewsCollectorConfig, OneDriveConfig, PipelineMetadata, PipelineRequestInfo,
+		PipelineRequestInfoList, PipelinesMetadata, PostgresConfig, S3CollectorConfig,
+		SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
 		SlackCollectorConfig, StorageConfig, StorageType,
 	},
 };

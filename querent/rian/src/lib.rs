@@ -76,19 +76,18 @@ pub async fn create_dynamic_sources(
 					sources::drive::drive::GoogleDriveSource::new(config.clone()).await;
 				sources.push(Arc::new(drive_source));
 			},
-			Some(proto::semantics::Backend::Onedrive(config)) => {
+			Some(proto::semantics::Backend::Onedrive(config)) =>
 				match sources::onedrive::onedrive::OneDriveSource::new(config.clone()).await {
 					Ok(onedrive_source) => {
 						sources.push(Arc::new(onedrive_source));
 					},
 					Err(e) => {
-					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 							"Failed to initialize email source: {:?} ",
 							e
 						)));
-					},				
-				}
-			},
+					},
+				},
 			Some(proto::semantics::Backend::Email(config)) =>
 				match sources::email::email::EmailSource::new(config.clone()).await {
 					Ok(email_source) => {

@@ -106,7 +106,6 @@ impl Engine for AttentionTensorsEngine {
 					let split_chunks = split_into_chunks(max_tokens, &data);
 					all_chunks.extend(split_chunks);
 				}
-				println!("All chunks {:?}", all_chunks.clone());
 
 				let mut tokenized_chunks = Vec::new();
 				for chunk in &all_chunks {

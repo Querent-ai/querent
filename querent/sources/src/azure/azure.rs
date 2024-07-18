@@ -147,7 +147,7 @@ impl Source for AzureBlobStorage {
 			match first_blob_result {
 				Ok(_) => Ok(()),
 				Err(e) => {
-					println!("Error connecting to Azure Blob Storage: {}", e);
+					eprintln!("Error connecting to Azure Blob Storage: {}", e);
 					Err(e.into())
 				},
 			}

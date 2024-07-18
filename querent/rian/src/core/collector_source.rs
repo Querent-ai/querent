@@ -68,24 +68,18 @@ impl Source for Collector {
 
 		// Store the JoinHandle with the result in the Collector struct
 		self.workflow_handle = Some(tokio::spawn(async move {
-			println!("Inside handle");
 			let result = data_poller.poll_data().await;
-			println!("Got the poll data");
 			match result {
 				Ok(mut stream) => {
 					while let Some(data) = stream.next().await {
 						match data {
-							Ok(bytes) => {
-								println!("Got the bytes ");
+							Ok(bytes) =>
 								if let Err(e) = event_sender.send(bytes).await {
 									error!("Failed to send data: {:?}", e);
-									println!("Error as {:?}", e);
-								}
-							},
-								
+								},
+
 							Err(e) => {
 								error!("Failed to poll data here: {:?}", e);
-								println!("Error here as {:?}", e);
 								if let Err(e) = event_sender
 									.send(CollectedBytes::new(
 										None,
@@ -102,10 +96,7 @@ impl Source for Collector {
 								return Err(e);
 							},
 						}
-
-						println!("Outside of the matchdata");
 					}
-					println!("Here 11111111111");
 
 					if let Err(e) = event_sender
 						.send(CollectedBytes::new(None, None, true, None, None, "".to_string()))
