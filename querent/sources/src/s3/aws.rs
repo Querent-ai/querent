@@ -337,6 +337,7 @@ async fn download_all(byte_stream: ByteStream, output: &mut Vec<u8>) -> io::Resu
 // 			region: "ap-south-1".to_string(),
 
 // 			bucket: "querentbucket1".to_string(),
+//          id: "Id".to_string(),
 // 		};
 
 // 		let credentials = Credentials::new(

@@ -156,7 +156,7 @@ impl Storage for PostgresStorage {
 	async fn traverse_metadata_table(
 		&self,
 		_filtered_pairs: Vec<(String, String)>,
-	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}
 

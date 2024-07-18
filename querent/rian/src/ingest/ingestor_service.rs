@@ -109,6 +109,7 @@ impl Handler<CollectionBatch> for IngestorService {
 		// Calculate and update total megabytes ingested
 		let total_bytes: usize =
 			message.clone().bytes.iter().map(|bytes| bytes.size.unwrap_or(0)).sum();
+
 		let total_mbs = (total_bytes + 1023) / 1024 / 1024; // Ceiling division for bytes to MB
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);

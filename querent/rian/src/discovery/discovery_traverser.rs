@@ -206,7 +206,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							} else {
 								// If previous_query_results is not empty, parse and combine with current results
 								let previous_results: Vec<(
-									i32,
+									String,
 									String,
 									String,
 									String,
@@ -306,7 +306,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 }
 
 fn process_documents(
-	traverser_results: &Vec<(i32, String, String, String, String, String, String, f32)>,
+	traverser_results: &Vec<(String, String, String, String, String, String, String, f32)>,
 	insights: &mut Vec<proto::Insight>,
 	document_payloads: &mut Vec<DocumentPayload>,
 	current_query_embedding: Vec<f32>,

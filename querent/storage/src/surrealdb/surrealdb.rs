@@ -65,6 +65,7 @@ struct QueryResultSemantic {
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
 struct QueryResultTraverser {
+	id: Thing,
 	document_id: String,
 	subject: String,
 	object: String,
@@ -109,7 +110,7 @@ pub struct SurrealDB {
 	pub db: Surreal<Db>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 struct Record {
 	#[allow(dead_code)]
 	pub id: Thing,
@@ -306,9 +307,17 @@ impl Storage for SurrealDB {
 	async fn traverse_metadata_table(
 		&self,
 		filtered_pairs: Vec<(String, String)>,
-	) -> StorageResult<Vec<(i32, String, String, String, String, String, String, f32)>> {
-		let mut combined_results: Vec<(i32, String, String, String, String, String, String, f32)> =
-			Vec::new();
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		let mut combined_results: Vec<(
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			f32,
+		)> = Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
 		for (head, tail) in filtered_pairs {
 			// Traverse depth 1
@@ -486,7 +495,7 @@ impl Storage for SurrealDB {
 pub async fn traverse_node<'a>(
 	db: &'a Surreal<Db>,
 	node: String,
-	combined_results: &'a mut Vec<(i32, String, String, String, String, String, String, f32)>,
+	combined_results: &'a mut Vec<(String, String, String, String, String, String, String, f32)>,
 	visited_pairs: &'a mut HashSet<(String, String)>,
 	depth: usize,
 ) -> StorageResult<()> {
@@ -526,7 +535,7 @@ pub async fn traverse_node<'a>(
 		let score = score_result[0].score;
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
-				123,
+				result.id.id.to_string(),
 				result.document_id,
 				result.subject.clone(),
 				result.object.clone(),
@@ -574,7 +583,7 @@ pub async fn traverse_node<'a>(
 
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
-				123,
+				result.id.id.to_string(),
 				result.document_id,
 				result.subject.clone(),
 				result.object.clone(),

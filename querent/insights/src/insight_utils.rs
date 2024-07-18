@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 pub fn unique_sentences(
-	discovered_knowledge: &[(i32, String, String, String, String, String, String, f32)],
+	discovered_knowledge: &[(String, String, String, String, String, String, String, f32)],
 ) -> Vec<String> {
 	let mut unique_sentences_set = HashSet::new();
 

@@ -212,7 +212,7 @@ pub struct CollectorConfig {
     pub name: ::prost::alloc::string::String,
     #[prost(
         oneof = "collector_config::Backend",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13"
     )]
     pub backend: ::core::option::Option<collector_config::Backend>,
 }
@@ -245,6 +245,8 @@ pub mod collector_config {
         News(super::NewsCollectorConfig),
         #[prost(message, tag = "12")]
         Files(super::FileCollectorConfig),
+        #[prost(message, tag = "13")]
+        Onedrive(super::OneDriveConfig),
     }
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
@@ -375,13 +377,10 @@ pub struct GoogleDriveCollectorConfig {
     #[prost(string, tag = "3")]
     pub drive_refresh_token: ::prost::alloc::string::String,
     /// Folder to crawl of the Google Drive collector.
-    #[prost(string, tag = "6")]
+    #[prost(string, tag = "4")]
     pub folder_to_crawl: ::prost::alloc::string::String,
-    /// Specific file type of the Google Drive collector.
-    #[prost(string, tag = "7")]
-    pub specific_file_type: ::prost::alloc::string::String,
     /// Id for the collector
-    #[prost(string, tag = "8")]
+    #[prost(string, tag = "5")]
     pub id: ::prost::alloc::string::String,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.
@@ -520,9 +519,9 @@ pub struct OneDriveConfig {
     /// Redirect URI
     #[prost(string, tag = "3")]
     pub redirect_uri: ::prost::alloc::string::String,
-    /// Auth code of the app
+    /// Refresh token of the app
     #[prost(string, tag = "4")]
-    pub auth_code: ::prost::alloc::string::String,
+    pub refresh_token: ::prost::alloc::string::String,
     /// / Folder path of the app
     #[prost(string, tag = "5")]
     pub folder_path: ::prost::alloc::string::String,
