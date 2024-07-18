@@ -61,4 +61,5 @@ common = { workspace = true, features = ["testsuite"] }
 
 [features]
 testsuite = []
+licence-check = []
 

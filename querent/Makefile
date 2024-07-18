@@ -20,7 +20,7 @@ check:
 .PHONY: test
 test:
 	@echo "Running Cargo test..."
-	@cargo test
+	@cargo test --all --all-features --all-targets
 
 .PHONY: clippy
 clippy:

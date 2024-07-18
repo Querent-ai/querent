@@ -32,11 +32,16 @@ pub async fn start_semantic_service(
 	querent: &Querent,
 	cluster: &Cluster,
 	pubsub_broker: &PubSubBroker,
+	secret_store: Arc<dyn storage::Storage>,
 ) -> anyhow::Result<MessageBus<SemanticService>> {
 	info!("Starting semantic service");
 
-	let semantic_service =
-		SemanticService::new(node_config.node_id.clone(), cluster.clone(), pubsub_broker.clone());
+	let semantic_service = SemanticService::new(
+		node_config.node_id.clone(),
+		cluster.clone(),
+		pubsub_broker.clone(),
+		secret_store,
+	);
 
 	let (semantic_service_mailbox, _) = querent.spawn_builder().spawn(semantic_service);
 	info!("Starting semantic service started");
@@ -151,6 +156,25 @@ pub fn verify_key(licence_key: String) -> Result<bool, anyhow::Error> {
 	Ok(true)
 }
 
+// Return a ProductRegistrationInfo from a license key
+#[allow(deprecated)]
+pub fn get_product_info(licence_key: String) -> Result<ProductRegistrationInfo, anyhow::Error> {
+	// license_key is a base64 encoded string
+	let key = base64::decode(licence_key)?;
+	// parse key into ProductRegistrationInfo
+	let product_sign: SignedPayload = serde_json::from_slice(&key)?;
+	Ok(product_sign.payload)
+}
+
+pub fn get_pipeline_count_by_product(licence_key: String) -> Result<usize, anyhow::Error> {
+	let info = get_product_info(licence_key)?;
+	match info.product {
+		ProductType::Rian => Ok(1),
+		ProductType::RianPro => Ok(usize::MAX),
+		ProductType::RianEnterprise => Ok(usize::MAX),
+	}
+}
+
 const PREFIX: &'static str = "<Bytes>";
 const POSTFIX: &'static str = "</Bytes>";
 
@@ -181,6 +205,12 @@ mod tests {
 	#[test]
 	fn test_verify_key() {
 		let result = verify_key(TEST_KEY.to_string());
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[test]
+	fn test_get_product_info() {
+		let result = get_product_info(TEST_KEY.to_string());
 		assert_eq!(result.is_ok(), true);
 	}
 }
