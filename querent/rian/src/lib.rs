@@ -49,12 +49,24 @@ pub async fn start_semantic_service(
 }
 
 pub async fn create_dynamic_sources(
+	licence_key: Option<String>,
 	collectors_configs: Vec<CollectorConfig>,
 ) -> Result<Vec<Arc<dyn sources::Source>>, PipelineErrors> {
 	let mut sources: Vec<Arc<dyn sources::Source>> = vec![];
+	let licence_key = licence_key.unwrap_or_default();
+	if licence_key.is_empty() {
+		log::warn!("Missing License Key");
+	}
 	for collector in collectors_configs {
 		match &collector.backend {
 			Some(proto::semantics::Backend::Files(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
 				let file_source = sources::filesystem::files::LocalFolderSource::new(
 					PathBuf::from(config.root_path.clone()),
 					None,
@@ -63,6 +75,13 @@ pub async fn create_dynamic_sources(
 				sources.push(Arc::new(file_source));
 			},
 			Some(proto::semantics::Backend::Gcs(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
 				let gcs_source = sources::gcs::get_gcs_storage(config.clone()).map_err(|e| {
 					PipelineErrors::InvalidParams(anyhow::anyhow!(
 						"Failed to create GCS source: {}",
@@ -72,10 +91,24 @@ pub async fn create_dynamic_sources(
 				sources.push(Arc::new(gcs_source));
 			},
 			Some(proto::semantics::Backend::S3(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
 				let s3_source = sources::s3::S3Source::new(config.clone()).await;
 				sources.push(Arc::new(s3_source));
 			},
 			Some(proto::semantics::Backend::Azure(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
 				let azure_source = sources::azure::AzureBlobStorage::new(config.clone());
 				sources.push(Arc::new(azure_source));
 			},
@@ -95,6 +128,7 @@ pub struct SignedPayload {
 	pub signature: MultiSignature,
 	#[serde(rename = "publicKey")]
 	pub public_key: String,
+	pub expiry: u64,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductRegistrationInfo {
@@ -131,6 +165,14 @@ pub fn verify_key(licence_key: String) -> Result<bool, anyhow::Error> {
 	let key = base64::decode(licence_key)?;
 	// parse key into ProductRegistrationInfo
 	let product_sign: SignedPayload = serde_json::from_slice(&key)?;
+	// Check the expiry is not in the past
+	let now = std::time::SystemTime::now()
+		.duration_since(std::time::UNIX_EPOCH)
+		.unwrap()
+		.as_secs();
+	if product_sign.expiry < now {
+		return Err(anyhow::anyhow!("License key expired"));
+	}
 	let public_key_hex = product_sign.clone().public_key.clone();
 	// remove 0x prefix
 	let public_key_hex = public_key_hex.trim_start_matches("0x");
@@ -175,6 +217,22 @@ pub fn get_pipeline_count_by_product(licence_key: String) -> Result<usize, anyho
 	}
 }
 
+pub fn is_data_source_allowed_by_product(
+	licence_key: String,
+	data_source: &CollectorConfig,
+) -> Result<bool, anyhow::Error> {
+	let info = get_product_info(licence_key)?;
+	match info.product {
+		ProductType::Rian => match &data_source.backend {
+			Some(proto::semantics::Backend::Files(_)) => Ok(true),
+			Some(proto::semantics::Backend::Gcs(_)) => Ok(true),
+			_ => Ok(false),
+		},
+		ProductType::RianPro => Ok(true),
+		ProductType::RianEnterprise => Ok(true),
+	}
+}
+
 const PREFIX: &'static str = "<Bytes>";
 const POSTFIX: &'static str = "</Bytes>";
 
@@ -190,7 +248,7 @@ pub fn wrap_binary_data(data: Vec<u8>) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	const TEST_KEY: &str = "eyJzaWduYXR1cmUiOnsiU3IyNTUxOSI6IjB4MmU5M2RkMTgzN2MzNjgxMjcxYjNmM2RmZjg4OGUzM2JiOTM2NzJiYjA5YzdhNDI0OGE5NzE3NDNiMDE2ZTAzMWJhNzgwNTExMzZhM2E1OWI2YzJmOTQwZGE4ZDczZGUwYjc4ZDkxYjg3ZTEzNWQzYTNlYzhmYTZkNTY4YWVmODYifSwicHVibGljS2V5IjoiMHhhY2I2YjMzMjQ4ZmNmYzUyZmJlMjQwMmE4YzY3ZjRiMGJlZDkzOWExNmQzNDIzZmNmZTlmMjNiYzhiNzI0MjIwIiwicGF5bG9hZCI6eyJuYW1lIjoiSGVsbG8gV29ybGQiLCJlbWFpbCI6ImZramdmaCIsIndlYnNpdGUiOiJhYWEiLCJwcm9kdWN0IjoicmlhbiJ9fQ==";
+	const TEST_KEY: &str = "eyJzaWduYXR1cmUiOnsiU3IyNTUxOSI6IjB4NjIwNTE4YjcyMWFlOTViZDUzNzMzOWIyNjM4YWQ4MjFiZjgyZmRlMTU5Y2I1ZGFiNGIyMWUyYjk1ZWIzZDUyZDYwOGNlZWMwNDhhNDQxMTAyYmUxYTU5ZTk4YjRhZTJkZDYzN2FiN2U0MjZkZDE0N2UzOTQ4YzNmZTA4MTU5OGUifSwicHVibGljS2V5IjoiMHhhY2I2YjMzMjQ4ZmNmYzUyZmJlMjQwMmE4YzY3ZjRiMGJlZDkzOWExNmQzNDIzZmNmZTlmMjNiYzhiNzI0MjIwIiwicGF5bG9hZCI6eyJuYW1lIjoiSGVsbG8gV29ybGQiLCJlbWFpbCI6ImFlZGFlIiwid2Vic2l0ZSI6ImRkIiwicHJvZHVjdCI6InJpYW4ifSwiZXhwaXJ5IjoxNzIzOTIxMDc1MTE2fQ==";
 	#[test]
 	fn test_wrap_binary_data() {
 		let data = vec![1, 2, 3, 4, 5];

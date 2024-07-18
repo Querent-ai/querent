@@ -18,7 +18,7 @@ use std::{
 use storage::Storage;
 use tracing::{error, info};
 
-#[cfg(feature = "licence-check")]
+#[cfg(feature = "license-check")]
 use crate::get_pipeline_count_by_product;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
@@ -139,7 +139,7 @@ impl SemanticService {
 		pipeline_id: String,
 		settings: PipelineSettings,
 	) -> Result<(), PipelineErrors> {
-		#[cfg(feature = "licence-check")]
+		#[cfg(feature = "license-check")]
 		{
 			let licence_key = self
 				.secret_store
