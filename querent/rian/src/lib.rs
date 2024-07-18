@@ -5,7 +5,7 @@ use cluster::Cluster;
 use common::PubSubBroker;
 pub mod core;
 pub use core::*;
-use proto::{semantics::CollectorConfig, NodeConfig};
+use proto::{semantics::CollectorConfig, DiscoveryAgentType, NodeConfig};
 pub mod events;
 pub use events::*;
 pub mod storage;
@@ -255,6 +255,21 @@ pub fn is_data_source_allowed_by_product(
 		ProductType::Rian => match &data_source.backend {
 			Some(proto::semantics::Backend::Files(_)) => Ok(true),
 			Some(proto::semantics::Backend::Gcs(_)) => Ok(true),
+			_ => Ok(false),
+		},
+		ProductType::RianPro => Ok(true),
+		ProductType::RianEnterprise => Ok(true),
+	}
+}
+
+pub fn is_discovery_agent_type_allowed(
+	licence_key: String,
+	agent_type: &DiscoveryAgentType,
+) -> Result<bool, anyhow::Error> {
+	let info = get_product_info(licence_key)?;
+	match info.product {
+		ProductType::Rian => match agent_type {
+			DiscoveryAgentType::Retriever => Ok(true),
 			_ => Ok(false),
 		},
 		ProductType::RianPro => Ok(true),

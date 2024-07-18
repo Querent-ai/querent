@@ -76,6 +76,7 @@ pub async fn serve_quester(
 		event_storages.clone(),
 		index_storages.clone(),
 		metadata_store.clone(),
+		secret_store.clone(),
 	)
 	.await?;
 
