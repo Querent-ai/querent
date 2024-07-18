@@ -535,7 +535,7 @@ pub async fn traverse_node<'a>(
 		let score = score_result[0].score;
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
-				result.id.id.to_string(),,
+				result.id.id.to_string(),
 				result.document_id,
 				result.subject.clone(),
 				result.object.clone(),
@@ -583,7 +583,7 @@ pub async fn traverse_node<'a>(
 
 		if visited_pairs.insert((result.subject.clone(), result.object.clone())) {
 			combined_results.push((
-				result.id.id.to_string(),,
+				result.id.id.to_string(),
 				result.document_id,
 				result.subject.clone(),
 				result.object.clone(),

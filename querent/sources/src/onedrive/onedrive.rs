@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Cursor, ops::Range, path::Path, pin::Pin, sync::Arc};
+use std::{io::Cursor, ops::Range, path::Path, pin::Pin, sync::Arc};
 
 use anyhow::{anyhow, Result};
 use async_stream::stream;
@@ -7,10 +7,9 @@ use common::CollectedBytes;
 use futures::Stream;
 use onedrive_api::{
 	Auth, ClientCredential, DriveLocation, ItemLocation, OneDrive, Permission, Tenant,
-	TokenResponse,
 };
 use proto::semantics::OneDriveConfig;
-use reqwest::{get, Client};
+use reqwest::get;
 use tokio::io::{AsyncRead, AsyncWriteExt};
 use tracing::instrument;
 
@@ -30,11 +29,15 @@ pub static TOKEN: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_n
 impl OneDriveSource {
 	pub async fn new(config: OneDriveConfig) -> anyhow::Result<Self> {
 		let onedrive = match Self::get_logined_onedrive(&config).await {
-            Ok(logged_in_drive) => logged_in_drive,
-            Err(e) => return Err(anyhow::anyhow!("Failed to log in to OneDrive: {}", e)),
-        };
+			Ok(logged_in_drive) => logged_in_drive,
+			Err(e) => return Err(anyhow::anyhow!("Failed to log in to OneDrive: {}", e)),
+		};
 
-		Ok(OneDriveSource { onedrive, folder_path: config.folder_path, source_id: config.id.clone() })
+		Ok(OneDriveSource {
+			onedrive,
+			folder_path: config.folder_path,
+			source_id: config.id.clone(),
+		})
 	}
 
 	pub async fn get_logined_onedrive(config: &OneDriveConfig) -> Result<OneDrive, anyhow::Error> {
@@ -51,7 +54,8 @@ impl OneDriveSource {
 					&ClientCredential::Secret(config.client_secret.clone()),
 				)
 				.await
-				.map_err(|e| anyhow!("Login failed: {}", e)).unwrap()
+				.map_err(|e| anyhow!("Login failed: {}", e))
+				.unwrap()
 				.access_token
 			})
 			.await;
