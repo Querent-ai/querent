@@ -286,7 +286,14 @@ pub async fn start_pipeline(
 			collectors_configs.push(collector_config_value);
 		}
 	}
-	let data_sources = create_dynamic_sources(collectors_configs).await?;
+	let mut _license_key = None;
+	#[cfg(feature = "license-check")]
+	{
+		_license_key = secret_store.get_rian_api_key().await.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
+		})?;
+	};
+	let data_sources = create_dynamic_sources(_license_key, collectors_configs).await?;
 
 	let options = EmbedderOptions {
 		model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),

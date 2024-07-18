@@ -1,3 +1,5 @@
+#[cfg(feature = "license-check")]
+use crate::is_discovery_agent_type_allowed;
 use crate::{discovery_searcher::DiscoverySearch, discovery_traverser::DiscoveryTraverse};
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
@@ -34,6 +36,7 @@ pub struct DiscoveryAgentService {
 	traverse_pipelines: HashMap<String, DiscoveryTraverseHandle>,
 	searcher_pipelines: HashMap<String, DiscoverSearchHandle>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+	license_key: Option<String>,
 }
 
 impl Debug for DiscoveryAgentService {
@@ -50,6 +53,7 @@ impl DiscoveryAgentService {
 		node_id: String,
 		cluster: Cluster,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+		license_key: Option<String>,
 	) -> Self {
 		Self {
 			node_id,
@@ -57,6 +61,7 @@ impl DiscoveryAgentService {
 			traverse_pipelines: HashMap::new(),
 			searcher_pipelines: HashMap::new(),
 			event_storages,
+			license_key,
 		}
 	}
 }
@@ -80,7 +85,19 @@ impl Handler<DiscoverySessionRequest> for DiscoveryAgentService {
 		let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 		let current_timestamp = chrono::Utc::now().timestamp();
 		let event_storages = self.event_storages.clone();
-
+		if self.license_key.is_some() {
+			#[cfg(feature = "license-check")]
+			{
+				let license_key = self.license_key.clone().unwrap_or_default();
+				let is_allowed = is_discovery_agent_type_allowed(
+					license_key,
+					&request.session_type.clone().unwrap_or(DiscoveryAgentType::Retriever),
+				)?;
+				if !is_allowed {
+					return Err(anyhow::anyhow!("Discovery Agent Type not allowed").into());
+				}
+			}
+		}
 		match request.session_type.clone().unwrap_or(DiscoveryAgentType::Retriever) {
 			DiscoveryAgentType::Retriever => {
 				let search = DiscoverySearch::new(

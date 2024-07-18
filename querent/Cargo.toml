@@ -260,6 +260,12 @@ ollama-rs = { version = "0.2.0", features = [
     "chat-history",
 ] }
 surrealdb = { version = "1.5.3", features = ["kv-rocksdb"] }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
+
+# patch unicode-normalization to version 1.22.0
+[patch.crates-io]
+bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 
 [profile.release]
 panic = "unwind"

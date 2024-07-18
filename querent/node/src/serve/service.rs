@@ -58,10 +58,15 @@ pub async fn serve_quester(
 	info!("Node ID: {}", node_config.node_id);
 	info!("Starting Querent RIAN 🏁");
 	log::info!("Node ID: {}", node_config.node_id);
-	let semantic_service_bus: MessageBus<SemanticService> =
-		start_semantic_service(&node_config, &quester_cloud, &cluster, &event_broker)
-			.await
-			.expect("Failed to start semantic service");
+	let semantic_service_bus: MessageBus<SemanticService> = start_semantic_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		&event_broker,
+		secret_store.clone(),
+	)
+	.await
+	.expect("Failed to start semantic service");
 
 	info!("Starting Discovery Service 🕵️");
 	let discovery_service = start_discovery_service(
@@ -71,6 +76,7 @@ pub async fn serve_quester(
 		event_storages.clone(),
 		index_storages.clone(),
 		metadata_store.clone(),
+		secret_store.clone(),
 	)
 	.await?;
 

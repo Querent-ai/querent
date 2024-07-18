@@ -25,15 +25,20 @@ pub async fn start_discovery_service(
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
 	metadata_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn Storage>,
 ) -> anyhow::Result<Arc<dyn DiscoveryService>> {
+	let licence_key = secret_store
+		.get_rian_api_key()
+		.await
+		.map_err(|e| anyhow::anyhow!("Failed to get licence key: {:?}", e))?;
 	let discovery_agent_service = DiscoveryAgentService::new(
 		node_config.node_id.clone(),
 		cluster.clone(),
 		event_storages.clone(),
+		licence_key.clone(),
 	);
 	let (discovery_service_mailbox, _) = querent.spawn_builder().spawn(discovery_agent_service);
 	info!("Starting discovery agent service");
-
 	let discovery_service = Arc::new(service::DiscoveryImpl::new(
 		event_storages,
 		index_storages,

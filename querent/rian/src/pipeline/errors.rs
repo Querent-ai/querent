@@ -15,6 +15,9 @@ pub enum PipelineErrors {
 
 	#[error("unknown error: {0}")]
 	UnknownError(String),
+
+	#[error("Missing License Key")]
+	MissingLicenseKey,
 }
 
 impl From<AskError<PipelineErrors>> for PipelineErrors {
@@ -40,6 +43,8 @@ impl From<PipelineErrors> for tonic::Status {
 			PipelineErrors::InvalidParams(error) =>
 				tonic::Status::invalid_argument(error.to_string()),
 			PipelineErrors::UnknownError(error) => tonic::Status::internal(error),
+			PipelineErrors::MissingLicenseKey =>
+				tonic::Status::invalid_argument("Missing License Key"),
 		}
 	}
 }

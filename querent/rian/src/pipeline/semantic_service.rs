@@ -13,8 +13,13 @@ use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashMap,
 	fmt::{Debug, Formatter},
+	sync::Arc,
 };
+use storage::Storage;
 use tracing::{error, info};
+
+#[cfg(feature = "license-check")]
+use crate::get_pipeline_count_by_product;
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SemanticServiceCounters {
@@ -34,6 +39,8 @@ pub struct SemanticService {
 	node_id: String,
 	cluster: Cluster,
 	semantic_pipelines: HashMap<String, PipelineHandle>,
+	#[allow(unused)]
+	secret_store: Arc<dyn Storage>,
 	pubsub_broker: PubSubBroker,
 	counters: SemanticServiceCounters,
 }
@@ -48,15 +55,22 @@ impl Debug for SemanticService {
 }
 
 impl SemanticService {
-	pub fn new(node_id: String, cluster: Cluster, pubsub_broker: PubSubBroker) -> Self {
+	pub fn new(
+		node_id: String,
+		cluster: Cluster,
+		pubsub_broker: PubSubBroker,
+		secret_store: Arc<dyn Storage>,
+	) -> Self {
 		Self {
 			node_id,
 			cluster,
 			semantic_pipelines: HashMap::new(),
 			pubsub_broker,
 			counters: SemanticServiceCounters::default(),
+			secret_store,
 		}
 	}
+
 	async fn self_supervise(&mut self) -> Result<(), ActorExitStatus> {
 		self.semantic_pipelines.retain(|qflow_id, pipeline_handle| {
 			match pipeline_handle.handle.state() {
@@ -125,6 +139,28 @@ impl SemanticService {
 		pipeline_id: String,
 		settings: PipelineSettings,
 	) -> Result<(), PipelineErrors> {
+		#[cfg(feature = "license-check")]
+		{
+			let licence_key = self
+				.secret_store
+				.get_rian_api_key()
+				.await
+				.map_err(|_e| PipelineErrors::MissingLicenseKey)?;
+			if licence_key.is_none() {
+				return Err(PipelineErrors::MissingLicenseKey);
+			}
+			let allowed_pipelines = get_pipeline_count_by_product(licence_key.unwrap())
+				.map_err(|e| PipelineErrors::InvalidParams(e.into()))?;
+			if self.semantic_pipelines.contains_key(&pipeline_id) {
+				return Err(PipelineErrors::PipelineAlreadyExists { pipeline_id });
+			}
+			if self.semantic_pipelines.len() >= allowed_pipelines {
+				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+					"Maximum number of pipelines allowed for this license key is {}",
+					allowed_pipelines
+				)));
+			}
+		}
 		if self.semantic_pipelines.contains_key(&pipeline_id) {
 			return Err(PipelineErrors::PipelineAlreadyExists { pipeline_id });
 		}
