@@ -137,6 +137,12 @@ async fn set_api_key(
 			message: "Invalid Licence Key".to_string(),
 		}
 	})?;
+	if !valid_license_key {
+		return Err(ApiError {
+			service_code: ServiceErrorCode::BadRequest,
+			message: "Invalid Licence Key".to_string(),
+		});
+	}
 	secret_store.set_rian_api_key(&key).await.map_err(|e| {
 		error!("failed to set the API Key: {}", e);
 		ApiError {
