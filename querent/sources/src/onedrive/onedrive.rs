@@ -198,11 +198,15 @@ impl Source for OneDriveSource {
 
 		let stream = stream! {
 			for drive_item in drive_item_all {
+				println!("Inside the stream of one drive fucking finally");
 				if let Some(_file) = &drive_item.file {
 					let name = drive_item.name.unwrap();
+					println!("Name - {:?}", name.clone());
 					let extension = Self::get_file_extension(&name);
+					println!("Extension - {:?}", extension);
 					if let Some(download_url) = &drive_item.download_url {
 						let bytes = Self::download_file(download_url).await.unwrap();
+						println!("Got the bytes finally ");
 						let res = CollectedBytes {
 							data: Some(bytes),
 							file: Some(Path::new(&name).to_path_buf()),
@@ -212,12 +216,15 @@ impl Source for OneDriveSource {
 							size: Some(123),
 							source_id: source_id.clone(),
 						};
+
+						println!("Collected bytes {:?}", res.file);
 						yield Ok(res);
 
 					}
 				}
 			}
 		};
+		println!("About to leave the stream");
 		Ok(Box::pin(stream))
 	}
 
@@ -282,15 +289,16 @@ impl Source for OneDriveSource {
 
 // 	#[tokio::test]
 // 	async fn test_onedrive_collector() {
-// 		let google_config = OneDriveConfig {
+// 		let onedrive_config = OneDriveConfig {
 // 			client_id: "c7c05424-b4d5-4af9-8f97-9e2de234b1b4".to_string(),
 //             client_secret: "I-08Q~fZ~Vsbm6Mc7rj4sqyzgjlYIA5WN5jG.cLn".to_string(),
 //             redirect_uri: "http://localhost:8000/callback".to_string(),
-//             refresh_token: M.C540_BAY.0.U.-Cg3wuI8L3FPX!LmwIHH1W8ChFNgervWiVAwuppNW9EC1W8iXHE797KeL!OU6*ywNfZD1*FVuVNroTPyH3HrzaP3ZiG!xepBUpmDKq1NjmXDFya6rlBABG*ahheNyOHv*WV9gYb*voX11ic00XJmxYyzEnHCxjbZ5SU75rWqzAgltIilcVoQm8VhLSeMYpRkUzDWS*Jeg6Ht8AuPJHpmetwdME7b33pOiKupGlFKn7OH1SoO7Xsc6JYcp96hneg8TS8mLg1!tVN9NkRcv1q1JjxxgLPPRXn*Xub7Y61rew91E9GdaXTAzJzFiRAL8ISH2*vq4gEzxmAG*wtfV9nMzT85JH2xxpdMvrvaXsrMrqJUm".to_string(),
+//             refresh_token: "M.C540_BAY.0.U.-Cg3wuI8L3FPX!LmwIHH1W8ChFNgervWiVAwuppNW9EC1W8iXHE797KeL!OU6*ywNfZD1*FVuVNroTPyH3HrzaP3ZiG!xepBUpmDKq1NjmXDFya6rlBABG*ahheNyOHv*WV9gYb*voX11ic00XJmxYyzEnHCxjbZ5SU75rWqzAgltIilcVoQm8VhLSeMYpRkUzDWS*Jeg6Ht8AuPJHpmetwdME7b33pOiKupGlFKn7OH1SoO7Xsc6JYcp96hneg8TS8mLg1!tVN9NkRcv1q1JjxxgLPPRXn*Xub7Y61rew91E9GdaXTAzJzFiRAL8ISH2*vq4gEzxmAG*wtfV9nMzT85JH2xxpdMvrvaXsrMrqJUm".to_string(),
 //             folder_path: "/testing".to_string(),
+// 			id: "test".to_string(),
 // 		};
 
-// 		let drive_storage = OneDriveSource::new(google_config).await.unwwrap();
+// 		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
 // 		let connectivity = drive_storage.check_connectivity().await;
 
 // 		println!("Connectivity: {:?}", connectivity);
@@ -302,7 +310,6 @@ impl Source for OneDriveSource {
 // 		while let Some(item) = stream.next().await {
 // 			match item {
 // 				Ok(collected_bytes) => {
-//                     println!("Collected bytes: {:?}", collected_bytes);
 // 					if let Some(pathbuf) = collected_bytes.file {
 // 						if let Some(str_path) = pathbuf.to_str() {
 // 							count_files.insert(str_path.to_string());

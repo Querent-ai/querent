@@ -94,7 +94,9 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
+		println!("Here inside handle of ingestor");
 		debug!("Received CollectionBatch: {:?}", message.file);
+		println!("Extension {:?}", &message.clone().ext);
 		let file_ingestor =
 			resolve_ingestor_with_extension(&message.clone().ext).await.map_err(|e| {
 				ActorExitStatus::Failure(
@@ -109,6 +111,8 @@ impl Handler<CollectionBatch> for IngestorService {
 		// Calculate and update total megabytes ingested
 		let total_bytes: usize =
 			message.clone().bytes.iter().map(|bytes| bytes.size.unwrap_or(0)).sum();
+		
+		println!("Total bytes: {}", total_bytes);
 		let total_mbs = (total_bytes + 1023) / 1024 / 1024; // Ceiling division for bytes to MB
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);

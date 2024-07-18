@@ -210,7 +210,10 @@ pub struct BooleanResponse {
 pub struct CollectorConfig {
 	#[prost(string, tag = "1")]
 	pub name: ::prost::alloc::string::String,
-	#[prost(oneof = "collector_config::Backend", tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12")]
+	#[prost(
+        oneof = "collector_config::Backend",
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13"
+    )]
 	pub backend: ::core::option::Option<Backend>,
 }
 /// Nested message and enum types in `CollectorConfig`.
@@ -243,6 +246,8 @@ pub mod collector_config {
 		News(NewsCollectorConfig),
 		#[prost(message, tag = "12")]
 		Files(FileCollectorConfig),
+		#[prost(message, tag = "13")]
+        Onedrive(OneDriveConfig),
 	}
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.

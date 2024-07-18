@@ -212,7 +212,7 @@ pub struct CollectorConfig {
     pub name: ::prost::alloc::string::String,
     #[prost(
         oneof = "collector_config::Backend",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13"
     )]
     pub backend: ::core::option::Option<collector_config::Backend>,
 }
@@ -245,6 +245,8 @@ pub mod collector_config {
         News(super::NewsCollectorConfig),
         #[prost(message, tag = "12")]
         Files(super::FileCollectorConfig),
+        #[prost(message, tag = "13")]
+        Onedrive(super::OneDriveConfig),
     }
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.

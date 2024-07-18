@@ -150,6 +150,7 @@ message CollectorConfig {
     SlackCollectorConfig slack = 10;
     NewsCollectorConfig news = 11;
     FileCollectorConfig files = 12;
+    OneDriveConfig onedrive = 13;
   }
 }
 

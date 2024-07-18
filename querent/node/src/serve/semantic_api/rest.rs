@@ -15,7 +15,7 @@ use proto::{
 	semantics::{
 		AzureCollectorConfig, Backend, CollectorConfig, CollectorConfigResponse,
 		DeleteCollectorRequest, DeleteCollectorResponse, DropBoxCollectorConfig,
-		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
+		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, OneDriveConfig, FixedEntities,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
 		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, MilvusConfig, Neo4jConfig,
 		NewsCollectorConfig, PipelineMetadata, PipelineRequestInfo, PipelineRequestInfoList,
@@ -70,6 +70,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		GithubCollectorConfig,
 		NewsCollectorConfig,
 		FileCollectorConfig,
+		OneDriveConfig,
 		StorageConfigs,
 		StorageConfig,
 		StorageType,
