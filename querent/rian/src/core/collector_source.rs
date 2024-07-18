@@ -77,6 +77,7 @@ impl Source for Collector {
 								if let Err(e) = event_sender.send(bytes).await {
 									error!("Failed to send data: {:?}", e);
 								},
+
 							Err(e) => {
 								error!("Failed to poll data here: {:?}", e);
 								if let Err(e) = event_sender

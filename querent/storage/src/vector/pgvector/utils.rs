@@ -35,7 +35,7 @@ pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String,
 pub async fn traverse_node(
 	pool: &ActualDbPool,
 	node: String,
-	combined_results: &mut Vec<(i32, String, String, String, String, String, String, f32)>,
+	combined_results: &mut Vec<(String, String, String, String, String, String, String, f32)>,
 	visited_pairs: &mut HashSet<(String, String)>,
 	conn: &mut AsyncPgConnection,
 	depth: usize,
@@ -73,7 +73,7 @@ pub async fn traverse_node(
 					Ok(score) =>
 						if visited_pairs.insert((subject.clone(), object.clone())) {
 							combined_results.push((
-								id,
+								id.to_string(),
 								doc_id,
 								subject.clone(),
 								object.clone(),
@@ -139,7 +139,7 @@ pub async fn traverse_node(
 					Ok(score) =>
 						if visited_pairs.insert((subject.clone(), object.clone())) {
 							combined_results.push((
-								id,
+								id.to_string(),
 								doc_id,
 								subject.clone(),
 								object.clone(),
@@ -180,7 +180,7 @@ pub async fn traverse_node(
 }
 
 pub fn extract_unique_pairs(
-	traverser_results: Vec<(i32, String, String, String, String, String, String, f32)>,
+	traverser_results: Vec<(String, String, String, String, String, String, String, f32)>,
 	filtered_results: Vec<(String, String)>,
 ) -> Vec<(String, String)> {
 	let mut unique_pairs: HashSet<(String, String)> = filtered_results.into_iter().collect();

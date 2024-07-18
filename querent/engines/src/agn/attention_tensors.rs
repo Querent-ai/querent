@@ -324,6 +324,7 @@ impl Engine for AttentionTensorsEngine {
 		Ok(Box::pin(stream))
 	}
 }
+
 // #[cfg(test)]
 // mod tests {
 // 	use super::*;
@@ -332,9 +333,12 @@ impl Engine for AttentionTensorsEngine {
 // 	use futures::StreamExt;
 // 	use ingestors::{pdf::pdfv1::PdfIngestor, BaseIngestor};
 // 	use llms::transformers::{bert::{BertLLM, EmbedderOptions}, roberta::roberta::RobertaLLM};
+// use proto::semantics::OneDriveConfig;
 // 	use std::{fs::File, io::Read, sync::Arc};
 // 	use tokio::sync::mpsc;
 // 	use tokio_stream::wrappers::ReceiverStream;
+// 	use sources::onedrive::onedrive::OneDriveSource;
+// 	use sources::Source;
 
 // 	#[tokio::test]
 // 	async fn test_txt_ingestor() {
@@ -351,6 +355,7 @@ impl Engine for AttentionTensorsEngine {
 // 			eof: false,
 // 			extension: Some("pdf".to_string()),
 // 			size: Some(10),
+// 			source_id: "Abcd".to_string(),
 // 		};
 
 // 		// Create a TxtIngestor instance
@@ -462,5 +467,45 @@ impl Engine for AttentionTensorsEngine {
 // 		while let Some(result) = engine_stream.next().await {
 // 			results.push(result.unwrap());
 // 		}
+// 	}
+
+// 	#[tokio::test]
+//     async fn test_pdf_ingestor() {
+
+//         let onedrive_config = OneDriveConfig {
+// 			client_id: "c7c05424-b4d5-4af9-8f97-9e2de234b1b4".to_string(),
+//             client_secret: "I-08Q~fZ~Vsbm6Mc7rj4sqyzgjlYIA5WN5jG.cLn".to_string(),
+//             redirect_uri: "http://localhost:8000/callback".to_string(),
+//             refresh_token: "M.C540_BAY.0.U.-Cg3wuI8L3FPX!LmwIHH1W8ChFNgervWiVAwuppNW9EC1W8iXHE797KeL!OU6*ywNfZD1*FVuVNroTPyH3HrzaP3ZiG!xepBUpmDKq1NjmXDFya6rlBABG*ahheNyOHv*WV9gYb*voX11ic00XJmxYyzEnHCxjbZ5SU75rWqzAgltIilcVoQm8VhLSeMYpRkUzDWS*Jeg6Ht8AuPJHpmetwdME7b33pOiKupGlFKn7OH1SoO7Xsc6JYcp96hneg8TS8mLg1!tVN9NkRcv1q1JjxxgLPPRXn*Xub7Y61rew91E9GdaXTAzJzFiRAL8ISH2*vq4gEzxmAG*wtfV9nMzT85JH2xxpdMvrvaXsrMrqJUm".to_string(),
+//             folder_path: "/testing".to_string(),
+// 			id: "test".to_string(),
+// 		};
+
+// 		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
+// 		// Create a TxtIngestor instance
+//         let ingestor = PdfIngestor::new();
+// 		let connectivity = drive_storage.check_connectivity().await;
+
+// 		println!("Connectivity: {:?}", connectivity);
+
+// 		let result = drive_storage.poll_data().await;
+
+// 		let mut stream = result.unwrap();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) => {
+// 					println!("Here  ");
+// 					let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+// 					println!("Got the stream: ");
+// 					let mut stream = result_stream;
+// 					while let Some(tokens) = stream.next().await {
+// 						let tokens = tokens.unwrap();
+// 						println!("These are the tokens in file --------------{:?}", tokens);
+// 					}
+// 				},
+// 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+// 			}
+// 		}
+
 // 	}
 // }
