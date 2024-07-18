@@ -147,11 +147,13 @@ impl Source for Collector {
 						// If the payload is empty, skip the event
 						if !event_data.eof && event_data.file.is_none() {
 							is_failure = true;
+							self.event_receiver.take();
 							break;
 						}
 
 						if event_data.eof && event_data.file.is_none() {
 							is_success = true;
+							self.event_receiver.take();
 							break;
 						}
 						let size = event_data.size.unwrap_or_default();
@@ -214,6 +216,7 @@ impl Source for Collector {
 				}
 			}
 		}
+		events_collected.clear();
 		if is_success {
 			return Err(ActorExitStatus::Success);
 		}
@@ -248,6 +251,8 @@ impl Source for Collector {
 				info!("Collector is already finished");
 			},
 		}
+		// drop event receiver
+		std::mem::drop(self.event_receiver.take());
 		Ok(())
 	}
 }
