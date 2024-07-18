@@ -21,6 +21,9 @@ pub mod ingest;
 pub mod memory;
 pub mod schemas;
 pub mod tools;
+use serde::{Deserialize, Serialize};
+use sp_core::sr25519;
+use sp_runtime::{traits::Verify, MultiSignature};
 use tracing::info;
 
 #[allow(clippy::too_many_arguments)]
@@ -79,4 +82,105 @@ pub async fn create_dynamic_sources(
 		};
 	}
 	Ok(sources)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SignedPayload {
+	pub payload: ProductRegistrationInfo,
+	pub signature: MultiSignature,
+	#[serde(rename = "publicKey")]
+	pub public_key: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductRegistrationInfo {
+	pub name: String,
+	pub website: String,
+	pub email: String,
+	pub product: ProductType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ProductType {
+	#[serde(rename = "rian")]
+	Rian,
+	#[serde(rename = "rianpro")]
+	RianPro,
+	#[serde(rename = "rianenterprise")]
+	RianEnterprise,
+}
+
+impl ProductType {
+	pub fn to_string(&self) -> String {
+		match self {
+			ProductType::Rian => "rian".to_string(),
+			ProductType::RianPro => "rianpro".to_string(),
+			ProductType::RianEnterprise => "rianenterprise".to_string(),
+		}
+	}
+}
+
+/// Verify a license key
+#[allow(deprecated)]
+pub fn verify_key(licence_key: String) -> Result<bool, anyhow::Error> {
+	// license_key is a base64 encoded string
+	let key = base64::decode(licence_key)?;
+	// parse key into ProductRegistrationInfo
+	let product_sign: SignedPayload = serde_json::from_slice(&key)?;
+	let public_key_hex = product_sign.clone().public_key.clone();
+	// remove 0x prefix
+	let public_key_hex = public_key_hex.trim_start_matches("0x");
+	// hex to U8
+	let public_key_bytes = hex::decode(public_key_hex)?;
+	let pkey_32: [u8; 32] = public_key_bytes.as_slice().try_into()?;
+	let public_key_querent = sr25519::Public::from_raw(pkey_32);
+	let signature = product_sign.signature.clone();
+	let to_sign = format!(
+		"{}{}{}{}",
+		product_sign.payload.name,
+		product_sign.payload.email,
+		product_sign.payload.website,
+		product_sign.payload.product.to_string()
+	);
+	let to_sign = to_sign.as_bytes();
+	let signed_payload = wrap_binary_data(to_sign.to_vec());
+	// Verify signature
+	let verified = signature.verify(&signed_payload[..], &public_key_querent.into());
+	if !verified {
+		return Err(anyhow::anyhow!("Invalid signature"));
+	}
+	Ok(true)
+}
+
+const PREFIX: &'static str = "<Bytes>";
+const POSTFIX: &'static str = "</Bytes>";
+
+/// Wraps `PREFIX` and `POSTFIX` around a `Vec<u8>`
+/// Returns `PREFIX` ++ `data` ++ `POSTFIX`
+pub fn wrap_binary_data(data: Vec<u8>) -> Vec<u8> {
+	let mut encapsuled = PREFIX.as_bytes().to_vec();
+	encapsuled.append(&mut data.clone());
+	encapsuled.append(&mut POSTFIX.as_bytes().to_vec());
+	encapsuled
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	const TEST_KEY: &str = "eyJzaWduYXR1cmUiOnsiU3IyNTUxOSI6IjB4MmU5M2RkMTgzN2MzNjgxMjcxYjNmM2RmZjg4OGUzM2JiOTM2NzJiYjA5YzdhNDI0OGE5NzE3NDNiMDE2ZTAzMWJhNzgwNTExMzZhM2E1OWI2YzJmOTQwZGE4ZDczZGUwYjc4ZDkxYjg3ZTEzNWQzYTNlYzhmYTZkNTY4YWVmODYifSwicHVibGljS2V5IjoiMHhhY2I2YjMzMjQ4ZmNmYzUyZmJlMjQwMmE4YzY3ZjRiMGJlZDkzOWExNmQzNDIzZmNmZTlmMjNiYzhiNzI0MjIwIiwicGF5bG9hZCI6eyJuYW1lIjoiSGVsbG8gV29ybGQiLCJlbWFpbCI6ImZramdmaCIsIndlYnNpdGUiOiJhYWEiLCJwcm9kdWN0IjoicmlhbiJ9fQ==";
+	#[test]
+	fn test_wrap_binary_data() {
+		let data = vec![1, 2, 3, 4, 5];
+		let wrapped = wrap_binary_data(data.clone());
+		let expected = "<Bytes>".as_bytes().to_vec();
+		let mut expected = expected.clone();
+		expected.append(&mut data.clone());
+		expected.append(&mut "</Bytes>".as_bytes().to_vec());
+		assert_eq!(wrapped, expected);
+	}
+
+	#[test]
+	fn test_verify_key() {
+		let result = verify_key(TEST_KEY.to_string());
+		assert_eq!(result.is_ok(), true);
+	}
 }
