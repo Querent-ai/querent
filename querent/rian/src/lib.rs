@@ -277,6 +277,22 @@ pub fn is_discovery_agent_type_allowed(
 	}
 }
 
+pub fn is_insight_allowed_by_product(
+	licence_key: String,
+	insight_id: String,
+) -> Result<bool, anyhow::Error> {
+	let info = get_product_info(licence_key)?;
+	match info.product {
+		ProductType::Rian => match insight_id.as_str() {
+			"querent.insights.x_ai.openai" => Ok(true),
+
+			_ => Ok(false),
+		},
+		ProductType::RianPro => Ok(true),
+		ProductType::RianEnterprise => Ok(true),
+	}
+}
+
 const PREFIX: &'static str = "<Bytes>";
 const POSTFIX: &'static str = "</Bytes>";
 
@@ -313,6 +329,43 @@ mod tests {
 	#[test]
 	fn test_get_product_info() {
 		let result = get_product_info(TEST_KEY.to_string());
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[test]
+	fn test_get_pipeline_count_by_product() {
+		let result = get_pipeline_count_by_product(TEST_KEY.to_string());
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[test]
+	fn test_is_data_source_allowed_by_product() {
+		let collector = CollectorConfig {
+			name: "test".to_string(),
+			backend: Some(proto::semantics::Backend::Files(
+				proto::semantics::FileCollectorConfig {
+					root_path: "test".to_string(),
+					id: "test".to_string(),
+				},
+			)),
+		};
+		let result = is_data_source_allowed_by_product(TEST_KEY.to_string(), &collector);
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[test]
+	fn test_is_discovery_agent_type_allowed() {
+		let result =
+			is_discovery_agent_type_allowed(TEST_KEY.to_string(), &DiscoveryAgentType::Retriever);
+		assert_eq!(result.is_ok(), true);
+	}
+
+	#[test]
+	fn test_is_insight_allowed_by_product() {
+		let result = is_insight_allowed_by_product(
+			TEST_KEY.to_string(),
+			"querent.insights.x_ai.openai".to_string(),
+		);
 		assert_eq!(result.is_ok(), true);
 	}
 }

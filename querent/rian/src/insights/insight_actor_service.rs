@@ -19,6 +19,9 @@ use storage::Storage;
 
 use crate::InsightAgent;
 
+#[cfg(feature = "license-check")]
+use crate::is_insight_allowed_by_product;
+
 // TODO Insight Agents rethinking needed
 struct InsightAgentHandles {
 	mailbox: MessageBus<InsightAgent>,
@@ -31,6 +34,7 @@ pub struct InsightAgentService {
 	agent_pipelines: HashMap<String, InsightAgentHandles>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
+	_license_key: Option<String>,
 }
 
 impl Debug for InsightAgentService {
@@ -48,8 +52,16 @@ impl InsightAgentService {
 		cluster: Cluster,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
+		_license_key: Option<String>,
 	) -> Self {
-		Self { node_id, cluster, agent_pipelines: HashMap::new(), event_storages, index_storages }
+		Self {
+			node_id,
+			cluster,
+			_license_key,
+			agent_pipelines: HashMap::new(),
+			event_storages,
+			index_storages,
+		}
 	}
 }
 
@@ -69,6 +81,19 @@ impl Handler<InsightAnalystRequest> for InsightAgentService {
 		request: InsightAnalystRequest,
 		ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
+		#[cfg(feature = "license-check")]
+		{
+			if self._license_key.is_some() {
+				let insight_id = request.id.clone();
+				let license_key = self._license_key.clone().unwrap_or_default();
+				let is_allowed = is_insight_allowed_by_product(license_key, insight_id)?;
+				if !is_allowed {
+					return Err(anyhow::anyhow!("Discovery Agent Type not allowed").into());
+				}
+			} else {
+				return Err(anyhow::anyhow!("License Key not provided").into());
+			}
+		};
 		let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 		let current_timestamp = chrono::Utc::now().timestamp();
 		let event_storages = self.event_storages.clone();
