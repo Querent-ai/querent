@@ -110,7 +110,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 			if stored_event_type == &event_type {
 				for storage in storage.iter() {
 					let storage_clone = storage.clone();
-					let storage_items = message.clone().event_payload();
+					let storage_items = message.event_payload();
 					// Spawn a task for each storage insertion
 					tokio::spawn(insert_graph_async(
 						self.qflow_id.clone(),
@@ -145,7 +145,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 				for storage in storage.iter() {
 					let storage_clone = storage.clone();
 					let qflow_id_clone = qflow_id.clone();
-					let storage_items = message.clone().event_payload();
+					let storage_items = message.event_payload();
 
 					// Spawn a task for each storage insertion
 					tokio::spawn(insert_vector_async(storage_clone, qflow_id_clone, storage_items));

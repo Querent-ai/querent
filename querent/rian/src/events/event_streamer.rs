@@ -113,8 +113,9 @@ impl Handler<EventsBatch> for EventStreamer {
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		self.counters.increment_batches_received();
-		let grouped_events = message.events.clone();
-		self.counters.increment_events_received(message.events.len() as u64);
+		let grouped_events = message.events;
+		let group_event_count = grouped_events.len();
+		self.counters.increment_events_received(group_event_count.clone() as u64);
 		self.timestamp = message.timestamp;
 
 		// Send grouped events to StorageMapper
@@ -165,7 +166,7 @@ impl Handler<EventsBatch> for EventStreamer {
 				_ => {},
 			}
 		}
-		self.counters.increment_events_processed(message.events.len() as u64);
+		self.counters.increment_events_processed(group_event_count as u64);
 		ctx.record_progress();
 		Ok(())
 	}
