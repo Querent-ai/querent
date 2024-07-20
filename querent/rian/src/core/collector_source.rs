@@ -202,17 +202,9 @@ impl Source for Collector {
 					chunks,
 				);
 				let batches_error =
-					ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
+					ctx.send_message(event_streamer_messagebus, events_batch).await;
 				if batches_error.is_err() {
 					error!("Failed to send bytes batch: {:?}", batches_error);
-					// Re-trying
-					let retry_error =
-						ctx.send_message(event_streamer_messagebus, events_batch).await;
-					if retry_error.is_err() {
-						return Err(ActorExitStatus::Failure(
-							anyhow::anyhow!("Failed to send bytes batch: {:?}", retry_error).into(),
-						));
-					}
 				}
 			}
 		}

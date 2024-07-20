@@ -213,23 +213,16 @@ impl Source for EngineRunner {
 		if !events_collected.is_empty() {
 			let events_batch = EventsBatch::new(
 				self.id.clone(),
-				events_collected.clone(),
+				events_collected,
 				chrono::Utc::now().timestamp_millis() as u64,
 			);
 			let batches_error =
 				ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
 			if batches_error.is_err() {
 				error!("Failed to send events batch: {:?}", batches_error);
-				//re-trying
-				let retry_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
-				if retry_error.is_err() {
-					return Err(ActorExitStatus::Failure(
-						anyhow::anyhow!("Failed to send events batch: {:?}", retry_error).into(),
-					));
-				}
 			}
 		}
-		events_collected.clear();
+		// events_collected.clear();
 		if is_successs {
 			// sleep for 10 seconds to allow the engine send remaining events to database
 			time::sleep(Duration::from_secs(10)).await;
