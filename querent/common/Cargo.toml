@@ -45,6 +45,10 @@ tower = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
 siphasher = { workspace = true }
+log = { workspace = true }
+reqwest = { workspace = true }
+reqwest-eventsource = { workspace = true }
+urlencoding = { workspace = true }
 
 [features]
 testsuite = []

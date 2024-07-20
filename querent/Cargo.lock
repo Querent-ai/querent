@@ -2308,6 +2308,7 @@ dependencies = [
  "http-serde",
  "hyper 0.14.30",
  "itertools 0.12.1",
+ "log 0.4.22",
  "num_cpus",
  "once_cell",
  "pin-project",
@@ -2315,6 +2316,8 @@ dependencies = [
  "prometheus",
  "rand 0.8.5",
  "regex",
+ "reqwest 0.12.5",
+ "reqwest-eventsource",
  "serde",
  "serde_json",
  "serde_with",
@@ -2327,6 +2330,7 @@ dependencies = [
  "tonic 0.9.2",
  "tower",
  "tracing",
+ "urlencoding",
  "utoipa",
 ]
 
