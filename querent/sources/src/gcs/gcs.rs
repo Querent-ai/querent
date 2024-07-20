@@ -9,7 +9,7 @@ use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObjectMetadata {
@@ -51,11 +51,13 @@ impl OpendalStorage {
 #[async_trait]
 impl Source for OpendalStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		self.op.check().await?;
 		Ok(())
 	}
 
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let path = path.as_os_str().to_string_lossy();
 		let mut storage_reader = self.op.reader(&path).await?;
 		tokio::io::copy(&mut storage_reader, output).await?;
@@ -64,6 +66,7 @@ impl Source for OpendalStorage {
 	}
 
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let path = path.as_os_str().to_string_lossy();
 		let range = range.start as u64..range.end as u64;
 		let storage_content = self.op.read_with(&path).range(range).await?;
@@ -76,6 +79,7 @@ impl Source for OpendalStorage {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let path = path.as_os_str().to_string_lossy();
 		let range = range.start as u64..range.end as u64;
 		let storage_reader = self.op.reader_with(&path).range(range).await?;
@@ -84,6 +88,7 @@ impl Source for OpendalStorage {
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		// let path = path.as_os_str().to_string_lossy();
 		let path_str = path.to_string_lossy();
 		let storage_content = self.op.read(&path_str).await?;
@@ -92,6 +97,7 @@ impl Source for OpendalStorage {
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let path = path.as_os_str().to_string_lossy();
 		let meta = self.op.stat(&path).await?;
 		Ok(meta.content_length())
@@ -110,6 +116,7 @@ impl Source for OpendalStorage {
 				.await?;
 
 			while let Some(object) = object_lister.next().await {
+				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 				match object {
 					Ok(object) => {
 						let key = object.path().to_string();
