@@ -3,8 +3,10 @@ use crate::document::*;
 use chrono::DateTime;
 use pdfium_render::prelude::*;
 
+#[allow(unused)]
 type Result<T> = std::result::Result<T, anyhow::Error>;
 
+#[allow(unused)]
 pub(super) fn extract_pdf_page(pdf_page: &PdfPage, page_num: usize) -> Result<Vec<Element>> {
 	let pdf_page_text = pdf_page.text()?;
 	let page = Page::builder()
@@ -22,6 +24,7 @@ pub(super) fn extract_pdf_page(pdf_page: &PdfPage, page_num: usize) -> Result<Ve
 	Ok(elements)
 }
 
+#[allow(unused)]
 pub(super) fn extract_pdf_object(
 	page: &Page,
 	pdf_page_text: &PdfPageText,
@@ -82,6 +85,7 @@ pub(super) fn extract_pdf_object(
 	Ok(results)
 }
 
+#[allow(unused)]
 pub(crate) fn extract_meta(pdf_meta: &PdfMetadata) -> DocumentMeta {
 	let title = match pdf_meta.get(PdfDocumentMetadataTagType::Title) {
 		Some(tag) => tag.value().to_string(),
