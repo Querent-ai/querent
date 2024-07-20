@@ -114,7 +114,7 @@ impl CollectionCounter {
 	}
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct CollectionBatch {
 	pub file: String,
 	pub ext: String,
@@ -122,16 +122,16 @@ pub struct CollectionBatch {
 }
 
 impl CollectionBatch {
-	pub fn new(file: &String, ext: &String, bytes: &Vec<CollectedBytes>) -> Self {
-		Self { file: file.clone(), bytes: bytes.clone(), ext: ext.clone() }
+	pub fn new(file: &String, ext: &String, bytes: Vec<CollectedBytes>) -> Self {
+		Self { file: file.clone(), bytes, ext: ext.clone() }
 	}
 
 	pub fn file(&self) -> String {
 		self.file.clone()
 	}
 
-	pub fn events(&self) -> Vec<CollectedBytes> {
-		self.bytes.clone()
+	pub fn events(&self) -> &Vec<CollectedBytes> {
+		&self.bytes
 	}
 
 	pub fn ext(&self) -> String {

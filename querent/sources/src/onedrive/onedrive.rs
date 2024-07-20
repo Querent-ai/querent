@@ -3,7 +3,7 @@ use std::{io::Cursor, ops::Range, path::Path, pin::Pin, sync::Arc};
 use anyhow::{anyhow, Result};
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, OwnedBytes};
 use futures::Stream;
 use onedrive_api::{
 	Auth, ClientCredential, DriveLocation, ItemLocation, OneDrive, Permission, Tenant,
@@ -212,7 +212,7 @@ impl Source for OneDriveSource {
 					if let Some(download_url) = &drive_item.download_url {
 						let bytes = Self::download_file(download_url).await.unwrap();
 						let res = CollectedBytes {
-							data: Some(bytes),
+							data: Some(OwnedBytes::new(bytes)),
 							file: Some(Path::new(&name).to_path_buf()),
 							eof: false,
 							doc_source: Some("onedrive://".to_string()),

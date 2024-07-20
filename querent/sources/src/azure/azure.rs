@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
 use azure_storage_blobs::{blob::operations::GetBlobResponse, prelude::*};
-use common::{CollectedBytes, Retryable};
+use common::{CollectedBytes, OwnedBytes, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
@@ -269,7 +269,7 @@ impl Source for AzureBlobStorage {
 							// Only process and serialize if bytes were read
 							let collected_bytes = CollectedBytes::new(
 								Some(blob_path.to_path_buf()),
-								Some(buffer[..bytes_read].to_vec()),
+								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
 								false,
 								Some(container_client.container_name().to_string()),
 								Some(bytes_read as usize),

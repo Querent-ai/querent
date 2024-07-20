@@ -1,6 +1,6 @@
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, OwnedBytes};
 use futures::{stream, Stream};
 use std::{
 	io::SeekFrom,
@@ -132,7 +132,7 @@ impl LocalFolderSource {
 
 					let collected_bytes = CollectedBytes::new(
 						Some(file_path.clone()),
-						Some(buffer[..bytes_read].to_vec()),
+						Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
 						false,
 						Some(file_path.to_string_lossy().to_string()),
 						Some(bytes_read),

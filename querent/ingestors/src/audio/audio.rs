@@ -34,14 +34,16 @@ impl BaseIngestor for AudioIngestor {
 		let mut doc_source = String::new();
 		let mut source_id = String::new();
 		for collected_bytes in all_collected_bytes.iter() {
+			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+				continue;
+			}
 			if file.is_empty() {
-				file =
-					collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
+				file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
 			}
 			if doc_source.is_empty() {
 				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 			}
-			buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
 			source_id = collected_bytes.source_id.clone();
 		}
 

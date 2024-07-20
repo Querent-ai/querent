@@ -12,7 +12,7 @@ use aws_sdk_s3::{
 	Client as S3Client,
 };
 
-use common::CollectedBytes;
+use common::{CollectedBytes, OwnedBytes};
 use futures::Stream;
 use once_cell::sync::Lazy;
 use proto::semantics::S3CollectorConfig;
@@ -277,7 +277,7 @@ async fn create_poll_data_stream(
 
 							let collected_bytes = CollectedBytes::new(
 								Some(Path::new(&key).to_path_buf()),
-								Some(buffer[..bytes_read].to_vec()),
+								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
 								false,
 								Some(bucket_name.clone()),
 								Some(bytes_read),

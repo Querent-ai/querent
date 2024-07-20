@@ -2323,6 +2323,7 @@ dependencies = [
  "serde_with",
  "serde_yaml",
  "siphasher 1.0.1",
+ "stable_deref_trait",
  "tempfile",
  "thiserror",
  "tokio",
