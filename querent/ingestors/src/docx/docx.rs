@@ -50,11 +50,9 @@ impl BaseIngestor for DocxIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
-				let cursor = Cursor::new(buffer.as_ref());
+				let cursor = Cursor::new(buffer);
 
 				let docx = DocxFile::from_reader(cursor).unwrap();
 				let docx = match docx.parse() {

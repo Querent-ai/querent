@@ -48,9 +48,7 @@ impl BaseIngestor for PptxIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
 				let text_result = extract_text_from_pptx(&buffer);
 				match text_result {

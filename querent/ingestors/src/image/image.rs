@@ -46,9 +46,7 @@ impl BaseIngestor for ImageIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
 			let dyn_img = image::load_from_memory(&buffer).unwrap();
 

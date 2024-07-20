@@ -57,7 +57,7 @@ impl BaseIngestor for PdfIngestor {
 		let stream = stream! {
 			let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
 			let parser = PdfDocumentParser::new(pdfium);
-			let document = parser.parse(buffer.clone());
+			let document = parser.parse(buffer);
 			let pages = document.unwrap().all_texts();
 			for text in pages {
 				let ingested_tokens = IngestedTokens {

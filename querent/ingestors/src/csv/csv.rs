@@ -45,12 +45,10 @@ impl BaseIngestor for CsvIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
 
-				let cursor = Cursor::new(buffer.as_ref());
+				let cursor = Cursor::new(buffer);
 				let mut reader = csv::Reader::from_reader(cursor);
 				let headers = reader.headers()?.clone();
 

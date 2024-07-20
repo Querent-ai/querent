@@ -46,11 +46,9 @@ impl BaseIngestor for XmlIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
-			let cursor = Cursor::new(buffer.as_ref());
+			let cursor = Cursor::new(buffer);
 			let parser = EventReader::new(cursor);
 			let mut content = String::new();
 			for e in parser {

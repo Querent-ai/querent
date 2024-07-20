@@ -45,11 +45,9 @@ impl BaseIngestor for AudioIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
-			let _cursor = Cursor::new(buffer.as_ref());
+			let _cursor = Cursor::new(buffer);
 			// TODO: find a library capable of converting audio data to text format
 			let ingested_tokens = IngestedTokens {
 				data: vec!["".to_string()],
