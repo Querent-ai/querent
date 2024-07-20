@@ -3,7 +3,7 @@ use std::{io, net::TcpStream, ops::Range, path::Path, pin::Pin, sync::Arc};
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 use async_trait::async_trait;
 
-use common::CollectedBytes;
+use common::{CollectedBytes, OwnedBytes};
 use futures::stream::{self, Stream, StreamExt};
 use imap::Session;
 use native_tls::TlsStream;
@@ -163,7 +163,7 @@ impl Source for EmailSource {
 			.iter()
 			.filter_map(|message| {
 				message.body().map(|body| CollectedBytes {
-					data: Some(body.to_vec()),
+					data: Some(OwnedBytes::new(body.to_vec())),
 					file: None,
 					eof: true,
 					doc_source: Some("email://unknown_sender".to_string()),

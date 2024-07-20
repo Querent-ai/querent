@@ -1,6 +1,6 @@
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, OwnedBytes};
 use futures::{Stream, StreamExt};
 use google_drive3::{
 	api::Scope,
@@ -341,7 +341,7 @@ impl Source for GoogleDriveSource {
 
 								let collected_bytes = CollectedBytes::new(
 									Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-									Some(chunk.to_vec()),
+									Some(OwnedBytes::new(chunk.to_vec())),
 									eof,
 									Some(folder_id.clone()),
 									Some(chunk.len()),

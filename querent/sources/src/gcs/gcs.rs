@@ -3,7 +3,7 @@ use std::{fmt, ops::Range, path::Path, pin::Pin};
 use async_stream::stream;
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine as _};
-use common::CollectedBytes;
+use common::{CollectedBytes, OwnedBytes};
 use futures::{Stream, StreamExt};
 use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
@@ -151,7 +151,7 @@ impl Source for OpendalStorage {
 
 							let collected_bytes = CollectedBytes::new(
 								Some(Path::new(&key).to_path_buf()),
-								Some(buffer[..bytes_read].to_vec()),
+								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
 								false,
 								Some(bucket_name.clone()),
 								Some(bytes_read),

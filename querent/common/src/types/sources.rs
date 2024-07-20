@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use crate::OwnedBytes;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct CollectedBytes {
-	pub data: Option<Vec<u8>>,
+	pub data: Option<OwnedBytes>,
 	pub file: Option<PathBuf>,
 	pub eof: bool,
 	pub doc_source: Option<String>,
@@ -16,7 +16,7 @@ pub struct CollectedBytes {
 impl CollectedBytes {
 	pub fn new(
 		file: Option<PathBuf>,
-		data: Option<Vec<u8>>,
+		data: Option<OwnedBytes>,
 		eof: bool,
 		doc_source: Option<String>,
 		size: Option<usize>,
@@ -28,7 +28,7 @@ impl CollectedBytes {
 		CollectedBytes { data, file, eof, doc_source, extension, size, source_id }
 	}
 
-	pub fn success(data: Vec<u8>) -> Self {
+	pub fn success(data: OwnedBytes) -> Self {
 		CollectedBytes::new(None, Some(data), false, None, None, "".to_string())
 	}
 
@@ -44,17 +44,17 @@ impl CollectedBytes {
 		self.extension.as_ref()
 	}
 
-	pub fn unwrap(self) -> Vec<u8> {
+	pub fn unwrap(self) -> OwnedBytes {
 		match self.data {
 			Some(data) => data,
 			None => panic!("Tried to unwrap an error CollectedBytes"),
 		}
 	}
 
-	pub fn unwrap_or(self, default: Vec<u8>) -> Vec<u8> {
+	pub fn unwrap_or(self, default: Vec<u8>) -> OwnedBytes {
 		match self.data {
 			Some(data) => data,
-			None => default,
+			None => OwnedBytes::new(default),
 		}
 	}
 }

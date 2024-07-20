@@ -199,12 +199,13 @@ impl Source for Collector {
 				let events_batch = CollectionBatch::new(
 					file,
 					&chunks[0].extension.clone().unwrap_or_default(),
-					chunks,
+					chunks.clone(),
 				);
 				let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
 				if batches_error.is_err() {
 					error!("Failed to send bytes batch: {:?}", batches_error);
 				}
+				self.file_buffers.remove(file);
 			}
 		}
 		events_collected.clear();
