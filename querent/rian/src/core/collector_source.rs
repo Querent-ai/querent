@@ -147,11 +147,13 @@ impl Source for Collector {
 						// If the payload is empty, skip the event
 						if !event_data.eof && event_data.file.is_none() {
 							is_failure = true;
+							self.event_receiver.take();
 							break;
 						}
 
 						if event_data.eof && event_data.file.is_none() {
 							is_success = true;
+							self.event_receiver.take();
 							break;
 						}
 						let size = event_data.size.unwrap_or_default();
@@ -199,21 +201,13 @@ impl Source for Collector {
 					&chunks[0].extension.clone().unwrap_or_default(),
 					chunks,
 				);
-				let batches_error =
-					ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
+				let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
 				if batches_error.is_err() {
 					error!("Failed to send bytes batch: {:?}", batches_error);
-					// Re-trying
-					let retry_error =
-						ctx.send_message(event_streamer_messagebus, events_batch).await;
-					if retry_error.is_err() {
-						return Err(ActorExitStatus::Failure(
-							anyhow::anyhow!("Failed to send bytes batch: {:?}", retry_error).into(),
-						));
-					}
 				}
 			}
 		}
+		events_collected.clear();
 		if is_success {
 			return Err(ActorExitStatus::Success);
 		}
@@ -248,6 +242,8 @@ impl Source for Collector {
 				info!("Collector is already finished");
 			},
 		}
+		// drop event receiver
+		std::mem::drop(self.event_receiver.take());
 		Ok(())
 	}
 }

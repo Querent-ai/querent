@@ -63,7 +63,6 @@ impl BaseIngestor for PdfIngestor {
 			let mut output = PagePlainTextOutput::new();
 			output_doc(&doc, &mut output).unwrap();
 			for (_, text) in output.pages {
-				println!("Text {:?}", text.clone());
 				let ingested_tokens = IngestedTokens {
 					data: vec![text],
 					file: file.clone(),

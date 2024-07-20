@@ -178,10 +178,13 @@ impl Source for EngineRunner {
 						}
 						if event_type == EventType::Success {
 							is_successs = true;
+							// clear the receiver
+							self.event_receiver.take();
 							break
 						}
 						if event_type == EventType::Failure {
 							error!("EngineRunner failed");
+							self.event_receiver.take();
 							is_failure = true;
 							break
 						}
@@ -217,15 +220,9 @@ impl Source for EngineRunner {
 				ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
 			if batches_error.is_err() {
 				error!("Failed to send events batch: {:?}", batches_error);
-				//re-trying
-				let retry_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
-				if retry_error.is_err() {
-					return Err(ActorExitStatus::Failure(
-						anyhow::anyhow!("Failed to send events batch: {:?}", retry_error).into(),
-					));
-				}
 			}
 		}
+		// events_collected.clear();
 		if is_successs {
 			// sleep for 10 seconds to allow the engine send remaining events to database
 			time::sleep(Duration::from_secs(10)).await;
@@ -258,7 +255,9 @@ impl Source for EngineRunner {
 			None => {
 				info!("EngineRunner is already finished");
 			},
-		}
+		};
+		// drop event receiver
+		std::mem::drop(self.event_receiver.take());
 		Ok(())
 	}
 }

@@ -62,7 +62,7 @@ impl Actor for Indexer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(100)
 	}
 
 	fn runtime_handle(&self) -> Handle {

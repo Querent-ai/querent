@@ -1,6 +1,6 @@
 use std::{io, net::TcpStream, ops::Range, path::Path, pin::Pin, sync::Arc};
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 use async_trait::async_trait;
 
 use common::CollectedBytes;
@@ -53,13 +53,13 @@ impl EmailSource {
 #[async_trait]
 impl Source for EmailSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		Ok(())
 	}
 
 	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let session_lock = self.imap_session.clone();
 		let mut session = session_lock.lock().await;
-
 		session.select(self.imap_folder.as_str()).map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
@@ -75,6 +75,7 @@ impl Source for EmailSource {
 		})?;
 
 		for message in messages.iter() {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if let Some(body) = message.body() {
 				let mut reader = &body[..]; // Convert &[u8] to a slice
 				tokio::io::copy_buf(&mut reader, output).await.map_err(|err| {
@@ -96,6 +97,7 @@ impl Source for EmailSource {
 	}
 
 	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		Ok(Vec::new())
 	}
 
@@ -104,6 +106,7 @@ impl Source for EmailSource {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file = File::open(path).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
@@ -126,16 +129,19 @@ impl Source for EmailSource {
 	}
 
 	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		Ok(Vec::new())
 	}
 
 	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		Ok(0)
 	}
 
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let session_lock = self.imap_session.clone();
 		let mut session = session_lock.lock().await;
 

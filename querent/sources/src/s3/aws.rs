@@ -246,6 +246,7 @@ async fn create_poll_data_stream(
 
 			if let Some(contents) = list_objects_v2_output.contents {
 				for object in contents {
+					let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 					if let Some(key) = object.key {
 						let get_object_output = s3_client
 							.get_object()

@@ -15,6 +15,7 @@ use tracing::instrument;
 
 use crate::{
 	default_copy_to_file, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult,
+	REQUEST_SEMAPHORE,
 };
 
 #[derive(Clone)]
@@ -63,6 +64,7 @@ impl OneDriveSource {
 	}
 
 	async fn download_file(url: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let response = get(url).await;
 		let bytes = response.unwrap().bytes().await;
 		return Ok(bytes?.to_vec());
@@ -101,11 +103,13 @@ impl std::fmt::Debug for OneDriveSource {
 #[async_trait]
 impl Source for OneDriveSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		self.onedrive.get_drive().await.expect("Cannot get drive");
 		Ok(())
 	}
 
 	async fn copy_to_file(&self, path: &Path, output_path: &Path) -> SourceResult<u64> {
+		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		default_copy_to_file(self, path, output_path).await
 	}
 
@@ -117,6 +121,7 @@ impl Source for OneDriveSource {
 			.await
 			.map_err(|e| SourceError { kind: SourceErrorKind::Io, source: Arc::new(e.into()) })?;
 		for drive_item in drive_item_all {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let bytes =
@@ -147,6 +152,7 @@ impl Source for OneDriveSource {
 			.await
 			.map_err(|e| SourceError { kind: SourceErrorKind::Io, source: Arc::new(e.into()) })?;
 		for drive_item in drive_item_all {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let bytes =
@@ -172,6 +178,7 @@ impl Source for OneDriveSource {
 			.await
 			.expect("Cannot list children");
 		for drive_item in drive_item_all {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let bytes = Self::download_file(download_url).await.unwrap();
@@ -198,6 +205,7 @@ impl Source for OneDriveSource {
 
 		let stream = stream! {
 			for drive_item in drive_item_all {
+				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 				if let Some(_file) = &drive_item.file {
 					let name = drive_item.name.unwrap();
 					let extension = Self::get_file_extension(&name);
@@ -238,6 +246,7 @@ impl Source for OneDriveSource {
 			.await
 			.map_err(|e| SourceError { kind: SourceErrorKind::Io, source: Arc::new(e.into()) })?;
 		for drive_item in drive_item_all {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let bytes =
@@ -262,6 +271,7 @@ impl Source for OneDriveSource {
 			.await
 			.map_err(|e| SourceError { kind: SourceErrorKind::Io, source: Arc::new(e.into()) })?;
 		for drive_item in drive_item_all {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let bytes =
