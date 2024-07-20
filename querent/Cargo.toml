@@ -262,6 +262,11 @@ ollama-rs = { version = "0.2.0", features = [
 surrealdb = { version = "1.5.3", features = ["kv-rocksdb"] }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
+pdfium-render = "0.8.3"
+typed-builder = "0.18.1"
+derive_builder = "0.20.0"
+derive-getters = "0.3.0"
+sha2 = "0.10.8"
 
 # patch unicode-normalization to version 1.22.0
 [patch.crates-io]

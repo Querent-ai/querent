@@ -70,3 +70,10 @@ xlsx_reader = { workspace = true }
 xml = { workspace = true }
 rusty-tesseract = { workspace = true }
 zip = { workspace = true }
+pdfium-render = { workspace = true }
+typed-builder = { workspace = true }
+derive_builder = { workspace = true }
+derive-getters = { workspace = true }
+rayon = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
