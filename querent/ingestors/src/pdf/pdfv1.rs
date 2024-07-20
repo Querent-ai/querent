@@ -7,39 +7,25 @@ use proto::semantics::IngestedTokens;
 use std::{
 	collections::HashMap,
 	fmt,
-	path::PathBuf,
 	pin::Pin,
 	sync::{Arc, Mutex},
 };
 
+#[allow(unused_imports)]
+use super::init;
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
 	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
 };
 
-const LIBPDFIUM_BYTES: &[u8] = include_bytes!("resources/lib/libpdfium.so");
 // Define the PdfIngestor
 pub struct PdfIngestor {
 	pub processors: Vec<Arc<dyn AsyncProcessor>>,
-	pub libpdfium_path: String,
 }
 
 impl PdfIngestor {
 	pub fn new() -> Self {
-		// write the pdfium library to a file
-		let temp_dir = PathBuf::from("/tmp/pdf_resources");
-		let pdfium_lib_path = temp_dir.join("libpdfium.so");
-		if !temp_dir.exists() {
-			std::fs::create_dir_all(&temp_dir).unwrap();
-			if !pdfium_lib_path.exists() {
-				std::fs::write(pdfium_lib_path.clone(), LIBPDFIUM_BYTES).unwrap();
-			}
-		}
-
-		Self {
-			processors: vec![Arc::new(TextCleanupProcessor::new())],
-			libpdfium_path: pdfium_lib_path.to_str().unwrap().to_string(),
-		}
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 
@@ -188,23 +174,23 @@ impl OutputDev for PagePlainTextOutput {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use std::path::PathBuf;
+#[cfg(test)]
+mod tests {
+	use std::path::PathBuf;
 
-// 	use crate::pdf::pdf_document::PdfDocumentParser;
+	use tempfile::TempDir;
 
-// 	#[test]
-// 	fn test_pdf() {
-// 		let pdfium_lib_path =
-// 			"/home/querent/querent/quester/querent/ingestors/src/pdf/resources/lib/libpdfium.so";
-// 		let parser = PdfDocumentParser::new(pdfium_lib_path);
-// 		assert!(parser.is_ok());
-// 		let parser = parser.unwrap();
-// 		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
-// 		let data = std::fs::read(file_path).unwrap();
-// 		let document = parser.parse(data.to_vec());
-// 		assert!(document.is_ok());
-// 		assert!(document.unwrap().text().len() > 0);
-// 	}
-// }
+	use crate::pdf::{init, pdf_document::PdfDocumentParser};
+
+	#[test]
+	fn test_pdf() {
+		let binary_folder = TempDir::new().unwrap();
+		let (pdfium, _) = init(&binary_folder.path().to_string_lossy().to_string());
+		let parser = PdfDocumentParser::new(pdfium);
+		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
+		let data = std::fs::read(file_path).unwrap();
+		let document = parser.parse(data.to_vec());
+		assert!(document.is_ok());
+		assert!(document.unwrap().text().len() > 0);
+	}
+}

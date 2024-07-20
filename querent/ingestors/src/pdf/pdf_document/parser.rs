@@ -13,13 +13,9 @@ pub struct PdfDocumentParser {
 }
 
 impl PdfDocumentParser {
-	pub fn new(pdfium_lib_path: &str) -> Result<Self> {
-		let pdfium = Pdfium::new(
-			Pdfium::bind_to_library(pdfium_lib_path)
-				.or_else(|_| Pdfium::bind_to_system_library())?,
-		);
+	pub fn new(pdfium: Pdfium) -> Self {
 		let analyzer = Analyser::new();
-		Ok(Self { pdfium, analyzer })
+		Self { pdfium, analyzer }
 	}
 
 	pub fn parse(&self, bytes: Vec<u8>) -> Result<Document> {
