@@ -1,4 +1,4 @@
-use common::DocumentPayload;
+use crate::DocumentPayload;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 #[derive(Clone, Eq, PartialEq, Hash, Debug, Serialize, Deserialize)]
