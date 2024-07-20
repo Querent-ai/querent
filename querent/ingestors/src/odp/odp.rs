@@ -53,11 +53,9 @@ impl BaseIngestor for OdpIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
-				let cursor = Cursor::new(buffer.as_ref());
+				let cursor = Cursor::new(buffer);
 
 				let mut archive = match ZipArchive::new(cursor) {
 					Ok(archive) => archive,

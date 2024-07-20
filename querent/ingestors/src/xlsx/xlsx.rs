@@ -46,9 +46,7 @@ impl BaseIngestor for XlsxIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
 				match xlsx_reader::parse_xlsx(&buffer, None) {
 					Ok(parsed_xlsx) => {

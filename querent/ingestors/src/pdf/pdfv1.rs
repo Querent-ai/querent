@@ -2,28 +2,26 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use pdf_extract::{output_doc, ConvertToFmt, OutputDev, OutputError, PlainTextOutput};
 use proto::semantics::IngestedTokens;
-use std::{
-	collections::HashMap,
-	fmt,
-	pin::Pin,
-	sync::{Arc, Mutex},
-};
+use std::{path::PathBuf, pin::Pin, sync::Arc};
 
+#[allow(unused_imports)]
+use super::init;
+use super::pdf_document::PdfDocumentParser;
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
-	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
+	AsyncProcessor, BaseIngestor, IngestorResult,
 };
 
 // Define the PdfIngestor
 pub struct PdfIngestor {
-	processors: Vec<Arc<dyn AsyncProcessor>>,
+	pub processors: Vec<Arc<dyn AsyncProcessor>>,
+	pub libpdfium_folder_path: PathBuf,
 }
 
 impl PdfIngestor {
-	pub fn new() -> Self {
-		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
+	pub fn new(libpdfium_folder_path: PathBuf) -> Self {
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())], libpdfium_folder_path }
 	}
 }
 
@@ -43,6 +41,7 @@ impl BaseIngestor for PdfIngestor {
 		let mut file = String::new();
 		let mut doc_source = String::new();
 		let mut source_id = String::new();
+		let binary_folder = self.libpdfium_folder_path.clone();
 		for collected_bytes in all_collected_bytes.iter() {
 			if file.is_empty() {
 				file =
@@ -55,14 +54,12 @@ impl BaseIngestor for PdfIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let reader = std::io::Cursor::new(buffer);
-		let doc = lopdf::Document::load_from(reader)
-			.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-
 		let stream = stream! {
-			let mut output = PagePlainTextOutput::new();
-			output_doc(&doc, &mut output).unwrap();
-			for (_, text) in output.pages {
+			let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
+			let parser = PdfDocumentParser::new(pdfium);
+			let document = parser.parse(buffer);
+			let pages = document.unwrap().all_texts();
+			for text in pages {
 				let ingested_tokens = IngestedTokens {
 					data: vec![text],
 					file: file.clone(),
@@ -88,85 +85,23 @@ impl BaseIngestor for PdfIngestor {
 	}
 }
 
-struct PagePlainTextOutput {
-	inner: PlainTextOutput<OutputWrapper>,
-	pages: HashMap<u32, String>,
-	current_page: u32,
-	reader: Arc<Mutex<String>>,
-}
+// #[cfg(test)]
+// mod tests {
+// 	use std::path::PathBuf;
 
-struct OutputWrapper(Arc<Mutex<String>>);
+// 	use tempfile::TempDir;
 
-impl std::fmt::Write for OutputWrapper {
-	fn write_str(&mut self, s: &str) -> std::fmt::Result {
-		let mut reader = self.0.lock().unwrap();
-		reader.write_str(s).map_err(|_| fmt::Error)
-	}
-}
+// 	use crate::pdf::{init, pdf_document::PdfDocumentParser};
 
-impl ConvertToFmt for OutputWrapper {
-	type Writer = OutputWrapper;
-
-	fn convert(self) -> Self::Writer {
-		self
-	}
-}
-
-impl PagePlainTextOutput {
-	fn new() -> Self {
-		let s = Arc::new(Mutex::new(String::new()));
-		let writer = Arc::clone(&s);
-		Self {
-			pages: HashMap::new(),
-			current_page: 0,
-			reader: s,
-			inner: PlainTextOutput::new(OutputWrapper(writer)),
-		}
-	}
-}
-
-impl OutputDev for PagePlainTextOutput {
-	fn begin_page(
-		&mut self,
-		page_num: u32,
-		media_box: &pdf_extract::MediaBox,
-		art_box: Option<(f64, f64, f64, f64)>,
-	) -> Result<(), OutputError> {
-		self.current_page = page_num;
-		self.reader.lock().unwrap().clear(); // Ensure the buffer is clear at the start of each page
-		self.inner.begin_page(page_num, media_box, art_box)
-	}
-
-	fn end_page(&mut self) -> Result<(), OutputError> {
-		self.inner.end_page()?;
-
-		let buf = self.reader.lock().unwrap().clone();
-		self.pages.insert(self.current_page, buf);
-		self.reader.lock().unwrap().clear();
-
-		Ok(())
-	}
-
-	fn output_character(
-		&mut self,
-		trm: &pdf_extract::Transform,
-		width: f64,
-		spacing: f64,
-		font_size: f64,
-		char: &str,
-	) -> Result<(), OutputError> {
-		self.inner.output_character(trm, width, spacing, font_size, char)
-	}
-
-	fn begin_word(&mut self) -> Result<(), OutputError> {
-		self.inner.begin_word()
-	}
-
-	fn end_word(&mut self) -> Result<(), OutputError> {
-		self.inner.end_word()
-	}
-
-	fn end_line(&mut self) -> Result<(), OutputError> {
-		self.inner.end_line()
-	}
-}
+// 	#[test]
+// 	fn test_pdf() {
+// 		let binary_folder = TempDir::new().unwrap();
+// 		let (pdfium, _) = init(&binary_folder.path().to_string_lossy().to_string());
+// 		let parser = PdfDocumentParser::new(pdfium);
+// 		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
+// 		let data = std::fs::read(file_path).unwrap();
+// 		let document = parser.parse(data.to_vec());
+// 		assert!(document.is_ok());
+// 		assert!(document.unwrap().text().len() > 0);
+// 	}
+// }

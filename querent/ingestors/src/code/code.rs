@@ -49,12 +49,10 @@ impl BaseIngestor for CodeIngestor {
 			source_id = collected_bytes.source_id.clone();
 		}
 
-		let buffer = Arc::new(buffer);
 		let stream = {
-			let buffer = Arc::clone(&buffer);
 			stream! {
 				let mut content = String::new();
-				let mut cursor = Cursor::new(buffer.as_ref());
+				let mut cursor = Cursor::new(buffer);
 
 				cursor.read_to_string(&mut content).await
 					.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;

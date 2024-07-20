@@ -118,9 +118,9 @@ impl ClusterServiceClient {
     {
         #[cfg(any(test, feature = "testsuite"))]
         assert!(
-            std::any::TypeId::of:: < T > () != std::any::TypeId::of:: <
-            MockClusterService > (),
-            "`MockClusterService` must be wrapped in a `MockClusterServiceWrapper`. Use `MockClusterService::from(mock)` to instantiate the client."
+            std::any::TypeId::of::< T > () != std::any::TypeId::of::< MockClusterService
+            > (),
+            "`MockClusterService` must be wrapped in a `MockClusterServiceWrapper`. Use `MockClusterService::from(mock)` to instantiate the client.",
         );
         Self { inner: Box::new(instance) }
     }
