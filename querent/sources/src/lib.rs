@@ -20,7 +20,6 @@ use tokio::sync::Semaphore;
 
 pub static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10));
 
-
 async fn default_copy_to_file<S: Source + ?Sized>(
 	storage: &S,
 	path: &Path,

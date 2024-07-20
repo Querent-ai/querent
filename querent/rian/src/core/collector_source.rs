@@ -201,8 +201,7 @@ impl Source for Collector {
 					&chunks[0].extension.clone().unwrap_or_default(),
 					chunks,
 				);
-				let batches_error =
-					ctx.send_message(event_streamer_messagebus, events_batch).await;
+				let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
 				if batches_error.is_err() {
 					error!("Failed to send bytes batch: {:?}", batches_error);
 				}

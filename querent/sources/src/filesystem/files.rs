@@ -85,7 +85,6 @@ impl LocalFolderSource {
 
 					let value = value.clone();
 					if eof_reached {
-
 						return None;
 					}
 					let file = match fs::File::open(&file_path).await {
@@ -109,7 +108,6 @@ impl LocalFolderSource {
 					let bytes_read = match reader.read(&mut buffer).await {
 						Ok(br) => br,
 						Err(e) => {
-
 							return Some((
 								Err(SourceError::from(e)),
 								(file_path, chunk_size, offset, false),
@@ -118,7 +116,6 @@ impl LocalFolderSource {
 					};
 
 					if bytes_read == 0 {
-
 						let eof_collected_bytes = CollectedBytes::new(
 							Some(file_path.clone()),
 							None,
@@ -142,7 +139,6 @@ impl LocalFolderSource {
 						value.clone(),
 					);
 
-
 					Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read, false)))
 				}
 			},
@@ -156,11 +152,8 @@ impl LocalFolderSource {
 impl Source for LocalFolderSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		 
 
 		if !self.folder_path.exists() {
-			 
-
 			return Err(SourceError::new(
 				SourceErrorKind::NotFound,
 				anyhow::anyhow!("Folder not found").into(),
@@ -170,14 +163,11 @@ impl Source for LocalFolderSource {
 		let mut entries = fs::read_dir(&self.folder_path).await.map_err(SourceError::from)?;
 		entries.next_entry().await.map_err(SourceError::from)?;
 
-		 
-
 		Ok(())
 	}
 
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		 
 
 		let full_path = self.full_path(path);
 		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
@@ -188,8 +178,6 @@ impl Source for LocalFolderSource {
 		let mut buffer = vec![0; range.len()];
 		file.read_exact(&mut buffer).await.map_err(SourceError::from)?;
 
-		 
-
 		Ok(buffer)
 	}
 
@@ -199,7 +187,6 @@ impl Source for LocalFolderSource {
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		 
 
 		let full_path = self.full_path(path);
 		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
@@ -208,14 +195,12 @@ impl Source for LocalFolderSource {
 			.map_err(SourceError::from)?;
 
 		let reader = BufReader::new(file.take(range.len() as u64));
-		 
 
 		Ok(Box::new(reader))
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		 
 
 		let full_path = self.full_path(path);
 		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
@@ -223,19 +208,14 @@ impl Source for LocalFolderSource {
 		let mut buffer = Vec::new();
 		file.read_to_end(&mut buffer).await.map_err(SourceError::from)?;
 
-		 
-
 		Ok(buffer)
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		 
 
 		let full_path = self.full_path(path);
 		let metadata = fs::metadata(&full_path).await.map_err(SourceError::from)?;
-
-		 
 
 		Ok(metadata.len())
 	}
@@ -259,15 +239,12 @@ impl Source for LocalFolderSource {
 	{
 		Box::pin(async move {
 			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-			 
 
 			let full_path = self.full_path(path);
 			let file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 			let mut reader = BufReader::new(file);
 			tokio::io::copy_buf(&mut reader, output).await.map_err(SourceError::from)?;
 			output.flush().await.map_err(SourceError::from)?;
-
-			 
 
 			Ok(())
 		})
@@ -277,11 +254,8 @@ impl Source for LocalFolderSource {
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		 
 
 		let result = self.poll_data_recursive(self.folder_path.clone()).await;
-
-		 
 
 		result
 	}
