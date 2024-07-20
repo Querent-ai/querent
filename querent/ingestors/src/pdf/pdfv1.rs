@@ -42,8 +42,6 @@ impl BaseIngestor for PdfIngestor {
 		let mut doc_source = String::new();
 		let mut source_id = String::new();
 		let binary_folder = self.libpdfium_folder_path.clone();
-		let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
-		let parser = PdfDocumentParser::new(pdfium);
 		for collected_bytes in all_collected_bytes.iter() {
 			if file.is_empty() {
 				file =
@@ -57,6 +55,8 @@ impl BaseIngestor for PdfIngestor {
 		}
 
 		let stream = stream! {
+			let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
+			let parser = PdfDocumentParser::new(pdfium);
 			let document = parser.parse(buffer.clone());
 			let pages = document.unwrap().all_texts();
 			for text in pages {
