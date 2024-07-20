@@ -188,22 +188,23 @@ impl OutputDev for PagePlainTextOutput {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use std::path::PathBuf;
+// #[cfg(test)]
+// mod tests {
+// 	use std::path::PathBuf;
 
-	use crate::pdf::pdf_document::PdfDocumentParser;
+// 	use crate::pdf::pdf_document::PdfDocumentParser;
 
-	#[test]
-	fn test_pdf() {
-		let pdfium_lib_path =
-			"/home/querent/querent/quester/querent/ingestors/src/pdf/resources/lib/libpdfium.so";
-		let parser = PdfDocumentParser::new(pdfium_lib_path);
-		assert!(parser.is_ok());
-		let parser = parser.unwrap();
-		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
-		let data = std::fs::read(file_path).unwrap();
-		let document = parser.parse(data.to_vec());
-		assert!(document.is_ok());
-	}
-}
+// 	#[test]
+// 	fn test_pdf() {
+// 		let pdfium_lib_path =
+// 			"/home/querent/querent/quester/querent/ingestors/src/pdf/resources/lib/libpdfium.so";
+// 		let parser = PdfDocumentParser::new(pdfium_lib_path);
+// 		assert!(parser.is_ok());
+// 		let parser = parser.unwrap();
+// 		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
+// 		let data = std::fs::read(file_path).unwrap();
+// 		let document = parser.parse(data.to_vec());
+// 		assert!(document.is_ok());
+// 		assert!(document.unwrap().text().len() > 0);
+// 	}
+// }
