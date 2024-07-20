@@ -17,7 +17,8 @@ fn init_dynamically_linked(binary_folder: &str, binary_name: &str, lib_bytes: &[
 	use std::{fs, path::Path};
 	let binary_path = format!("{}/{}", binary_folder, binary_name);
 	let binary_folder = Path::new(binary_folder);
-	if !binary_folder.exists() {
+	let binary_path = Path::new(&binary_path);
+	if !binary_path.exists() {
 		fs::create_dir_all(binary_folder).unwrap();
 		fs::write(&binary_path, lib_bytes).unwrap_or_default();
 	}

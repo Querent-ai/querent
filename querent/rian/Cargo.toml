@@ -39,7 +39,6 @@ regex = { workspace = true }
 async-stream = { workspace = true }
 async-openai = { workspace = true }
 url = { workspace = true }
-lopdf = { workspace = true }
 tiktoken-rs = { workspace = true }
 csv = { workspace = true }
 readability = { workspace = true }
