@@ -199,9 +199,8 @@ pub async fn resolve_ingestor_with_extension(
 	if programming_languages.contains(&extension) {
 		return Ok(Arc::new(CodeIngestor::new()));
 	}
-	let temp_resource_dir = std::env::temp_dir();
 	match extension {
-		"pdf" => Ok(Arc::new(PdfIngestor::new(temp_resource_dir))),
+		"pdf" => Ok(Arc::new(PdfIngestor::new())),
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),

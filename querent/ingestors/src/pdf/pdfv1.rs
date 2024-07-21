@@ -20,7 +20,8 @@ pub struct PdfIngestor {
 }
 
 impl PdfIngestor {
-	pub fn new(libpdfium_folder_path: PathBuf) -> Self {
+	pub fn new() -> Self {
+		let libpdfium_folder_path = std::env::temp_dir();
 		Self { processors: vec![Arc::new(TextCleanupProcessor::new())], libpdfium_folder_path }
 	}
 }
