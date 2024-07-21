@@ -8,10 +8,18 @@ use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{
-	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor,
-	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
-	json::json::JsonIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor,
-	pptx::pptx::PptxIngestor, txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor,
+	code::code::CodeIngestor,
+	csv::csv::CsvIngestor,
+	doc::doc::DocIngestor,
+	docx::docx::DocxIngestor,
+	html::html::HtmlIngestor,
+	image::image::ImageIngestor,
+	json::json::JsonIngestor,
+	odp::odp::OdpIngestor,
+	pdf::{init, pdfv1::PdfIngestor},
+	pptx::pptx::PptxIngestor,
+	txt::txt::TxtIngestor,
+	xlsx::xlsx::XlsxIngestor,
 	xml::xml::XmlIngestor,
 };
 use tracing::info;
@@ -199,8 +207,11 @@ pub async fn resolve_ingestor_with_extension(
 	if programming_languages.contains(&extension) {
 		return Ok(Arc::new(CodeIngestor::new()));
 	}
+	let binary_folder = std::env::temp_dir();
+	let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
+
 	match extension {
-		"pdf" => Ok(Arc::new(PdfIngestor::new())),
+		"pdf" => Ok(Arc::new(PdfIngestor::new(Arc::new(pdfium)))),
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),
@@ -215,9 +226,5 @@ pub async fn resolve_ingestor_with_extension(
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
-		// _ => Err(IngestorError::new(
-		// 	IngestorErrorKind::NotSupported,
-		// 	Arc::new(anyhow::anyhow!("Extension not supported")),
-		// )),
 	}
 }

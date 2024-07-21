@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use pdfium_render::prelude::*;
 
 use super::{extractor, Analyser, Element, TextElement, TextElementGroupKind};
@@ -8,12 +10,13 @@ use crate::{
 type Result<T> = std::result::Result<T, anyhow::Error>;
 
 pub struct PdfDocumentParser {
-	pdfium: Pdfium,
+	/// The PDFium instance reference.
+	pdfium: Arc<Pdfium>,
 	analyzer: Analyser,
 }
 
 impl PdfDocumentParser {
-	pub fn new(pdfium: Pdfium) -> Self {
+	pub fn new(pdfium: Arc<Pdfium>) -> Self {
 		let analyzer = Analyser::new();
 		Self { pdfium, analyzer }
 	}

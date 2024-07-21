@@ -2,8 +2,9 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
+use pdfium_render::pdfium::Pdfium;
 use proto::semantics::IngestedTokens;
-use std::{path::PathBuf, pin::Pin, sync::Arc};
+use std::{pin::Pin, sync::Arc};
 
 #[allow(unused_imports)]
 use super::init;
@@ -16,13 +17,12 @@ use crate::{
 // Define the PdfIngestor
 pub struct PdfIngestor {
 	pub processors: Vec<Arc<dyn AsyncProcessor>>,
-	pub libpdfium_folder_path: PathBuf,
+	pub pdfium: Arc<Pdfium>,
 }
 
 impl PdfIngestor {
-	pub fn new() -> Self {
-		let libpdfium_folder_path = std::env::temp_dir();
-		Self { processors: vec![Arc::new(TextCleanupProcessor::new())], libpdfium_folder_path }
+	pub fn new(pdfium: Arc<Pdfium>) -> Self {
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())], pdfium }
 	}
 }
 
@@ -42,7 +42,6 @@ impl BaseIngestor for PdfIngestor {
 		let mut file = String::new();
 		let mut doc_source = String::new();
 		let mut source_id = String::new();
-		let binary_folder = self.libpdfium_folder_path.clone();
 		for collected_bytes in all_collected_bytes.iter() {
 			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 				continue;
@@ -56,9 +55,8 @@ impl BaseIngestor for PdfIngestor {
 			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
 			source_id = collected_bytes.source_id.clone();
 		}
-
+		let pdfium = self.pdfium.clone();
 		let stream = stream! {
-			let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
 			let parser = PdfDocumentParser::new(pdfium);
 			let document = parser.parse(buffer);
 			let pages = document.unwrap().all_texts();
@@ -88,23 +86,31 @@ impl BaseIngestor for PdfIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use std::path::PathBuf;
+#[cfg(test)]
+mod tests {
+	use std::{path::PathBuf, sync::Arc};
 
-// 	use tempfile::TempDir;
+	use tempfile::TempDir;
 
-// 	use crate::pdf::{init, pdf_document::PdfDocumentParser};
+	use crate::pdf::{init, pdf_document::PdfDocumentParser};
 
-// 	#[test]
-// 	fn test_pdf() {
-// 		let binary_folder = TempDir::new().unwrap();
-// 		let (pdfium, _) = init(&binary_folder.path().to_string_lossy().to_string());
-// 		let parser = PdfDocumentParser::new(pdfium);
-// 		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
-// 		let data = std::fs::read(file_path).unwrap();
-// 		let document = parser.parse(data.to_vec());
-// 		assert!(document.is_ok());
-// 		assert!(document.unwrap().text().len() > 0);
-// 	}
-// }
+	#[test]
+	fn test_pdf() {
+		let binary_folder = TempDir::new().unwrap();
+		let binary_folder2 = TempDir::new().unwrap();
+
+		let (pdfium, _) = init(&binary_folder.path().to_string_lossy().to_string());
+		let (pdfium2, _) = init(&binary_folder2.path().to_string_lossy().to_string());
+
+		let parser = PdfDocumentParser::new(Arc::new(pdfium));
+		let parser2 = PdfDocumentParser::new(Arc::new(pdfium2));
+		let file_path = PathBuf::from("/home/querent/querent/files/2112.08340v3.pdf");
+		let data = std::fs::read(file_path).unwrap();
+		let document = parser.parse(data.to_vec());
+		let document2 = parser2.parse(data.to_vec());
+		assert!(document.is_ok());
+		assert!(document.unwrap().text().len() > 0);
+		assert!(document2.is_ok());
+		assert!(document2.unwrap().text().len() > 0);
+	}
+}
