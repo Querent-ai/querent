@@ -31,24 +31,23 @@ impl BaseIngestor for AudioIngestor {
 	{
 		let stream = {
 			stream! {
-			let mut buffer = Vec::new();
-			let mut file = String::new();
-			let mut doc_source = String::new();
-			let mut source_id = String::new();
-			for collected_bytes in all_collected_bytes.iter() {
-				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-					continue;
+				let mut buffer = Vec::new();
+				let mut file = String::new();
+				let mut doc_source = String::new();
+				let mut source_id = String::new();
+				for collected_bytes in all_collected_bytes.iter() {
+					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+						continue;
+					}
+					if file.is_empty() {
+						file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+					}
+					if doc_source.is_empty() {
+						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+					}
+					buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+					source_id = collected_bytes.source_id.clone();
 				}
-				if file.is_empty() {
-					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-				}
-				if doc_source.is_empty() {
-					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-				}
-				buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
-				source_id = collected_bytes.source_id.clone();
-			}
-
 				let _cursor = Cursor::new(buffer);
 				// TODO: find a library capable of converting audio data to text format
 				let ingested_tokens = IngestedTokens {
@@ -58,9 +57,8 @@ impl BaseIngestor for AudioIngestor {
 					is_token_stream: false,
 					source_id: source_id.clone(),
 				};
-
 				yield Ok(ingested_tokens);
-				}
+			}
 		};
 
 		let processed_stream =

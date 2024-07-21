@@ -31,40 +31,39 @@ impl BaseIngestor for XlsxIngestor {
 	{
 		let stream = {
 			stream! {
-			// collect all the bytes into a single buffer
-			let mut buffer = Vec::new();
-			let mut file = String::new();
-			let mut doc_source = String::new();
-			let mut source_id = String::new();
-			for collected_bytes in all_collected_bytes.iter() {
-				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-					continue;
+				// collect all the bytes into a single buffer
+				let mut buffer = Vec::new();
+				let mut file = String::new();
+				let mut doc_source = String::new();
+				let mut source_id = String::new();
+				for collected_bytes in all_collected_bytes.iter() {
+					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+						continue;
+					}
+					if file.is_empty() {
+						file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+					}
+					if doc_source.is_empty() {
+						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+					}
+					buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+					source_id = collected_bytes.source_id.clone();
 				}
-				if file.is_empty() {
-					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-				}
-				if doc_source.is_empty() {
-					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-				}
-				buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
-				source_id = collected_bytes.source_id.clone();
-			}
 
-					match xlsx_reader::parse_xlsx(&buffer, None) {
-						Ok(parsed_xlsx) => {
+				match xlsx_reader::parse_xlsx(&buffer, None) {
+					Ok(parsed_xlsx) => {
+						for (_, row_map) in &parsed_xlsx {
 							let mut res = String::new();
-							for (_, row_map) in &parsed_xlsx {
-								let mut first = true;
-								for (inner_size, value) in row_map {
-									if first {
-										first = false;
-									} else {
-										res.push_str(", ");
-									}
-									res.push_str(&format!("{},{}", inner_size, value));
+							let mut first = true;
+							for (inner_size, value) in row_map {
+								if first {
+									first = false;
+								} else {
+									res.push_str(", ");
 								}
-								res.push_str("\n");
+								res.push_str(&format!("{},{}", inner_size, value));
 							}
+
 							let ingested_tokens = IngestedTokens {
 								data: vec![res],
 								file: file.clone(),
@@ -72,14 +71,23 @@ impl BaseIngestor for XlsxIngestor {
 								is_token_stream: false,
 								source_id: source_id.clone(),
 							};
-							yield Ok(ingested_tokens);
-						},
-						Err(e) => {
-							eprintln!("Error parsing xlsx - {}", e);
-						}
-					}
 
+							yield Ok(ingested_tokens);
+						}
+						yield Ok(IngestedTokens {
+							data: vec![],
+							file: file.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+						})
+
+					},
+					Err(e) => {
+						eprintln!("Error parsing xlsx - {}", e);
+					}
 				}
+			}
 		};
 
 		let processed_stream =

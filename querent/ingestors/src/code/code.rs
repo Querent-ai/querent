@@ -53,22 +53,29 @@ impl BaseIngestor for CodeIngestor {
 				source_id = collected_bytes.source_id.clone();
 			}
 
-					let mut content = String::new();
-					let mut cursor = Cursor::new(buffer);
+				let mut content = String::new();
+				let mut cursor = Cursor::new(buffer);
+				cursor.read_to_string(&mut content).await
+					.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
+				let ingested_tokens = IngestedTokens {
+					data: vec![content.to_string()],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+				};
+				yield Ok(ingested_tokens);
 
-					cursor.read_to_string(&mut content).await
-						.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
+				let ingested_tokens = IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+				};
 
-					let ingested_tokens = IngestedTokens {
-						data: vec![content.to_string()],
-						file: file.clone(),
-						doc_source: doc_source.clone(),
-						is_token_stream: false,
-						source_id: source_id.clone(),
-					};
-
-					yield Ok(ingested_tokens);
-				}
+				yield Ok(ingested_tokens);
+			}
 		};
 
 		let processed_stream =

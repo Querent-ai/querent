@@ -51,24 +51,31 @@ impl BaseIngestor for PptxIngestor {
 				buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
 				source_id = collected_bytes.source_id.clone();
 			}
-					let text_result = extract_text_from_pptx(&buffer);
-					match text_result {
-						Ok(text) => {
-							let ingested_tokens = IngestedTokens {
-								data: vec![text],
-								file: file.clone(),
-								doc_source: doc_source.clone(),
-								is_token_stream: false,
-								source_id: source_id.clone(),
-							};
-							yield Ok(ingested_tokens);
-						},
-						Err(e) => {
-							eprintln!("Error: {:?}", e);
-							yield Err(e);
-						}
-					}
+			let text_result = extract_text_from_pptx(&buffer);
+			match text_result {
+				Ok(text) => {
+					let ingested_tokens = IngestedTokens {
+						data: vec![text],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+					};
+					yield Ok(ingested_tokens);
+				},
+				Err(e) => {
+					eprintln!("Error: {:?}", e);
+					yield Err(e);
 				}
+			}
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+			})
+			}
 		};
 
 		let processed_stream =

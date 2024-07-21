@@ -72,6 +72,15 @@ impl BaseIngestor for TxtIngestor {
 			};
 
 			yield Ok(ingested_tokens);
+
+
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+			})
 		};
 
 		let processed_stream =
