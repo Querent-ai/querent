@@ -76,13 +76,6 @@ impl Engine for AttentionTensorsEngine {
 		&'life0 self,
 		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>> {
-		// Await the maximum tokens value outside the stream! block
-		let max_tokens = self.llm.maximum_tokens().await;
-		// Make copies of necessary parts of `self`
-		let mut entities = self.entities.clone();
-		let mut sample_entities = self.sample_entities.clone();
-		let llm = self.llm.clone();
-
 		if self.embedding_model.is_none() {
 			return Err(EngineError::new(
 				EngineErrorKind::ModelError,
@@ -90,23 +83,27 @@ impl Engine for AttentionTensorsEngine {
 			));
 		}
 
-		let embedder = self.embedding_model.as_ref().unwrap();
 		// Process the token stream to get chunks
 		let stream = stream! {
+			// Await the maximum tokens value outside the stream! block
+			let max_tokens = self.llm.maximum_tokens().await;
+			// Make copies of necessary parts of `self`
+			let mut entities = self.entities.clone();
+			let mut sample_entities = self.sample_entities.clone();
+			let llm = self.llm.clone();
+			let embedder = self.embedding_model.as_ref().unwrap();
 			let mut token_stream = token_stream;
-			while let Some(token) = token_stream.next().await {
+			while let Some(token) = token_stream.as_mut().next().await {
 				let doc_source = token.doc_source.clone(); // Assuming doc_source is of type Option<String>
 				let file = token.file.clone(); // Assuming file is of type Option<String>
 				let cleaned_data: Vec<String> =
 					token.data.into_iter().map(|s| remove_newlines(&s)).collect();
 				let source_id = token.source_id.clone();
-
 				let mut all_chunks = Vec::new();
 				for data in cleaned_data {
 					let split_chunks = split_into_chunks(max_tokens, &data);
 					all_chunks.extend(split_chunks);
 				}
-
 				let mut tokenized_chunks = Vec::new();
 				for chunk in &all_chunks {
 					let tokenized_chunk =
@@ -137,10 +134,8 @@ impl Engine for AttentionTensorsEngine {
 							let classification_result = ner_llm.token_classification(input.clone(), None).await.map_err(|e| EngineError::from(e))?;
 							classification_results.push(classification_result);
 						}
-
 						for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
 							let filtered_entities: Vec<(String, String)> = classification.iter().filter(|(_, label)| label != "O").cloned().collect();
-
 							classified_sentences.push(ClassifiedSentence {
 								sentence: chunk.clone(),
 								entities: filtered_entities
@@ -150,36 +145,28 @@ impl Engine for AttentionTensorsEngine {
 									});
 						}
 					}
-
 					match_entities_with_tokens(&tokenized_words, &classified_sentences)
 				};
 				let classified_sentences_with_pairs = create_binary_pairs(&classified_sentences);
-
 				let extended_classified_sentences_with_attention = add_attention_to_classified_sentences(
 					llm.as_ref(),
 					&classified_sentences_with_pairs,
 					&tokenized_chunks,
 				)
 				.await?;
-
 				let mut all_sentences_with_relations = Vec::new();
 				for (classified, tokenized_chunk) in extended_classified_sentences_with_attention.iter().zip(tokenized_chunks.iter()) {
 					let attention_matrix = classified.attention_matrix.as_ref().unwrap().clone();
 					let pairs = &classified.classified_sentence.pairs;
-
 					let token_words = llm.tokens_to_words(tokenized_chunk).await;
-
 					let tokens: Vec<Token> = token_words.iter().map(|word| {
 						Token {
 							text: word.clone(),
 							lemma: word.clone(),
 						}
 					}).collect();
-
 					let filter = IndividualFilter::new(tokens, true, 0.05);
-
 					let mut sentence_relations = Vec::new();
-
 					for (head_text, head_start, head_end, tail_text, tail_start, tail_end) in pairs {
 						let head = Entity {
 							name: head_text.clone(),
@@ -191,13 +178,11 @@ impl Engine for AttentionTensorsEngine {
 							start_idx: *tail_start,
 							end_idx: *tail_end,
 						};
-
 						let entity_pair = EntityPair {
 							head_entity: head.clone(),
 							tail_entity: tail.clone(),
 							context: classified.classified_sentence.sentence.clone(),
 						};
-
 						let search_results = perform_search(
 							head.start_idx,
 							&attention_matrix,
@@ -208,30 +193,23 @@ impl Engine for AttentionTensorsEngine {
 						).unwrap_or_else(|_e| {
 							Vec::new()
 						});
-
 						let search_beams: Vec<SearchBeam> = search_results.into_iter()
 							.map(|sr| SearchBeam {
 								rel_tokens: sr.relation_tokens,
 								score: sr.total_score,
 							}).collect();
-
 						let head_tail_relations = filter.filter(search_beams, &head, &tail);
-
 						// Use select_highest_score_relation function here
 						let highest_scored_relation = select_highest_score_relation(&head_tail_relations);
-
 						sentence_relations.push(highest_scored_relation);
 					}
-
 					all_sentences_with_relations.push(ClassifiedSentenceWithRelations {
 						classified_sentence: classified.classified_sentence.clone(),
 						attention_matrix: Some(attention_matrix),
 						relations: sentence_relations,
 					});
 				}
-
 				merge_similar_relations(&mut all_sentences_with_relations);
-
 				if !all_sentences_with_relations.is_empty()  && entities.is_empty(){
 					(entities, sample_entities) = extract_entities_and_types(all_sentences_with_relations.clone());
 				}
@@ -241,15 +219,12 @@ impl Engine for AttentionTensorsEngine {
 						for (predicate, _score) in &head_tail_relation.relations {
 							let event_id = generate_custom_comb_uuid();
 							event_ids.push(event_id.clone());
-
 							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
-
 							// Assign the types based on the indices
 							let subject_type = head_index.and_then(|i| sample_entities.get(i)).unwrap_or(&"unlabelled".to_string()).clone();
 							let object_type = tail_index.and_then(|i| sample_entities.get(i)).unwrap_or(&"unlabelled".to_string()).clone();
-
 							let payload = SemanticKnowledgePayload {
 								subject: head_tail_relation.head.name.clone().to_string(),
 								subject_type: subject_type.to_string(),
@@ -271,7 +246,6 @@ impl Engine for AttentionTensorsEngine {
 								timestamp: 0.0,
 								payload: serde_json::to_string(&payload).unwrap_or_default(),
 							};
-
 							yield Ok(event);
 						}
 					}
@@ -280,7 +254,6 @@ impl Engine for AttentionTensorsEngine {
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
 						let tail_entity = &relation.tail.name;
-
 						// Assuming the indices are available in the Entity struct
 						let head_start_index = relation.head.start_idx;
 						let head_end_index = relation.head.end_idx;
@@ -320,7 +293,6 @@ impl Engine for AttentionTensorsEngine {
 				}
 			}
 		};
-
 		Ok(Box::pin(stream))
 	}
 }
