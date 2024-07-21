@@ -10,6 +10,7 @@ use std::{
 	pin::Pin,
 	sync::{Arc, Mutex},
 };
+use tracing::error;
 
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
@@ -39,31 +40,34 @@ impl BaseIngestor for PdfIngestor {
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
 		// collect all the bytes into a single buffer
-		let mut buffer = Vec::new();
-		let mut file = String::new();
-		let mut doc_source = String::new();
-		let mut source_id = String::new();
-		for collected_bytes in all_collected_bytes.iter() {
-			if file.is_empty() {
-				file =
-					collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
-			}
-			if doc_source.is_empty() {
-				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-			}
-			buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
-			source_id = collected_bytes.source_id.clone();
-		}
-
-		let reader = std::io::Cursor::new(buffer);
-		let doc = lopdf::Document::load_from(reader)
-			.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-
 		let stream = stream! {
+			let mut buffer = Vec::new();
+			let mut file = String::new();
+			let mut doc_source = String::new();
+			let mut source_id = String::new();
+			for collected_bytes in all_collected_bytes.iter() {
+				if file.is_empty() {
+					file =
+						collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
+				}
+				if doc_source.is_empty() {
+					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+				source_id = collected_bytes.source_id.clone();
+			}
+			error!("File {:?}", file);
+			let reader = std::io::Cursor::new(buffer);
+			let doc = lopdf::Document::load_from(reader);
+			if let Err(e) = doc {
+				yield Err(IngestorError::new(IngestorErrorKind::Internal, Arc::new(e.into())));
+				return;
+			}
+			let doc = doc.unwrap();
+
 			let mut output = PagePlainTextOutput::new();
 			output_doc(&doc, &mut output).unwrap();
 			for (_, text) in output.pages {
-				println!("Text {:?}", text.clone());
 				let ingested_tokens = IngestedTokens {
 					data: vec![text],
 					file: file.clone(),
