@@ -33,6 +33,7 @@ impl BaseIngestor for TxtIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
+		let stream = stream! {
 		// collect all the bytes into a single buffer
 		let mut buffer = Vec::new();
 		let mut file = String::new();
@@ -53,7 +54,7 @@ impl BaseIngestor for TxtIngestor {
 		}
 
 		// Create a stream to read the text file content
-		let stream = stream! {
+
 			let reader = BufReader::new(buffer.as_slice());
 			let mut content = String::new();
 			let mut buf_reader = BufReader::new(reader);

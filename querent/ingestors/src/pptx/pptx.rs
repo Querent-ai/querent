@@ -32,44 +32,43 @@ impl BaseIngestor for PptxIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
-		let mut buffer = Vec::new();
-		let mut file = String::new();
-		let mut doc_source = String::new();
-		let mut source_id = String::new();
-		for collected_bytes in all_collected_bytes.iter() {
-			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-				continue;
-			}
-			if file.is_empty() {
-				file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-			}
-			if doc_source.is_empty() {
-				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-			}
-			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
-			source_id = collected_bytes.source_id.clone();
-		}
-
 		let stream = {
 			stream! {
-				let text_result = extract_text_from_pptx(&buffer);
-				match text_result {
-					Ok(text) => {
-						let ingested_tokens = IngestedTokens {
-							data: vec![text],
-							file: file.clone(),
-							doc_source: doc_source.clone(),
-							is_token_stream: false,
-							source_id: source_id.clone(),
-						};
-						yield Ok(ingested_tokens);
-					},
-					Err(e) => {
-						eprintln!("Error: {:?}", e);
-						yield Err(e);
+					let mut buffer = Vec::new();
+			let mut file = String::new();
+			let mut doc_source = String::new();
+			let mut source_id = String::new();
+			for collected_bytes in all_collected_bytes.iter() {
+				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+					continue;
+				}
+				if file.is_empty() {
+					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+				}
+				if doc_source.is_empty() {
+					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+				source_id = collected_bytes.source_id.clone();
+			}
+					let text_result = extract_text_from_pptx(&buffer);
+					match text_result {
+						Ok(text) => {
+							let ingested_tokens = IngestedTokens {
+								data: vec![text],
+								file: file.clone(),
+								doc_source: doc_source.clone(),
+								is_token_stream: false,
+								source_id: source_id.clone(),
+							};
+							yield Ok(ingested_tokens);
+						},
+						Err(e) => {
+							eprintln!("Error: {:?}", e);
+							yield Err(e);
+						}
 					}
 				}
-			}
 		};
 
 		let processed_stream =

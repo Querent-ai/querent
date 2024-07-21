@@ -10,7 +10,6 @@ use std::{
 	pin::Pin,
 	sync::{Arc, Mutex},
 };
-use tracing::error;
 
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
@@ -56,7 +55,6 @@ impl BaseIngestor for PdfIngestor {
 				buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
 				source_id = collected_bytes.source_id.clone();
 			}
-			error!("File {:?}", file);
 			let reader = std::io::Cursor::new(buffer);
 			let doc = lopdf::Document::load_from(reader);
 			if let Err(e) = doc {
