@@ -103,7 +103,7 @@ impl Handler<CollectionBatch> for IngestorService {
 		let token_sender = self.get_token_sender();
 		if token_sender.is_closed() {
 			error!("Token sender is closed");
-			return Ok(());
+			return Err(ActorExitStatus::Failure(anyhow::anyhow!("Token sender is closed").into()));
 		}
 		let counters = self.get_counters();
 		let collector_id = self.get_collector_id();
