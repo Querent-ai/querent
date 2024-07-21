@@ -2,24 +2,17 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{pin_mut, stream, Stream, StreamExt};
+use pdfium_render::pdfium::Pdfium;
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
 
 use crate::{
-	code::code::CodeIngestor,
-	csv::csv::CsvIngestor,
-	doc::doc::DocIngestor,
-	docx::docx::DocxIngestor,
-	html::html::HtmlIngestor,
-	image::image::ImageIngestor,
-	json::json::JsonIngestor,
-	odp::odp::OdpIngestor,
-	pdf::{init, pdfv1::PdfIngestor},
-	pptx::pptx::PptxIngestor,
-	txt::txt::TxtIngestor,
-	xlsx::xlsx::XlsxIngestor,
+	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor,
+	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
+	json::json::JsonIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor,
+	pptx::pptx::PptxIngestor, txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor,
 	xml::xml::XmlIngestor,
 };
 use tracing::info;
@@ -197,6 +190,7 @@ pub async fn process_ingested_tokens_stream(
 }
 
 pub async fn resolve_ingestor_with_extension(
+	pdfium: Arc<Pdfium>,
 	extension: &str,
 ) -> IngestorResult<Arc<dyn BaseIngestor>> {
 	let programming_languages = vec![
@@ -207,11 +201,9 @@ pub async fn resolve_ingestor_with_extension(
 	if programming_languages.contains(&extension) {
 		return Ok(Arc::new(CodeIngestor::new()));
 	}
-	let binary_folder = std::env::temp_dir();
-	let (pdfium, _) = init(&binary_folder.to_string_lossy().to_string());
 
 	match extension {
-		"pdf" => Ok(Arc::new(PdfIngestor::new(Arc::new(pdfium)))),
+		"pdf" => Ok(Arc::new(PdfIngestor::new(pdfium))),
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),
