@@ -94,6 +94,9 @@ impl Engine for AttentionTensorsEngine {
 			let embedder = self.embedding_model.as_ref().unwrap();
 			let mut token_stream = token_stream;
 			while let Some(token) = token_stream.as_mut().next().await {
+				if token.data.is_empty() {
+					continue;
+				}
 				let doc_source = token.doc_source.clone(); // Assuming doc_source is of type Option<String>
 				let file = token.file.clone(); // Assuming file is of type Option<String>
 				let cleaned_data: Vec<String> =

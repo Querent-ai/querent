@@ -21,7 +21,7 @@ use tracing::{debug, error, info};
 
 static SPAWN_PIPELINE_SEMAPHORE: Semaphore = Semaphore::const_new(10);
 const HEALTH_CHECK_INTERVAL: Duration = Duration::from_secs(5);
-const MAX_RETRY_DELAY: Duration = Duration::from_secs(5);
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(600);
 
 pub(crate) fn wait_time(retry_count: usize) -> Duration {
 	// Protect against a `retry_count` that will lead to an overflow.

@@ -131,7 +131,9 @@ mod tests {
 		while let Some(tokens) = stream.next().await {
 			let tokens = tokens.unwrap();
 			println!("These are the tokens in file --------------{:?}", tokens);
-			count += 1;
+			if tokens.data.len() > 0 {
+				count += 1;
+			}
 		}
 		assert_eq!(count, 1);
 	}
