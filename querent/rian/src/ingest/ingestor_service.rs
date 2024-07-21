@@ -4,10 +4,7 @@ use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
-use ingestors::{
-	pdf::{init, Pdfium},
-	resolve_ingestor_with_extension,
-};
+use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender};
 use tracing::{debug, error, info};
@@ -17,20 +14,11 @@ pub struct IngestorService {
 	pub timestamp: u64,
 	pub counters: Arc<IngestorCounters>,
 	token_sender: Sender<IngestedTokens>,
-	pdfium: Arc<Pdfium>,
 }
 
 impl IngestorService {
 	pub fn new(collector_id: String, token_sender: Sender<IngestedTokens>, timestamp: u64) -> Self {
-		let temp_dir = std::env::temp_dir();
-		let (pdfium, _) = init(&temp_dir.to_string_lossy().to_string());
-		Self {
-			pdfium: Arc::new(pdfium),
-			collector_id,
-			timestamp,
-			counters: Arc::new(IngestorCounters::new()),
-			token_sender,
-		}
+		Self { collector_id, timestamp, counters: Arc::new(IngestorCounters::new()), token_sender }
 	}
 
 	pub fn get_timestamp(&self) -> u64 {
@@ -107,13 +95,9 @@ impl Handler<CollectionBatch> for IngestorService {
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		debug!("Received CollectionBatch: {:?}", message.file);
-		let file_ingestor = resolve_ingestor_with_extension(self.pdfium.clone(), &message.ext)
-			.await
-			.map_err(|e| {
-				ActorExitStatus::Failure(
-					anyhow::anyhow!("Failed to resolve ingestor: {}", e).into(),
-				)
-			})?;
+		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
+			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
+		})?;
 
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();

@@ -8,21 +8,29 @@ use std::{pin::Pin, sync::Arc};
 
 #[allow(unused_imports)]
 use super::init;
-use super::pdf_document::PdfDocumentParser;
+use super::{pdf_document::PdfDocumentParser, PDFIUM};
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
-	AsyncProcessor, BaseIngestor, IngestorResult,
+	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
 };
 
 // Define the PdfIngestor
 pub struct PdfIngestor {
 	pub processors: Vec<Arc<dyn AsyncProcessor>>,
-	pub pdfium: Arc<Pdfium>,
 }
 
 impl PdfIngestor {
-	pub fn new(pdfium: Arc<Pdfium>) -> Self {
-		Self { processors: vec![Arc::new(TextCleanupProcessor::new())], pdfium }
+	pub fn new() -> Self {
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
+	}
+
+	pub fn get_pdfium_instance() -> Result<&'static Pdfium, IngestorError> {
+		PDFIUM.get().ok_or_else(|| {
+			IngestorError::new(
+				IngestorErrorKind::Internal,
+				Arc::new(anyhow::anyhow!("PDFium not initialized")),
+			)
+		})
 	}
 }
 
@@ -55,10 +63,10 @@ impl BaseIngestor for PdfIngestor {
 			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
 			source_id = collected_bytes.source_id.clone();
 		}
-		let pdfium = self.pdfium.clone();
+		let pdfium = Self::get_pdfium_instance()?;
 		let stream = stream! {
-			let parser = PdfDocumentParser::new(pdfium);
-			let document = parser.parse(buffer);
+			let parser = PdfDocumentParser::new();
+			let document = parser.parse(buffer,pdfium);
 			let pages = document.unwrap().all_texts();
 			for text in pages {
 				let ingested_tokens = IngestedTokens {

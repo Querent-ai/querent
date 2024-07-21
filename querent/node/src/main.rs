@@ -42,6 +42,8 @@ fn main() -> Result<(), anyhow::Error> {
 	rustls::crypto::ring::default_provider()
 		.install_default()
 		.expect("Failed to install ring as the default crypto provider");
+	let temp_resource_dir = std::env::temp_dir();
+	ingestors::pdf::init_static_pdf(&temp_resource_dir.to_string_lossy().to_string());
 	match runtime {
 		Ok(runtime) => {
 			let _ = runtime

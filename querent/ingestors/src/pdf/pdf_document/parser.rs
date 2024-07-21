@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use pdfium_render::prelude::*;
 
 use super::{extractor, Analyser, Element, TextElement, TextElementGroupKind};
@@ -11,18 +9,17 @@ type Result<T> = std::result::Result<T, anyhow::Error>;
 
 pub struct PdfDocumentParser {
 	/// The PDFium instance reference.
-	pdfium: Arc<Pdfium>,
 	analyzer: Analyser,
 }
 
 impl PdfDocumentParser {
-	pub fn new(pdfium: Arc<Pdfium>) -> Self {
+	pub fn new() -> Self {
 		let analyzer = Analyser::new();
-		Self { pdfium, analyzer }
+		Self { analyzer }
 	}
 
-	pub fn parse(&self, bytes: Vec<u8>) -> Result<Document> {
-		let pdfium_document = self.pdfium.load_pdf_from_byte_vec(bytes, None)?;
+	pub fn parse(&self, bytes: Vec<u8>, pdfium: &Pdfium) -> Result<Document> {
+		let pdfium_document = pdfium.load_pdf_from_byte_vec(bytes, None)?;
 		let meta = extractor::extract_meta(pdfium_document.metadata());
 		let elements = pdfium_document
 			.pages()

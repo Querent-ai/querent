@@ -64,6 +64,7 @@ hyper = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
 rian = { workspace = true }
+ingestors = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
 engines = { workspace = true }

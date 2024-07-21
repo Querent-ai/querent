@@ -2,7 +2,6 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{pin_mut, stream, Stream, StreamExt};
-use pdfium_render::pdfium::Pdfium;
 use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
@@ -190,7 +189,6 @@ pub async fn process_ingested_tokens_stream(
 }
 
 pub async fn resolve_ingestor_with_extension(
-	pdfium: Arc<Pdfium>,
 	extension: &str,
 ) -> IngestorResult<Arc<dyn BaseIngestor>> {
 	let programming_languages = vec![
@@ -203,7 +201,7 @@ pub async fn resolve_ingestor_with_extension(
 	}
 
 	match extension {
-		"pdf" => Ok(Arc::new(PdfIngestor::new(pdfium))),
+		"pdf" => Ok(Arc::new(PdfIngestor::new())),
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),

@@ -6168,6 +6168,7 @@ dependencies = [
  "humantime",
  "hyper 0.14.30",
  "indicatif",
+ "ingestors",
  "insights",
  "itertools 0.12.1",
  "llms",

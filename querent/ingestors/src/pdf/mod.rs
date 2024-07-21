@@ -1,8 +1,11 @@
 pub mod pdf_document;
 pub mod pdf_extractor;
 pub mod pdfv1;
+use once_cell::sync::OnceCell;
 
 pub use pdfium_render::prelude::*;
+
+static PDFIUM: OnceCell<Pdfium> = OnceCell::new(); // static initializers must impl Sync + Send
 
 #[cfg(target_vendor = "apple")]
 pub fn init(_statically_linked: &str) -> Pdfium {
@@ -93,4 +96,9 @@ pub fn init(binary_folder: &String) -> (Pdfium, String) {
 	};
 
 	lib_bytes
+}
+
+pub fn init_static_pdf(binary_folder: &String) {
+	let (pdfium, _) = init(binary_folder);
+	PDFIUM.set(pdfium).ok().expect("Can't set PDFIUM");
 }
