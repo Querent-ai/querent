@@ -16,6 +16,8 @@ use crate::{
 };
 use tracing::info;
 
+use tempfile::TempDir;
+
 /// Ingestor error kind.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum IngestorErrorKind {
@@ -199,7 +201,11 @@ pub async fn resolve_ingestor_with_extension(
 	if programming_languages.contains(&extension) {
 		return Ok(Arc::new(CodeIngestor::new()));
 	}
-	let temp_resource_dir = std::env::temp_dir();
+	// let temp_resource_dir = std::env::temp_dir();
+
+	let temp_path = TempDir::new().unwrap();
+    let temp_resource_dir = temp_path.path().to_path_buf();
+
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new(temp_resource_dir))),
 		"txt" => Ok(Arc::new(TxtIngestor::new())),
