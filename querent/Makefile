@@ -45,7 +45,7 @@ format-check:
 .PHONY: build
 build:
 	@echo "Running Cargo build..."
-	@cargo build --release --all-features
+	@cargo build --release --features "license-check","openssl-probe" --bin rian
 
 .PHONY: doc
 doc:
