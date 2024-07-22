@@ -243,6 +243,15 @@ pub fn get_pipeline_count_by_product(licence_key: String) -> Result<usize, anyho
 	}
 }
 
+pub fn get_total_sources_by_product(licence_key: String) -> Result<usize, anyhow::Error> {
+	let info = get_product_info(licence_key)?;
+	match info.product {
+		ProductType::Rian => Ok(5),
+		ProductType::RianPro => Ok(usize::MAX),
+		ProductType::RianEnterprise => Ok(usize::MAX),
+	}
+}
+
 pub fn is_data_source_allowed_by_product(
 	licence_key: String,
 	data_source: &CollectorConfig,

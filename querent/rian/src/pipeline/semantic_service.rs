@@ -19,7 +19,7 @@ use storage::Storage;
 use tracing::{error, info};
 
 #[cfg(feature = "license-check")]
-use crate::get_pipeline_count_by_product;
+use crate::{get_pipeline_count_by_product, get_total_sources_by_product};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SemanticServiceCounters {
@@ -149,7 +149,7 @@ impl SemanticService {
 			if licence_key.is_none() {
 				return Err(PipelineErrors::MissingLicenseKey);
 			}
-			let allowed_pipelines = get_pipeline_count_by_product(licence_key.unwrap())
+			let allowed_pipelines = get_pipeline_count_by_product(licence_key.clone().unwrap())
 				.map_err(|e| PipelineErrors::InvalidParams(e.into()))?;
 			if self.semantic_pipelines.contains_key(&pipeline_id) {
 				return Err(PipelineErrors::PipelineAlreadyExists { pipeline_id });
@@ -158,6 +158,15 @@ impl SemanticService {
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Maximum number of pipelines allowed for this license key is {}",
 					allowed_pipelines
+				)));
+			}
+			let total_sources_allowed_per_pipeline =
+				get_total_sources_by_product(licence_key.unwrap())
+					.map_err(|e| PipelineErrors::InvalidParams(e.into()))?;
+			if settings.data_sources.len() > total_sources_allowed_per_pipeline {
+				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+					"Maximum number of sources allowed per pipeline for this license key is {}",
+					total_sources_allowed_per_pipeline
 				)));
 			}
 		}
