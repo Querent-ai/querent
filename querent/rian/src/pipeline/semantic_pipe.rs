@@ -222,9 +222,7 @@ impl SemanticPipeline {
 			engine_id=?engine_id,
 			"spawning semantic pipeline",
 		);
-		let (source_message_bus, source_inbox) = ctx
-			.spawn_ctx()
-			.create_messagebus::<SourceActor>("SourceActor", QueueCapacity::Unbounded);
+
 		let current_timestamp = chrono::Utc::now().timestamp_millis() as u64;
 
 		// Storage mapper actor
@@ -264,18 +262,26 @@ impl SemanticPipeline {
 
 		// Start various source actors
 		let mut collection_handlers = Vec::new();
-		for source in self.data_sources.clone().iter() {
-			let collector_source =
-				Collector::new(engine_id.clone(), source.clone(), self.terminate_sig.clone());
-			let (_source_mailbox, source_inbox) = ctx
-				.spawn_actor()
-				.set_terminate_sig(self.terminate_sig.clone())
-				.spawn(SourceActor {
-					source: Box::new(collector_source),
-					event_streamer_messagebus: event_streamer_messagebus.clone(),
-				});
-			collection_handlers.push(source_inbox);
-		}
+		let collector_source = Collector::new(
+			engine_id.clone(),
+			self.data_sources.clone(),
+			self.terminate_sig.clone(),
+		);
+
+		let (collector_message_bus, collector_inbox) = ctx
+			.spawn_ctx()
+			.create_messagebus::<SourceActor>("DataSourceActor", QueueCapacity::Unbounded);
+		let collector_actor = SourceActor {
+			source: Box::new(collector_source),
+			event_streamer_messagebus: event_streamer_messagebus.clone(),
+		};
+		let (_, collector_handle) = ctx
+			.spawn_actor()
+			.set_messagebuses(collector_message_bus, collector_inbox)
+			.set_terminate_sig(self.terminate_sig.clone())
+			.spawn(collector_actor);
+		collection_handlers.push(collector_handle);
+
 		info!("Starting the collector actor 📚");
 		info!("Starting the engine actor 🧠");
 		info!("Starting the event streamer actor ⇵");
@@ -291,15 +297,18 @@ impl SemanticPipeline {
 			token_receiver,
 			self.terminate_sig.clone(),
 		);
+		let (engine_message_bus, engine_inbox) = ctx
+			.spawn_ctx()
+			.create_messagebus::<SourceActor>("EngineSourceActor", QueueCapacity::Unbounded);
 		let engine_source_actor =
 			SourceActor { source: Box::new(engine_source), event_streamer_messagebus };
-		let (_, engine_inbox) = ctx
+		let (_, engine_handle) = ctx
 			.spawn_actor()
-			.set_messagebuses(source_message_bus, source_inbox)
+			.set_messagebuses(engine_message_bus, engine_inbox)
 			.set_terminate_sig(self.terminate_sig.clone())
 			.spawn(engine_source_actor);
 		self.handlers = Some(PipelineHandlers {
-			engine_handler: engine_inbox,
+			engine_handler: engine_handle,
 			event_streamer_handler: event_streamer_inbox,
 			indexer_handler: indexer_inbox,
 			storage_mapper_handler: storage_mapper_inbox,
