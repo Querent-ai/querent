@@ -30,55 +30,61 @@ impl BaseIngestor for XmlIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
-		let mut buffer = Vec::new();
-		let mut file = String::new();
-		let mut doc_source = String::new();
-		let mut source_id = String::new();
-		for collected_bytes in all_collected_bytes.iter() {
-			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-				continue;
-			}
-			if file.is_empty() {
-				file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-			}
-			if doc_source.is_empty() {
-				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-			}
-			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
-			source_id = collected_bytes.source_id.clone();
-		}
-
 		let stream = {
 			stream! {
-			let cursor = Cursor::new(buffer);
-			let parser = EventReader::new(cursor);
-			let mut content = String::new();
-			for e in parser {
-				match e {
-					Ok(XmlEvent::StartElement { name, .. }) => {
-						content.push_str(&name.local_name);
-						content.push_str("   ");
-					},
-					Ok(XmlEvent::Characters(data)) => {
-						content.push_str(&data);
-						content.push_str("\n");
+				let mut buffer = Vec::new();
+				let mut file = String::new();
+				let mut doc_source = String::new();
+				let mut source_id = String::new();
+				for collected_bytes in all_collected_bytes.iter() {
+					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+						continue;
 					}
-					Err(e) => {
-						eprintln!("Error: {e}");
-						break;
+					if file.is_empty() {
+						file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
 					}
-					_ => {}
+					if doc_source.is_empty() {
+						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+					}
+					buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+					source_id = collected_bytes.source_id.clone();
 				}
-			}
-			let ingested_tokens = IngestedTokens {
-				data: vec![content.to_string()],
-				file: file.clone(),
-				doc_source: doc_source.clone(),
-				is_token_stream: false,
-				source_id: source_id.clone(),
-			};
+				let cursor = Cursor::new(buffer);
+				let parser = EventReader::new(cursor);
+				let mut content = String::new();
+				for e in parser {
+					match e {
+						Ok(XmlEvent::StartElement { name, .. }) => {
+							content.push_str(&name.local_name);
+							content.push_str("   ");
+						},
+						Ok(XmlEvent::Characters(data)) => {
+							content.push_str(&data);
+							content.push_str("\n");
+						}
+						Err(e) => {
+							eprintln!("Error: {e}");
+							break;
+						}
+						_ => {}
+					}
+				}
+				let ingested_tokens = IngestedTokens {
+					data: vec![content.to_string()],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+				};
+				yield Ok(ingested_tokens);
 
-			yield Ok(ingested_tokens);
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+				});
 			}
 		};
 

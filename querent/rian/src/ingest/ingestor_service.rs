@@ -101,6 +101,10 @@ impl Handler<CollectionBatch> for IngestorService {
 
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
+		if token_sender.is_closed() {
+			error!("Token sender is closed");
+			return Err(ActorExitStatus::Failure(anyhow::anyhow!("Token sender is closed").into()));
+		}
 		let counters = self.get_counters();
 		let collector_id = self.get_collector_id();
 		// Calculate and update total megabytes ingested

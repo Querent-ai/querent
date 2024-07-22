@@ -686,9 +686,9 @@ impl SemanticsServiceClient {
     {
         #[cfg(any(test, feature = "testsuite"))]
         assert!(
-            std::any::TypeId::of::< T > () != std::any::TypeId::of::<
+            std::any::TypeId::of:: < T > () != std::any::TypeId::of:: <
             MockSemanticsService > (),
-            "`MockSemanticsService` must be wrapped in a `MockSemanticsServiceWrapper`. Use `MockSemanticsService::from(mock)` to instantiate the client.",
+            "`MockSemanticsService` must be wrapped in a `MockSemanticsServiceWrapper`. Use `MockSemanticsService::from(mock)` to instantiate the client."
         );
         Self { inner: Box::new(instance) }
     }

@@ -33,29 +33,27 @@ impl BaseIngestor for DocxIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
-		// collect all the bytes into a single buffer
-		let mut buffer = Vec::new();
-		let mut file = String::new();
-		let mut doc_source = String::new();
-		let mut source_id = String::new();
-		for collected_bytes in all_collected_bytes.iter() {
-			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-				continue;
-			}
-			if file.is_empty() {
-				file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-			}
-			if doc_source.is_empty() {
-				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-			}
-			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
-			source_id = collected_bytes.source_id.clone();
-		}
-
 		let stream = {
 			stream! {
+				// collect all the bytes into a single buffer
+				let mut buffer = Vec::new();
+				let mut file = String::new();
+				let mut doc_source = String::new();
+				let mut source_id = String::new();
+				for collected_bytes in all_collected_bytes.iter() {
+					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+						continue;
+					}
+					if file.is_empty() {
+						file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+					}
+					if doc_source.is_empty() {
+						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+					}
+					buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+					source_id = collected_bytes.source_id.clone();
+				}
 				let cursor = Cursor::new(buffer);
-
 				let docx = DocxFile::from_reader(cursor).unwrap();
 				let docx = match docx.parse() {
 					Ok(parsed) => parsed,
@@ -64,9 +62,7 @@ impl BaseIngestor for DocxIngestor {
 						return;
 					}
 				};
-
 				let body = docx.document.body;
-
 				for content_item in body.content {
 					let mut text = String::new();
 					match content_item {
@@ -111,8 +107,15 @@ impl BaseIngestor for DocxIngestor {
 						source_id: source_id.clone(),
 					};
 					yield Ok(ingested_tokens);
-
 				}
+
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+				})
 			}
 		};
 
@@ -121,40 +124,3 @@ impl BaseIngestor for DocxIngestor {
 		Ok(Box::pin(processed_stream))
 	}
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
-
-//     #[tokio::test]
-//     async fn test_docx_ingestor() {
-
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Assessment of Eagle Ford shale oil and gas resources.docx").unwrap();
-
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("Assessment of Eagle Ford shale oil and gas resources.docx").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("docx".to_string()),
-// 			size: Some(10),
-//          source_id: "Filesystem".to_string(),
-//         };
-
-//         // Create a TxtIngestor instance
-//         let ingestor = DocxIngestor::new();
-
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
-
-//         // Collect the stream into a Vec
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }

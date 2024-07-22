@@ -256,8 +256,6 @@ impl Source for EngineRunner {
 				info!("EngineRunner is already finished");
 			},
 		};
-		// drop event receiver
-		std::mem::drop(self.event_receiver.take());
 		Ok(())
 	}
 }

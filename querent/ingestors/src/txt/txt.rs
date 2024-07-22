@@ -33,6 +33,7 @@ impl BaseIngestor for TxtIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
+		let stream = stream! {
 		// collect all the bytes into a single buffer
 		let mut buffer = Vec::new();
 		let mut file = String::new();
@@ -53,7 +54,7 @@ impl BaseIngestor for TxtIngestor {
 		}
 
 		// Create a stream to read the text file content
-		let stream = stream! {
+
 			let reader = BufReader::new(buffer.as_slice());
 			let mut content = String::new();
 			let mut buf_reader = BufReader::new(reader);
@@ -71,6 +72,15 @@ impl BaseIngestor for TxtIngestor {
 			};
 
 			yield Ok(ingested_tokens);
+
+
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+			})
 		};
 
 		let processed_stream =
@@ -121,7 +131,9 @@ mod tests {
 		while let Some(tokens) = stream.next().await {
 			let tokens = tokens.unwrap();
 			println!("These are the tokens in file --------------{:?}", tokens);
-			count += 1;
+			if tokens.data.len() > 0 {
+				count += 1;
+			}
 		}
 		assert_eq!(count, 1);
 	}

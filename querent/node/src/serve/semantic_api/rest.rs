@@ -259,9 +259,15 @@ pub async fn start_pipeline(
 			distribution: None,
 		};
 		if model_type == "Roberta".to_string() {
-			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+			Some(Arc::new(
+				RobertaLLM::new(ner_options)
+					.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?,
+			) as Arc<dyn LLM>)
 		} else if model_type == "Bert".to_string() {
-			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+			Some(Arc::new(
+				BertLLM::new(ner_options)
+					.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?,
+			) as Arc<dyn LLM>)
 		} else {
 			None
 		}
@@ -273,16 +279,15 @@ pub async fn start_pipeline(
 	for collector_id in request.clone().collectors {
 		let config_value = secret_store.get_secret(&collector_id).await.map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
-		});
-		if let Some(value) = config_value.unwrap() {
-			let collector_config_value: CollectorConfig = serde_json::from_str(&value)
-				.map_err(|e| {
+		})?;
+		if let Some(value) = config_value {
+			let collector_config_value: CollectorConfig =
+				serde_json::from_str(&value).map_err(|e| {
 					PipelineErrors::InvalidParams(anyhow::anyhow!(
 						"Failed to create sources: {:?}",
 						e
 					))
-				})
-				.unwrap();
+				})?;
 			collectors_configs.push(collector_config_value);
 		}
 	}
@@ -301,7 +306,8 @@ pub async fn start_pipeline(
 		revision: None,
 		distribution: None,
 	};
-	let embedder = Arc::new(BertLLM::new(options).unwrap());
+	let embedder =
+		Arc::new(BertLLM::new(options).map_err(|e| PipelineErrors::UnknownError(e.to_string()))?);
 
 	// Initialize the embedding model
 	let embedding_model = TextEmbedding::try_new(InitOptions {
@@ -309,7 +315,7 @@ pub async fn start_pipeline(
 		show_download_progress: true,
 		..Default::default()
 	})
-	.unwrap();
+	.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
 
 	let engine = Arc::new(AttentionTensorsEngine::new(
 		embedder,
@@ -329,7 +335,7 @@ pub async fn start_pipeline(
 	if pipeline_id.is_err() {
 		return Err(PipelineErrors::UnknownError(pipeline_id.unwrap_err().to_string()).into());
 	}
-	let id: String = pipeline_id.unwrap();
+	let id: String = pipeline_id.unwrap_or_default();
 	let result_pipe_obs = describe_pipeline(id.clone(), semantic_service_mailbox.clone()).await;
 	if result_pipe_obs.is_err() {
 		return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
@@ -683,22 +689,16 @@ pub fn list_collectors_list_handler(
 pub async fn list_collectors(
 	secret_store: Arc<dyn storage::Storage>,
 ) -> Result<ListCollectorConfig, PipelineErrors> {
-	let collectors = secret_store
-		.get_all_secrets()
-		.await
-		.map_err(|e| {
-			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to list sources: {:?}", e))
-		})
-		.unwrap();
+	let collectors = secret_store.get_all_secrets().await.map_err(|e| {
+		PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to list sources: {:?}", e))
+	})?;
 
 	let mut config_list = Vec::new();
 
 	for (_key, collector) in collectors {
-		let config: CollectorConfig = from_str(&collector)
-			.map_err(|e| {
-				PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
-			})
-			.unwrap();
+		let config: CollectorConfig = from_str(&collector).map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
+		})?;
 		config_list.push(config);
 	}
 	Ok(ListCollectorConfig { config: config_list })
