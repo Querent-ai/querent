@@ -1,15 +1,19 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use docx_rust::{
-	document::{BodyContent, ParagraphContent, RunContent},
-	DocxFile,
-};
+use tracing::error;
+
 use futures::Stream;
 use proto::semantics::IngestedTokens;
-use std::{io::Cursor, pin::Pin, sync::Arc};
+use std::{
+	io::{Cursor, Read},
+	pin::Pin,
+	sync::Arc,
+};
 
 use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
+use xml::{reader::XmlEvent, EventReader};
+use zip::ZipArchive;
 
 // Define the DocxIngestor
 pub struct DocxIngestor {
@@ -54,63 +58,65 @@ impl BaseIngestor for DocxIngestor {
 					source_id = collected_bytes.source_id.clone();
 				}
 				let cursor = Cursor::new(buffer);
-				let docx = DocxFile::from_reader(cursor).unwrap();
-				let docx = match docx.parse() {
-					Ok(parsed) => parsed,
+				let mut archive = match ZipArchive::new(cursor) {
+					Ok(archive) => archive,
 					Err(e) => {
-						eprintln!("Failed to parse DOCX: {:?}", e);
+						error!("Failed to read zip archive: {:?}", e);
 						return;
 					}
 				};
-				let body = docx.document.body;
-				for content_item in body.content {
-					let mut text = String::new();
-					match content_item {
-						BodyContent::Paragraph(paragraph) => {
-							for content in paragraph.content {
-								match content {
-									ParagraphContent::Run(run) => {
-										for run_content in run.content {
-											match run_content {
-												RunContent::Text(text_struct) => {
-													text.push_str(&text_struct.text);
-												},
-												_ => {}
-											}
-										}
-									},
-									_ => {}
-								}
-							}
-						},
-						BodyContent::Table(_table) => {
-							// TODO handle table
-						},
-						BodyContent::Sdt(_sdt) => {
-							// TODO handle Sdt
-						},
-						BodyContent::SectionProperty(_section) => {
-							// TODO handle section property
-						},
-						BodyContent::TableCell(_cell) => {
-							// TODO handle cell
-						},
-					}
-					if text == "" {
-						continue;
-					}
-					let ingested_tokens = IngestedTokens {
-						data: vec![text],
-						file: file.clone(),
-						doc_source: doc_source.clone(),
-						is_token_stream: false,
-						source_id: source_id.clone(),
+
+				let mut xml_data = String::new();
+				for i in 0..archive.len() {
+					let mut file = match archive.by_index(i) {
+						Ok(file) => file,
+						Err(e) => {
+							error!("Failed to access file in archive: {:?}", e);
+							return;
+						}
 					};
-					yield Ok(ingested_tokens);
+					if file.name() == "word/document.xml" {
+						if let Err(e) = file.read_to_string(&mut xml_data) {
+							error!("Failed to read XML data: {:?}", e);
+							return;
+						}
+						break;
+					}
+				}
+
+				if xml_data.is_empty() {
+					error!("No content.xml found in the archive or the file is empty");
+					return;
+				}
+
+				let parser = EventReader::from_str(&xml_data);
+				let mut txt = Vec::new();
+				let mut in_text = false;
+
+				for event in parser {
+					match event {
+						Ok(XmlEvent::StartElement { name, .. }) => {
+							if name.local_name == "p" {
+								txt.push("\n".to_string());
+							} else if name.local_name == "t" {
+								in_text = true;
+							}
+						}
+						Ok(XmlEvent::Characters(content)) if in_text => {
+							txt.push(content);
+							in_text = false;
+						}
+						Ok(XmlEvent::EndDocument) => break,
+						Err(e) => {
+							error!("Error reading XML: {:?}", e);
+							return;
+						}
+						_ => {}
+					}
 				}
 
 				yield Ok(IngestedTokens {
-					data: vec![],
+					data: vec![txt.join("")],
 					file: file.clone(),
 					doc_source: doc_source.clone(),
 					is_token_stream: false,
@@ -124,3 +130,40 @@ impl BaseIngestor for DocxIngestor {
 		Ok(Box::pin(processed_stream))
 	}
 }
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use std::path::Path;
+//     use futures::StreamExt;
+// 	use common::OwnedBytes;
+
+//     #[tokio::test]
+//     async fn test_docx_ingestor() {
+
+//         let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Decline curve analysis of shale oil production_ The case of Eagle Ford.docx").unwrap();
+
+//         // Create a CollectedBytes instance
+//         let collected_bytes = CollectedBytes {
+//             data: Some(OwnedBytes::new(bytes)),
+//             file: Some(Path::new("Decline curve analysis of shale oil production_ The case of Eagle Ford.docx").to_path_buf()),
+//             doc_source: Some("test_source".to_string()),
+//             eof: false,
+//             extension: Some("docx".to_string()),
+//             size: Some(10),
+//             source_id: "Filesystem".to_string(),
+//         };
+
+//         // Create a HtmlIngestor instance
+//         let ingestor = DocxIngestor::new();
+
+//         // Ingest the file
+//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+//         let mut stream = result_stream;
+//         while let Some(tokens) = stream.next().await {
+//             let tokens = tokens.unwrap();
+//             println!("These are the tokens in file --------------{:?}", tokens);
+//         }
+//     }
+// }
