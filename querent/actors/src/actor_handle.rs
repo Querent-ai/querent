@@ -2,7 +2,7 @@ use std::fmt;
 
 use serde::Serialize;
 use tokio::sync::{oneshot, watch};
-use tracing::error;
+use tracing::{error, warn};
 
 use crate::{
 	actor_state::ActorState, command::Observe, messagebus::Priority, observation::ObservationType,
@@ -81,7 +81,11 @@ impl<A: Actor> Supervisable for ActorHandle<A> {
 		{
 			Health::Healthy
 		} else {
-			error!(actor = self.name(), "actor-timeout");
+			if self.name().contains("SourceActor") {
+				warn!(actor = self.name(), "actor-timeout: Source is likely processed");
+				return Health::Success;
+			}
+			warn!(actor = self.name(), "actor-timeout");
 			Health::FailureOrUnhealthy
 		}
 	}

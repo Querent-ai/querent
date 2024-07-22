@@ -247,8 +247,11 @@ pub fn is_data_source_allowed_by_product(
 	licence_key: String,
 	data_source: &CollectorConfig,
 ) -> Result<bool, anyhow::Error> {
-	let info = get_product_info(licence_key)?;
-	match info.product {
+	let info = get_product_info(licence_key);
+	if info.is_err() {
+		return Ok(false);
+	}
+	match info.unwrap().product {
 		ProductType::Rian => match &data_source.backend {
 			Some(proto::semantics::Backend::Files(_)) => Ok(true),
 			Some(proto::semantics::Backend::Gcs(_)) => Ok(true),

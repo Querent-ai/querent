@@ -42,10 +42,14 @@ format-check:
 	@rustup component add rustfmt --toolchain nightly
 	@cargo +nightly fmt --all -- --check
 
-.PHONY: build
+.PHONY: build, build-without-license-check
 build:
 	@echo "Running Cargo build..."
 	@cargo build --release --features "license-check","openssl-probe" --bin rian
+
+build-without-license-check:
+	@echo "Running Cargo build..."
+	@cargo build --release --features "openssl-probe" --bin rian
 
 .PHONY: doc
 doc:
