@@ -9,6 +9,9 @@ use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
 use tracing::error;
+use tokio::sync::Semaphore;
+use tokio::task;
+
 
 pub struct StorageMapper {
 	qflow_id: String,
@@ -16,6 +19,8 @@ pub struct StorageMapper {
 	counters: Arc<StorageMapperCounters>,
 	publish_event_lock: EventLock,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
+	semaphore: Semaphore,
+
 }
 
 impl StorageMapper {
@@ -30,6 +35,7 @@ impl StorageMapper {
 			counters: Arc::new(StorageMapperCounters::new()),
 			publish_event_lock: EventLock::default(),
 			event_storages,
+			semaphore: Semaphore::new(1),
 		}
 	}
 
@@ -134,6 +140,7 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		message: ContextualEmbeddings,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
+		let _permit = self.semaphore.acquire().await.unwrap();
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
@@ -142,16 +149,20 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		// Iterate over all storages in self.event_storages
 		for (stored_event_type, storage) in &self.event_storages {
 			if stored_event_type == &event_type {
+				// println!("This is the storage items length------------{:?}", storage);
 				for storage in storage.iter() {
 					let storage_clone = storage.clone();
 					let qflow_id_clone = qflow_id.clone();
 					let storage_items = message.event_payload();
 
-					// Spawn a task for each storage insertion
-					tokio::spawn(insert_vector_async(storage_clone, qflow_id_clone, storage_items));
+					tokio::spawn(async move {
+						let _ = insert_vector_async(storage_clone, qflow_id_clone, storage_items).await;
+					});
+	
 				}
 			}
 		}
+		
 
 		Ok(())
 	}
