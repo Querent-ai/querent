@@ -63,7 +63,7 @@ impl Actor for StorageMapper {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(3)
 	}
 
 	fn runtime_handle(&self) -> Handle {
