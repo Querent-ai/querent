@@ -15,7 +15,7 @@ use proto::{
 };
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
-
+use crate::postgres_index::QuerySuggestion;
 use crate::{
 	semantic_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult,
 	POOL_TIMEOUT,
@@ -123,6 +123,17 @@ impl Storage for PGVector {
 		let _ = self.pool.get().await?;
 		Ok(())
 	}
+
+
+	/// Asynchronously fetches popular queries .
+    async fn autogenerate_queries(
+        &self,
+        _max_suggestions: i32,
+    ) -> StorageResult<Vec<QuerySuggestion>> {
+        // Return an empty vector
+        Ok(Vec::new())
+    }
+
 
 	async fn insert_vector(
 		&self,
@@ -574,6 +585,8 @@ impl Storage for PGVector {
 	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
 		Ok(None)
 	}
+
+	
 }
 
 table! {

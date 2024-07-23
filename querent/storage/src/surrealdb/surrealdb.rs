@@ -15,7 +15,7 @@ use surrealdb::{
 	sql::Thing,
 	Response, Surreal,
 };
-
+use crate::postgres_index::QuerySuggestion;
 const NAMESPACE: &str = "querent";
 const DATABASE: &str = "querent";
 
@@ -490,6 +490,15 @@ impl Storage for SurrealDB {
 		// Inner Key: RIAN_API_KEY
 		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
+
+	/// Asynchronously fetches popular queries .
+    async fn autogenerate_queries(
+        &self,
+        _max_suggestions: i32,
+    ) -> StorageResult<Vec<QuerySuggestion>> {
+        // Return an empty vector
+        Ok(Vec::new())
+    }
 }
 
 pub async fn traverse_node<'a>(

@@ -7,6 +7,7 @@ use proto::{
 	DiscoverySessionRequest, InsightAnalystRequest,
 };
 use std::sync::Arc;
+use crate::postgres_index::QuerySuggestion;
 
 pub struct Neo4jStorage {
 	pub graph: Arc<Graph>,
@@ -298,6 +299,15 @@ impl Storage for Neo4jStorage {
 	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
 		Ok(Vec::new())
 	}
+
+	/// Asynchronously fetches popular queries .
+    async fn autogenerate_queries(
+        &self,
+        _max_suggestions: i32,
+    ) -> StorageResult<Vec<QuerySuggestion>> {
+        // Return an empty vector
+        Ok(Vec::new())
+    }
 }
 
 #[cfg(test)]

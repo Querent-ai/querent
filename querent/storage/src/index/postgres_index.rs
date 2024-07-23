@@ -7,6 +7,8 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
+use tracing::error;
+use diesel::{sql_types::BigInt, ExpressionMethods, QueryDsl};
 use proto::{
 	discovery::DiscoverySessionRequest,
 	insights::InsightAnalystRequest,
@@ -46,6 +48,13 @@ pub struct PostgresStorage {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
 }
+
+pub struct QuerySuggestion {
+    pub query: String,
+    pub frequency: i64,
+}
+
+
 
 impl PostgresStorage {
 	pub async fn new(config: PostgresConfig) -> StorageResult<Self> {
@@ -201,6 +210,49 @@ impl Storage for PostgresStorage {
 		})?;
 		Ok(())
 	}
+
+	/// Asynchronously fetches queries.
+	async fn autogenerate_queries(
+        &self,
+        max_suggestions: i32,
+    ) -> Result<Vec<QuerySuggestion>, StorageError> {
+        let mut conn = self.pool.get().await.map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+
+        // Query the semantic_knowledge table to find the most common subject-object pairs
+        let query_result = semantic_knowledge::dsl::semantic_knowledge
+            .select((
+                semantic_knowledge::dsl::subject,
+                semantic_knowledge::dsl::object,
+                diesel::dsl::sql::<BigInt>("COUNT(*) as frequency")
+            ))
+            .group_by((semantic_knowledge::dsl::subject, semantic_knowledge::dsl::object))
+            .order_by(diesel::dsl::sql::<BigInt>("frequency").desc())
+            .limit(max_suggestions as i64)
+            .load::<(String, String, i64)>(&mut conn)
+            .await;
+
+        match query_result {
+            Ok(result) => {
+                let suggestions = result.into_iter()
+                    .map(|(subject, object, frequency)| QuerySuggestion { 
+                        query: format!("{} and {}", subject, object), 
+                        frequency: frequency as i64
+                    })
+                    .collect();
+                Ok(suggestions)
+            },
+            Err(e) => {
+                error!("Error querying popular queries: {:?}", e);
+                Err(StorageError {
+                    kind: StorageErrorKind::Query,
+                    source: Arc::new(anyhow::Error::from(e)),
+                })
+            },
+        }
+    }
 
 	/// Store key value pair
 	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
