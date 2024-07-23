@@ -107,6 +107,7 @@ impl Handler<ContextualTriples> for StorageMapper {
 		message: ContextualTriples,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
+		let _permit = self.semaphore.acquire().await.unwrap();
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
@@ -173,6 +174,7 @@ async fn insert_graph_async(
 	storage: Arc<dyn Storage>,
 	storage_items: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 ) -> Result<(), ActorExitStatus> {
+	
 	let upsert_result = storage.insert_graph(collection_id, &storage_items).await;
 	match upsert_result {
 		Ok(()) => {
