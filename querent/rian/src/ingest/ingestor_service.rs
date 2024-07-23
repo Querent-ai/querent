@@ -123,7 +123,6 @@ impl Handler<CollectionBatch> for IngestorService {
 					}
 					// Send IngestedTokens to the token_sender and trace the errors
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
-						error!("Got Tokens");
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
 								if let Err(e) = token_sender.send(ingested_tokens).await {
