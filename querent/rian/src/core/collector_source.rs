@@ -3,7 +3,11 @@ use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
 use sources::SourceError;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{
+	collections::HashMap,
+	sync::{atomic::AtomicI32, Arc},
+	time::Duration,
+};
 use tokio::{sync::mpsc, task::JoinHandle, time};
 use tracing::{error, info};
 
@@ -23,6 +27,8 @@ pub struct Collector {
 	pub counters: CollectionCounter,
 	// terminate signal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
+	// internal counter for exit when data pollers are finished
+	poller_finished_counter: AtomicI32,
 }
 
 impl Collector {
@@ -41,6 +47,7 @@ impl Collector {
 			file_size: HashMap::new(),
 			counters: CollectionCounter::new(),
 			event_receiver: None,
+			poller_finished_counter: AtomicI32::new(0),
 		}
 	}
 }
@@ -159,15 +166,23 @@ impl Source for Collector {
 					if let Some(event_data) = event_opt {
 						// If the payload is empty, skip the event
 						if !event_data.eof && event_data.file.is_none() {
+							self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 							is_failure = true;
-							self.event_receiver.take();
-							break;
+							if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
+								self.event_receiver.take();
+								break;
+							}
+							continue;
 						}
 
 						if event_data.eof && event_data.file.is_none() {
+							self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 							is_success = true;
-							self.event_receiver.take();
-							break;
+							if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
+								self.event_receiver.take();
+								break;
+							}
+							continue;
 						}
 						let size = event_data.size.unwrap_or_default();
 
@@ -222,10 +237,18 @@ impl Source for Collector {
 			}
 		}
 		events_collected.clear();
-		if is_success {
+		if is_success &&
+			self.data_pollers.len() as usize ==
+				self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst)
+					as usize
+		{
 			return Err(ActorExitStatus::Success);
 		}
-		if is_failure {
+		if is_failure &&
+			self.data_pollers.len() as usize ==
+				self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst)
+					as usize
+		{
 			return Err(ActorExitStatus::Failure(
 				anyhow::anyhow!("Collector failed: {:?}", self.id).into(),
 			));
