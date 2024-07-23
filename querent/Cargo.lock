@@ -8507,6 +8507,7 @@ dependencies = [
  "ingestors",
  "insights",
  "log 0.4.22",
+ "once_cell",
  "proto",
  "readability",
  "regex",

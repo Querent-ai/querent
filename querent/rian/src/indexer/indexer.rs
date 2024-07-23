@@ -62,7 +62,7 @@ impl Actor for Indexer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(100)
+		QueueCapacity::Bounded(10)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -71,7 +71,7 @@ impl Actor for Indexer {
 
 	#[inline]
 	fn yield_after_each_message(&self) -> bool {
-		false
+		true
 	}
 
 	async fn finalize(

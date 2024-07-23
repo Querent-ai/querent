@@ -63,7 +63,7 @@ impl Actor for StorageMapper {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(100)
+		QueueCapacity::Bounded(10)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -72,7 +72,7 @@ impl Actor for StorageMapper {
 
 	#[inline]
 	fn yield_after_each_message(&self) -> bool {
-		false
+		true
 	}
 
 	async fn finalize(
@@ -147,7 +147,6 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 					let qflow_id_clone = qflow_id.clone();
 					let storage_items = message.event_payload();
 
-					// Spawn a task for each storage insertion
 					tokio::spawn(insert_vector_async(storage_clone, qflow_id_clone, storage_items));
 				}
 			}

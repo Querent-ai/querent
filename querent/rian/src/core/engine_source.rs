@@ -38,10 +38,10 @@ impl EngineRunner {
 	) -> Self {
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 		let event_runner = engine.clone();
-		let event_sender = event_sender.clone();
 		info!("Starting the engine 🚀");
-		let token_stream = Box::pin(ReceiverStream::new(token_receiver));
 		let workflow_handle = Some(tokio::spawn(async move {
+			let token_stream = Box::pin(ReceiverStream::new(token_receiver));
+
 			let mut engine_op = event_runner
 				.process_ingested_tokens(token_stream)
 				.await
@@ -216,13 +216,12 @@ impl Source for EngineRunner {
 				events_collected,
 				chrono::Utc::now().timestamp_millis() as u64,
 			);
-			let batches_error =
-				ctx.send_message(event_streamer_messagebus, events_batch.clone()).await;
+			let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
 			if batches_error.is_err() {
 				error!("Failed to send events batch: {:?}", batches_error);
 			}
 		}
-		// events_collected.clear();
+
 		if is_successs {
 			// sleep for 10 seconds to allow the engine send remaining events to database
 			time::sleep(Duration::from_secs(10)).await;
@@ -244,12 +243,13 @@ impl Source for EngineRunner {
 
 	async fn finalize(
 		&mut self,
-		_exit_status: &ActorExitStatus,
+		exit_status: &ActorExitStatus,
 		_ctx: &SourceContext,
 	) -> anyhow::Result<()> {
 		log::info!("Engine Runner with id: {} is finalizing", self.id);
 		match self.workflow_handle.take() {
 			Some(handle) => {
+				info!("EngineRunner is finalizing with status: {:?}", exit_status);
 				handle.abort();
 			},
 			None => {

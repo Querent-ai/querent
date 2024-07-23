@@ -70,7 +70,7 @@ impl Source for Collector {
 		}
 
 		info!("Starting data source collection for {}", self.id);
-		let (event_sender, event_receiver) = mpsc::channel(1000);
+		let (event_sender, event_receiver) = mpsc::channel(100);
 		self.event_receiver = Some(event_receiver);
 		for data_poller in &self.data_pollers {
 			let data_poller = data_poller.clone();
