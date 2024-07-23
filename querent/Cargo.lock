@@ -6190,6 +6190,7 @@ dependencies = [
  "common 4.2.0",
  "console-subscriber",
  "dialoguer",
+ "dirs",
  "engines",
  "fastembed",
  "futures",
