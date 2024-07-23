@@ -5,14 +5,10 @@ use async_trait::async_trait;
 use common::{
 	EventType, RuntimeType, SemanticKnowledgePayload, StorageMapperCounters, VectorPayload,
 };
-use std::sync::Mutex;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
 use tracing::error;
-use tokio::sync::Semaphore;
-use tokio::task;
-
 
 pub struct StorageMapper {
 	qflow_id: String,
@@ -20,8 +16,6 @@ pub struct StorageMapper {
 	counters: Arc<StorageMapperCounters>,
 	publish_event_lock: EventLock,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
-	semaphore: Semaphore,
-
 }
 
 impl StorageMapper {
@@ -36,7 +30,6 @@ impl StorageMapper {
 			counters: Arc::new(StorageMapperCounters::new()),
 			publish_event_lock: EventLock::default(),
 			event_storages,
-			semaphore: Mutex::new(Semaphore::new(5)),
 		}
 	}
 
@@ -70,7 +63,7 @@ impl Actor for StorageMapper {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(100)
+		QueueCapacity::Bounded(10)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -79,7 +72,7 @@ impl Actor for StorageMapper {
 
 	#[inline]
 	fn yield_after_each_message(&self) -> bool {
-		false
+		true
 	}
 
 	async fn finalize(
@@ -108,7 +101,6 @@ impl Handler<ContextualTriples> for StorageMapper {
 		message: ContextualTriples,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		let _permit = self.semaphore.acquire().await.unwrap();
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
@@ -142,7 +134,6 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		message: ContextualEmbeddings,
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		let _permit = self.semaphore.acquire().await.unwrap();
 		self.counters.increment_total(message.len() as u64);
 		self.counters.increment_event_count(message.event_type(), message.len() as u64);
 		let event_type = message.event_type();
@@ -151,20 +142,15 @@ impl Handler<ContextualEmbeddings> for StorageMapper {
 		// Iterate over all storages in self.event_storages
 		for (stored_event_type, storage) in &self.event_storages {
 			if stored_event_type == &event_type {
-				// println!("This is the storage items length------------{:?}", storage);
 				for storage in storage.iter() {
 					let storage_clone = storage.clone();
 					let qflow_id_clone = qflow_id.clone();
 					let storage_items = message.event_payload();
 
-					tokio::spawn(async move {
-						let _ = insert_vector_async(storage_clone, qflow_id_clone, storage_items).await;
-					});
-	
+					tokio::spawn(insert_vector_async(storage_clone, qflow_id_clone, storage_items));
 				}
 			}
 		}
-		
 
 		Ok(())
 	}
@@ -175,7 +161,6 @@ async fn insert_graph_async(
 	storage: Arc<dyn Storage>,
 	storage_items: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 ) -> Result<(), ActorExitStatus> {
-	
 	let upsert_result = storage.insert_graph(collection_id, &storage_items).await;
 	match upsert_result {
 		Ok(()) => {
