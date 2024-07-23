@@ -1,13 +1,15 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 pub fn unique_sentences(
-	discovered_knowledge: &[(String, String, String, String, String, String, String, f32)],
+    discovered_knowledge: &[(String, String, String, String, String, String, String, f32)],
 ) -> Vec<String> {
-	let mut unique_sentences_set = HashSet::new();
+    let mut unique_sentences_map = HashMap::new();
 
-	for (_, _, _, _, _, sentence, _, _) in discovered_knowledge {
-		unique_sentences_set.insert(sentence.clone());
-	}
+    for (_, _, entity1, entity2, _, sentence, _, _) in discovered_knowledge {
+        // Insert into HashMap only if the sentence is not already present
+        unique_sentences_map.entry(sentence).or_insert_with(|| format!("Entities: {} and {}, Sentence: {}", entity1, entity2, sentence));
+    }
 
-	unique_sentences_set.into_iter().collect::<Vec<String>>()
+    // Collect only the values from the map, which are the formatted strings
+    unique_sentences_map.values().cloned().collect()
 }

@@ -269,20 +269,24 @@ impl InsightRunner for XAIRunner {
 								.enumerate()
 								.map(|(i, s)| format!("{}. {}", i + 1, s))
 								.collect();
+							
 							let context = numbered_sentences.join("\n");
 							let prompt = format!(
-                            "Below is the context which was discovered during graph traversal for the user query. Summarize the key findings from the context provided that directly answer the user query.
-                        
-                        User Query:
-                        {}
-                        
-                        Context:
-                        {}
-                        ",
-                            query,
-                            context
-                        );
+                            "
+You are a helpful assistant responsible for generating a comprehensive summary of the data provided below.
+Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence.
+Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences.
+If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary.
+Make sure it is written in third person, and make sure we the have full context.
 
+#######
+-Data-
+User Query: {query}
+Graph Traversal Results: {context}
+#######
+Output:
+                        ",
+                        );
 							let human_message = vec![Message::new_human_message(&prompt)];
 
 							let summary = self.llm.generate(&human_message).await.map_err(|e| {
