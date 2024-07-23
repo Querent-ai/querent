@@ -29,8 +29,6 @@ pub struct SemanticKnowledge {
 	pub subject_type: String,
 	pub object: String,
 	pub object_type: String,
-	// pub predicate: String,
-	// pub predicate_type: String,
 	pub sentence: String,
 	pub document_id: String,
 	pub document_source: String,

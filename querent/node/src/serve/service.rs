@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration};
+use std::{collections::HashMap, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use crate::{
 	discovery_api::discovery_service::{start_discovery_service, DiscoveryService},
@@ -37,6 +37,11 @@ pub struct QuesterServices {
 	pub metadata_store: Arc<dyn Storage>,
 }
 
+fn get_querent_data_path() -> PathBuf {
+	let data_path = dirs::data_dir().expect("Failed to get Querent data directory");
+	data_path.join("querent_data")
+}
+
 pub async fn serve_quester(
 	node_config: NodeConfig,
 	_runtimes_config: RuntimesConfig,
@@ -46,13 +51,12 @@ pub async fn serve_quester(
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Querent::new();
 	info!("Creating storages 🗄️");
-	let surreal_db_path = std::path::Path::new("/tmp/querent_surreal_db");
-	let secert_store_path = std::path::Path::new("/tmp/querent_secret_store");
-	let secret_store = create_secret_store(secert_store_path.to_path_buf()).await?;
-	let metadata_store = create_metadata_store(secert_store_path.to_path_buf()).await?;
+	let querent_data_path = get_querent_data_path();
+	let secret_store = create_secret_store(querent_data_path.clone().to_path_buf()).await?;
+	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
 
 	let (event_storages, index_storages) =
-		create_storages(&node_config.storage_configs.0, surreal_db_path.to_path_buf()).await?;
+		create_storages(&node_config.storage_configs.0, querent_data_path.to_path_buf()).await?;
 
 	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);

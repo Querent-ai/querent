@@ -55,7 +55,7 @@ impl Actor for IngestorService {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(100)
+		QueueCapacity::Bounded(10)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -118,13 +118,16 @@ impl Handler<CollectionBatch> for IngestorService {
 			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
 			match ingested_token_stream {
 				Ok(mut ingested_tokens_stream) => {
+					if token_sender.is_closed() {
+						return;
+					}
 					// Send IngestedTokens to the token_sender and trace the errors
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
 								if let Err(e) = token_sender.send(ingested_tokens).await {
 									error!("Failed to send IngestedTokens to token_sender with error: {}", e);
-									break;
+									return;
 								}
 								counters.increment_total_ingested_tokens(1);
 							},

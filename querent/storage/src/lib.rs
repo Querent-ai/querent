@@ -193,4 +193,4 @@ impl<'a> From<&'a ActualDbPool> for DbPool<'a> {
 pub const FETCH_LIMIT_MAX: i64 = 50;
 pub const SITEMAP_LIMIT: i64 = 50000;
 pub const SITEMAP_DAYS: i64 = 31;
-const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(5));
+const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));

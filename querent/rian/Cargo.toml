@@ -53,6 +53,7 @@ sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 base64 = { workspace = true }
 hex ={ workspace = true }
+once_cell = { workspace = true }
 
 [dev-dependencies]
 actors = { workspace = true, features = ["testsuite"] }
