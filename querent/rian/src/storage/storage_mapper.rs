@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use common::{
 	EventType, RuntimeType, SemanticKnowledgePayload, StorageMapperCounters, VectorPayload,
 };
+use std::sync::Mutex;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
@@ -35,7 +36,7 @@ impl StorageMapper {
 			counters: Arc::new(StorageMapperCounters::new()),
 			publish_event_lock: EventLock::default(),
 			event_storages,
-			semaphore: Semaphore::new(1),
+			semaphore: Mutex::new(Semaphore::new(5)),
 		}
 	}
 
