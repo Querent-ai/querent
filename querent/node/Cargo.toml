@@ -78,6 +78,7 @@ utoipa-swagger-ui = { workspace = true }
 fastembed =  { workspace = true }
 log = { workspace = true }
 rustls = { workspace = true }
+dirs = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
