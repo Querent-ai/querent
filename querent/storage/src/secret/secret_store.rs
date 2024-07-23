@@ -167,7 +167,11 @@ impl Storage for SecretStore {
 				})?;
 				Some(value)
 			},
-			None => None,
+			None => {
+				// If we dont get any source for the given key, we return a log message
+				log::info!("No source found for given ID: {:?}", key.clone());
+				None
+			},
 		};
 		Ok(value)
 	}
