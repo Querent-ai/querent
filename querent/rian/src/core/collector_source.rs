@@ -61,7 +61,6 @@ impl Source for Collector {
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
-		
 		if !self.workflow_handles.is_empty() {
 			self.workflow_handles.retain(|handle| !handle.is_finished());
 			if self.workflow_handles.is_empty() {
