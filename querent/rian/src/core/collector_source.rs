@@ -234,7 +234,6 @@ impl Source for Collector {
 					let err = batches_error.unwrap_err();
 					match err {
 						TrySendError::Full(_) => {
-							info!("Event streamer is full, retrying in next iteration");
 							self.availble_files.insert(file.clone(), chunks.clone());
 							return Ok(Duration::default());
 						},
