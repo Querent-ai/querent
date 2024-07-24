@@ -164,6 +164,7 @@ impl Source for Collector {
 		let mut is_success = false;
 		let mut is_failure = false;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
+		let mut doc_counter = 0;
 		if self.availble_files.len() < 10 {
 			loop {
 				tokio::select! {
@@ -204,6 +205,7 @@ impl Source for Collector {
 							if event_data.eof {
 								if let Some(buffer) = self.file_buffers.remove(&file_path_str) {
 									self.availble_files.insert(file_path_str.clone(), buffer);
+									doc_counter+=1;
 									self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
 								}
 							} else {
@@ -222,9 +224,9 @@ impl Source for Collector {
 				}
 			}
 		}
+		self.counters.increment_total_docs(doc_counter as u64);
 		if !self.availble_files.is_empty() {
 			for (file, chunks) in self.availble_files.iter() {
-				self.counters.increment_total_docs();
 				if chunks.is_empty() {
 					continue;
 				}
