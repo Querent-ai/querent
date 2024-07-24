@@ -3,6 +3,8 @@ use std::{path::PathBuf, sync::Arc};
 use actors::{MessageBus, Querent};
 use cluster::Cluster;
 use common::PubSubBroker;
+use once_cell::sync::Lazy;
+use tokio::sync::Semaphore;
 pub mod core;
 pub use core::*;
 use proto::{semantics::CollectorConfig, DiscoveryAgentType, NodeConfig};
@@ -22,6 +24,8 @@ use serde::{Deserialize, Serialize};
 use sp_core::sr25519;
 use sp_runtime::{traits::Verify, MultiSignature};
 use tracing::info;
+
+pub static INGESTOR_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10));
 
 #[allow(clippy::too_many_arguments)]
 pub async fn start_semantic_service(

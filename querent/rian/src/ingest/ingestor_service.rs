@@ -6,7 +6,7 @@ use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
-use tokio::{runtime::Handle, sync::mpsc::Sender};
+use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
 use tracing::{debug, error, info};
 
 pub struct IngestorService {
@@ -14,11 +14,18 @@ pub struct IngestorService {
 	pub timestamp: u64,
 	pub counters: Arc<IngestorCounters>,
 	token_sender: Sender<IngestedTokens>,
+	workflow_handles: Vec<JoinHandle<()>>,
 }
 
 impl IngestorService {
 	pub fn new(collector_id: String, token_sender: Sender<IngestedTokens>, timestamp: u64) -> Self {
-		Self { collector_id, timestamp, counters: Arc::new(IngestorCounters::new()), token_sender }
+		Self {
+			collector_id,
+			timestamp,
+			counters: Arc::new(IngestorCounters::new()),
+			token_sender,
+			workflow_handles: Vec::new(),
+		}
 	}
 
 	pub fn get_timestamp(&self) -> u64 {
@@ -98,7 +105,14 @@ impl Handler<CollectionBatch> for IngestorService {
 		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
 		})?;
+		// only 10 handles are allowed to be stored in the workflow_handles
+		// check any remove any which is finished if count is 10 then return emtpy
+		self.workflow_handles.retain(|handle| !handle.is_finished());
 
+		if self.workflow_handles.len() >= 10 {
+			_ctx.send_self_message(message).await?;
+			return Ok(());
+		}
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		if token_sender.is_closed() {
@@ -114,7 +128,7 @@ impl Handler<CollectionBatch> for IngestorService {
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
 
-		tokio::spawn(async move {
+		let handle = tokio::spawn(async move {
 			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
 			match ingested_token_stream {
 				Ok(mut ingested_tokens_stream) => {
@@ -142,6 +156,8 @@ impl Handler<CollectionBatch> for IngestorService {
 				},
 			}
 		});
+
+		self.workflow_handles.push(handle);
 
 		Ok(())
 	}
