@@ -74,4 +74,3 @@ rayon = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 lopdf = { workspace = true }
-pdf-extract = { workspace = true }

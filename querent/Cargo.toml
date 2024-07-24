@@ -263,8 +263,7 @@ typed-builder = "0.18.1"
 derive_builder = "0.20.0"
 derive-getters = "0.3.0"
 sha2 = "0.10.8"
-pdf-extract = { git = "https://github.com/Querent-ai/pdf-extract", branch = "master" }
-lopdf = "0.33.0"
+lopdf = { version = "0.33.0", features = ["async"] }
 dirs = "5.0.1"
 
 # patch unicode-normalization to version 1.22.0
