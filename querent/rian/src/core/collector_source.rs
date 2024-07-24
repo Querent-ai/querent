@@ -169,7 +169,6 @@ impl Source for Collector {
 							self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 							is_failure = true;
 							if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
-								self.event_receiver.take();
 								break;
 							}
 							continue;
@@ -179,7 +178,6 @@ impl Source for Collector {
 							self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 							is_success = true;
 							if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
-								self.event_receiver.take();
 								break;
 							}
 							continue;
