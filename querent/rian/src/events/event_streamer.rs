@@ -1,4 +1,6 @@
-use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
+use actors::{
+	Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity, TrySendError,
+};
 use async_trait::async_trait;
 use common::{CollectionBatch, EventStreamerCounters, EventType, EventsBatch, RuntimeType};
 use std::sync::Arc;
@@ -112,6 +114,7 @@ impl Handler<EventsBatch> for EventStreamer {
 		message: EventsBatch,
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
+		error!("Received EventsBatch message");
 		self.counters.increment_batches_received();
 		let grouped_events = message.events;
 		let group_event_count = grouped_events.len();
@@ -181,16 +184,23 @@ impl Handler<CollectionBatch> for EventStreamer {
 		message: CollectionBatch,
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		let indexer_res = ctx.send_message(&self.ingestor_messagebus, message).await;
-		match indexer_res {
-			Ok(_) => {},
-			Err(e) => {
-				error!("Error sending message to Indexer: {:?}", e);
-				return Err(ActorExitStatus::Failure(
-					anyhow::anyhow!("Failed to send CollectionBatch: {:?}", e).into(),
-				));
-			},
-		};
+		let ingestor_res = self.ingestor_messagebus.try_send_message(message);
+
+		if ingestor_res.is_err() {
+			let err = ingestor_res.unwrap_err();
+			match err {
+				TrySendError::Full(message) => {
+					ctx.send_self_message(message).await?;
+					tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+				},
+				TrySendError::Disconnected => {
+					error!("IngestorService is disconnected, exiting");
+					return Err(ActorExitStatus::Failure(
+						anyhow::anyhow!("IngestorService is disconnected").into(),
+					));
+				},
+			}
+		}
 		Ok(())
 	}
 }

@@ -239,8 +239,8 @@ impl Source for Collector {
 				if batches_error.is_err() {
 					let err = batches_error.unwrap_err();
 					match err {
-						TrySendError::Full(_) => {
-							self.availble_files.insert(file.clone(), chunks.clone());
+						TrySendError::Full(chunks_returned) => {
+							self.availble_files.insert(file.clone(), chunks_returned.bytes);
 							return Ok(Duration::default());
 						},
 						TrySendError::Disconnected => {

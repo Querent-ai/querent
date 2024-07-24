@@ -12,8 +12,8 @@ use tokio::runtime::{Builder, Runtime};
 /// QUERENT_RUNTIME_NUM_THREADS environment variable.
 fn get_main_runtime_num_threads() -> usize {
 	let mut default_num_runtime_threads = num_cpus::get() / 3;
-	if default_num_runtime_threads < 3 {
-		default_num_runtime_threads = 3;
+	if default_num_runtime_threads < 4 {
+		default_num_runtime_threads = 4;
 	}
 	std::env::var("QUERENT_RUNTIME_NUM_THREADS")
 		.ok()

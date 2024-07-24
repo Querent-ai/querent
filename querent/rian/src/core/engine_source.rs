@@ -225,12 +225,11 @@ impl Source for EngineRunner {
 			}
 			let mut left_batches = Vec::new();
 			for events_batch in self.left_over_batches.drain(..) {
-				let batches_error =
-					event_streamer_messagebus.try_send_message(events_batch.clone());
+				let batches_error = event_streamer_messagebus.try_send_message(events_batch);
 				if batches_error.is_err() {
 					let err = batches_error.unwrap_err();
 					match err {
-						TrySendError::Full(_) => {
+						TrySendError::Full(events_batch) => {
 							left_batches.push(events_batch);
 						},
 						TrySendError::Disconnected => {

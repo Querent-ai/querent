@@ -7,7 +7,7 @@ use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 pub struct IngestorService {
 	pub collector_id: String,
@@ -66,7 +66,7 @@ impl Actor for IngestorService {
 	}
 
 	fn runtime_handle(&self) -> Handle {
-		RuntimeType::NonBlocking.get_runtime_handle()
+		RuntimeType::Blocking.get_runtime_handle()
 	}
 
 	#[inline]
@@ -106,7 +106,6 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		debug!("Received CollectionBatch: {:?}", message.file);
 		for handle in self.workflow_handles.iter() {
 			if handle.is_finished() {
 				handle.abort();
