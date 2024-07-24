@@ -204,7 +204,6 @@ impl Source for Collector {
 							if event_data.eof {
 								if let Some(buffer) = self.file_buffers.remove(&file_path_str) {
 									self.availble_files.insert(file_path_str.clone(), buffer);
-									self.counters.increment_total_docs();
 									self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
 								}
 							} else {
@@ -225,6 +224,7 @@ impl Source for Collector {
 		}
 		if !self.availble_files.is_empty() {
 			for (file, chunks) in self.availble_files.iter() {
+				self.counters.increment_total_docs();
 				if chunks.is_empty() {
 					continue;
 				}
