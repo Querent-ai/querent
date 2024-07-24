@@ -70,7 +70,7 @@ impl Source for Collector {
 		}
 
 		info!("Starting data source collection for {}", self.id);
-		let (event_sender, event_receiver) = mpsc::channel(100);
+		let (event_sender, event_receiver) = mpsc::channel(10);
 		self.event_receiver = Some(event_receiver);
 		for data_poller in &self.data_pollers {
 			let data_poller = data_poller.clone();
@@ -159,7 +159,6 @@ impl Source for Collector {
 		let mut is_success = false;
 		let mut is_failure = false;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
-
 		loop {
 			tokio::select! {
 				event_opt = event_receiver.recv() => {
@@ -271,6 +270,7 @@ impl Source for Collector {
 			handle.abort();
 		}
 		self.workflow_handles.clear();
+		self.event_receiver.take();
 		Ok(())
 	}
 }
