@@ -97,7 +97,6 @@ impl Source for OpendalStorage {
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let path = path.as_os_str().to_string_lossy();
 		let meta = self.op.stat(&path).await?;
 		Ok(meta.content_length())
@@ -120,6 +119,7 @@ impl Source for OpendalStorage {
 				match object {
 					Ok(object) => {
 						let key = object.path().to_string();
+						let meta = op.stat(&key).await?;
 
 						let mut storage_reader = match op.reader(&key).await {
 							Ok(reader) => reader,
@@ -131,7 +131,8 @@ impl Source for OpendalStorage {
 								continue;
 							}
 						};
-						let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+						let chunk_size = meta.content_length().min(1024 * 1024 * 10); // Use file size or 10MB, whichever is smaller
+						let mut buffer: Vec<u8> = vec![0; chunk_size as usize];
 
 						loop {
 							let bytes_read = match storage_reader.read(&mut buffer).await {
