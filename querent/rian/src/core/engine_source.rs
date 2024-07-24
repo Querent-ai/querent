@@ -226,7 +226,6 @@ impl Source for EngineRunner {
 					match err {
 						TrySendError::Full(_) => {
 							left_batches.push(events_batch);
-							return Ok(Duration::default());
 						},
 						TrySendError::Disconnected => {
 							error!("Event streamer is disconnected, exiting");
