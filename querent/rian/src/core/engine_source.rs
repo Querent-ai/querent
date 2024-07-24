@@ -178,13 +178,10 @@ impl Source for EngineRunner {
 							}
 							if event_type == EventType::Success {
 								is_successs = true;
-								// clear the receiver
-								self.event_receiver.take();
 								break
 							}
 							if event_type == EventType::Failure {
 								error!("EngineRunner failed");
-								self.event_receiver.take();
 								is_failure = true;
 								break
 							}
