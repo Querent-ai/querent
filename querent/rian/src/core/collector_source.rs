@@ -70,6 +70,8 @@ impl Source for Collector {
 				}
 			}
 			return Ok(());
+		} else {
+			return Err(ActorExitStatus::Success);
 		}
 
 		info!("Starting data source collection for {}", self.id);
