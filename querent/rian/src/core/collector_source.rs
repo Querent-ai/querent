@@ -1,4 +1,4 @@
-use actors::{ActorExitStatus, MessageBus};
+use actors::{ActorExitStatus, MessageBus, TrySendError};
 use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
@@ -24,6 +24,7 @@ pub struct Collector {
 	workflow_handles: Vec<JoinHandle<Result<(), SourceError>>>,
 	file_buffers: HashMap<String, Vec<CollectedBytes>>,
 	file_size: HashMap<String, usize>,
+	availble_files: HashMap<String, Vec<CollectedBytes>>,
 	pub counters: CollectionCounter,
 	// terminate signal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
@@ -48,6 +49,7 @@ impl Collector {
 			counters: CollectionCounter::new(),
 			event_receiver: None,
 			poller_finished_counter: AtomicI32::new(0),
+			availble_files: HashMap::new(),
 		}
 	}
 }
@@ -60,6 +62,10 @@ impl Source for Collector {
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		if !self.workflow_handles.is_empty() {
+			self.workflow_handles.retain(|handle| !handle.is_finished());
+			if self.workflow_handles.is_empty() {
+				return Err(ActorExitStatus::Success);
+			}
 			for handle in &self.workflow_handles {
 				if handle.is_finished() {
 					error!("Data Source is already finished");
@@ -70,7 +76,7 @@ impl Source for Collector {
 		}
 
 		info!("Starting data source collection for {}", self.id);
-		let (event_sender, event_receiver) = mpsc::channel(100);
+		let (event_sender, event_receiver) = mpsc::channel(10);
 		self.event_receiver = Some(event_receiver);
 		for data_poller in &self.data_pollers {
 			let data_poller = data_poller.clone();
@@ -154,71 +160,71 @@ impl Source for Collector {
 		}
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
-		let mut events_collected = HashMap::new();
 		let mut counter = 0;
 		let mut is_success = false;
 		let mut is_failure = false;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
-
-		loop {
-			tokio::select! {
-				event_opt = event_receiver.recv() => {
-					if let Some(event_data) = event_opt {
-						// If the payload is empty, skip the event
-						if !event_data.eof && event_data.file.is_none() {
-							self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-							is_failure = true;
-							if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
-								break;
+		if self.availble_files.len() < 10 {
+			loop {
+				tokio::select! {
+					event_opt = event_receiver.recv() => {
+						if let Some(event_data) = event_opt {
+							// If the payload is empty, skip the event
+							if !event_data.eof && event_data.file.is_none() {
+								self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+								is_failure = true;
+								if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
+									break;
+								}
+								continue;
 							}
-							continue;
-						}
 
-						if event_data.eof && event_data.file.is_none() {
-							self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-							is_success = true;
-							if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
-								break;
+							if event_data.eof && event_data.file.is_none() {
+								self.poller_finished_counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+								is_success = true;
+								if self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize == self.data_pollers.len() {
+									break;
+								}
+								continue;
 							}
-							continue;
-						}
-						let size = event_data.size.unwrap_or_default();
+							let size = event_data.size.unwrap_or_default();
 
-						// Update file size in self.file_size
-						if let Some(file_path) = event_data.file.clone() {
+							// Update file size in self.file_size
+							if let Some(file_path) = event_data.file.clone() {
+								let file_path_str = file_path.to_string_lossy().to_string();
+								if let Some(file_size) = self.file_size.get_mut(&file_path_str) {
+									*file_size += size;
+								} else {
+									self.file_size.insert(file_path_str.clone(), size);
+								}
+							}
+
+							let file_path = event_data.file.clone().unwrap_or_default();
 							let file_path_str = file_path.to_string_lossy().to_string();
-							if let Some(file_size) = self.file_size.get_mut(&file_path_str) {
-								*file_size += size;
+							if event_data.eof {
+								if let Some(buffer) = self.file_buffers.remove(&file_path_str) {
+									self.availble_files.insert(file_path_str.clone(), buffer);
+									self.counters.increment_total_docs();
+									self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
+								}
 							} else {
-								self.file_size.insert(file_path_str.clone(), size);
+								self.file_buffers.entry(file_path_str.clone()).or_default().push(event_data);
 							}
+							counter += 1;
 						}
-
-						let file_path = event_data.file.clone().unwrap_or_default();
-						let file_path_str = file_path.to_string_lossy().to_string();
-						if event_data.eof {
-							if let Some(buffer) = self.file_buffers.remove(&file_path_str) {
-								self.counters.increment_total_docs();
-								self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
-								events_collected.insert(file_path_str, buffer);
-							}
-						} else {
-							self.file_buffers.entry(file_path_str.clone()).or_default().push(event_data);
+						if counter >= BATCH_NUM_EVENTS_LIMIT {
+							break;
 						}
-						counter += 1;
+						ctx.record_progress();
 					}
-					if counter >= BATCH_NUM_EVENTS_LIMIT {
+					_ = &mut deadline => {
 						break;
 					}
-					ctx.record_progress();
-				}
-				_ = &mut deadline => {
-					break;
 				}
 			}
 		}
-		if !events_collected.is_empty() {
-			for (file, chunks) in events_collected.iter() {
+		if !self.availble_files.is_empty() {
+			for (file, chunks) in self.availble_files.iter() {
 				if chunks.is_empty() {
 					continue;
 				}
@@ -227,14 +233,25 @@ impl Source for Collector {
 					&chunks[0].extension.clone().unwrap_or_default(),
 					chunks.clone(),
 				);
-				let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
+				let batches_error = event_streamer_messagebus.try_send_message(events_batch);
 				if batches_error.is_err() {
-					error!("Failed to send bytes batch: {:?}", batches_error);
+					let err = batches_error.unwrap_err();
+					match err {
+						TrySendError::Full(_) => {
+							self.availble_files.insert(file.clone(), chunks.clone());
+							return Ok(Duration::default());
+						},
+						TrySendError::Disconnected => {
+							error!("Event streamer is disconnected, exiting");
+							return Err(ActorExitStatus::Failure(
+								anyhow::anyhow!("Event streamer is disconnected").into(),
+							));
+						},
+					}
 				}
 				self.file_buffers.remove(file);
 			}
 		}
-		events_collected.clear();
 		if is_success &&
 			self.data_pollers.len() as usize ==
 				self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst)
