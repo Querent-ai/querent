@@ -1,4 +1,4 @@
-use actors::{ActorExitStatus, MessageBus};
+use actors::{ActorExitStatus, MessageBus, TrySendError};
 use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
@@ -229,9 +229,22 @@ impl Source for Collector {
 					&chunks[0].extension.clone().unwrap_or_default(),
 					chunks.clone(),
 				);
-				let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
+				let batches_error = event_streamer_messagebus.try_send_message(events_batch);
 				if batches_error.is_err() {
-					error!("Failed to send bytes batch: {:?}", batches_error);
+					let err = batches_error.unwrap_err();
+					match err {
+						TrySendError::Full(_) => {
+							info!("Event streamer is full, retrying in next iteration");
+							self.availble_files.insert(file.clone(), chunks.clone());
+							return Ok(Duration::default());
+						},
+						TrySendError::Disconnected => {
+							error!("Event streamer is disconnected, exiting");
+							return Err(ActorExitStatus::Failure(
+								anyhow::anyhow!("Event streamer is disconnected").into(),
+							));
+						},
+					}
 				}
 				self.file_buffers.remove(file);
 			}
