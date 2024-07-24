@@ -89,7 +89,7 @@ impl From<CandleCoreError> for EngineError {
 pub trait Engine: Send + Sync {
 	async fn process_ingested_tokens<'life0>(
 		&'life0 self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+		token_stream: tokio::sync::mpsc::Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>>;
 }
 

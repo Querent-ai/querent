@@ -86,6 +86,11 @@ impl Actor for IngestorService {
 			ActorExitStatus::Panicked => Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				info!("IngestorService exiting with success");
+				if !self.workflow_handles.is_empty() {
+					for handle in self.workflow_handles.iter() {
+						handle.abort();
+					}
+				}
 				Ok(())
 			},
 		}
@@ -102,17 +107,23 @@ impl Handler<CollectionBatch> for IngestorService {
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		debug!("Received CollectionBatch: {:?}", message.file);
-		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
-			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
-		})?;
 		// only 10 handles are allowed to be stored in the workflow_handles
-		// check any remove any which is finished if count is 10 then return emtpy
+		// check any remove any which is finished if count is 10 then return
+		// abort all finished handles
+		for handle in self.workflow_handles.iter() {
+			if handle.is_finished() {
+				handle.abort();
+			}
+		}
 		self.workflow_handles.retain(|handle| !handle.is_finished());
 
 		if self.workflow_handles.len() >= 10 {
 			_ctx.send_self_message(message).await?;
 			return Ok(());
 		}
+		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
+			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
+		})?;
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		if token_sender.is_closed() {

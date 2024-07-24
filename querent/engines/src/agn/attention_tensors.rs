@@ -9,7 +9,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::{EventState, EventType, SemanticKnowledgePayload, VectorPayload};
 use fastembed::TextEmbedding;
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use llms::llm::LLM;
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
@@ -74,7 +74,7 @@ impl Engine for AttentionTensorsEngine {
 	/// A result containing a stream of events or an error.
 	async fn process_ingested_tokens<'life0>(
 		&'life0 self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+		token_stream: tokio::sync::mpsc::Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>> {
 		if self.embedding_model.is_none() {
 			return Err(EngineError::new(
@@ -93,7 +93,7 @@ impl Engine for AttentionTensorsEngine {
 			let llm = self.llm.clone();
 			let embedder = self.embedding_model.as_ref().unwrap();
 			let mut token_stream = token_stream;
-			while let Some(token) = token_stream.as_mut().next().await {
+			while let Some(token) = token_stream.recv().await {
 				if token.data.is_empty() {
 					continue;
 				}
