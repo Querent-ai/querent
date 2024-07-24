@@ -114,7 +114,7 @@ impl CollectionCounter {
 	}
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 pub struct CollectionBatch {
 	pub file: String,
 	pub ext: String,
