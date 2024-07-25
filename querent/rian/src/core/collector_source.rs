@@ -195,7 +195,7 @@ impl Source for Collector {
 									self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
 
 							} else {
-								self.file_buffers.entry(file_path_str.clone()).or_default().push(event_data);
+								self.file_buffers.entry(file_path_str).or_default().push(event_data);
 							}
 							counter += 1;
 						}

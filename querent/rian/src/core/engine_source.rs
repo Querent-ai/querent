@@ -52,7 +52,6 @@ impl EngineRunner {
 			while let Some(data) = engine_op.next().await {
 				match data {
 					Ok(event) => {
-						//error!("GOT EVENT: {:?}", event);
 						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
 							return Err(EngineError::new(
 								EngineErrorKind::EventStream,

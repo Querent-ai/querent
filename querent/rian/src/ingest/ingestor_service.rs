@@ -66,7 +66,7 @@ impl Actor for IngestorService {
 	}
 
 	fn runtime_handle(&self) -> Handle {
-		RuntimeType::Blocking.get_runtime_handle()
+		RuntimeType::NonBlocking.get_runtime_handle()
 	}
 
 	#[inline]
@@ -137,8 +137,7 @@ impl Handler<CollectionBatch> for IngestorService {
 
 		let handle = tokio::spawn(async move {
 			tokio::spawn(async move {
-				let boxed_bytes = message.bytes.clone();
-				let ingested_token_stream = file_ingestor.ingest(boxed_bytes.into()).await;
+				let ingested_token_stream = file_ingestor.ingest(message.bytes.into()).await;
 				match ingested_token_stream {
 					Ok(mut ingested_tokens_stream) => {
 						if token_sender.is_closed() {
