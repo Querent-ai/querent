@@ -112,7 +112,6 @@ impl Handler<EventsBatch> for EventStreamer {
 		message: EventsBatch,
 		ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
-		error!("Received EventsBatch message");
 		self.counters.increment_batches_received();
 		let grouped_events = message.events;
 		let group_event_count = grouped_events.len();
