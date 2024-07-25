@@ -237,6 +237,7 @@ impl Source for Collector {
 								.entry(batch.file.to_string())
 								.or_default()
 								.extend(batch.bytes);
+							return Ok(Duration::from_secs(1));
 						},
 						None => {
 							file_buffer_to_remove.push(available_file_from_buffer.clone());
