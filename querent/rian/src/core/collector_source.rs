@@ -13,7 +13,7 @@ use tracing::{error, info};
 
 use crate::{
 	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
-	EMIT_BATCHES_TIMEOUT,
+	EMIT_BATCHES_TIMEOUT, NUMBER_FILES_IN_MEMORY,
 };
 
 pub struct Collector {
@@ -168,7 +168,7 @@ impl Source for Collector {
 		let mut counter = 0;
 		let mut is_failure = false;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
-		if self.availble_files.len() < 11 {
+		if self.availble_files.len() == 0 {
 			loop {
 				tokio::select! {
 					event_opt = event_receiver.recv() => {
@@ -193,7 +193,10 @@ impl Source for Collector {
 									self.counters.increment_total_docs(1);
 									self.availble_files.insert(file_path_str.clone());
 									self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
-
+									// only keep the last NUMBER_FILES_IN_MEMORY files in memory
+									if self.availble_files.len() >= NUMBER_FILES_IN_MEMORY {
+										break;
+									}
 							} else {
 								self.file_buffers.entry(file_path_str).or_default().push(event_data);
 							}

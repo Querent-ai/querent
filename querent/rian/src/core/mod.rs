@@ -16,6 +16,8 @@ pub use collector_source::*;
 
 pub type SourceContext = ActorContext<SourceActor>;
 
+pub const NUMBER_FILES_IN_MEMORY: usize = 10;
+
 pub const BATCH_NUM_EVENTS_LIMIT: usize = 10;
 
 pub const EMIT_BATCHES_TIMEOUT: Duration =
