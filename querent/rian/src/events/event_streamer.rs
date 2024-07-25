@@ -1,6 +1,4 @@
-use actors::{
-	Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity, TrySendError,
-};
+use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus, QueueCapacity};
 use async_trait::async_trait;
 use common::{CollectionBatch, EventStreamerCounters, EventType, EventsBatch, RuntimeType};
 use std::sync::Arc;
@@ -73,7 +71,7 @@ impl Actor for EventStreamer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(2)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -177,31 +175,28 @@ impl Handler<EventsBatch> for EventStreamer {
 
 #[async_trait]
 impl Handler<CollectionBatch> for EventStreamer {
-	type Reply = ();
+	type Reply = Result<Option<CollectionBatch>, anyhow::Error>;
 
 	async fn handle(
 		&mut self,
 		message: CollectionBatch,
-		ctx: &ActorContext<Self>,
-	) -> Result<(), ActorExitStatus> {
-		let ingestor_res = self.ingestor_messagebus.try_send_message(message);
-
+		_ctx: &ActorContext<Self>,
+	) -> Result<Self::Reply, ActorExitStatus> {
+		let ingestor_res = self.ingestor_messagebus.ask(message).await;
 		if ingestor_res.is_err() {
-			let err = ingestor_res.unwrap_err();
-			match err {
-				TrySendError::Full(message) => {
-					ctx.send_self_message(message).await?;
-					tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-				},
-				TrySendError::Disconnected => {
-					error!("IngestorService is disconnected, exiting");
-					return Err(ActorExitStatus::Failure(
-						anyhow::anyhow!("IngestorService is disconnected").into(),
-					));
-				},
-			}
+			return Ok(Err(anyhow::anyhow!(
+				"Error sending message to IngestorService: {:?}",
+				ingestor_res
+			)
+			.into()));
 		}
-		Ok(())
+		let ingestor_res = ingestor_res.unwrap();
+		match ingestor_res {
+			Ok(batch) => Ok(Ok(batch)),
+			Err(e) => {
+				Ok(Err(anyhow::anyhow!("Error sending message to IngestorService: {:?}", e).into()))
+			},
+		}
 	}
 }
 

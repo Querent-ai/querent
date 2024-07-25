@@ -62,7 +62,7 @@ impl Actor for IngestorService {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(5)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -99,7 +99,7 @@ impl Actor for IngestorService {
 
 #[async_trait]
 impl Handler<CollectionBatch> for IngestorService {
-	type Reply = ();
+	type Reply = Result<Option<CollectionBatch>, anyhow::Error>;
 
 	async fn handle(
 		&mut self,
@@ -111,11 +111,10 @@ impl Handler<CollectionBatch> for IngestorService {
 				handle.abort();
 			}
 		}
-		self.workflow_handles.retain(|handle| !handle.is_finished());
 
-		if self.workflow_handles.len() >= 10 {
-			_ctx.send_self_message(message).await?;
-			return Ok(());
+		self.workflow_handles.retain(|handle| !handle.is_finished());
+		if self.workflow_handles.len() > 5 {
+			return Ok(Ok(Some(message)));
 		}
 		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
@@ -138,7 +137,8 @@ impl Handler<CollectionBatch> for IngestorService {
 
 		let handle = tokio::spawn(async move {
 			tokio::spawn(async move {
-				let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
+				let boxed_bytes = message.bytes.clone();
+				let ingested_token_stream = file_ingestor.ingest(boxed_bytes.into()).await;
 				match ingested_token_stream {
 					Ok(mut ingested_tokens_stream) => {
 						if token_sender.is_closed() {
@@ -168,6 +168,6 @@ impl Handler<CollectionBatch> for IngestorService {
 			});
 		});
 		self.workflow_handles.push(handle);
-		Ok(())
+		Ok(Ok(None))
 	}
 }
