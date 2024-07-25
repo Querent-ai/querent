@@ -71,7 +71,7 @@ impl Actor for EventStreamer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(2)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -174,24 +174,27 @@ impl Handler<EventsBatch> for EventStreamer {
 
 #[async_trait]
 impl Handler<CollectionBatch> for EventStreamer {
-	type Reply = ();
+	type Reply = Result<Option<CollectionBatch>, anyhow::Error>;
 
 	async fn handle(
 		&mut self,
 		message: CollectionBatch,
-		ctx: &ActorContext<Self>,
-	) -> Result<(), ActorExitStatus> {
-		let indexer_res = ctx.send_message(&self.ingestor_messagebus, message).await;
-		match indexer_res {
-			Ok(_) => {},
-			Err(e) => {
-				error!("Error sending message to Indexer: {:?}", e);
-				return Err(ActorExitStatus::Failure(
-					anyhow::anyhow!("Failed to send CollectionBatch: {:?}", e).into(),
-				));
-			},
-		};
-		Ok(())
+		_ctx: &ActorContext<Self>,
+	) -> Result<Self::Reply, ActorExitStatus> {
+		let ingestor_res = self.ingestor_messagebus.ask(message).await;
+		if ingestor_res.is_err() {
+			return Ok(Err(anyhow::anyhow!(
+				"Error sending message to IngestorService: {:?}",
+				ingestor_res
+			)
+			.into()));
+		}
+		let ingestor_res = ingestor_res.unwrap();
+		match ingestor_res {
+			Ok(batch) => Ok(Ok(batch)),
+			Err(e) =>
+				Ok(Err(anyhow::anyhow!("Error sending message to IngestorService: {:?}", e).into())),
+		}
 	}
 }
 

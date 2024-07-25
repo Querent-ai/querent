@@ -231,13 +231,12 @@ impl Source for AzureBlobStorage {
 						continue;
 					},
 				};
-
 				let blobs_list = blob.blobs;
 
 				for blob_info in blobs_list.blobs() {
 					let blob_name = blob_info.name.clone();
 					let blob_path = Path::new(&blob_name);
-
+					let chunk_size = (blob_info.properties.content_length as usize).min(1024 * 1024 * 10); // 10MB chunk size
 					let mut output_stream =
 						container_client.blob_client(&blob_name).get().into_stream();
 
@@ -257,8 +256,7 @@ impl Source for AzureBlobStorage {
 							.compat();
 
 						let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
-
-						let mut buffer: Vec<u8> = vec![0; 1024 * 1024 * 10]; // 10MB buffer
+						let mut buffer: Vec<u8> = vec![0; chunk_size];
 						loop {
 							let bytes_read = body_stream_reader.read(&mut buffer).await?;
 

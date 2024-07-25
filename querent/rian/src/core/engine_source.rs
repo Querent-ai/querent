@@ -1,4 +1,4 @@
-use actors::{ActorExitStatus, MessageBus};
+use actors::{ActorExitStatus, MessageBus, TrySendError};
 use async_trait::async_trait;
 use common::{EventState, EventType, EventsBatch, EventsCounter, TerimateSignal};
 use engines::{Engine, EngineError, EngineErrorKind};
@@ -10,7 +10,6 @@ use tokio::{
 	task::JoinHandle,
 	time::{self},
 };
-use tokio_stream::wrappers::ReceiverStream;
 use tracing::{error, info};
 
 use crate::{
@@ -27,6 +26,7 @@ pub struct EngineRunner {
 	workflow_handle: Option<JoinHandle<Result<(), EngineError>>>,
 	// terimatesignal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
+	left_over_batches: Vec<EventsBatch>,
 }
 
 impl EngineRunner {
@@ -40,10 +40,8 @@ impl EngineRunner {
 		let event_runner = engine.clone();
 		info!("Starting the engine 🚀");
 		let workflow_handle = Some(tokio::spawn(async move {
-			let token_stream = Box::pin(ReceiverStream::new(token_receiver));
-
 			let mut engine_op = event_runner
-				.process_ingested_tokens(token_stream)
+				.process_ingested_tokens(token_receiver)
 				.await
 				.map_err(|e| {
 					ActorExitStatus::Failure(
@@ -51,7 +49,6 @@ impl EngineRunner {
 					)
 				})
 				.expect("Expect engine to run");
-
 			while let Some(data) = engine_op.next().await {
 				match data {
 					Ok(event) => {
@@ -124,6 +121,7 @@ impl EngineRunner {
 			event_receiver: Some(event_receiver),
 			workflow_handle,
 			terminate_sig,
+			left_over_batches: Vec::new(),
 		}
 	}
 
@@ -169,65 +167,85 @@ impl Source for EngineRunner {
 		let mut is_failure = false;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
 
-		loop {
-			tokio::select! {
-				event_opt = event_receiver.recv() => {
-					if let Some((event_type, event_data)) = event_opt {
-						if event_data.payload.is_empty() {
-							continue;
+		if self.left_over_batches.is_empty() {
+			loop {
+				tokio::select! {
+					event_opt = event_receiver.recv() => {
+						if let Some((event_type, event_data)) = event_opt {
+							if event_data.payload.is_empty() {
+								continue;
+							}
+							if event_type == EventType::Success {
+								is_successs = true;
+								// clear the receiver
+								self.event_receiver.take();
+								break
+							}
+							if event_type == EventType::Failure {
+								error!("EngineRunner failed");
+								self.event_receiver.take();
+								is_failure = true;
+								break
+							}
+							self.counters.increment_total();
+							// check if the event type is already in the map
+							if events_collected.contains_key(&event_type) {
+								let event_vec: &mut Vec<EventState> = events_collected.get_mut(&event_type).unwrap();
+								event_vec.push(event_data);
+							} else {
+								events_collected.insert(event_type, vec![event_data]);
+							}
+							counter += 1;
 						}
-						if event_type == EventType::Success {
-							is_successs = true;
-							// clear the receiver
-							self.event_receiver.take();
-							break
+						if counter >= BATCH_NUM_EVENTS_LIMIT {
+							self.counters.increment_processed(counter as u64);
+							break;
 						}
-						if event_type == EventType::Failure {
-							error!("EngineRunner failed");
-							self.event_receiver.take();
-							is_failure = true;
-							break
-						}
-						self.counters.increment_total();
-						// check if the event type is already in the map
-						if events_collected.contains_key(&event_type) {
-							let event_vec: &mut Vec<EventState> = events_collected.get_mut(&event_type).unwrap();
-							event_vec.push(event_data);
-						} else {
-							events_collected.insert(event_type, vec![event_data]);
-						}
-						counter += 1;
+						ctx.record_progress();
 					}
-					if counter >= BATCH_NUM_EVENTS_LIMIT {
+					_ = &mut deadline => {
 						self.counters.increment_processed(counter as u64);
 						break;
 					}
-					ctx.record_progress();
-				}
-				_ = &mut deadline => {
-					self.counters.increment_processed(counter as u64);
-					break;
 				}
 			}
 		}
-		if !events_collected.is_empty() {
-			let events_batch = EventsBatch::new(
-				self.id.clone(),
-				events_collected,
-				chrono::Utc::now().timestamp_millis() as u64,
-			);
-			let batches_error = ctx.send_message(event_streamer_messagebus, events_batch).await;
-			if batches_error.is_err() {
-				error!("Failed to send events batch: {:?}", batches_error);
+		if !events_collected.is_empty() || !self.left_over_batches.is_empty() {
+			if !events_collected.is_empty() {
+				let events_batch = EventsBatch::new(
+					self.id.clone(),
+					events_collected,
+					chrono::Utc::now().timestamp_millis() as u64,
+				);
+				self.left_over_batches.push(events_batch);
 			}
+			let mut left_batches = Vec::new();
+			for events_batch in self.left_over_batches.drain(..) {
+				let batches_error = event_streamer_messagebus.try_send_message(events_batch);
+				if batches_error.is_err() {
+					let err = batches_error.unwrap_err();
+					match err {
+						TrySendError::Full(events_batch) => {
+							left_batches.push(events_batch);
+						},
+						TrySendError::Disconnected => {
+							error!("Event streamer is disconnected, exiting");
+							return Err(ActorExitStatus::Failure(
+								anyhow::anyhow!("Event streamer is disconnected").into(),
+							));
+						},
+					}
+				}
+			}
+			self.left_over_batches = left_batches;
 		}
 
-		if is_successs {
+		if is_successs && self.left_over_batches.is_empty() {
 			// sleep for 10 seconds to allow the engine send remaining events to database
 			time::sleep(Duration::from_secs(10)).await;
 			return Err(ActorExitStatus::Success);
 		}
-		if is_failure {
+		if is_failure && self.left_over_batches.is_empty() {
 			return Err(ActorExitStatus::Failure(anyhow::anyhow!("EngineRunner failed").into()));
 		}
 		Ok(Duration::default())

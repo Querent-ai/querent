@@ -6,19 +6,26 @@ use common::{CollectionBatch, IngestorCounters, RuntimeType};
 use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
-use tokio::{runtime::Handle, sync::mpsc::Sender};
-use tracing::{debug, error, info};
+use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
+use tracing::{error, info};
 
 pub struct IngestorService {
 	pub collector_id: String,
 	pub timestamp: u64,
 	pub counters: Arc<IngestorCounters>,
 	token_sender: Sender<IngestedTokens>,
+	workflow_handles: Vec<JoinHandle<()>>,
 }
 
 impl IngestorService {
 	pub fn new(collector_id: String, token_sender: Sender<IngestedTokens>, timestamp: u64) -> Self {
-		Self { collector_id, timestamp, counters: Arc::new(IngestorCounters::new()), token_sender }
+		Self {
+			collector_id,
+			timestamp,
+			counters: Arc::new(IngestorCounters::new()),
+			token_sender,
+			workflow_handles: Vec::new(),
+		}
 	}
 
 	pub fn get_timestamp(&self) -> u64 {
@@ -55,7 +62,7 @@ impl Actor for IngestorService {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(5)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -79,6 +86,11 @@ impl Actor for IngestorService {
 			ActorExitStatus::Panicked => Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				info!("IngestorService exiting with success");
+				if !self.workflow_handles.is_empty() {
+					for handle in self.workflow_handles.iter() {
+						handle.abort();
+					}
+				}
 				Ok(())
 			},
 		}
@@ -87,14 +99,23 @@ impl Actor for IngestorService {
 
 #[async_trait]
 impl Handler<CollectionBatch> for IngestorService {
-	type Reply = ();
+	type Reply = Result<Option<CollectionBatch>, anyhow::Error>;
 
 	async fn handle(
 		&mut self,
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		debug!("Received CollectionBatch: {:?}", message.file);
+		for handle in self.workflow_handles.iter() {
+			if handle.is_finished() {
+				handle.abort();
+			}
+		}
+
+		self.workflow_handles.retain(|handle| !handle.is_finished());
+		if self.workflow_handles.len() > 5 {
+			return Ok(Ok(Some(message)));
+		}
 		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
 		})?;
@@ -114,35 +135,38 @@ impl Handler<CollectionBatch> for IngestorService {
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
 
-		tokio::spawn(async move {
-			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
-			match ingested_token_stream {
-				Ok(mut ingested_tokens_stream) => {
-					if token_sender.is_closed() {
-						return;
-					}
-					// Send IngestedTokens to the token_sender and trace the errors
-					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
-						match ingested_tokens_result {
-							Ok(ingested_tokens) => {
-								if let Err(e) = token_sender.send(ingested_tokens).await {
-									error!("Failed to send IngestedTokens to token_sender with error: {}", e);
-									return;
-								}
-								counters.increment_total_ingested_tokens(1);
-							},
-							Err(e) => {
-								error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
-							},
+		let handle = tokio::spawn(async move {
+			tokio::spawn(async move {
+				let ingested_token_stream = file_ingestor.ingest(message.bytes.into()).await;
+				match ingested_token_stream {
+					Ok(mut ingested_tokens_stream) => {
+						if token_sender.is_closed() {
+							return;
 						}
-					}
-				},
-				Err(e) => {
-					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
-				},
-			}
+						// Send IngestedTokens to the token_sender and trace the errors
+						while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await
+						{
+							match ingested_tokens_result {
+								Ok(ingested_tokens) => {
+									if let Err(e) = token_sender.send(ingested_tokens).await {
+										error!("Failed to send IngestedTokens to token_sender with error: {}", e);
+										return;
+									}
+									counters.increment_total_ingested_tokens(1);
+								},
+								Err(e) => {
+									error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
+								},
+							}
+						}
+					},
+					Err(e) => {
+						error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
+					},
+				}
+			});
 		});
-
-		Ok(())
+		self.workflow_handles.push(handle);
+		Ok(Ok(None))
 	}
 }

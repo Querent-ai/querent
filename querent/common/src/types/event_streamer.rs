@@ -104,8 +104,8 @@ impl CollectionCounter {
 		Self { total_docs: AtomicU64::new(0), ext_counter_map: HashMap::new() }
 	}
 
-	pub fn increment_total_docs(&self) {
-		self.total_docs.fetch_add(1, Ordering::SeqCst);
+	pub fn increment_total_docs(&self, count: u64) {
+		self.total_docs.fetch_add(count, Ordering::SeqCst);
 	}
 
 	pub fn increment_ext_counter(&mut self, ext: &String) {

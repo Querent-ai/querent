@@ -16,7 +16,7 @@ pub use collector_source::*;
 
 pub type SourceContext = ActorContext<SourceActor>;
 
-pub const BATCH_NUM_EVENTS_LIMIT: usize = 1000;
+pub const BATCH_NUM_EVENTS_LIMIT: usize = 10;
 
 pub const EMIT_BATCHES_TIMEOUT: Duration =
 	Duration::from_millis(if cfg!(test) { 100 } else { 1_000 });
