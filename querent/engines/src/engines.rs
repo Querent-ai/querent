@@ -6,6 +6,7 @@ use proto::semantics::IngestedTokens;
 use serde::{Deserialize, Serialize};
 use std::{fmt, io, pin::Pin, sync::Arc};
 use thiserror::Error;
+use tokio::sync::mpsc::Receiver;
 
 use candle_core::Error as CandleCoreError;
 
@@ -89,7 +90,7 @@ impl From<CandleCoreError> for EngineError {
 pub trait Engine: Send + Sync {
 	async fn process_ingested_tokens<'life0>(
 		&'life0 self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+		token_stream: Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>>;
 }
 

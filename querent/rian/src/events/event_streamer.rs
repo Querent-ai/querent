@@ -193,9 +193,8 @@ impl Handler<CollectionBatch> for EventStreamer {
 		let ingestor_res = ingestor_res.unwrap();
 		match ingestor_res {
 			Ok(batch) => Ok(Ok(batch)),
-			Err(e) => {
-				Ok(Err(anyhow::anyhow!("Error sending message to IngestorService: {:?}", e).into()))
-			},
+			Err(e) =>
+				Ok(Err(anyhow::anyhow!("Error sending message to IngestorService: {:?}", e).into())),
 		}
 	}
 }
