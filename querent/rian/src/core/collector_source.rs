@@ -252,7 +252,6 @@ impl Source for Collector {
 			}
 
 			for file in file_buffer_to_remove {
-				error!("Removing file from buffer: {:?}", file);	
 				self.availble_files.remove(&file);
 			}
 		}
