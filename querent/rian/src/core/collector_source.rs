@@ -8,7 +8,11 @@ use std::{
 	sync::{atomic::AtomicI32, Arc},
 	time::Duration,
 };
-use tokio::{sync::mpsc, task::JoinHandle, time};
+use tokio::{
+	sync::{mpsc, Semaphore},
+	task::JoinHandle,
+	time,
+};
 use tracing::{error, info};
 
 use crate::{
@@ -31,6 +35,7 @@ pub struct Collector {
 	pub terminate_sig: TerimateSignal,
 	// internal counter for exit when data pollers are finished
 	poller_finished_counter: AtomicI32,
+	file_semaphore: Arc<Semaphore>,
 }
 
 impl Collector {
@@ -52,6 +57,7 @@ impl Collector {
 			poller_finished_counter: AtomicI32::new(0),
 			availble_files: HashSet::new(),
 			is_set_once: false,
+			file_semaphore: Arc::new(Semaphore::new(NUMBER_FILES_IN_MEMORY)),
 		}
 	}
 }
@@ -190,12 +196,22 @@ impl Source for Collector {
 							let file_path = event_data.file.clone().unwrap_or_default();
 							let file_path_str = file_path.to_string_lossy().to_string();
 							if event_data.eof {
-									self.counters.increment_total_docs(1);
-									self.availble_files.insert(file_path_str.clone());
-									self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
-									// only keep the last NUMBER_FILES_IN_MEMORY files in memory
-									if self.availble_files.len() >= NUMBER_FILES_IN_MEMORY {
-										break;
+									// Acquire a permit from the semaphore before processing a new file
+									let permit = self.file_semaphore.clone().try_acquire_owned();
+									match permit {
+										Ok(_) => {
+											self.counters.increment_total_docs(1);
+											self.availble_files.insert(file_path_str.clone());
+											self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
+											// only keep the last NUMBER_FILES_IN_MEMORY files in memory
+											if self.availble_files.len() >= NUMBER_FILES_IN_MEMORY {
+												break;
+											}
+										},
+										Err(_) => {
+											error!("Failed to acquire semaphore permit");
+											return Ok(Duration::from_secs(1));
+										},
 									}
 							} else {
 								self.file_buffers.entry(file_path_str).or_default().push(event_data);
@@ -257,6 +273,8 @@ impl Source for Collector {
 
 			for file in file_buffer_to_remove {
 				self.availble_files.remove(&file);
+				// Release the semaphore permit after processing a file
+				self.file_semaphore.add_permits(1);
 			}
 		}
 
