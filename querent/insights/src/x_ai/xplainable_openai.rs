@@ -1,7 +1,5 @@
 use crate::{
-	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
-	InsightError, InsightErrorKind, InsightInfo, InsightInput, InsightOutput, InsightResult,
-	InsightRunner,
+	rerank_documents, ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue, InsightError, InsightErrorKind, InsightInfo, InsightInput, InsightOutput, InsightResult, InsightRunner
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -262,14 +260,29 @@ impl InsightRunner for XAIRunner {
 									},
 								}
 							}
-							// Summarize the results using OpenAI
-							let unique_sentences_vec = unique_sentences(&all_discovered_data);
-							let numbered_sentences: Vec<String> = unique_sentences_vec
-								.iter()
-								.enumerate()
-								.map(|(i, s)| format!("{}. {}", i + 1, s))
-								.collect();
-							
+
+							let (unique_sentences, _count) = unique_sentences(&all_discovered_data);
+
+							let numbered_sentences: Vec<String>;
+
+							if let Some(reranked_results) = rerank_documents(query, unique_sentences.clone()) {
+								println!("Reranked results: {:?}", reranked_results);
+
+								let top_10_reranked = reranked_results.into_iter().take(10).collect::<Vec<_>>();
+
+								numbered_sentences = top_10_reranked
+									.iter()
+									.enumerate()
+									.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
+									.collect();
+							} else {
+								numbered_sentences = unique_sentences
+									.iter()
+									.enumerate()
+									.map(|(i, s)| format!("{}. {}", i + 1, s))
+									.collect();
+							}
+
 							let context = numbered_sentences.join("\n");
 							let prompt = format!(
                             "
@@ -298,7 +311,7 @@ Output:
 
 							// Extract the generation text and replace `\n` with actual line breaks
 							let generation_text = summary.generation.replace("\\n", "\n");
-
+							println!("This is the token usage --------------{:?}", summary.tokens);
 							// Insert the generated insight knowledge into storage
 							storage
 								.insert_insight_knowledge(
@@ -465,8 +478,10 @@ Output:
 											}
 										}
 									// Summarize the results using OpenAI
-									let unique_sentences_vec = unique_sentences(&all_discovered_data);
-									let numbered_sentences: Vec<String> = unique_sentences_vec.iter().enumerate().map(|(i, s)| format!("{}. {}", i + 1, s)).collect();
+									let (unique_sentences, count) = unique_sentences(&all_discovered_data);
+
+    								println!("Number of unique sentences: {}", count);
+									let numbered_sentences: Vec<String> = unique_sentences.iter().enumerate().map(|(i, s)| format!("{}. {}", i + 1, s)).collect();
 									let context = numbered_sentences.join("\n");
 									let prompt = format!(
 										"Below is the context which was discovered during graph traversal for the user query. Summarize the key findings from the context provided that directly answer the user query.
