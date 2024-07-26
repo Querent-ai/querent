@@ -71,7 +71,7 @@ impl Actor for IngestorService {
 
 	#[inline]
 	fn yield_after_each_message(&self) -> bool {
-		false
+		true
 	}
 
 	async fn finalize(
@@ -106,67 +106,71 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		for handle in self.workflow_handles.iter() {
-			if handle.is_finished() {
-				handle.abort();
-			}
-		}
-
+		// Retain only unfinished handles
 		self.workflow_handles.retain(|handle| !handle.is_finished());
-		if self.workflow_handles.len() > 5 {
+
+		// Check if current running count is less than 5
+		if self.counters.get_current_running_count() >= 5 {
+			error!("Current running count is greater than 5");
 			return Ok(Ok(Some(message)));
 		}
+
 		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
 		})?;
+
+		// Increment the counter before spawning the task
+		self.counters.increment_current_running_count(1);
 
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		if token_sender.is_closed() {
 			error!("Token sender is closed");
+			self.counters.decrement_current_running_count(1); // Decrement on failure
 			return Err(ActorExitStatus::Failure(anyhow::anyhow!("Token sender is closed").into()));
 		}
 		let counters = self.get_counters();
 		let collector_id = self.get_collector_id();
+
 		// Calculate and update total megabytes ingested
 		let total_bytes: usize = message.bytes.iter().map(|bytes| bytes.size.unwrap_or(0)).sum();
-
 		let total_mbs = (total_bytes + 1023) / 1024 / 1024; // Ceiling division for bytes to MB
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
 
 		let handle = tokio::spawn(async move {
-			tokio::spawn(async move {
-				let ingested_token_stream = file_ingestor.ingest(message.bytes.into()).await;
-				match ingested_token_stream {
-					Ok(mut ingested_tokens_stream) => {
-						if token_sender.is_closed() {
-							return;
+			let ingested_token_stream = file_ingestor.ingest(message.bytes.into()).await;
+			match ingested_token_stream {
+				Ok(mut ingested_tokens_stream) => {
+					if token_sender.is_closed() {
+						counters.decrement_current_running_count(1); // Decrement when the task completes
+						return;
+					}
+					// Send IngestedTokens to the token_sender and trace the errors
+					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
+						match ingested_tokens_result {
+							Ok(ingested_tokens) => {
+								if let Err(e) = token_sender.send(ingested_tokens).await {
+									error!("Failed to send IngestedTokens to token_sender with error: {}", e);
+									counters.decrement_current_running_count(1); // Decrement on failure
+									return;
+								}
+								counters.increment_total_ingested_tokens(1);
+							},
+							Err(e) => {
+								error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
+							},
 						}
-						// Send IngestedTokens to the token_sender and trace the errors
-						while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await
-						{
-							match ingested_tokens_result {
-								Ok(ingested_tokens) => {
-									if let Err(e) = token_sender.send(ingested_tokens).await {
-										error!("Failed to send IngestedTokens to token_sender with error: {}", e);
-										return;
-									}
-									counters.increment_total_ingested_tokens(1);
-								},
-								Err(e) => {
-									error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
-								},
-							}
-						}
-					},
-					Err(e) => {
-						error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
-					},
-				}
-			});
+					}
+				},
+				Err(e) => {
+					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
+				},
+			}
+			counters.decrement_current_running_count(1); // Decrement when the task completes
 		});
 		self.workflow_handles.push(handle);
+		_ctx.record_progress();
 		Ok(Ok(None))
 	}
 }

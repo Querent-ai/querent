@@ -3,11 +3,11 @@ use std::{fmt, ops::Range, path::Path, pin::Pin};
 use async_stream::stream;
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine as _};
-use common::{CollectedBytes, OwnedBytes};
+use common::CollectedBytes;
 use futures::{Stream, StreamExt};
 use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWriteExt};
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 
@@ -105,7 +105,6 @@ impl Source for OpendalStorage {
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
-		let bucket_name = self._bucket.clone().unwrap_or_default();
 		let op = self.op.clone();
 		let source_id = self.source_id.clone();
 		let stream = stream! {
@@ -121,57 +120,16 @@ impl Source for OpendalStorage {
 						let key = object.path().to_string();
 						let meta = op.stat(&key).await?;
 
-						let mut storage_reader = match op.reader(&key).await {
-							Ok(reader) => reader,
-							Err(e) => {
-								yield Err(SourceError::new(
-									SourceErrorKind::Io,
-									anyhow::anyhow!("Error getting reader: {:?}", e).into()
-								));
-								continue;
-							}
-						};
-						let chunk_size = meta.content_length().min(1024 * 1024 * 10); // Use file size or 10MB, whichever is smaller
-						let mut buffer: Vec<u8> = vec![0; chunk_size as usize];
-
-						loop {
-							let bytes_read = match storage_reader.read(&mut buffer).await {
-								Ok(bytes) => bytes,
-								Err(e) => {
-									yield Err(SourceError::new(
-										SourceErrorKind::Io,
-										anyhow::anyhow!("Error reading from storage: {:?}", e).into()
-									));
-									break;
-								}
-							};
-
-							if bytes_read == 0 {
-								break;
-							}
-
-							let collected_bytes = CollectedBytes::new(
-								Some(Path::new(&key).to_path_buf()),
-								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
-								false,
-								Some(bucket_name.clone()),
-								Some(bytes_read),
-								source_id.clone(),
-							);
-
-							yield Ok(collected_bytes);
-						}
-
-						let eof_collected_bytes = CollectedBytes::new(
+						let file_size = meta.content_length() as usize;
+						let storage_reader: opendal::Reader = op.reader_with(&key).await?;
+						yield Ok(CollectedBytes::new(
 							Some(Path::new(&key).to_path_buf()),
-							None,
+							Some(Box::pin(storage_reader)),
 							true,
-							Some(bucket_name.clone()),
-							None,
+							Some(key.clone()),
+							Some(file_size),
 							source_id.clone(),
-						);
-
-						yield Ok(eof_collected_bytes);
+						));
 					}
 					Err(e) => {
 						yield Err(SourceError::new(

@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
 use azure_storage_blobs::{blob::operations::GetBlobResponse, prelude::*};
-use common::{CollectedBytes, OwnedBytes, Retryable};
+use common::{CollectedBytes, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
@@ -13,7 +13,7 @@ use futures::{
 };
 use proto::semantics::AzureCollectorConfig;
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
@@ -236,7 +236,7 @@ impl Source for AzureBlobStorage {
 				for blob_info in blobs_list.blobs() {
 					let blob_name = blob_info.name.clone();
 					let blob_path = Path::new(&blob_name);
-					let chunk_size = (blob_info.properties.content_length as usize).min(1024 * 1024 * 10); // 10MB chunk size
+					let file_size = blob_info.properties.content_length;
 					let mut output_stream =
 						container_client.blob_client(&blob_name).get().into_stream();
 
@@ -255,35 +255,13 @@ impl Source for AzureBlobStorage {
 							.into_async_read()
 							.compat();
 
-						let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
-						let mut buffer: Vec<u8> = vec![0; chunk_size];
-						loop {
-							let bytes_read = body_stream_reader.read(&mut buffer).await?;
-
-							// Break the loop if EOF is reached
-							if bytes_read == 0 {
-								break;
-							}
-							// Only process and serialize if bytes were read
-							let collected_bytes = CollectedBytes::new(
-								Some(blob_path.to_path_buf()),
-								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
-								false,
-								Some(container_client.container_name().to_string()),
-								Some(bytes_read as usize),
-								source_id.clone(),
-							);
-
-							yield Ok(collected_bytes);
-						}
-
-						// Create CollectedBytes instance
+						// Only process and serialize if bytes were read
 						let collected_bytes = CollectedBytes::new(
 							Some(blob_path.to_path_buf()),
-							None,
-							true,
+							Some(Box::pin(chunk_response_body_stream)),
+							false,
 							Some(container_client.container_name().to_string()),
-							None,
+							Some(file_size as usize),
 							source_id.clone(),
 						);
 						yield Ok(collected_bytes);

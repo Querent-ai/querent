@@ -12,12 +12,12 @@ use aws_sdk_s3::{
 	Client as S3Client,
 };
 
-use common::{CollectedBytes, OwnedBytes};
+use common::CollectedBytes;
 use futures::Stream;
 use once_cell::sync::Lazy;
 use proto::semantics::S3CollectorConfig;
 use tokio::{
-	io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
+	io::{AsyncRead, AsyncWriteExt, BufReader},
 	sync::Semaphore,
 };
 
@@ -29,7 +29,6 @@ pub struct S3Source {
 	pub region: Region,
 	pub access_key: String,
 	pub secret_key: String,
-	pub chunk_size: usize,
 	pub s3_client: Option<S3Client>,
 	pub continuation_token: Option<String>,
 	pub source_id: String,
@@ -42,14 +41,12 @@ impl S3Source {
 		let region = Region::new(static_region_str.clone());
 		let access_key = config.access_key.clone();
 		let secret_key = config.secret_key.clone();
-		let chunk_size = 1024 * 1024 * 10; // this is 10MB
 		let source_id = config.id.clone();
 		let mut s3 = S3Source {
 			bucket_name,
 			region,
 			access_key,
 			secret_key,
-			chunk_size,
 			s3_client: None,
 			continuation_token: None,
 			source_id,
@@ -206,17 +203,11 @@ impl Source for S3Source {
 		let s3_client = self.s3_client.clone().unwrap();
 		let bucket_name = self.bucket_name.clone();
 		let continuation_token_start = self.continuation_token.clone();
-		let chunk_size = self.chunk_size;
 		let source_id = self.source_id.clone();
 
-		let stream = create_poll_data_stream(
-			s3_client,
-			bucket_name,
-			continuation_token_start,
-			chunk_size,
-			source_id,
-		)
-		.await;
+		let stream =
+			create_poll_data_stream(s3_client, bucket_name, continuation_token_start, source_id)
+				.await;
 
 		Ok(Box::pin(stream))
 	}
@@ -226,7 +217,6 @@ async fn create_poll_data_stream(
 	s3_client: S3Client,
 	bucket_name: String,
 	continuation_token_start: Option<String>,
-	chunk_size: usize,
 	source_id: String,
 ) -> impl Stream<Item = SourceResult<CollectedBytes>> + Send + 'static {
 	stream! {
@@ -261,42 +251,16 @@ async fn create_poll_data_stream(
 										.into(),
 								)
 							})?;
-						let chunk_size = chunk_size.min(get_object_output.content_length as usize);
-						let mut body_stream_reader =
-							BufReader::new(get_object_output.body.into_async_read());
-						let mut buffer = vec![0; chunk_size];
-
-						loop {
-							let bytes_read = body_stream_reader.read(&mut buffer).await?;
-
-							// Break the loop if EOF is reached
-							if bytes_read == 0 {
-								break;
-							}
-							// Only process and serialize if bytes were read
-
-							let collected_bytes = CollectedBytes::new(
-								Some(Path::new(&key).to_path_buf()),
-								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
-								false,
-								Some(bucket_name.clone()),
-								Some(bytes_read),
-								source_id.clone(),
-							);
-
-							yield Ok(collected_bytes);
-						}
-						// Mark the end of file for the current object
-						let eof_collected_bytes = CollectedBytes::new(
+						let file_size = get_object_output.content_length();
+						let collected_bytes = CollectedBytes::new(
 							Some(Path::new(&key).to_path_buf()),
-							None,
+							Some(Box::pin(get_object_output.body.into_async_read())),
 							true,
 							Some(bucket_name.clone()),
-							None,
+							Some(file_size as usize),
 							source_id.clone(),
 						);
-
-						yield Ok(eof_collected_bytes);
+						yield Ok(collected_bytes);
 					}
 				}
 			}

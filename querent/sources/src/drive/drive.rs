@@ -1,7 +1,7 @@
 use async_stream::stream;
 use async_trait::async_trait;
-use common::{CollectedBytes, OwnedBytes};
-use futures::{Stream, StreamExt};
+use common::CollectedBytes;
+use futures::{Stream, StreamExt, TryStreamExt};
 use google_drive3::{
 	api::Scope,
 	hyper::{self, client::HttpConnector},
@@ -17,6 +17,7 @@ use std::{
 	pin::Pin,
 };
 use tokio::io::{AsyncRead, AsyncWriteExt};
+use tokio_util::io::StreamReader;
 use tracing::instrument;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
@@ -311,7 +312,7 @@ impl Source for GoogleDriveSource {
 					for file in files {
 						let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 						if let Some(file_id) = file.id {
-							let mut content_body =
+							let content_body =
 								download_file(&hub, &file_id).await.map_err(|err| {
 									SourceError::new(
 										SourceErrorKind::Io,
@@ -322,46 +323,15 @@ impl Source for GoogleDriveSource {
 										.into(),
 									)
 								})?;
-							while let Some(chunk) = content_body.next().await {
-								let chunk = chunk.map_err(|err| {
-									SourceError::new(
-										SourceErrorKind::Io,
-										anyhow::anyhow!(
-											"Error reading chunk from Google Drive: {:?}",
-											err
-										)
-										.into(),
-									)
-								})?;
-
-								let eof = chunk.is_empty();
-								if eof {
-									break;
-								}
-
-								let collected_bytes = CollectedBytes::new(
-									Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-									Some(OwnedBytes::new(chunk.to_vec())),
-									eof,
-									Some(folder_id.clone()),
-									Some(chunk.len()),
-									source_id.clone(),
-								);
-
-								yield Ok(collected_bytes);
-							}
-
-							// Send EOF for the file
-							let eof_collected_bytes = CollectedBytes::new(
+							let collected_bytes = CollectedBytes::new(
 								Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-								None,
+								Some(Box::pin(body_to_async_read(content_body))),
 								true,
 								Some(folder_id.clone()),
-								None,
+								Some(file.size.unwrap_or(0) as usize),
 								source_id.clone(),
 							);
-
-							yield Ok(eof_collected_bytes);
+							yield Ok(collected_bytes);
 						}
 					}
 				}
@@ -375,6 +345,12 @@ impl Source for GoogleDriveSource {
 
 		Ok(Box::pin(stream))
 	}
+}
+
+// Convert hyper::Body to AsyncRead
+fn body_to_async_read(body: Body) -> impl AsyncRead + Send + Unpin {
+	// Create a StreamReader that wraps the Body stream
+	StreamReader::new(body.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)))
 }
 
 async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_drive3::Error> {

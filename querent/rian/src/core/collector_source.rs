@@ -3,16 +3,8 @@ use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
 use sources::SourceError;
-use std::{
-	collections::{HashMap, HashSet},
-	sync::{atomic::AtomicI32, Arc},
-	time::Duration,
-};
-use tokio::{
-	sync::{mpsc, Semaphore},
-	task::JoinHandle,
-	time,
-};
+use std::{sync::Arc, time::Duration};
+use tokio::{sync::mpsc, task::JoinHandle, time};
 use tracing::{error, info};
 
 use crate::{
@@ -23,19 +15,12 @@ use crate::{
 pub struct Collector {
 	pub id: String,
 	pub event_lock: EventLock,
-	pub is_set_once: bool,
-	pub event_receiver: Option<mpsc::Receiver<CollectedBytes>>,
+	pub event_receiver: Option<mpsc::Receiver<CollectionBatch>>,
 	data_pollers: Vec<Arc<dyn sources::Source>>,
 	workflow_handles: Vec<JoinHandle<Result<(), SourceError>>>,
-	file_buffers: HashMap<String, Vec<CollectedBytes>>,
-	file_size: HashMap<String, usize>,
-	availble_files: HashSet<String>,
 	pub counters: CollectionCounter,
-	// terminate signal to kill actors in the pipeline.
 	pub terminate_sig: TerimateSignal,
-	// internal counter for exit when data pollers are finished
-	poller_finished_counter: AtomicI32,
-	file_semaphore: Arc<Semaphore>,
+	leftover_collection_batches: Vec<CollectionBatch>,
 }
 
 impl Collector {
@@ -50,14 +35,9 @@ impl Collector {
 			workflow_handles: Vec::new(),
 			terminate_sig,
 			data_pollers,
-			file_buffers: HashMap::new(),
-			file_size: HashMap::new(),
 			counters: CollectionCounter::new(),
 			event_receiver: None,
-			poller_finished_counter: AtomicI32::new(0),
-			availble_files: HashSet::new(),
-			is_set_once: false,
-			file_semaphore: Arc::new(Semaphore::new(NUMBER_FILES_IN_MEMORY)),
+			leftover_collection_batches: Vec::new(),
 		}
 	}
 }
@@ -82,71 +62,52 @@ impl Source for Collector {
 			}
 			return Ok(());
 		}
-		if self.is_set_once {
-			return Err(ActorExitStatus::Success);
-		}
 		info!("Starting data source collection for {}", self.id);
 		let (event_sender, event_receiver) = mpsc::channel(10);
 		self.event_receiver = Some(event_receiver);
 		for data_poller in &self.data_pollers {
 			let data_poller = data_poller.clone();
 			let event_sender = event_sender.clone();
+			let terminate_sig = self.terminate_sig.clone();
 
-			// Store the JoinHandle with the result in the Collector struct
 			let handle = tokio::spawn(async move {
 				let result = data_poller.poll_data().await;
 				match result {
 					Ok(mut stream) => {
-						while let Some(data) = stream.next().await {
-							match data {
-								Ok(bytes) =>
-									if let Err(e) = event_sender.send(bytes).await {
-										error!("Failed to send data: {:?}", e);
-									},
-
-								Err(e) => {
-									error!("Failed to poll data: {:?}", e);
-									if let Err(e) = event_sender
-										.send(CollectedBytes::new(
-											None,
-											None,
-											false,
-											None,
-											None,
-											"".to_string(),
-										))
-										.await
-									{
-										error!("Failed to send failure signal: {:?}", e);
-									}
-									return Err(e);
-								},
+						while terminate_sig.is_alive() {
+							let mut buffer_data: Vec<CollectedBytes> = Vec::new();
+							let mut file = String::new();
+							let mut extension = String::new();
+							// loop over stream till you get a eof, when None is received, break the loop
+							while let Some(Ok(data)) = stream.next().await {
+								if data.eof {
+									file = data
+										.file
+										.clone()
+										.unwrap_or_default()
+										.to_string_lossy()
+										.to_string();
+									extension = data.extension.clone().unwrap_or_default();
+									break;
+								}
+								buffer_data.push(data);
 							}
-						}
 
-						if let Err(e) = event_sender
-							.send(CollectedBytes::new(None, None, true, None, None, "".to_string()))
-							.await
-						{
-							error!("Failed to send EOF signal: {:?}", e);
+							// we have no data to send
+							if buffer_data.is_empty() {
+								error!("No data to send");
+								return Ok(());
+							}
+							error!("Sending data to event sender");
+							let batch = CollectionBatch::new(&file, &extension, buffer_data);
+							if let Err(e) = event_sender.send(batch).await {
+								error!("Failed to send EOF signal: {:?}", e);
+							}
 						}
 						Ok(())
 					},
 					Err(e) => {
 						error!("Failed to poll data: {:?}", e);
-						if let Err(e) = event_sender
-							.send(CollectedBytes::new(
-								None,
-								None,
-								false,
-								None,
-								None,
-								"".to_string(),
-							))
-							.await
-						{
-							error!("Failed to send failure signal: {:?}", e);
-						}
 						Err(e)
 					},
 				}
@@ -157,7 +118,6 @@ impl Source for Collector {
 		info!("Started the collector for {}", self.id);
 		let event_lock = self.event_lock.clone();
 		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
-		self.is_set_once = true;
 		Ok(())
 	}
 
@@ -172,50 +132,16 @@ impl Source for Collector {
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut counter = 0;
-		let mut is_failure = false;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
-		if self.availble_files.len() == 0 {
+		let mut files = Vec::new();
+		if self.leftover_collection_batches.is_empty() {
 			loop {
 				tokio::select! {
 					event_opt = event_receiver.recv() => {
 						if let Some(event_data) = event_opt {
-							if event_data.file.is_none() && event_data.data.is_none() {
-								is_failure = true;
-								break;
-							}
-							let size = event_data.size.unwrap_or_default();
-							if let Some(file_path) = event_data.file.clone() {
-								let file_path_str = file_path.to_string_lossy().to_string();
-								if let Some(file_size) = self.file_size.get_mut(&file_path_str) {
-									*file_size += size;
-								} else {
-									self.file_size.insert(file_path_str.clone(), size);
-								}
-							}
-
-							let file_path = event_data.file.clone().unwrap_or_default();
-							let file_path_str = file_path.to_string_lossy().to_string();
-							if event_data.eof {
-									// Acquire a permit from the semaphore before processing a new file
-									let permit = self.file_semaphore.clone().try_acquire_owned();
-									match permit {
-										Ok(_) => {
-											self.counters.increment_total_docs(1);
-											self.availble_files.insert(file_path_str.clone());
-											self.counters.increment_ext_counter(&event_data.extension.clone().unwrap_or_default());
-											// only keep the last NUMBER_FILES_IN_MEMORY files in memory
-											if self.availble_files.len() >= NUMBER_FILES_IN_MEMORY {
-												break;
-											}
-										},
-										Err(_) => {
-											error!("Failed to acquire semaphore permit");
-											return Ok(Duration::from_secs(1));
-										},
-									}
-							} else {
-								self.file_buffers.entry(file_path_str).or_default().push(event_data);
-							}
+							self.counters.increment_total_docs(1);
+							self.counters.increment_ext_counter(&event_data.ext.clone());
+							files.push(event_data);
 							counter += 1;
 						}
 						if counter >= BATCH_NUM_EVENTS_LIMIT {
@@ -229,20 +155,13 @@ impl Source for Collector {
 				}
 			}
 		}
-		if !self.availble_files.is_empty() {
-			let mut file_buffer_to_remove = Vec::new();
-			for available_file_from_buffer in self.availble_files.iter() {
-				let chunks =
-					self.file_buffers.remove(available_file_from_buffer).unwrap_or_default();
-				if chunks.is_empty() {
-					continue;
-				}
-				let events_batch = CollectionBatch::new(
-					available_file_from_buffer,
-					&chunks[0].extension.clone().unwrap_or_default(),
-					chunks,
-				);
-				let batches_error = event_streamer_messagebus.ask(events_batch).await;
+		error!("Count of files: {:?}", files.len());
+		if files.len() > NUMBER_FILES_IN_MEMORY {
+			error!("Number of files in memory: {:?}", files.len());
+		}
+		if !files.is_empty() {
+			for batch in files {
+				let batches_error = event_streamer_messagebus.ask(batch).await;
 				if batches_error.is_err() {
 					return Err(ActorExitStatus::Failure(
 						anyhow::anyhow!("Failed to send batch: {:?}", batches_error).into(),
@@ -252,15 +171,10 @@ impl Source for Collector {
 				match batches_error {
 					Ok(batch) => match batch {
 						Some(batch) => {
-							self.file_buffers
-								.entry(batch.file.to_string())
-								.or_default()
-								.extend(batch.bytes);
-							return Ok(Duration::from_secs(1));
+							error!("EventStreamer returned a batch");
+							self.leftover_collection_batches.push(batch);
 						},
-						None => {
-							file_buffer_to_remove.push(available_file_from_buffer.clone());
-						},
+						None => {},
 					},
 					Err(e) => {
 						error!("Error sending message to StorageMapper: {:?}", e);
@@ -270,33 +184,11 @@ impl Source for Collector {
 					},
 				}
 			}
-
-			for file in file_buffer_to_remove {
-				self.availble_files.remove(&file);
-				// Release the semaphore permit after processing a file
-				self.file_semaphore.add_permits(1);
-			}
 		}
-
-		if self.data_pollers.len() as usize ==
-			self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst) as usize &&
-			self.availble_files.is_empty() &&
-			self.file_buffers.is_empty()
-		{
-			return Err(ActorExitStatus::Success);
+		if self.leftover_collection_batches.is_empty() {
+			return Ok(Duration::from_secs(1));
 		}
-		if is_failure &&
-			self.data_pollers.len() as usize ==
-				self.poller_finished_counter.load(std::sync::atomic::Ordering::SeqCst)
-					as usize &&
-			self.availble_files.is_empty() &&
-			self.file_buffers.is_empty()
-		{
-			return Err(ActorExitStatus::Failure(
-				anyhow::anyhow!("Collector failed: {:?}", self.id).into(),
-			));
-		}
-		Ok(Duration::from_secs(1))
+		Ok(Duration::default())
 	}
 
 	fn name(&self) -> String {
@@ -316,6 +208,7 @@ impl Source for Collector {
 			handle.abort();
 		}
 		self.workflow_handles.clear();
+		self.terminate_sig.kill();
 		Ok(())
 	}
 }

@@ -39,7 +39,7 @@ impl BaseIngestor for TxtIngestor {
 		let mut file = String::new();
 		let mut doc_source = String::new();
 		let mut source_id = String::new();
-		for collected_bytes in all_collected_bytes.iter() {
+		for collected_bytes in all_collected_bytes {
 			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 				continue;
 			}
@@ -49,7 +49,11 @@ impl BaseIngestor for TxtIngestor {
 			if doc_source.is_empty() {
 				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 			}
-			buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+			if let Some(mut data) = collected_bytes.data {
+				let mut buf = Vec::new();
+				data.read_to_end(&mut buf).await.unwrap();
+				buffer.extend_from_slice(&buf);
+			}
 			source_id = collected_bytes.source_id.clone();
 		}
 
@@ -93,9 +97,11 @@ impl BaseIngestor for TxtIngestor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::OwnedBytes;
 	use futures::StreamExt;
-	use std::{fs::File, io::Write};
+	use std::{
+		fs::File,
+		io::{Cursor, Write},
+	};
 	use tokio::fs::read;
 
 	#[tokio::test]
@@ -107,10 +113,9 @@ mod tests {
 
 		// Read the sample .txt file
 		let bytes = read(test_file_path).await.expect("Failed to read test file");
-
 		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
-			data: Some(OwnedBytes::new(bytes)),
+			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(test_file_path.into()),
 			doc_source: Some("test_source".to_string()),
 			eof: false,

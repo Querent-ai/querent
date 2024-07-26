@@ -1,10 +1,9 @@
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf, pin::Pin};
 
-use crate::OwnedBytes;
+use tokio::io::AsyncRead;
 
-#[derive(Debug, Clone)]
 pub struct CollectedBytes {
-	pub data: Option<OwnedBytes>,
+	pub data: Option<Pin<Box<dyn AsyncRead + Send>>>,
 	pub file: Option<PathBuf>,
 	pub eof: bool,
 	pub doc_source: Option<String>,
@@ -13,10 +12,23 @@ pub struct CollectedBytes {
 	pub source_id: String,
 }
 
+impl Debug for CollectedBytes {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("CollectedBytes")
+			.field("file", &self.file)
+			.field("eof", &self.eof)
+			.field("doc_source", &self.doc_source)
+			.field("extension", &self.extension)
+			.field("size", &self.size)
+			.field("source_id", &self.source_id)
+			.finish()
+	}
+}
+
 impl CollectedBytes {
 	pub fn new(
 		file: Option<PathBuf>,
-		data: Option<OwnedBytes>,
+		data: Option<Pin<Box<dyn AsyncRead + Send>>>,
 		eof: bool,
 		doc_source: Option<String>,
 		size: Option<usize>,
@@ -28,7 +40,7 @@ impl CollectedBytes {
 		CollectedBytes { data, file, eof, doc_source, extension, size, source_id }
 	}
 
-	pub fn success(data: OwnedBytes) -> Self {
+	pub fn success(data: Pin<Box<dyn AsyncRead + Send>>) -> Self {
 		CollectedBytes::new(None, Some(data), false, None, None, "".to_string())
 	}
 
@@ -44,17 +56,10 @@ impl CollectedBytes {
 		self.extension.as_ref()
 	}
 
-	pub fn unwrap(self) -> OwnedBytes {
+	pub fn unwrap(self) -> Pin<Box<dyn AsyncRead + Send>> {
 		match self.data {
 			Some(data) => data,
 			None => panic!("Tried to unwrap an error CollectedBytes"),
-		}
-	}
-
-	pub fn unwrap_or(self, default: Vec<u8>) -> OwnedBytes {
-		match self.data {
-			Some(data) => data,
-			None => OwnedBytes::new(default),
 		}
 	}
 }
