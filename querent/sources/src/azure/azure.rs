@@ -76,7 +76,6 @@ impl AzureBlobStorage {
 		path: &Path,
 		range_opt: Option<Range<usize>>,
 	) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let name = self.blob_name(path);
 		let capacity = range_opt.as_ref().map(Range::len).unwrap_or(0);
 
@@ -120,7 +119,6 @@ async fn download_all(
 #[async_trait]
 impl Source for AzureBlobStorage {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let name = self.blob_name(path);
 		let mut output_stream = self.container_client.blob_client(name).get().into_stream();
 
@@ -138,7 +136,6 @@ impl Source for AzureBlobStorage {
 		Ok(())
 	}
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		if let Some(first_blob_result) = self
 			.container_client
 			.list_blobs()
@@ -170,7 +167,6 @@ impl Source for AzureBlobStorage {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let range = range.clone();
 		let name = self.blob_name(path);
 		let page_stream = self.container_client.blob_client(name).get().range(range).into_stream();
@@ -197,14 +193,12 @@ impl Source for AzureBlobStorage {
 
 	#[instrument(level = "debug", skip(self), fields(fetched_bytes_len))]
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let data = self.get_to_vec(path, None).await?;
 		tracing::Span::current().record("fetched_bytes_len", data.len());
 		Ok(data)
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let name = self.blob_name(path);
 		let properties_result =
 			self.container_client.blob_client(name).get_properties().into_future().await;

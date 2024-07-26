@@ -73,7 +73,6 @@ impl GoogleDriveSource {
 	}
 
 	async fn download_file(&self, file_id: &str) -> Result<Body, google_drive3::Error> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let (resp_obj, file) = self
 			.hub
 			.files()
@@ -111,7 +110,6 @@ impl GoogleDriveSource {
 	}
 
 	async fn get_file_id_by_path(&self, path: &Path) -> Result<String, SourceError> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let mut query: String = format!("'{}' in parents", self.folder_id);
 		for component in path.iter() {
 			query.push_str(&format!(" and name = '{}'", component.to_string_lossy()));
@@ -139,7 +137,6 @@ impl GoogleDriveSource {
 #[async_trait]
 impl Source for GoogleDriveSource {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -165,14 +162,12 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		self.hub.files().list().page_size(1).doit().await?;
 		Ok(())
 	}
 
 	#[instrument(level = "debug", skip(self, range), fields(range.start = range.start, range.end = range.end))]
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -205,7 +200,6 @@ impl Source for GoogleDriveSource {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -242,7 +236,6 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -264,7 +257,6 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let (_, metadata) = self
 			.hub
@@ -292,7 +284,6 @@ impl Source for GoogleDriveSource {
 		let source_id = self.source_id.clone();
 		let stream = stream! {
 			loop {
-				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 				let (_, list) =hub
 					.files()
 					.list()
@@ -354,7 +345,6 @@ fn body_to_async_read(body: Body) -> impl AsyncRead + Send + Unpin {
 }
 
 async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_drive3::Error> {
-	let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 	let (resp_obj, file) = hub
 		.files()
 		.get(file_id)

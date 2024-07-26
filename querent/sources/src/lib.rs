@@ -18,7 +18,7 @@ pub mod s3;
 use once_cell::sync::Lazy;
 use tokio::sync::Semaphore;
 
-pub static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10));
+static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10000));
 
 async fn default_copy_to_file<S: Source + ?Sized>(
 	storage: &S,

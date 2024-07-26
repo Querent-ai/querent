@@ -1,6 +1,6 @@
 use std::{io, ops::Range, path::Path, pin::Pin};
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 use async_stream::stream;
 use async_trait::async_trait;
 use aws_credential_types::Credentials;
@@ -14,14 +14,8 @@ use aws_sdk_s3::{
 
 use common::CollectedBytes;
 use futures::Stream;
-use once_cell::sync::Lazy;
 use proto::semantics::S3CollectorConfig;
-use tokio::{
-	io::{AsyncRead, AsyncWriteExt, BufReader},
-	sync::Semaphore,
-};
-
-static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10000));
+use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
 
 #[derive(Debug, Clone)]
 pub struct S3Source {
@@ -116,8 +110,6 @@ impl S3Source {
 #[async_trait]
 impl Source for S3Source {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
-
 		let _ = self
 			.s3_client
 			.as_ref()
@@ -130,7 +122,6 @@ impl Source for S3Source {
 	}
 
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
 		let get_object_output =
 			self.create_get_object_request(path, None).await.map_err(|err| {
 				SourceError::new(
@@ -145,7 +136,6 @@ impl Source for S3Source {
 	}
 
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
 		self.get_to_vec(path, Some(range.clone())).await
 	}
 
@@ -154,7 +144,6 @@ impl Source for S3Source {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
 		let get_object_output =
 			self.create_get_object_request(path, Some(range.clone())).await.map_err(|err| {
 				SourceError::new(
@@ -168,13 +157,11 @@ impl Source for S3Source {
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
 		let bytes = self.get_to_vec(path, None).await?;
 		Ok(bytes)
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await;
 		let key = path.to_string_lossy().to_string();
 		let mut parts = key.splitn(2, '/');
 		let bucket = parts.next().unwrap();
