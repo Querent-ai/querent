@@ -2,9 +2,10 @@ use crate::{Engine, EngineResult};
 use async_stream::stream;
 use async_trait::async_trait;
 use common::{EventState, EventType, SemanticKnowledgePayload};
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use proto::semantics::IngestedTokens;
 use std::pin::Pin;
+use tokio::sync::mpsc::Receiver;
 
 pub struct MockEngine;
 
@@ -12,11 +13,11 @@ pub struct MockEngine;
 impl Engine for MockEngine {
 	async fn process_ingested_tokens<'life0>(
 		&'life0 self,
-		token_stream: Pin<Box<dyn Stream<Item = IngestedTokens> + Send + 'life0>>,
+		token_stream: Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>> {
 		let stream = stream! {
 			let mut token_stream = token_stream;
-			while let Some(token) = token_stream.next().await {
+			while let Some(token) = token_stream.recv().await {
 				// create a payload
 				let payload = SemanticKnowledgePayload {
 					subject: "mock".to_string(),

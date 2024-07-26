@@ -74,7 +74,9 @@ impl LocalFolderSource {
 		&self,
 		file_path: PathBuf,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
-		let chunk_size = self.chunk_size;
+		let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
+		let file_size = file_metadata.len() as usize;
+		let chunk_size = self.chunk_size.min(file_size);
 		let source_id = self.source_id.clone();
 		let stream = stream::unfold(
 			(file_path, chunk_size, 0, false),

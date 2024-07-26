@@ -1,3 +1,7 @@
+use crate::{
+	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
+	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
+};
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
@@ -9,11 +13,6 @@ use std::{
 	fmt,
 	pin::Pin,
 	sync::{Arc, Mutex},
-};
-
-use crate::{
-	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
-	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
 };
 
 // Define the PdfIngestor
@@ -55,14 +54,12 @@ impl BaseIngestor for PdfIngestor {
 				buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
 				source_id = collected_bytes.source_id.clone();
 			}
-			let reader = std::io::Cursor::new(buffer);
-			let doc = lopdf::Document::load_from(reader);
+			let doc = lopdf::Document::load_mem(&buffer);
 			if let Err(e) = doc {
 				yield Err(IngestorError::new(IngestorErrorKind::Internal, Arc::new(e.into())));
 				return;
 			}
 			let doc = doc.unwrap();
-
 			let mut output = PagePlainTextOutput::new();
 			output_doc(&doc, &mut output).unwrap();
 			for (_, text) in output.pages {
@@ -75,7 +72,6 @@ impl BaseIngestor for PdfIngestor {
 				};
 				yield Ok(ingested_tokens);
 			}
-
 			yield Ok(IngestedTokens {
 				data: vec![],
 				file: file.clone(),

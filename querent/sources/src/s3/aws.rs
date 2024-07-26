@@ -261,7 +261,7 @@ async fn create_poll_data_stream(
 										.into(),
 								)
 							})?;
-
+						let chunk_size = chunk_size.min(get_object_output.content_length as usize);
 						let mut body_stream_reader =
 							BufReader::new(get_object_output.body.into_async_read());
 						let mut buffer = vec![0; chunk_size];
