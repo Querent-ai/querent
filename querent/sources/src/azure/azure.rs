@@ -253,7 +253,7 @@ impl Source for AzureBlobStorage {
 						let collected_bytes = CollectedBytes::new(
 							Some(blob_path.to_path_buf()),
 							Some(Box::pin(chunk_response_body_stream)),
-							false,
+							true,
 							Some(container_client.container_name().to_string()),
 							Some(file_size as usize),
 							source_id.clone(),
