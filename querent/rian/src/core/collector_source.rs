@@ -22,6 +22,7 @@ pub struct Collector {
 	pub terminate_sig: TerimateSignal,
 	leftover_collection_batches: Vec<CollectionBatch>,
 	semaphore: Arc<tokio::sync::Semaphore>,
+	source_counter_semaphore: Arc<tokio::sync::Semaphore>,
 }
 
 impl Collector {
@@ -30,6 +31,7 @@ impl Collector {
 		data_pollers: Vec<Arc<dyn sources::Source>>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
+		let total_pollers = data_pollers.len();
 		Self {
 			id: id.clone(),
 			event_lock: EventLock::default(),
@@ -39,6 +41,7 @@ impl Collector {
 			counters: CollectionCounter::new(),
 			event_receiver: None,
 			leftover_collection_batches: Vec::new(),
+			source_counter_semaphore: Arc::new(tokio::sync::Semaphore::new(total_pollers)),
 			semaphore: Arc::new(tokio::sync::Semaphore::new(NUMBER_FILES_IN_MEMORY)),
 		}
 	}
@@ -52,26 +55,19 @@ impl Source for Collector {
 		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
-		if !self.workflow_handles.is_empty() {
-			self.workflow_handles.retain(|handle| !handle.is_finished());
-			if self.workflow_handles.is_empty() {
-				return Err(ActorExitStatus::Success);
-			}
-			for handle in &self.workflow_handles {
-				if handle.is_finished() {
-					debug!("Data Source is already finished");
-					return Err(ActorExitStatus::Success);
-				}
-			}
+		if self.source_counter_semaphore.available_permits() == 0 {
 			return Ok(());
 		}
+
 		info!("Starting data source collection for {}", self.id);
 		let (event_sender, event_receiver) = mpsc::channel(NUMBER_FILES_IN_MEMORY);
 		self.event_receiver = Some(event_receiver);
 		for data_poller in &self.data_pollers {
+			let permit = self.source_counter_semaphore.clone().acquire_owned().await;
 			let data_poller = data_poller.clone();
 			let event_sender = event_sender.clone();
 			let handle = tokio::spawn(async move {
+				let _permit = permit.unwrap();
 				let result = data_poller.poll_data().await;
 				match result {
 					Ok(mut stream) => {
@@ -125,18 +121,19 @@ impl Source for Collector {
 		ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
-		if self.workflow_handles.is_empty() {
-			return Err(ActorExitStatus::Success);
-		}
 		if self.semaphore.available_permits() == 0 {
 			return Ok(Duration::default());
 		}
+		if self.source_counter_semaphore.available_permits() == self.data_pollers.len() {
+			// all data pollers have finished, exit
+			return Err(ActorExitStatus::Success);
+		}
+
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut counter = 0;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
 		let mut files = self.leftover_collection_batches.drain(..).collect::<Vec<_>>();
-		let mut is_finished = false;
 		loop {
 			tokio::select! {
 				event_opt = event_receiver.recv() => {
@@ -144,7 +141,8 @@ impl Source for Collector {
 						if event_data.file.is_empty()
 							&& event_data.ext.is_empty()
 							&& event_data.bytes.is_empty() {
-							is_finished = true;
+							// clean up the workflow handles
+							self.workflow_handles.retain(|handle| !handle.is_finished());
 							break;
 						}
 						self.counters.increment_total_docs(1);
@@ -199,9 +197,6 @@ impl Source for Collector {
 				}
 			}
 		}
-		if is_finished {
-			return Err(ActorExitStatus::Success);
-		}
 		Ok(Duration::default())
 	}
 
@@ -222,7 +217,6 @@ impl Source for Collector {
 			handle.abort();
 		}
 		self.workflow_handles.clear();
-		self.terminate_sig.kill();
 		Ok(())
 	}
 }
