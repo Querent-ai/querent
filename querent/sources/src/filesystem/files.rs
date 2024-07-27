@@ -213,12 +213,7 @@ impl Source for LocalFolderSource {
 
 // 		let mut stream = result.unwrap();
 // 		let mut count_files: HashSet<String> = HashSet::new();
-// 		let mut count = 0;
 // 		while let Some(item) = stream.next().await {
-// 			if count > 1 {
-// 				panic!("Expected only one file: {:?}", item);
-// 			}
-// 			count += 1;
 // 			match item {
 // 				Ok(collected_bytes) =>
 // 					if let Some(pathbuf) = collected_bytes.file {
@@ -231,5 +226,6 @@ impl Source for LocalFolderSource {
 // 			}
 // 		}
 // 		println!("Files are --- {:?}", count_files);
+// 		assert_eq!(count_files.len(), 1);
 // 	}
 // }
