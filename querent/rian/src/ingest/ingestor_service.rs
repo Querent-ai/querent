@@ -7,7 +7,7 @@ use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 pub struct IngestorService {
 	pub collector_id: String,
@@ -62,7 +62,7 @@ impl Actor for IngestorService {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(5)
+		QueueCapacity::Bounded(10)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -110,8 +110,8 @@ impl Handler<CollectionBatch> for IngestorService {
 		self.workflow_handles.retain(|handle| !handle.is_finished());
 
 		// Check if current running count is less than 5
-		if self.counters.get_current_running_count() >= 5 {
-			error!("Current running count is greater than 5");
+		if self.counters.get_current_running_count() >= 10 {
+			warn!("Current running count is greater than 5");
 			return Ok(Ok(Some(message)));
 		}
 

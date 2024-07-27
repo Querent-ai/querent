@@ -5,11 +5,11 @@ use futures::StreamExt;
 use sources::SourceError;
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinHandle, time};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 use crate::{
-	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
-	EMIT_BATCHES_TIMEOUT, NUMBER_FILES_IN_MEMORY,
+	ingest::ingestor_service::IngestorService, EventLock, EventStreamer, Source, SourceContext,
+	BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT, NUMBER_FILES_IN_MEMORY,
 };
 
 pub struct Collector {
@@ -46,7 +46,8 @@ impl Collector {
 impl Source for Collector {
 	async fn initialize(
 		&mut self,
-		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		if !self.workflow_handles.is_empty() {
@@ -56,7 +57,7 @@ impl Source for Collector {
 			}
 			for handle in &self.workflow_handles {
 				if handle.is_finished() {
-					error!("Data Source is already finished");
+					debug!("Data Source is already finished");
 					return Err(ActorExitStatus::Success);
 				}
 			}
@@ -68,40 +69,23 @@ impl Source for Collector {
 		for data_poller in &self.data_pollers {
 			let data_poller = data_poller.clone();
 			let event_sender = event_sender.clone();
-			let terminate_sig = self.terminate_sig.clone();
-
 			let handle = tokio::spawn(async move {
 				let result = data_poller.poll_data().await;
 				match result {
 					Ok(mut stream) => {
-						while terminate_sig.is_alive() {
-							let mut buffer_data: Vec<CollectedBytes> = Vec::new();
-							let mut file = String::new();
-							let mut extension = String::new();
-							// loop over stream till you get a eof, when None is received, break the loop
-							while let Some(Ok(data)) = stream.next().await {
-								if data.eof {
-									file = data
-										.file
-										.clone()
-										.unwrap_or_default()
-										.to_string_lossy()
-										.to_string();
-									extension = data.extension.clone().unwrap_or_default();
-									break;
+						let mut buffer_data: Vec<CollectedBytes> = Vec::new();
+						while let Some(Ok(data)) = stream.next().await {
+							let extension = data.extension.clone().unwrap_or_default();
+							let file =
+								data.file.clone().unwrap_or_default().to_string_lossy().to_string();
+							let eof = data.eof;
+							buffer_data.push(data);
+							if eof {
+								let batch = CollectionBatch::new(&file, &extension, buffer_data);
+								if let Err(e) = event_sender.send(batch).await {
+									error!("Failed to data to event sender: {:?}", e);
 								}
-								buffer_data.push(data);
-							}
-
-							// we have no data to send
-							if buffer_data.is_empty() {
-								error!("No data to send");
-								return Ok(());
-							}
-							error!("Sending data to event sender");
-							let batch = CollectionBatch::new(&file, &extension, buffer_data);
-							if let Err(e) = event_sender.send(batch).await {
-								error!("Failed to send EOF signal: {:?}", e);
+								buffer_data = Vec::new();
 							}
 						}
 						Ok(())
@@ -113,17 +97,16 @@ impl Source for Collector {
 				}
 			});
 			self.workflow_handles.push(handle);
+			ctx.record_progress();
 		}
-
 		info!("Started the collector for {}", self.id);
-		let event_lock = self.event_lock.clone();
-		ctx.send_message(event_streamer_messagebus, NewEventLock(event_lock)).await?;
 		Ok(())
 	}
 
 	async fn emit_events(
 		&mut self,
-		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_event_streamer_messagebus: &MessageBus<EventStreamer>,
+		ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
 		if self.workflow_handles.is_empty() {
@@ -155,13 +138,13 @@ impl Source for Collector {
 				}
 			}
 		}
-		error!("Count of files: {:?}", files.len());
 		if files.len() > NUMBER_FILES_IN_MEMORY {
-			error!("Number of files in memory: {:?}", files.len());
+			debug!("Number of files in memory: {:?}", files.len());
 		}
+		error!("Counter: {:?}", files.len());
 		if !files.is_empty() {
 			for batch in files {
-				let batches_error = event_streamer_messagebus.ask(batch).await;
+				let batches_error = ingestor_messagebus.ask(batch).await;
 				if batches_error.is_err() {
 					return Err(ActorExitStatus::Failure(
 						anyhow::anyhow!("Failed to send batch: {:?}", batches_error).into(),
@@ -171,13 +154,13 @@ impl Source for Collector {
 				match batches_error {
 					Ok(batch) => match batch {
 						Some(batch) => {
-							error!("EventStreamer returned a batch");
+							debug!("Ingestor returned a batch");
 							self.leftover_collection_batches.push(batch);
 						},
 						None => {},
 					},
 					Err(e) => {
-						error!("Error sending message to StorageMapper: {:?}", e);
+						error!("Error sending message to Ingestor: {:?}", e);
 						return Err(ActorExitStatus::Failure(
 							anyhow::anyhow!("Failed to send batch: {:?}", e).into(),
 						));
@@ -185,7 +168,8 @@ impl Source for Collector {
 				}
 			}
 		}
-		if self.leftover_collection_batches.is_empty() {
+		if !self.leftover_collection_batches.is_empty() {
+			debug!("batches not empty");
 			return Ok(Duration::from_secs(1));
 		}
 		Ok(Duration::default())

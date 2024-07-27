@@ -6,7 +6,7 @@ use common::RuntimeType;
 use serde_json::Value as JsonValue;
 use tokio::runtime::Handle;
 
-use crate::EventStreamer;
+use crate::{ingest::ingestor_service::IngestorService, EventStreamer};
 
 // custom sources
 pub mod engine_source;
@@ -29,6 +29,7 @@ pub trait Source: Send + 'static {
 	async fn initialize(
 		&mut self,
 		_event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ingestor_messagebus: &MessageBus<IngestorService>,
 		_ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		Ok(())
@@ -44,6 +45,7 @@ pub trait Source: Send + 'static {
 	async fn emit_events(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus>;
 
@@ -72,6 +74,7 @@ pub trait Source: Send + 'static {
 pub struct SourceActor {
 	pub source: Box<dyn Source>,
 	pub event_streamer_messagebus: MessageBus<EventStreamer>,
+	pub ingestor_messagebus: MessageBus<IngestorService>,
 }
 
 #[derive(Debug)]
@@ -98,7 +101,9 @@ impl Actor for SourceActor {
 	}
 
 	async fn initialize(&mut self, ctx: &SourceContext) -> Result<(), ActorExitStatus> {
-		self.source.initialize(&self.event_streamer_messagebus, ctx).await?;
+		self.source
+			.initialize(&self.event_streamer_messagebus, &self.ingestor_messagebus, ctx)
+			.await?;
 		self.handle(Loop, ctx).await?;
 		Ok(())
 	}
@@ -118,7 +123,10 @@ impl Handler<Loop> for SourceActor {
 	type Reply = ();
 
 	async fn handle(&mut self, _message: Loop, ctx: &SourceContext) -> Result<(), ActorExitStatus> {
-		let wait_for = self.source.emit_events(&self.event_streamer_messagebus, ctx).await?;
+		let wait_for = self
+			.source
+			.emit_events(&self.event_streamer_messagebus, &self.ingestor_messagebus, ctx)
+			.await?;
 		if wait_for.is_zero() {
 			ctx.send_self_message(Loop).await?;
 			return Ok(());

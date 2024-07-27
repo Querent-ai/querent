@@ -252,7 +252,7 @@ impl SemanticPipeline {
 			engine_id.clone(),
 			storage_mapper_mailbox,
 			indexer_messagebus,
-			ingestor_mailbox,
+			ingestor_mailbox.clone(),
 			current_timestamp,
 		);
 		let (event_streamer_messagebus, event_streamer_inbox) = ctx
@@ -274,6 +274,7 @@ impl SemanticPipeline {
 		let collector_actor = SourceActor {
 			source: Box::new(collector_source),
 			event_streamer_messagebus: event_streamer_messagebus.clone(),
+			ingestor_messagebus: ingestor_mailbox.clone(),
 		};
 		let (_, collector_handle) = ctx
 			.spawn_actor()
@@ -300,8 +301,11 @@ impl SemanticPipeline {
 		let (engine_message_bus, engine_inbox) = ctx
 			.spawn_ctx()
 			.create_messagebus::<SourceActor>("EngineSourceActor", QueueCapacity::Unbounded);
-		let engine_source_actor =
-			SourceActor { source: Box::new(engine_source), event_streamer_messagebus };
+		let engine_source_actor = SourceActor {
+			source: Box::new(engine_source),
+			event_streamer_messagebus,
+			ingestor_messagebus: ingestor_mailbox,
+		};
 		let (_, engine_handle) = ctx
 			.spawn_actor()
 			.set_messagebuses(engine_message_bus, engine_inbox)
