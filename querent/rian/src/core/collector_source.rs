@@ -2,7 +2,7 @@ use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
-use sources::SourceError;
+use sources::{SourceError, SourceErrorKind};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::mpsc, task::JoinHandle, time};
 use tracing::{debug, error, info};
@@ -91,13 +91,26 @@ impl Source for Collector {
 								buffer_data = Vec::new();
 							}
 						}
-						Ok(())
 					},
 					Err(e) => {
 						error!("Failed to poll data: {:?}", e);
-						Err(e)
+						return Err(e);
 					},
 				}
+
+				let finished_batch =
+					CollectionBatch::new(&"".to_string(), &"".to_string(), Vec::new(), None);
+				if let Err(e) = event_sender.send(finished_batch).await {
+					error!("Failed to send data to event sender: {:?}", e);
+					return Err(SourceError::new(
+						SourceErrorKind::Io,
+						Arc::new(
+							anyhow::anyhow!("Failed to send data to event sender: {:?}", e).into(),
+						),
+					));
+				}
+
+				Ok(())
 			});
 			self.workflow_handles.push(handle);
 			ctx.record_progress();
@@ -123,10 +136,17 @@ impl Source for Collector {
 		let mut counter = 0;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
 		let mut files = self.leftover_collection_batches.drain(..).collect::<Vec<_>>();
+		let mut is_finished = false;
 		loop {
 			tokio::select! {
 				event_opt = event_receiver.recv() => {
 					if let Some(event_data) = event_opt {
+						if event_data.file.is_empty()
+							&& event_data.ext.is_empty()
+							&& event_data.bytes.is_empty() {
+							is_finished = true;
+							break;
+						}
 						self.counters.increment_total_docs(1);
 						self.counters.increment_ext_counter(&event_data.ext.clone());
 						files.push(event_data);
@@ -178,6 +198,9 @@ impl Source for Collector {
 					},
 				}
 			}
+		}
+		if is_finished && self.workflow_handles.iter().all(|handle| handle.is_finished()) {
+			return Err(ActorExitStatus::Success);
 		}
 		Ok(Duration::default())
 	}
