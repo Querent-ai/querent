@@ -21,6 +21,7 @@ pub struct Collector {
 	pub counters: CollectionCounter,
 	pub terminate_sig: TerimateSignal,
 	leftover_collection_batches: Vec<CollectionBatch>,
+	semaphore: Arc<tokio::sync::Semaphore>,
 }
 
 impl Collector {
@@ -38,6 +39,7 @@ impl Collector {
 			counters: CollectionCounter::new(),
 			event_receiver: None,
 			leftover_collection_batches: Vec::new(),
+			semaphore: Arc::new(tokio::sync::Semaphore::new(NUMBER_FILES_IN_MEMORY)),
 		}
 	}
 }
@@ -64,7 +66,7 @@ impl Source for Collector {
 			return Ok(());
 		}
 		info!("Starting data source collection for {}", self.id);
-		let (event_sender, event_receiver) = mpsc::channel(10);
+		let (event_sender, event_receiver) = mpsc::channel(NUMBER_FILES_IN_MEMORY);
 		self.event_receiver = Some(event_receiver);
 		for data_poller in &self.data_pollers {
 			let data_poller = data_poller.clone();
@@ -81,9 +83,10 @@ impl Source for Collector {
 							let eof = data.eof;
 							buffer_data.push(data);
 							if eof {
-								let batch = CollectionBatch::new(&file, &extension, buffer_data);
+								let batch =
+									CollectionBatch::new(&file, &extension, buffer_data, None);
 								if let Err(e) = event_sender.send(batch).await {
-									error!("Failed to data to event sender: {:?}", e);
+									error!("Failed to send data to event sender: {:?}", e);
 								}
 								buffer_data = Vec::new();
 							}
@@ -112,38 +115,46 @@ impl Source for Collector {
 		if self.workflow_handles.is_empty() {
 			return Err(ActorExitStatus::Success);
 		}
+		if self.semaphore.available_permits() == 0 {
+			return Ok(Duration::default());
+		}
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut counter = 0;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
-		let mut files = Vec::new();
-		if self.leftover_collection_batches.is_empty() {
-			loop {
-				tokio::select! {
-					event_opt = event_receiver.recv() => {
-						if let Some(event_data) = event_opt {
-							self.counters.increment_total_docs(1);
-							self.counters.increment_ext_counter(&event_data.ext.clone());
-							files.push(event_data);
-							counter += 1;
-						}
-						if counter >= BATCH_NUM_EVENTS_LIMIT {
-							break;
-						}
-						ctx.record_progress();
+		let mut files = self.leftover_collection_batches.drain(..).collect::<Vec<_>>();
+		loop {
+			tokio::select! {
+				event_opt = event_receiver.recv() => {
+					if let Some(event_data) = event_opt {
+						self.counters.increment_total_docs(1);
+						self.counters.increment_ext_counter(&event_data.ext.clone());
+						files.push(event_data);
+						counter += 1;
 					}
-					_ = &mut deadline => {
+					if counter >= BATCH_NUM_EVENTS_LIMIT {
 						break;
 					}
+					ctx.record_progress();
+				}
+				_ = &mut deadline => {
+					break;
 				}
 			}
 		}
-		if files.len() > NUMBER_FILES_IN_MEMORY {
-			debug!("Number of files in memory: {:?}", files.len());
-		}
-		error!("Counter: {:?}", files.len());
 		if !files.is_empty() {
-			for batch in files {
+			for mut batch in files {
+				let permit = self.semaphore.clone().acquire_owned().await;
+				match permit {
+					Ok(permit) => {
+						batch._permit = Some(permit);
+					},
+					Err(e) => {
+						self.leftover_collection_batches.push(batch);
+						debug!("Failed to acquire permit: {:?}", e);
+						continue;
+					},
+				}
 				let batches_error = ingestor_messagebus.ask(batch).await;
 				if batches_error.is_err() {
 					return Err(ActorExitStatus::Failure(
@@ -154,7 +165,7 @@ impl Source for Collector {
 				match batches_error {
 					Ok(batch) => match batch {
 						Some(batch) => {
-							debug!("Ingestor returned a batch");
+							error!("Ingestor returned a batch");
 							self.leftover_collection_batches.push(batch);
 						},
 						None => {},
@@ -167,10 +178,6 @@ impl Source for Collector {
 					},
 				}
 			}
-		}
-		if !self.leftover_collection_batches.is_empty() {
-			debug!("batches not empty");
-			return Ok(Duration::from_secs(1));
 		}
 		Ok(Duration::default())
 	}

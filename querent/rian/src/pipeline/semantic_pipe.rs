@@ -209,7 +209,7 @@ impl SemanticPipeline {
 	}
 
 	async fn start_engine(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
-		let (token_sender, token_receiver) = mpsc::channel(1000);
+		let (token_sender, token_receiver) = mpsc::channel(10);
 		self.token_sender = Some(token_sender.clone());
 		let _spawn_pipeline_permit = ctx
 			.protect_future(SPAWN_PIPELINE_SEMAPHORE.acquire())

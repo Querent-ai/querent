@@ -321,6 +321,7 @@ impl Source for GoogleDriveSource {
 								Some(folder_id.clone()),
 								Some(file.size.unwrap_or(0) as usize),
 								source_id.clone(),
+								None,
 							);
 							yield Ok(collected_bytes);
 						}

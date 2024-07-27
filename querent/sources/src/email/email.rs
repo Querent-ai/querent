@@ -7,7 +7,7 @@ use std::{
 	sync::Arc,
 };
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 use async_trait::async_trait;
 
 use common::CollectedBytes;
@@ -158,23 +158,22 @@ impl Source for EmailSource {
 				anyhow::anyhow!("Error fetching email: {:?}", err).into(),
 			)
 		})?;
-		let collected_messages: Vec<CollectedBytes> = fetches
-			.iter()
-			.filter_map(|message| {
-				message.body().map(|body| {
-					let cursor = Cursor::new(body.to_vec());
-					CollectedBytes {
-						file: None,
-						eof: true,
-						doc_source: Some("email://unknown_sender".to_string()),
-						extension: Some("txt".to_string()),
-						size: Some(body.len() as usize),
-						source_id: self.source_id.clone(),
-						data: Some(Box::pin(cursor)),
-					}
-				})
-			})
-			.collect();
+		let mut collected_messages = Vec::new();
+		for fetch in fetches.into_iter() {
+			if let Some(body) = fetch.body() {
+				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+				let cursor = Cursor::new(fetch.body().to_owned().unwrap_or_default().to_vec());
+				collected_messages.push(CollectedBytes {
+					source_id: self.source_id.clone(),
+					data: Some(Box::pin(cursor)),
+					file: None,
+					eof: true,
+					doc_source: Some("email://unknown_sender".to_string()),
+					extension: Some("txt".to_string()),
+					size: Some(body.len() as usize),
+				});
+			}
+		}
 
 		let message_streams = collected_messages
 			.into_iter()

@@ -84,6 +84,7 @@ impl LocalFolderSource {
 			Some(file_name),
 			Some(file_size),
 			source_id,
+			None,
 		);
 
 		let stream = stream::once(async { Ok(collected_bytes) });

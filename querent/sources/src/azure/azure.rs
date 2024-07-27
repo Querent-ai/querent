@@ -1,4 +1,12 @@
-use std::{fmt, io, num::NonZeroU32, ops::Range, path::Path, pin::Pin, sync::Arc};
+use std::{
+	fmt,
+	io::{self},
+	num::NonZeroU32,
+	ops::Range,
+	path::Path,
+	pin::Pin,
+	sync::Arc,
+};
 
 use async_stream::stream;
 use async_trait::async_trait;
@@ -217,7 +225,6 @@ impl Source for AzureBlobStorage {
 
 		let stream = stream! {
 			while let Some(blob_result) = blob_stream.next().await {
-				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 				let blob = match blob_result {
 					Ok(blob) => blob,
 					Err(err) => {
@@ -231,35 +238,30 @@ impl Source for AzureBlobStorage {
 					let blob_name = blob_info.name.clone();
 					let blob_path = Path::new(&blob_name);
 					let file_size = blob_info.properties.content_length;
-					let mut output_stream =
-						container_client.blob_client(&blob_name).get().into_stream();
-
-					while let Some(chunk_result) = output_stream.next().await {
-						let chunk_response = match chunk_result {
-							Ok(response) => response,
-							Err(err) => {
-								yield Err(SourceError::from(AzureErrorWrapper::from(err)));
-								continue;
-							},
-						};
-
-						let chunk_response_body_stream = chunk_response
-							.data
+					let output_stream = container_client.blob_client(&blob_name).get().into_stream();
+					let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+					let async_read_stream = output_stream
+					.map(|page_res| {
+						page_res
+							.map(|page| page.data)
 							.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
-							.into_async_read()
-							.compat();
+					})
+					.try_flatten()
+					.map(|e| e.map_err(|err| FutureError::new(FutureErrorKind::Other, err)));
+					let stream_reader = StreamReader::new(async_read_stream);
+					let boxed_reader = Box::pin(stream_reader) as Pin<Box<dyn AsyncRead + Send + Unpin>>;
+					// Only process and serialize if bytes were read
+					let collected_bytes = CollectedBytes::new(
+						Some(blob_path.to_path_buf()),
+						Some(boxed_reader),
+						true,
+						Some(container_client.container_name().to_string()),
+						Some(file_size as usize),
+						source_id.clone(),
+						None,
+					);
+					yield Ok(collected_bytes);
 
-						// Only process and serialize if bytes were read
-						let collected_bytes = CollectedBytes::new(
-							Some(blob_path.to_path_buf()),
-							Some(Box::pin(chunk_response_body_stream)),
-							true,
-							Some(container_client.container_name().to_string()),
-							Some(file_size as usize),
-							source_id.clone(),
-						);
-						yield Ok(collected_bytes);
-					}
 				}
 			}
 		};

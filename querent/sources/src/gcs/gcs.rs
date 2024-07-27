@@ -124,6 +124,7 @@ impl Source for OpendalStorage {
 							Some(key.clone()),
 							Some(file_size),
 							source_id.clone(),
+							None,
 						));
 					}
 					Err(e) => {

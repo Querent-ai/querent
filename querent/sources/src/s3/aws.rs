@@ -246,6 +246,7 @@ async fn create_poll_data_stream(
 							Some(bucket_name.clone()),
 							Some(file_size as usize),
 							source_id.clone(),
+							None,
 						);
 						yield Ok(collected_bytes);
 					}

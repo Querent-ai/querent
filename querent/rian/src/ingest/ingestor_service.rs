@@ -7,7 +7,7 @@ use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 pub struct IngestorService {
 	pub collector_id: String,
@@ -106,27 +106,20 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		// Retain only unfinished handles
-		self.workflow_handles.retain(|handle| !handle.is_finished());
-
-		// Check if current running count is less than 5
-		if self.counters.get_current_running_count() >= 10 {
-			warn!("Current running count is greater than 5");
+		if message._permit.is_none() {
+			error!("Permit is None");
 			return Ok(Ok(Some(message)));
 		}
-
+		// Retain only unfinished handles
+		self.workflow_handles.retain(|handle| !handle.is_finished());
 		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
 		})?;
-
-		// Increment the counter before spawning the task
-		self.counters.increment_current_running_count(1);
 
 		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		if token_sender.is_closed() {
 			error!("Token sender is closed");
-			self.counters.decrement_current_running_count(1); // Decrement on failure
 			return Err(ActorExitStatus::Failure(anyhow::anyhow!("Token sender is closed").into()));
 		}
 		let counters = self.get_counters();
@@ -137,22 +130,20 @@ impl Handler<CollectionBatch> for IngestorService {
 		let total_mbs = (total_bytes + 1023) / 1024 / 1024; // Ceiling division for bytes to MB
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
-
 		let handle = tokio::spawn(async move {
-			let ingested_token_stream = file_ingestor.ingest(message.bytes.into()).await;
+			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
 			match ingested_token_stream {
 				Ok(mut ingested_tokens_stream) => {
 					if token_sender.is_closed() {
-						counters.decrement_current_running_count(1); // Decrement when the task completes
 						return;
 					}
+					let _ = message._permit.unwrap();
 					// Send IngestedTokens to the token_sender and trace the errors
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
 								if let Err(e) = token_sender.send(ingested_tokens).await {
 									error!("Failed to send IngestedTokens to token_sender with error: {}", e);
-									counters.decrement_current_running_count(1); // Decrement on failure
 									return;
 								}
 								counters.increment_total_ingested_tokens(1);
@@ -167,7 +158,6 @@ impl Handler<CollectionBatch> for IngestorService {
 					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
 				},
 			}
-			counters.decrement_current_running_count(1); // Decrement when the task completes
 		});
 		self.workflow_handles.push(handle);
 		_ctx.record_progress();

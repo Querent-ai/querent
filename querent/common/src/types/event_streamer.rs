@@ -119,11 +119,17 @@ pub struct CollectionBatch {
 	pub file: String,
 	pub ext: String,
 	pub bytes: Vec<CollectedBytes>,
+	pub _permit: Option<tokio::sync::OwnedSemaphorePermit>,
 }
 
 impl CollectionBatch {
-	pub fn new(file: &String, ext: &String, bytes: Vec<CollectedBytes>) -> Self {
-		Self { file: file.clone(), bytes, ext: ext.clone() }
+	pub fn new(
+		file: &String,
+		ext: &String,
+		bytes: Vec<CollectedBytes>,
+		_permit: Option<tokio::sync::OwnedSemaphorePermit>,
+	) -> Self {
+		Self { file: file.clone(), bytes, ext: ext.clone(), _permit }
 	}
 
 	pub fn file(&self) -> String {
