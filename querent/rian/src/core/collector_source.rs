@@ -199,7 +199,7 @@ impl Source for Collector {
 				}
 			}
 		}
-		if is_finished && self.workflow_handles.iter().all(|handle| handle.is_finished()) {
+		if is_finished {
 			return Err(ActorExitStatus::Success);
 		}
 		Ok(Duration::default())
