@@ -224,6 +224,7 @@ impl Source for OneDriveSource {
 							extension: extension.clone(),
 							size: Some(size as usize),
 							source_id: source_id.clone(),
+							_owned_permit: None,
 						});
 					}
 				}

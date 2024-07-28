@@ -69,25 +69,27 @@ impl LocalFolderSource {
 		&self,
 		file_path: PathBuf,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-		let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
-		let file_size = file_metadata.len() as usize;
 		let source_id = self.source_id.clone();
-		let file_name = file_path.to_string_lossy().to_string();
-		let file = fs::File::open(&file_path).await.map_err(SourceError::from)?;
-		let reader = BufReader::new(file);
+		let stream = async_stream::stream! {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+			let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
+			let file_size = file_metadata.len() as usize;
+			let file_name = file_path.to_string_lossy().to_string();
+			let file = fs::File::open(&file_path).await.map_err(SourceError::from)?;
+			let reader = BufReader::new(file);
 
-		let collected_bytes = CollectedBytes::new(
-			Some(file_path.clone()),
-			Some(Box::pin(reader)),
-			true,
-			Some(file_name),
-			Some(file_size),
-			source_id,
-			None,
-		);
+			let collected_bytes = CollectedBytes::new(
+				Some(file_path.clone()),
+				Some(Box::pin(reader)),
+				true,
+				Some(file_name),
+				Some(file_size),
+				source_id,
+				None,
+			);
 
-		let stream = stream::once(async { Ok(collected_bytes) });
+			yield Ok(collected_bytes);
+		};
 
 		Ok(Box::pin(stream))
 	}
@@ -191,42 +193,3 @@ impl Source for LocalFolderSource {
 		result
 	}
 }
-
-// #[cfg(test)]
-// mod tests {
-
-// 	use futures::StreamExt;
-// 	use std::{collections::HashSet, path::PathBuf};
-
-// 	use crate::Source;
-
-// 	use super::LocalFolderSource;
-
-// 	#[tokio::test]
-// 	async fn test_local_file_collector() {
-// 		let directory_path = "/home/querent/querent/files".to_string();
-// 		let root_path = PathBuf::from(directory_path);
-
-// 		let local_storage = LocalFolderSource::new(root_path, "FileSystem1".to_string());
-
-// 		println!("Connectivity :- {:?}", local_storage.check_connectivity().await);
-// 		let result = local_storage.poll_data().await;
-
-// 		let mut stream = result.unwrap();
-// 		let mut count_files: HashSet<String> = HashSet::new();
-// 		while let Some(item) = stream.next().await {
-// 			match item {
-// 				Ok(collected_bytes) =>
-// 					if let Some(pathbuf) = collected_bytes.file {
-// 						if let Some(str_path) = pathbuf.to_str() {
-// 							count_files.insert(str_path.to_string());
-// 						}
-// 					},
-// 				Err(_) => panic!("Expected successful data collection"),
-// 				// None => println!("Received none");
-// 			}
-// 		}
-// 		println!("Files are --- {:?}", count_files);
-// 		assert_eq!(count_files.len(), 1);
-// 	}
-// }

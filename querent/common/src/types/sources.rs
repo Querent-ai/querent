@@ -10,6 +10,7 @@ pub struct CollectedBytes {
 	pub extension: Option<String>,
 	pub size: Option<usize>,
 	pub source_id: String,
+	pub _owned_permit: Option<tokio::sync::OwnedSemaphorePermit>,
 }
 
 impl Debug for CollectedBytes {
@@ -38,7 +39,16 @@ impl CollectedBytes {
 		let extension = file
 			.as_ref()
 			.and_then(|file| file.extension().and_then(|ext| ext.to_str().map(String::from)));
-		CollectedBytes { data, file, eof, doc_source, extension, size, source_id }
+		CollectedBytes {
+			data,
+			file,
+			eof,
+			doc_source,
+			extension,
+			size,
+			source_id,
+			_owned_permit: _permit,
+		}
 	}
 
 	pub fn is_eof(&self) -> bool {

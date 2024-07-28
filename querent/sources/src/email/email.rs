@@ -171,6 +171,7 @@ impl Source for EmailSource {
 					doc_source: Some("email://unknown_sender".to_string()),
 					extension: Some("txt".to_string()),
 					size: Some(body.len() as usize),
+					_owned_permit: None,
 				});
 			}
 		}

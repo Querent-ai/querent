@@ -122,6 +122,7 @@ mod tests {
 			extension: Some("txt".to_string()),
 			size: Some(10),
 			source_id: "Filesystem".to_string(),
+			_owned_permit: None,
 		};
 
 		// Create a TxtIngestor instance
