@@ -71,7 +71,7 @@ impl Actor for EventStreamer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(20)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -80,7 +80,7 @@ impl Actor for EventStreamer {
 
 	#[inline]
 	fn yield_after_each_message(&self) -> bool {
-		false
+		true
 	}
 
 	async fn finalize(
@@ -183,11 +183,10 @@ impl Handler<CollectionBatch> for EventStreamer {
 	) -> Result<Self::Reply, ActorExitStatus> {
 		let ingestor_res = self.ingestor_messagebus.ask(message).await;
 		if ingestor_res.is_err() {
-			return Ok(Err(anyhow::anyhow!(
-				"Error sending message to IngestorService: {:?}",
-				ingestor_res
-			)
-			.into()));
+			let err = ingestor_res.err().unwrap();
+			return Ok(Err(
+				anyhow::anyhow!("Error sending message to IngestorService: {:?}", err).into()
+			));
 		}
 		let ingestor_res = ingestor_res.unwrap();
 		match ingestor_res {

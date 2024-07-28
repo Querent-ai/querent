@@ -1,11 +1,19 @@
-use std::{fmt, io, num::NonZeroU32, ops::Range, path::Path, pin::Pin, sync::Arc};
+use std::{
+	fmt,
+	io::{self},
+	num::NonZeroU32,
+	ops::Range,
+	path::Path,
+	pin::Pin,
+	sync::Arc,
+};
 
 use async_stream::stream;
 use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
 use azure_storage_blobs::{blob::operations::GetBlobResponse, prelude::*};
-use common::{CollectedBytes, OwnedBytes, Retryable};
+use common::{CollectedBytes, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
@@ -13,7 +21,7 @@ use futures::{
 };
 use proto::semantics::AzureCollectorConfig;
 use thiserror::Error;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
@@ -76,7 +84,6 @@ impl AzureBlobStorage {
 		path: &Path,
 		range_opt: Option<Range<usize>>,
 	) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let name = self.blob_name(path);
 		let capacity = range_opt.as_ref().map(Range::len).unwrap_or(0);
 
@@ -120,7 +127,6 @@ async fn download_all(
 #[async_trait]
 impl Source for AzureBlobStorage {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let name = self.blob_name(path);
 		let mut output_stream = self.container_client.blob_client(name).get().into_stream();
 
@@ -138,7 +144,6 @@ impl Source for AzureBlobStorage {
 		Ok(())
 	}
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		if let Some(first_blob_result) = self
 			.container_client
 			.list_blobs()
@@ -170,7 +175,6 @@ impl Source for AzureBlobStorage {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let range = range.clone();
 		let name = self.blob_name(path);
 		let page_stream = self.container_client.blob_client(name).get().range(range).into_stream();
@@ -197,14 +201,12 @@ impl Source for AzureBlobStorage {
 
 	#[instrument(level = "debug", skip(self), fields(fetched_bytes_len))]
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let data = self.get_to_vec(path, None).await?;
 		tracing::Span::current().record("fetched_bytes_len", data.len());
 		Ok(data)
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let name = self.blob_name(path);
 		let properties_result =
 			self.container_client.blob_client(name).get_properties().into_future().await;
@@ -223,7 +225,6 @@ impl Source for AzureBlobStorage {
 
 		let stream = stream! {
 			while let Some(blob_result) = blob_stream.next().await {
-				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 				let blob = match blob_result {
 					Ok(blob) => blob,
 					Err(err) => {
@@ -236,58 +237,31 @@ impl Source for AzureBlobStorage {
 				for blob_info in blobs_list.blobs() {
 					let blob_name = blob_info.name.clone();
 					let blob_path = Path::new(&blob_name);
-					let chunk_size = (blob_info.properties.content_length as usize).min(1024 * 1024 * 10); // 10MB chunk size
-					let mut output_stream =
-						container_client.blob_client(&blob_name).get().into_stream();
-
-					while let Some(chunk_result) = output_stream.next().await {
-						let chunk_response = match chunk_result {
-							Ok(response) => response,
-							Err(err) => {
-								yield Err(SourceError::from(AzureErrorWrapper::from(err)));
-								continue;
-							},
-						};
-
-						let chunk_response_body_stream = chunk_response
-							.data
+					let file_size = blob_info.properties.content_length;
+					let output_stream = container_client.blob_client(&blob_name).get().into_stream();
+					let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+					let async_read_stream = output_stream
+					.map(|page_res| {
+						page_res
+							.map(|page| page.data)
 							.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
-							.into_async_read()
-							.compat();
+					})
+					.try_flatten()
+					.map(|e| e.map_err(|err| FutureError::new(FutureErrorKind::Other, err)));
+					let stream_reader = StreamReader::new(async_read_stream);
+					let boxed_reader = Box::pin(stream_reader) as Pin<Box<dyn AsyncRead + Send + Unpin>>;
+					// Only process and serialize if bytes were read
+					let collected_bytes = CollectedBytes::new(
+						Some(blob_path.to_path_buf()),
+						Some(boxed_reader),
+						true,
+						Some(container_client.container_name().to_string()),
+						Some(file_size as usize),
+						source_id.clone(),
+						None,
+					);
+					yield Ok(collected_bytes);
 
-						let mut body_stream_reader = BufReader::new(chunk_response_body_stream);
-						let mut buffer: Vec<u8> = vec![0; chunk_size];
-						loop {
-							let bytes_read = body_stream_reader.read(&mut buffer).await?;
-
-							// Break the loop if EOF is reached
-							if bytes_read == 0 {
-								break;
-							}
-							// Only process and serialize if bytes were read
-							let collected_bytes = CollectedBytes::new(
-								Some(blob_path.to_path_buf()),
-								Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
-								false,
-								Some(container_client.container_name().to_string()),
-								Some(bytes_read as usize),
-								source_id.clone(),
-							);
-
-							yield Ok(collected_bytes);
-						}
-
-						// Create CollectedBytes instance
-						let collected_bytes = CollectedBytes::new(
-							Some(blob_path.to_path_buf()),
-							None,
-							true,
-							Some(container_client.container_name().to_string()),
-							None,
-							source_id.clone(),
-						);
-						yield Ok(collected_bytes);
-					}
 				}
 			}
 		};

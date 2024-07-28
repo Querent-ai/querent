@@ -1,6 +1,7 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
+use tokio::io::AsyncReadExt as _;
 use tracing::error;
 
 use futures::Stream;
@@ -44,7 +45,7 @@ impl BaseIngestor for DocxIngestor {
 				let mut file = String::new();
 				let mut doc_source = String::new();
 				let mut source_id = String::new();
-				for collected_bytes in all_collected_bytes.iter() {
+				for collected_bytes in all_collected_bytes {
 					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 						continue;
 					}
@@ -54,7 +55,11 @@ impl BaseIngestor for DocxIngestor {
 					if doc_source.is_empty() {
 						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 					}
-					buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+					if let Some(mut data) = collected_bytes.data {
+						let mut buf = Vec::new();
+						data.read_to_end(&mut buf).await.unwrap();
+						buffer.extend_from_slice(&buf);
+					}
 					source_id = collected_bytes.source_id.clone();
 				}
 				let cursor = Cursor::new(buffer);

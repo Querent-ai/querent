@@ -13,8 +13,8 @@ use tokio::{
 use tracing::{error, info};
 
 use crate::{
-	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
-	EMIT_BATCHES_TIMEOUT,
+	ingest::ingestor_service::IngestorService, EventLock, EventStreamer, NewEventLock, Source,
+	SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
 
 pub struct EngineRunner {
@@ -135,6 +135,7 @@ impl Source for EngineRunner {
 	async fn initialize(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
@@ -154,6 +155,7 @@ impl Source for EngineRunner {
 	async fn emit_events(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
 		if self.workflow_handle.is_none() {
@@ -177,13 +179,10 @@ impl Source for EngineRunner {
 							}
 							if event_type == EventType::Success {
 								is_successs = true;
-								// clear the receiver
-								self.event_receiver.take();
 								break
 							}
 							if event_type == EventType::Failure {
 								error!("EngineRunner failed");
-								self.event_receiver.take();
 								is_failure = true;
 								break
 							}
@@ -274,6 +273,7 @@ impl Source for EngineRunner {
 				info!("EngineRunner is already finished");
 			},
 		};
+		self.event_receiver.take();
 		Ok(())
 	}
 }
