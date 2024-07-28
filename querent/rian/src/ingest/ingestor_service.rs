@@ -164,7 +164,9 @@ impl Handler<CollectionBatch> for IngestorService {
 							},
 						}
 					}
-					error!("Ingested tokens stream is exhausted");
+					// Drop the permits here to release them
+					drop(_permit);
+					drop(_permit_workflow);
 				},
 				Err(e) => {
 					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
