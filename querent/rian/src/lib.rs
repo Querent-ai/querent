@@ -155,6 +155,7 @@ pub struct SignedPayload {
 	pub public_key: String,
 	pub expiry: u64,
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductRegistrationInfo {
 	pub name: String,

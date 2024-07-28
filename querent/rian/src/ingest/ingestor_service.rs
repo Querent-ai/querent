@@ -9,12 +9,15 @@ use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
 use tracing::{error, info};
 
+use crate::NUMBER_FILES_IN_MEMORY;
+
 pub struct IngestorService {
 	pub collector_id: String,
 	pub timestamp: u64,
 	pub counters: Arc<IngestorCounters>,
 	token_sender: Sender<IngestedTokens>,
 	workflow_handles: Vec<JoinHandle<()>>,
+	workflow_semaphore: Arc<tokio::sync::Semaphore>,
 }
 
 impl IngestorService {
@@ -25,6 +28,7 @@ impl IngestorService {
 			counters: Arc::new(IngestorCounters::new()),
 			token_sender,
 			workflow_handles: Vec::new(),
+			workflow_semaphore: Arc::new(tokio::sync::Semaphore::new(NUMBER_FILES_IN_MEMORY)),
 		}
 	}
 
@@ -62,7 +66,7 @@ impl Actor for IngestorService {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(10)
+		QueueCapacity::Bounded(1)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -106,17 +110,23 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if message._permit.is_none() {
-			error!("Permit is None");
+		if message._permit.is_none() || self.workflow_semaphore.available_permits() == 0 {
+			error!("Permit is None or no available permits");
 			return Ok(Ok(Some(message)));
 		}
-		// Retain only unfinished handles
+		let local_workflow_permit = match self.workflow_semaphore.clone().acquire_owned().await {
+			Ok(permit) => permit,
+			Err(e) => {
+				error!("Failed to acquire semaphore permit: {}", e);
+				return Ok(Ok(Some(message)));
+			},
+		};
+
 		self.workflow_handles.retain(|handle| !handle.is_finished());
 		let file_ingestor = resolve_ingestor_with_extension(&message.ext).await.map_err(|e| {
 			ActorExitStatus::Failure(anyhow::anyhow!("Failed to resolve ingestor: {}", e).into())
 		})?;
 
-		// Spawn a new task to ingest the file
 		let token_sender = self.get_token_sender();
 		if token_sender.is_closed() {
 			error!("Token sender is closed");
@@ -125,11 +135,11 @@ impl Handler<CollectionBatch> for IngestorService {
 		let counters = self.get_counters();
 		let collector_id = self.get_collector_id();
 
-		// Calculate and update total megabytes ingested
 		let total_bytes: usize = message.bytes.iter().map(|bytes| bytes.size.unwrap_or(0)).sum();
-		let total_mbs = (total_bytes + 1023) / 1024 / 1024; // Ceiling division for bytes to MB
+		let total_mbs = (total_bytes + 1023) / 1024 / 1024;
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
+
 		let handle = tokio::spawn(async move {
 			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
 			match ingested_token_stream {
@@ -137,8 +147,9 @@ impl Handler<CollectionBatch> for IngestorService {
 					if token_sender.is_closed() {
 						return;
 					}
-					let _ = message._permit.unwrap();
-					// Send IngestedTokens to the token_sender and trace the errors
+					let _permit = message._permit.unwrap();
+					let _permit_workflow = local_workflow_permit;
+
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
@@ -153,6 +164,7 @@ impl Handler<CollectionBatch> for IngestorService {
 							},
 						}
 					}
+					error!("Ingested tokens stream is exhausted");
 				},
 				Err(e) => {
 					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);
