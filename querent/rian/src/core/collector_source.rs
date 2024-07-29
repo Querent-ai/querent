@@ -55,7 +55,12 @@ impl Source for Collector {
 		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
-		if self.source_counter_semaphore.available_permits() == 0 {
+		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() {
+			if self.source_counter_semaphore.available_permits() == 0 &&
+				self.semaphore.available_permits() == 0
+			{
+				return Err(ActorExitStatus::Success);
+			}
 			return Ok(());
 		}
 
@@ -66,6 +71,7 @@ impl Source for Collector {
 			let permit = self.source_counter_semaphore.clone().acquire_owned().await;
 			let data_poller = data_poller.clone();
 			let event_sender = event_sender.clone();
+			let terminate_sig = self.terminate_sig.clone();
 			let handle = tokio::spawn(async move {
 				let _permit = permit.unwrap();
 				let result = data_poller.poll_data().await;
@@ -73,6 +79,9 @@ impl Source for Collector {
 					Ok(mut stream) => {
 						let mut buffer_data: Vec<CollectedBytes> = Vec::new();
 						while let Some(Ok(data)) = stream.next().await {
+							if terminate_sig.is_dead() {
+								break;
+							}
 							let extension = data.extension.clone().unwrap_or_default();
 							let file =
 								data.file.clone().unwrap_or_default().to_string_lossy().to_string();
@@ -122,11 +131,11 @@ impl Source for Collector {
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
 		if self.semaphore.available_permits() == 0 {
+			if self.source_counter_semaphore.available_permits() == self.data_pollers.len() {
+				// all data pollers have finished, exit
+				return Err(ActorExitStatus::Success);
+			}
 			return Ok(Duration::default());
-		}
-		if self.source_counter_semaphore.available_permits() == self.data_pollers.len() {
-			// all data pollers have finished, exit
-			return Err(ActorExitStatus::Success);
 		}
 
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
@@ -134,29 +143,31 @@ impl Source for Collector {
 		let mut counter = 0;
 		let event_receiver = self.event_receiver.as_mut().unwrap();
 		let mut files = self.leftover_collection_batches.drain(..).collect::<Vec<_>>();
-		loop {
-			tokio::select! {
-				event_opt = event_receiver.recv() => {
-					if let Some(event_data) = event_opt {
-						if event_data.file.is_empty()
-							&& event_data.ext.is_empty()
-							&& event_data.bytes.is_empty() {
-							// clean up the workflow handles
-							self.workflow_handles.retain(|handle| !handle.is_finished());
+		if files.is_empty() {
+			loop {
+				tokio::select! {
+					event_opt = event_receiver.recv() => {
+						if let Some(event_data) = event_opt {
+							if event_data.file.is_empty()
+								&& event_data.ext.is_empty()
+								&& event_data.bytes.is_empty() {
+								// clean up the workflow handles
+								self.workflow_handles.retain(|handle| !handle.is_finished());
+								break;
+							}
+							self.counters.increment_total_docs(1);
+							self.counters.increment_ext_counter(&event_data.ext.clone());
+							files.push(event_data);
+							counter += 1;
+						}
+						if counter >= BATCH_NUM_EVENTS_LIMIT {
 							break;
 						}
-						self.counters.increment_total_docs(1);
-						self.counters.increment_ext_counter(&event_data.ext.clone());
-						files.push(event_data);
-						counter += 1;
+						ctx.record_progress();
 					}
-					if counter >= BATCH_NUM_EVENTS_LIMIT {
+					_ = &mut deadline => {
 						break;
 					}
-					ctx.record_progress();
-				}
-				_ = &mut deadline => {
-					break;
 				}
 			}
 		}

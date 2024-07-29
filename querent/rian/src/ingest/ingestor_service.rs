@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
-use common::{CollectionBatch, IngestorCounters, RuntimeType};
+use common::{CollectionBatch, IngestorCounters, RuntimeType, TerimateSignal};
 use futures::StreamExt;
 use ingestors::resolve_ingestor_with_extension;
 use proto::semantics::IngestedTokens;
@@ -18,10 +18,16 @@ pub struct IngestorService {
 	token_sender: Sender<IngestedTokens>,
 	workflow_handles: Vec<JoinHandle<()>>,
 	workflow_semaphore: Arc<tokio::sync::Semaphore>,
+	terminate_signal: TerimateSignal,
 }
 
 impl IngestorService {
-	pub fn new(collector_id: String, token_sender: Sender<IngestedTokens>, timestamp: u64) -> Self {
+	pub fn new(
+		collector_id: String,
+		token_sender: Sender<IngestedTokens>,
+		timestamp: u64,
+		terminate_signal: TerimateSignal,
+	) -> Self {
 		Self {
 			collector_id,
 			timestamp,
@@ -29,6 +35,7 @@ impl IngestorService {
 			token_sender,
 			workflow_handles: Vec::new(),
 			workflow_semaphore: Arc::new(tokio::sync::Semaphore::new(NUMBER_FILES_IN_MEMORY)),
+			terminate_signal,
 		}
 	}
 
@@ -139,7 +146,7 @@ impl Handler<CollectionBatch> for IngestorService {
 		let total_mbs = (total_bytes + 1023) / 1024 / 1024;
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
-
+		let term_sig = self.terminate_signal.clone();
 		let handle = tokio::spawn(async move {
 			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
 			match ingested_token_stream {
@@ -151,6 +158,9 @@ impl Handler<CollectionBatch> for IngestorService {
 					let _permit_workflow = local_workflow_permit;
 
 					while let Some(ingested_tokens_result) = ingested_tokens_stream.next().await {
+						if term_sig.is_dead() {
+							break;
+						}
 						match ingested_tokens_result {
 							Ok(ingested_tokens) => {
 								if let Err(e) = token_sender.send(ingested_tokens).await {

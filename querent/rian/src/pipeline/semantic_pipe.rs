@@ -240,8 +240,12 @@ impl SemanticPipeline {
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(indexer);
 
 		// Ingestor actor
-		let ingestor_service =
-			IngestorService::new(engine_id.clone(), token_sender.clone(), current_timestamp);
+		let ingestor_service = IngestorService::new(
+			engine_id.clone(),
+			token_sender.clone(),
+			current_timestamp,
+			self.terminate_sig.clone(),
+		);
 
 		let (ingestor_mailbox, ingestor_inbox) = ctx
 			.spawn_actor()
