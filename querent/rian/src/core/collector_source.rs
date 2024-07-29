@@ -135,6 +135,7 @@ impl Source for Collector {
 				// all data pollers have finished, exit
 				return Err(ActorExitStatus::Success);
 			}
+			ctx.record_progress();
 			return Ok(Duration::default());
 		}
 
