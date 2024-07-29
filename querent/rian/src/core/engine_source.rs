@@ -38,6 +38,7 @@ impl EngineRunner {
 	) -> Self {
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 		let event_runner = engine.clone();
+		let term_sig = terminate_sig.clone();
 		info!("Starting the engine 🚀");
 		let workflow_handle = Some(tokio::spawn(async move {
 			let mut engine_op = event_runner
@@ -50,6 +51,9 @@ impl EngineRunner {
 				})
 				.expect("Expect engine to run");
 			while let Some(data) = engine_op.next().await {
+				if term_sig.is_dead() {
+					break;
+				}
 				match data {
 					Ok(event) => {
 						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {

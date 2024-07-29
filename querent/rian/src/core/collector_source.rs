@@ -71,6 +71,7 @@ impl Source for Collector {
 			let permit = self.source_counter_semaphore.clone().acquire_owned().await;
 			let data_poller = data_poller.clone();
 			let event_sender = event_sender.clone();
+			let terminate_sig = self.terminate_sig.clone();
 			let handle = tokio::spawn(async move {
 				let _permit = permit.unwrap();
 				let result = data_poller.poll_data().await;
@@ -78,6 +79,9 @@ impl Source for Collector {
 					Ok(mut stream) => {
 						let mut buffer_data: Vec<CollectedBytes> = Vec::new();
 						while let Some(Ok(data)) = stream.next().await {
+							if terminate_sig.is_dead() {
+								break;
+							}
 							let extension = data.extension.clone().unwrap_or_default();
 							let file =
 								data.file.clone().unwrap_or_default().to_string_lossy().to_string();
