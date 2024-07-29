@@ -31,50 +31,48 @@ impl BaseIngestor for ImageIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
-		let stream = {
-			stream! {
-				let mut buffer = Vec::new();
-				let mut file = String::new();
-				let mut doc_source = String::new();
-				let mut source_id = String::new();
-				for collected_bytes in all_collected_bytes {
-					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-						continue;
-					}
-					if file.is_empty() {
-						file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-					}
-					if doc_source.is_empty() {
-						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-					}
-					if let Some(mut data) = collected_bytes.data {
-						let mut buf = Vec::new();
-						data.read_to_end(&mut buf).await.unwrap();
-						buffer.extend_from_slice(&buf);
-					}
-					source_id = collected_bytes.source_id.clone();
+		let stream = stream! {
+			let mut buffer = Vec::new();
+			let mut file = String::new();
+			let mut doc_source = String::new();
+			let mut source_id = String::new();
+			for collected_bytes in all_collected_bytes {
+				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+					continue;
 				}
-				let dyn_img = image::load_from_memory(&buffer).unwrap();
-				let img = Image::from_dynamic_image(&dyn_img).unwrap();
-				let default_args = rusty_tesseract::Args::default();
-				let output = rusty_tesseract::image_to_string(&img, &default_args).unwrap();
-				let ingested_tokens = IngestedTokens {
-					data: vec![output.to_string()],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-				};
-				yield Ok(ingested_tokens);
-
-				yield Ok(IngestedTokens {
-					data: vec![],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-				})
+				if file.is_empty() {
+					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+				}
+				if doc_source.is_empty() {
+					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				if let Some(mut data) = collected_bytes.data {
+					let mut buf = Vec::new();
+					data.read_to_end(&mut buf).await.unwrap();
+					buffer.extend_from_slice(&buf);
+				}
+				source_id = collected_bytes.source_id.clone();
 			}
+			let dyn_img = image::load_from_memory(&buffer).unwrap();
+			let img = Image::from_dynamic_image(&dyn_img).unwrap();
+			let default_args = rusty_tesseract::Args::default();
+			let output = rusty_tesseract::image_to_string(&img, &default_args).unwrap();
+			let ingested_tokens = IngestedTokens {
+				data: vec![output.to_string()],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+			};
+			yield Ok(ingested_tokens);
+
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+			})
 		};
 
 		let processed_stream =
