@@ -14,10 +14,9 @@ use tracing::error;
 /// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
 	let mut unique_entries = HashSet::new();
-
 	let mut unique_payloads: Vec<_> = payloads
 		.into_iter()
-		.filter(|p| unique_entries.insert((p.subject.clone(), p.object.clone())))
+		.filter(|p| unique_entries.insert((p.subject.clone(), p.object.clone()))&& p.cosine_distance <= Some(0.2))
 		.collect();
 	unique_payloads.sort_by(|a, b| {
 		a.cosine_distance
@@ -54,7 +53,6 @@ pub async fn traverse_node(
 		.filter(semantic_knowledge::dsl::object.eq(&node))
 		.load::<(i32, String, String, String, String, String, String)>(conn)
 		.await;
-		println!("Going to run inward ------------------------{:?}", node);
 	match inward_query_result {
 		Ok(results) =>
 			for result in results {
@@ -107,7 +105,6 @@ pub async fn traverse_node(
 		},
 		}}
 	if direction == "outward" {
-		println!("Going to run outward ------------------------{:?}", node);
 	let outward_query_result = semantic_knowledge::dsl::semantic_knowledge
 		.select((
 			semantic_knowledge::dsl::id,
