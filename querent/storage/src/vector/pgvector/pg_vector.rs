@@ -428,7 +428,7 @@ impl Storage for PGVector {
 			f32,
 		)> = Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-
+		println!("Fileterd Pairs inside Traverse ---------------{:?}",filtered_pairs );
 		for (head, tail) in filtered_pairs {
 			let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
@@ -442,16 +442,19 @@ impl Storage for PGVector {
 				&mut combined_results,
 				&mut visited_pairs,
 				conn,
-				1,
+				0,
+				"inward",
 			)
 			.await?;
+		
 			traverse_node(
 				&self.pool,
 				tail.clone(),
 				&mut combined_results,
 				&mut visited_pairs,
 				conn,
-				1,
+				0,
+				"outward",
 			)
 			.await?;
 		}

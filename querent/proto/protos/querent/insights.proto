@@ -29,7 +29,7 @@ message InsightQueryResponse {
     // The ID of the insight session
     string session_id = 1;
     // Hash of the query
-    string query_hash = 2;
+    string query = 2;
     // The response from the insight
     string response = 3;
 }

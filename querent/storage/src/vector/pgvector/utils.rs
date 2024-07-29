@@ -11,24 +11,20 @@ use std::{
 };
 use tracing::error;
 
-// Function to get top k entries based on cosine distance and return unique pairs
+/// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
-	// Use a HashSet to store unique entries and filter them in one pass
 	let mut unique_entries = HashSet::new();
 
-	// Filter unique entries and sort by ascending order of cosine distance
 	let mut unique_payloads: Vec<_> = payloads
 		.into_iter()
 		.filter(|p| unique_entries.insert((p.subject.clone(), p.object.clone())))
 		.collect();
-
 	unique_payloads.sort_by(|a, b| {
 		a.cosine_distance
 			.partial_cmp(&b.cosine_distance)
 			.unwrap_or(std::cmp::Ordering::Equal)
 	});
 
-	// Get top k unique entries
 	unique_payloads.into_iter().take(k).map(|p| (p.subject, p.object)).collect()
 }
 
@@ -39,12 +35,12 @@ pub async fn traverse_node(
 	visited_pairs: &mut HashSet<(String, String)>,
 	conn: &mut AsyncPgConnection,
 	depth: usize,
+	direction: &str
 ) -> StorageResult<()> {
-	if depth > 2 {
+	if depth >= 1 {
 		return Ok(());
 	}
-
-	// Fetch inward edges
+	if direction == "inward"{
 	let inward_query_result = semantic_knowledge::dsl::semantic_knowledge
 		.select((
 			semantic_knowledge::dsl::id,
@@ -58,7 +54,7 @@ pub async fn traverse_node(
 		.filter(semantic_knowledge::dsl::object.eq(&node))
 		.load::<(i32, String, String, String, String, String, String)>(conn)
 		.await;
-
+		println!("Going to run inward ------------------------{:?}", node);
 	match inward_query_result {
 		Ok(results) =>
 			for result in results {
@@ -92,7 +88,8 @@ pub async fn traverse_node(
 								combined_results,
 								visited_pairs,
 								&mut new_conn,
-								depth + 1,
+								depth +1,
+								direction,
 							))
 							.await?;
 						},
@@ -108,9 +105,9 @@ pub async fn traverse_node(
 				source: Arc::new(anyhow::Error::from(e)),
 			});
 		},
-	}
-
-	// Fetch outward edges
+		}}
+	if direction == "outward" {
+		println!("Going to run outward ------------------------{:?}", node);
 	let outward_query_result = semantic_knowledge::dsl::semantic_knowledge
 		.select((
 			semantic_knowledge::dsl::id,
@@ -158,7 +155,8 @@ pub async fn traverse_node(
 								combined_results,
 								visited_pairs,
 								&mut new_conn,
-								depth + 1,
+								depth +1,
+								direction,
 							))
 							.await?;
 						},
@@ -174,7 +172,7 @@ pub async fn traverse_node(
 				source: Arc::new(anyhow::Error::from(e)),
 			});
 		},
-	}
+	}}
 
 	Ok(())
 }
@@ -200,7 +198,8 @@ pub fn find_intersection(
 ) -> Vec<(String, String)> {
 	let set1: HashSet<(String, String)> = pairs1.into_iter().collect();
 	let set2: HashSet<(String, String)> = pairs2.into_iter().collect();
-
+	println!("Subsequent query results 11111------------{:?}", set1);
+	println!("Subsequent query results 22222------------{:?}", set2);
 	set1.intersection(&set2).cloned().collect()
 }
 

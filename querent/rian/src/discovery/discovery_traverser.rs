@@ -2,6 +2,7 @@ use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{DocumentPayload, EventType, RuntimeType};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+use insights::{rerank_documents, unique_sentences};
 use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
@@ -131,7 +132,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		if message.query.is_empty() {
 			return Ok(Err(DiscoveryError::Internal("Discovery agent query is empty".to_string())));
 		}
-		// Reset offset if new query
 		if message.query != self.current_query {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
@@ -160,7 +160,8 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							self.current_offset += results.len() as i64;
 
 							// Filter results
-							let filtered_results = get_top_k_pairs(results.clone(), 2);
+							let filtered_results = get_top_k_pairs(results.clone(), 3);
+							println!("These are the filtered results--------------------{:?}",filtered_results);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(filtered_results.clone()).await;
 
@@ -259,8 +260,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 										log::error!("Failed to search for similar documents in traverser: {:?}", e);
 									},
 								}
-
-								// Format documents and insert discovered knowledge for final results
 								if let Ok(ref traverser_results) = final_traverser_results {
 									process_documents(
 										traverser_results,
@@ -314,6 +313,11 @@ fn process_documents(
 	session_id: String,
 	coll_id: String,
 ) {
+	let (unique_sentences, _count) = unique_sentences(&traverser_results);
+		if let Some(reranked_results) = rerank_documents(&query, unique_sentences.clone()) {
+			let top_10_reranked = reranked_results.into_iter().take(30).collect::<Vec<_>>();
+			println!("Reranked results --------------------: {:?}", top_10_reranked);
+			};
 	for document in traverser_results {
 		let tags = format!(
 			"{}, {}",
@@ -321,10 +325,10 @@ fn process_documents(
 			document.3.replace('_', " "), // object
 		);
 		let insight = proto::Insight {
-			document: document.1.to_string(),              // doc_id
-			source: document.4.clone(),                    // doc_source
-			relationship_strength: document.7.to_string(), // knowledge (score)
-			sentence: document.5.clone(),                  // sentence
+			document: document.1.to_string(),              
+			source: document.4.clone(),                    
+			relationship_strength: document.7.to_string(), 
+			sentence: document.5.clone(),                  
 			tags,
 		};
 
@@ -337,11 +341,11 @@ fn process_documents(
 			knowledge: document.7.to_string(),
 			subject: document.2.clone(),
 			object: document.3.clone(),
-			cosine_distance: None, // Assign appropriately if available
+			cosine_distance: None,
 			query_embedding: Some(current_query_embedding.clone()),
 			query: Some(query.clone()),
 			session_id: Some(session_id.clone()),
-			score: document.7, // Use the correct field for score if different
+			score: document.7,
 			collection_id: coll_id.clone(),
 		};
 

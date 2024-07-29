@@ -46,7 +46,7 @@ pub struct InsightQueryResponse {
     pub session_id: ::prost::alloc::string::String,
     /// Hash of the query
     #[prost(string, tag = "2")]
-    pub query_hash: ::prost::alloc::string::String,
+    pub query: ::prost::alloc::string::String,
     /// The response from the insight
     #[prost(string, tag = "3")]
     pub response: ::prost::alloc::string::String,
