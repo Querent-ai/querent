@@ -1,14 +1,12 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::{io::BufReader, AsyncReadExt, Stream};
+use futures::{io::BufReader, AsyncReadExt as _, Stream};
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
+use tokio::io::AsyncReadExt;
 
-use crate::{
-	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind,
-	IngestorResult,
-};
+use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
 
 // Define the TxtIngestor
 pub struct JsonIngestor {
@@ -37,7 +35,7 @@ impl BaseIngestor for JsonIngestor {
 			let mut file = String::new();
 			let mut doc_source = String::new();
 			let mut source_id = String::new();
-			for collected_bytes in all_collected_bytes.iter() {
+			for collected_bytes in all_collected_bytes {
 				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 					continue;
 				}
@@ -47,15 +45,16 @@ impl BaseIngestor for JsonIngestor {
 				if doc_source.is_empty() {
 					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 				}
-				buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+				if let Some(mut data) = collected_bytes.data {
+					let mut buf = Vec::new();
+					data.read_to_end(&mut buf).await.unwrap();
+					buffer.extend_from_slice(&buf);
+				}
 				source_id = collected_bytes.source_id.clone();
 			}
-			let reader = BufReader::new(buffer.as_slice());
+			let mut reader = BufReader::new(buffer.as_slice());
 			let mut content = String::new();
-			let mut buf_reader = BufReader::new(reader);
-			// Read the entire content of the file
-			buf_reader.read_to_string(&mut content).await
-				.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
+			reader.read_to_string(&mut content).await.expect("Failed to read file");
 			let json: serde_json::Value = serde_json::from_str(&content).expect("JSON was not well-formatted");
 			for (key, value) in json.as_object().expect("Failed to get object").iter() {
 				let res = format!("{:?}   {:?}", key, value).to_string();

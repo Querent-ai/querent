@@ -1,6 +1,6 @@
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 use async_trait::async_trait;
-use common::{CollectedBytes, OwnedBytes};
+use common::CollectedBytes;
 use futures::{stream, Stream};
 use std::{
 	io::SeekFrom,
@@ -13,19 +13,15 @@ use tokio::{
 	io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
 };
 
-use crate::REQUEST_SEMAPHORE;
-
 #[derive(Clone, Debug)]
 pub struct LocalFolderSource {
 	folder_path: PathBuf,
-	chunk_size: usize,
 	source_id: String,
 }
 
 impl LocalFolderSource {
-	pub fn new(folder_path: PathBuf, chunk_size: Option<usize>, source_id: String) -> Self {
-		let chunk_size = chunk_size.unwrap_or(1024 * 1024 * 10); // Default chunk size is 10MB
-		Self { folder_path, chunk_size, source_id }
+	pub fn new(folder_path: PathBuf, source_id: String) -> Self {
+		Self { folder_path, source_id }
 	}
 
 	fn full_path(&self, path: &Path) -> PathBuf {
@@ -65,7 +61,6 @@ impl LocalFolderSource {
 				}
 			}
 		}
-
 		let combined_stream = stream::select_all(streams);
 		Ok(Box::pin(combined_stream))
 	}
@@ -74,77 +69,27 @@ impl LocalFolderSource {
 		&self,
 		file_path: PathBuf,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
-		let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
-		let file_size = file_metadata.len() as usize;
-		let chunk_size = self.chunk_size.min(file_size);
 		let source_id = self.source_id.clone();
-		let stream = stream::unfold(
-			(file_path, chunk_size, 0, false),
-			move |(file_path, chunk_size, offset, eof_reached)| {
-				let value = source_id.clone();
-				async move {
-					let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+		let stream = async_stream::stream! {
+			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+			let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
+			let file_size = file_metadata.len() as usize;
+			let file_name = file_path.to_string_lossy().to_string();
+			let file = fs::File::open(&file_path).await.map_err(SourceError::from)?;
+			let reader = BufReader::new(file);
 
-					let value = value.clone();
-					if eof_reached {
-						return None;
-					}
-					let file = match fs::File::open(&file_path).await {
-						Ok(f) => f,
-						Err(e) => {
-							return Some((
-								Err(SourceError::from(e)),
-								(file_path, chunk_size, offset, false),
-							));
-						},
-					};
-					let mut reader = BufReader::new(file);
-					let mut buffer = vec![0; chunk_size];
-					if let Err(e) = reader.seek(SeekFrom::Start(offset as u64)).await {
-						return Some((
-							Err(SourceError::from(e)),
-							(file_path, chunk_size, offset, false),
-						));
-					}
+			let collected_bytes = CollectedBytes::new(
+				Some(file_path.clone()),
+				Some(Box::pin(reader)),
+				true,
+				Some(file_name),
+				Some(file_size),
+				source_id,
+				None,
+			);
 
-					let bytes_read = match reader.read(&mut buffer).await {
-						Ok(br) => br,
-						Err(e) => {
-							return Some((
-								Err(SourceError::from(e)),
-								(file_path, chunk_size, offset, false),
-							));
-						},
-					};
-
-					if bytes_read == 0 {
-						let eof_collected_bytes = CollectedBytes::new(
-							Some(file_path.clone()),
-							None,
-							true,
-							Some(file_path.to_string_lossy().to_string()),
-							None,
-							value.clone(),
-						);
-						return Some((
-							Ok(eof_collected_bytes),
-							(file_path, chunk_size, offset, true),
-						));
-					}
-
-					let collected_bytes = CollectedBytes::new(
-						Some(file_path.clone()),
-						Some(OwnedBytes::new(buffer[..bytes_read].to_vec())),
-						false,
-						Some(file_path.to_string_lossy().to_string()),
-						Some(bytes_read),
-						value.clone(),
-					);
-
-					Some((Ok(collected_bytes), (file_path, chunk_size, offset + bytes_read, false)))
-				}
-			},
-		);
+			yield Ok(collected_bytes);
+		};
 
 		Ok(Box::pin(stream))
 	}
@@ -153,8 +98,6 @@ impl LocalFolderSource {
 #[async_trait]
 impl Source for LocalFolderSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 		if !self.folder_path.exists() {
 			return Err(SourceError::new(
 				SourceErrorKind::NotFound,
@@ -169,8 +112,6 @@ impl Source for LocalFolderSource {
 	}
 
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 		let full_path = self.full_path(path);
 		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 		file.seek(SeekFrom::Start(range.start as u64))
@@ -188,8 +129,6 @@ impl Source for LocalFolderSource {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 		let full_path = self.full_path(path);
 		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 		file.seek(SeekFrom::Start(range.start as u64))
@@ -202,8 +141,6 @@ impl Source for LocalFolderSource {
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 		let full_path = self.full_path(path);
 		let mut file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 
@@ -214,8 +151,6 @@ impl Source for LocalFolderSource {
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 		let full_path = self.full_path(path);
 		let metadata = fs::metadata(&full_path).await.map_err(SourceError::from)?;
 
@@ -240,8 +175,6 @@ impl Source for LocalFolderSource {
 		Self: 'async_trait,
 	{
 		Box::pin(async move {
-			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 			let full_path = self.full_path(path);
 			let file = fs::File::open(&full_path).await.map_err(SourceError::from)?;
 			let mut reader = BufReader::new(file);
@@ -255,52 +188,8 @@ impl Source for LocalFolderSource {
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-
 		let result = self.poll_data_recursive(self.folder_path.clone()).await;
 
 		result
 	}
 }
-
-// #[cfg(test)]
-// mod tests {
-
-//     use std::{collections::HashSet, path::PathBuf};
-// 	use futures::StreamExt;
-
-// use crate::Source;
-
-// use super::LocalFolderSource;
-
-// 	#[tokio::test]
-// 	async fn test_local_file_collector() {
-// 		let directory_path = "/home/ansh/querent/querent/querent/storage/sql".to_string();
-// 		let root_path = PathBuf::from(directory_path);
-
-// 		let local_storage = LocalFolderSource::new(root_path, None, "FileSystem1");
-
-// 		println!("Connectivity :- {:?}", local_storage.check_connectivity().await);
-
-// 		let result = local_storage.poll_data().await;
-
-// 		let mut stream = result.unwrap();
-// 		let mut count_files: HashSet<String> = HashSet::new();
-// 		while let Some(item) = stream.next().await {
-// 			match item {
-// 				Ok(collected_bytes) => {
-
-// 					if let Some(pathbuf) = collected_bytes.file {
-// 						if let Some(str_path) = pathbuf.to_str() {
-// 							count_files.insert(str_path.to_string());
-// 						}
-// 					}
-// 				}
-// 				Err(_) => panic!("Expected successful data collection"),
-// 				// None => println!("Received none");
-// 			}
-// 		}
-// 		println!("Files are --- {:?}", count_files);
-
-// 	}
-// }

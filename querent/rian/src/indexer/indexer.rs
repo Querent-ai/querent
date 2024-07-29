@@ -5,9 +5,8 @@ use async_trait::async_trait;
 use common::{IndexerCounters, RuntimeType, SemanticKnowledgePayload};
 use storage::Storage;
 use tokio::runtime::Handle;
-use tracing::error;
 
-use crate::{ContextualTriples, EventLock, IndexerKnowledge, NewEventLock};
+use crate::{EventLock, IndexerKnowledge, NewEventLock};
 
 pub struct Indexer {
 	pub qflow_id: String,
@@ -62,7 +61,7 @@ impl Actor for Indexer {
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
-		QueueCapacity::Bounded(5)
+		QueueCapacity::Bounded(1)
 	}
 
 	fn runtime_handle(&self) -> Handle {
@@ -108,23 +107,6 @@ impl Handler<NewEventLock> for Indexer {
 }
 
 #[async_trait]
-impl Handler<ContextualTriples> for Indexer {
-	type Reply = ();
-
-	async fn handle(
-		&mut self,
-		message: ContextualTriples,
-		_ctx: &ActorContext<Self>,
-	) -> Result<(), ActorExitStatus> {
-		let _indexing_items = message.event_payload();
-		error!("indexing_items: {:?}", _indexing_items);
-		// items are document file vs triples
-		// we would want to index the triples and send to various storages
-		Err(ActorExitStatus::Success)
-	}
-}
-
-#[async_trait]
 impl Handler<IndexerKnowledge> for Indexer {
 	type Reply = ();
 
@@ -134,16 +116,9 @@ impl Handler<IndexerKnowledge> for Indexer {
 		_ctx: &ActorContext<Self>,
 	) -> Result<(), ActorExitStatus> {
 		let knowledge = _message.triples;
-		for storage in &self.index_storages {
-			storage.index_knowledge(self.qflow_id.clone(), &knowledge).await.map_err(|e| {
-				log::error!("Error indexing knowledge: {:?}", e);
-				ActorExitStatus::Failure(anyhow::anyhow!("Failed to index: {:?}", e).into())
-			})?;
-		}
-		// collect statistics
 		let mut doc_map: HashMap<String, Vec<SemanticKnowledgePayload>> = HashMap::new();
-		for (doc, _source, _image_id, payload) in knowledge {
-			doc_map.entry(doc.clone()).or_insert_with(Vec::new).push(payload);
+		for (doc, _source, _image_id, payload) in &knowledge {
+			doc_map.entry(doc.clone()).or_insert_with(Vec::new).push(payload.clone());
 		}
 		doc_map.iter().for_each(|(_doc, triples)| {
 			self.counters.increment_total_sentences_indexed(triples.len() as u64);
@@ -160,6 +135,23 @@ impl Handler<IndexerKnowledge> for Indexer {
 			self.counters.increment_total_predicates_indexed(p as u64);
 			self.counters.increment_total_objects_indexed(o as u64);
 		});
+		for storage in &self.index_storages {
+			insert_index_async(self.qflow_id.clone(), storage.clone(), knowledge.clone())?;
+		}
 		Ok(())
 	}
+}
+
+pub fn insert_index_async(
+	collection_id: String,
+	storage: Arc<dyn Storage>,
+	storage_items: Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
+) -> Result<(), ActorExitStatus> {
+	tokio::spawn(async move {
+		let upsert_result = storage.index_knowledge(collection_id, &storage_items).await;
+		if let Err(e) = upsert_result {
+			log::error!("Error inserting knowledge: {:?}", e);
+		}
+	});
+	Ok(())
 }

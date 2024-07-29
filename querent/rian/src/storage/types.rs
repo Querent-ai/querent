@@ -110,7 +110,7 @@ impl ContextualEmbeddings {
 	}
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct IndexerKnowledge {
 	pub qflow_id: String,
 	pub timestamp: u64,

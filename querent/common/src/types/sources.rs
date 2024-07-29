@@ -1,35 +1,54 @@
-use std::path::PathBuf;
+use std::{fmt::Debug, path::PathBuf, pin::Pin};
 
-use crate::OwnedBytes;
+use tokio::io::AsyncRead;
 
-#[derive(Debug, Clone)]
 pub struct CollectedBytes {
-	pub data: Option<OwnedBytes>,
+	pub data: Option<Pin<Box<dyn AsyncRead + Send>>>,
 	pub file: Option<PathBuf>,
 	pub eof: bool,
 	pub doc_source: Option<String>,
 	pub extension: Option<String>,
 	pub size: Option<usize>,
 	pub source_id: String,
+	pub _owned_permit: Option<tokio::sync::OwnedSemaphorePermit>,
+}
+
+impl Debug for CollectedBytes {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		f.debug_struct("CollectedBytes")
+			.field("file", &self.file)
+			.field("eof", &self.eof)
+			.field("doc_source", &self.doc_source)
+			.field("extension", &self.extension)
+			.field("size", &self.size)
+			.field("source_id", &self.source_id)
+			.finish()
+	}
 }
 
 impl CollectedBytes {
 	pub fn new(
 		file: Option<PathBuf>,
-		data: Option<OwnedBytes>,
+		data: Option<Pin<Box<dyn AsyncRead + Send>>>,
 		eof: bool,
 		doc_source: Option<String>,
 		size: Option<usize>,
 		source_id: String,
+		_permit: Option<tokio::sync::OwnedSemaphorePermit>,
 	) -> Self {
 		let extension = file
 			.as_ref()
 			.and_then(|file| file.extension().and_then(|ext| ext.to_str().map(String::from)));
-		CollectedBytes { data, file, eof, doc_source, extension, size, source_id }
-	}
-
-	pub fn success(data: OwnedBytes) -> Self {
-		CollectedBytes::new(None, Some(data), false, None, None, "".to_string())
+		CollectedBytes {
+			data,
+			file,
+			eof,
+			doc_source,
+			extension,
+			size,
+			source_id,
+			_owned_permit: _permit,
+		}
 	}
 
 	pub fn is_eof(&self) -> bool {
@@ -44,17 +63,10 @@ impl CollectedBytes {
 		self.extension.as_ref()
 	}
 
-	pub fn unwrap(self) -> OwnedBytes {
+	pub fn unwrap(self) -> Pin<Box<dyn AsyncRead + Send>> {
 		match self.data {
 			Some(data) => data,
 			None => panic!("Tried to unwrap an error CollectedBytes"),
-		}
-	}
-
-	pub fn unwrap_or(self, default: Vec<u8>) -> OwnedBytes {
-		match self.data {
-			Some(data) => data,
-			None => OwnedBytes::new(default),
 		}
 	}
 }

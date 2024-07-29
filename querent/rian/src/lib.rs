@@ -66,7 +66,6 @@ pub async fn create_dynamic_sources(
 				}
 				let file_source = sources::filesystem::files::LocalFolderSource::new(
 					PathBuf::from(config.root_path.clone()),
-					None,
 					config.id.clone(),
 				);
 				sources.push(Arc::new(file_source));
@@ -156,6 +155,7 @@ pub struct SignedPayload {
 	pub public_key: String,
 	pub expiry: u64,
 }
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProductRegistrationInfo {
 	pub name: String,

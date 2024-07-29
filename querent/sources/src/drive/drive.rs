@@ -1,7 +1,7 @@
 use async_stream::stream;
 use async_trait::async_trait;
-use common::{CollectedBytes, OwnedBytes};
-use futures::{Stream, StreamExt};
+use common::CollectedBytes;
+use futures::{Stream, StreamExt, TryStreamExt};
 use google_drive3::{
 	api::Scope,
 	hyper::{self, client::HttpConnector},
@@ -17,6 +17,7 @@ use std::{
 	pin::Pin,
 };
 use tokio::io::{AsyncRead, AsyncWriteExt};
+use tokio_util::io::StreamReader;
 use tracing::instrument;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
@@ -72,7 +73,6 @@ impl GoogleDriveSource {
 	}
 
 	async fn download_file(&self, file_id: &str) -> Result<Body, google_drive3::Error> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let (resp_obj, file) = self
 			.hub
 			.files()
@@ -110,7 +110,6 @@ impl GoogleDriveSource {
 	}
 
 	async fn get_file_id_by_path(&self, path: &Path) -> Result<String, SourceError> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let mut query: String = format!("'{}' in parents", self.folder_id);
 		for component in path.iter() {
 			query.push_str(&format!(" and name = '{}'", component.to_string_lossy()));
@@ -138,7 +137,6 @@ impl GoogleDriveSource {
 #[async_trait]
 impl Source for GoogleDriveSource {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -164,14 +162,12 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		self.hub.files().list().page_size(1).doit().await?;
 		Ok(())
 	}
 
 	#[instrument(level = "debug", skip(self, range), fields(range.start = range.start, range.end = range.end))]
 	async fn get_slice(&self, path: &Path, range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -204,7 +200,6 @@ impl Source for GoogleDriveSource {
 		path: &Path,
 		range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -241,7 +236,6 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn get_all(&self, path: &Path) -> SourceResult<Vec<u8>> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
 			SourceError::new(
@@ -263,7 +257,6 @@ impl Source for GoogleDriveSource {
 	}
 
 	async fn file_num_bytes(&self, path: &Path) -> SourceResult<u64> {
-		let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 		let file_id = self.get_file_id_by_path(path).await?;
 		let (_, metadata) = self
 			.hub
@@ -291,7 +284,6 @@ impl Source for GoogleDriveSource {
 		let source_id = self.source_id.clone();
 		let stream = stream! {
 			loop {
-				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 				let (_, list) =hub
 					.files()
 					.list()
@@ -311,7 +303,7 @@ impl Source for GoogleDriveSource {
 					for file in files {
 						let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 						if let Some(file_id) = file.id {
-							let mut content_body =
+							let content_body =
 								download_file(&hub, &file_id).await.map_err(|err| {
 									SourceError::new(
 										SourceErrorKind::Io,
@@ -322,46 +314,16 @@ impl Source for GoogleDriveSource {
 										.into(),
 									)
 								})?;
-							while let Some(chunk) = content_body.next().await {
-								let chunk = chunk.map_err(|err| {
-									SourceError::new(
-										SourceErrorKind::Io,
-										anyhow::anyhow!(
-											"Error reading chunk from Google Drive: {:?}",
-											err
-										)
-										.into(),
-									)
-								})?;
-
-								let eof = chunk.is_empty();
-								if eof {
-									break;
-								}
-
-								let collected_bytes = CollectedBytes::new(
-									Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-									Some(OwnedBytes::new(chunk.to_vec())),
-									eof,
-									Some(folder_id.clone()),
-									Some(chunk.len()),
-									source_id.clone(),
-								);
-
-								yield Ok(collected_bytes);
-							}
-
-							// Send EOF for the file
-							let eof_collected_bytes = CollectedBytes::new(
+							let collected_bytes = CollectedBytes::new(
 								Some(file.name.clone().map(PathBuf::from).unwrap_or_default()),
-								None,
+								Some(Box::pin(body_to_async_read(content_body))),
 								true,
 								Some(folder_id.clone()),
-								None,
+								Some(file.size.unwrap_or(0) as usize),
 								source_id.clone(),
+								None,
 							);
-
-							yield Ok(eof_collected_bytes);
+							yield Ok(collected_bytes);
 						}
 					}
 				}
@@ -377,8 +339,13 @@ impl Source for GoogleDriveSource {
 	}
 }
 
+// Convert hyper::Body to AsyncRead
+fn body_to_async_read(body: Body) -> impl AsyncRead + Send + Unpin {
+	// Create a StreamReader that wraps the Body stream
+	StreamReader::new(body.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)))
+}
+
 async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_drive3::Error> {
-	let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 	let (resp_obj, file) = hub
 		.files()
 		.get(file_id)

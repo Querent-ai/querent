@@ -39,7 +39,7 @@ impl BaseIngestor for CodeIngestor {
 			let mut file = String::new();
 			let mut doc_source = String::new();
 			let mut source_id = String::new();
-			for collected_bytes in all_collected_bytes.iter() {
+			for collected_bytes in all_collected_bytes {
 				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 					continue;
 				}
@@ -49,9 +49,13 @@ impl BaseIngestor for CodeIngestor {
 				if doc_source.is_empty() {
 					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 				}
-				buffer.extend_from_slice(collected_bytes.data.as_ref().unwrap().as_slice());
+				if let Some(mut data) = collected_bytes.data {
+					let mut buf = Vec::new();
+					data.read_to_end(&mut buf).await.unwrap();
+					buffer.extend_from_slice(&buf);
+				}
 				source_id = collected_bytes.source_id.clone();
-			}
+				}
 
 				let mut content = String::new();
 				let mut cursor = Cursor::new(buffer);
@@ -87,7 +91,6 @@ impl BaseIngestor for CodeIngestor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::OwnedBytes;
 	use futures::StreamExt;
 	use std::path::Path;
 
@@ -98,13 +101,14 @@ mod tests {
 
 		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
-			data: Some(OwnedBytes::new(bytes)),
+			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("csv.rs").to_path_buf()),
 			doc_source: Some("test_source".to_string()),
 			eof: false,
 			extension: Some("rs".to_string()),
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
 		};
 
 		// Create a TxtIngestor instance

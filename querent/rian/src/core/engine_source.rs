@@ -13,8 +13,8 @@ use tokio::{
 use tracing::{error, info};
 
 use crate::{
-	EventLock, EventStreamer, NewEventLock, Source, SourceContext, BATCH_NUM_EVENTS_LIMIT,
-	EMIT_BATCHES_TIMEOUT,
+	ingest::ingestor_service::IngestorService, EventLock, EventStreamer, NewEventLock, Source,
+	SourceContext, BATCH_NUM_EVENTS_LIMIT, EMIT_BATCHES_TIMEOUT,
 };
 
 pub struct EngineRunner {
@@ -38,6 +38,7 @@ impl EngineRunner {
 	) -> Self {
 		let (event_sender, event_receiver) = mpsc::channel(1000);
 		let event_runner = engine.clone();
+		let term_sig = terminate_sig.clone();
 		info!("Starting the engine 🚀");
 		let workflow_handle = Some(tokio::spawn(async move {
 			let mut engine_op = event_runner
@@ -50,6 +51,9 @@ impl EngineRunner {
 				})
 				.expect("Expect engine to run");
 			while let Some(data) = engine_op.next().await {
+				if term_sig.is_dead() {
+					break;
+				}
 				match data {
 					Ok(event) => {
 						if let Err(e) = event_sender.send((event.clone().event_type, event)).await {
@@ -135,6 +139,7 @@ impl Source for EngineRunner {
 	async fn initialize(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
 		if self.workflow_handle.is_some() {
@@ -154,6 +159,7 @@ impl Source for EngineRunner {
 	async fn emit_events(
 		&mut self,
 		event_streamer_messagebus: &MessageBus<EventStreamer>,
+		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
 		if self.workflow_handle.is_none() {
@@ -177,13 +183,10 @@ impl Source for EngineRunner {
 							}
 							if event_type == EventType::Success {
 								is_successs = true;
-								// clear the receiver
-								self.event_receiver.take();
 								break
 							}
 							if event_type == EventType::Failure {
 								error!("EngineRunner failed");
-								self.event_receiver.take();
 								is_failure = true;
 								break
 							}
@@ -274,6 +277,7 @@ impl Source for EngineRunner {
 				info!("EngineRunner is already finished");
 			},
 		};
+		self.event_receiver.take();
 		Ok(())
 	}
 }

@@ -23,7 +23,7 @@ pub struct VectorPayload {
 	pub score: f32,
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct SemanticKnowledgePayload {
 	pub subject: String,
 	pub subject_type: String,

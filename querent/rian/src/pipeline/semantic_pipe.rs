@@ -209,7 +209,7 @@ impl SemanticPipeline {
 	}
 
 	async fn start_engine(&mut self, ctx: &ActorContext<Self>) -> anyhow::Result<()> {
-		let (token_sender, token_receiver) = mpsc::channel(1000);
+		let (token_sender, token_receiver) = mpsc::channel(10);
 		self.token_sender = Some(token_sender.clone());
 		let _spawn_pipeline_permit = ctx
 			.protect_future(SPAWN_PIPELINE_SEMAPHORE.acquire())
@@ -240,8 +240,12 @@ impl SemanticPipeline {
 			ctx.spawn_actor().set_terminate_sig(self.terminate_sig.clone()).spawn(indexer);
 
 		// Ingestor actor
-		let ingestor_service =
-			IngestorService::new(engine_id.clone(), token_sender.clone(), current_timestamp);
+		let ingestor_service = IngestorService::new(
+			engine_id.clone(),
+			token_sender.clone(),
+			current_timestamp,
+			self.terminate_sig.clone(),
+		);
 
 		let (ingestor_mailbox, ingestor_inbox) = ctx
 			.spawn_actor()
@@ -252,7 +256,7 @@ impl SemanticPipeline {
 			engine_id.clone(),
 			storage_mapper_mailbox,
 			indexer_messagebus,
-			ingestor_mailbox,
+			ingestor_mailbox.clone(),
 			current_timestamp,
 		);
 		let (event_streamer_messagebus, event_streamer_inbox) = ctx
@@ -274,6 +278,7 @@ impl SemanticPipeline {
 		let collector_actor = SourceActor {
 			source: Box::new(collector_source),
 			event_streamer_messagebus: event_streamer_messagebus.clone(),
+			ingestor_messagebus: ingestor_mailbox.clone(),
 		};
 		let (_, collector_handle) = ctx
 			.spawn_actor()
@@ -300,8 +305,11 @@ impl SemanticPipeline {
 		let (engine_message_bus, engine_inbox) = ctx
 			.spawn_ctx()
 			.create_messagebus::<SourceActor>("EngineSourceActor", QueueCapacity::Unbounded);
-		let engine_source_actor =
-			SourceActor { source: Box::new(engine_source), event_streamer_messagebus };
+		let engine_source_actor = SourceActor {
+			source: Box::new(engine_source),
+			event_streamer_messagebus,
+			ingestor_messagebus: ingestor_mailbox,
+		};
 		let (_, engine_handle) = ctx
 			.spawn_actor()
 			.set_messagebuses(engine_message_bus, engine_inbox)

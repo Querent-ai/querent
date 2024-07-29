@@ -14,6 +14,7 @@ use std::{
 	pin::Pin,
 	sync::{Arc, Mutex},
 };
+use tokio::io::AsyncReadExt;
 
 // Define the PdfIngestor
 pub struct PdfIngestor {
@@ -43,15 +44,19 @@ impl BaseIngestor for PdfIngestor {
 			let mut file = String::new();
 			let mut doc_source = String::new();
 			let mut source_id = String::new();
-			for collected_bytes in all_collected_bytes.iter() {
+			for collected_bytes in all_collected_bytes {
 				if file.is_empty() {
 					file =
-						collected_bytes.clone().file.unwrap_or_default().to_string_lossy().to_string();
+						collected_bytes.file.clone().unwrap_or_default().to_string_lossy().to_string();
 				}
 				if doc_source.is_empty() {
 					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
 				}
-				buffer.extend_from_slice(&collected_bytes.clone().data.unwrap_or_default());
+				if let Some(mut data) = collected_bytes.data {
+					let mut buf = Vec::new();
+					data.read_to_end(&mut buf).await.unwrap();
+					buffer.extend_from_slice(&buf);
+				}
 				source_id = collected_bytes.source_id.clone();
 			}
 			let doc = lopdf::Document::load_mem(&buffer);
