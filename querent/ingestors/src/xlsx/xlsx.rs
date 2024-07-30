@@ -30,67 +30,65 @@ impl BaseIngestor for XlsxIngestor {
 		all_collected_bytes: Vec<CollectedBytes>,
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
-		let stream = {
-			stream! {
-				// collect all the bytes into a single buffer
-				let mut buffer = Vec::new();
-				let mut file = String::new();
-				let mut doc_source = String::new();
-				let mut source_id = String::new();
-				for collected_bytes in all_collected_bytes {
-					if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-						continue;
-					}
-					if file.is_empty() {
-						file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-					}
-					if doc_source.is_empty() {
-						doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-					}
-					if let Some(mut data) = collected_bytes.data {
-						let mut buf = Vec::new();
-						data.read_to_end(&mut buf).await.unwrap();
-						buffer.extend_from_slice(&buf);
-					}
-					source_id = collected_bytes.source_id.clone();
+		let stream = stream! {
+			// collect all the bytes into a single buffer
+			let mut buffer = Vec::new();
+			let mut file = String::new();
+			let mut doc_source = String::new();
+			let mut source_id = String::new();
+			for collected_bytes in all_collected_bytes {
+				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+					continue;
 				}
+				if file.is_empty() {
+					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+				}
+				if doc_source.is_empty() {
+					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				if let Some(mut data) = collected_bytes.data {
+					let mut buf = Vec::new();
+					data.read_to_end(&mut buf).await.unwrap();
+					buffer.extend_from_slice(&buf);
+				}
+				source_id = collected_bytes.source_id.clone();
+			}
 
-				match xlsx_reader::parse_xlsx(&buffer, None) {
-					Ok(parsed_xlsx) => {
-						for (_, row_map) in &parsed_xlsx {
-							let mut res = String::new();
-							let mut first = true;
-							for (inner_size, value) in row_map {
-								if first {
-									first = false;
-								} else {
-									res.push_str(", ");
-								}
-								res.push_str(&format!("{},{}", inner_size, value));
+			match xlsx_reader::parse_xlsx(&buffer, None) {
+				Ok(parsed_xlsx) => {
+					for (_, row_map) in &parsed_xlsx {
+						let mut res = String::new();
+						let mut first = true;
+						for (inner_size, value) in row_map {
+							if first {
+								first = false;
+							} else {
+								res.push_str(", ");
 							}
-
-							let ingested_tokens = IngestedTokens {
-								data: vec![res],
-								file: file.clone(),
-								doc_source: doc_source.clone(),
-								is_token_stream: false,
-								source_id: source_id.clone(),
-							};
-
-							yield Ok(ingested_tokens);
+							res.push_str(&format!("{},{}", inner_size, value));
 						}
-						yield Ok(IngestedTokens {
-							data: vec![],
+
+						let ingested_tokens = IngestedTokens {
+							data: vec![res],
 							file: file.clone(),
 							doc_source: doc_source.clone(),
 							is_token_stream: false,
 							source_id: source_id.clone(),
-						})
+						};
 
-					},
-					Err(e) => {
-						eprintln!("Error parsing xlsx - {}", e);
+						yield Ok(ingested_tokens);
 					}
+					yield Ok(IngestedTokens {
+						data: vec![],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+					})
+
+				},
+				Err(e) => {
+					eprintln!("Error parsing xlsx - {}", e);
 				}
 			}
 		};
