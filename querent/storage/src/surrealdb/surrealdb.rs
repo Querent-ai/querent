@@ -1,8 +1,8 @@
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use crate::{
-	DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
-	RIAN_API_KEY,
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError,
+	StorageErrorKind, StorageResult, RIAN_API_KEY,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -15,7 +15,6 @@ use surrealdb::{
 	sql::Thing,
 	Response, Surreal,
 };
-use crate::postgres_index::QuerySuggestion;
 const NAMESPACE: &str = "querent";
 const DATABASE: &str = "querent";
 
@@ -491,14 +490,84 @@ impl Storage for SurrealDB {
 		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 
-	/// Asynchronously fetches popular queries .
-    async fn autogenerate_queries(
-        &self,
-        _max_suggestions: i32,
-    ) -> StorageResult<Vec<QuerySuggestion>> {
-        // Return an empty vector
-        Ok(Vec::new())
-    }
+	/// Asynchronously fetches suggestions from the semantic table.
+	async fn autogenerate_queries(
+		&self,
+		max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>> {
+		let top_pairs_query = format!(
+			"SELECT subject, subject_type, object, object_type, COUNT(*) as pair_frequency
+			FROM semantic_knowledge
+			GROUP BY subject, subject_type, object, object_type
+			ORDER BY pair_frequency DESC
+			LIMIT 10"
+		);
+
+		let mut top_pairs_response: Response =
+			self.db.query(top_pairs_query).await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Query,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let top_pairs: Vec<(String, String, String, String, i64)> =
+			top_pairs_response.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let mut sentence_pair_counts = std::collections::HashMap::new();
+		for (subject, subject_type, object, object_type, _) in &top_pairs {
+			let sentences_query = format!(
+				"SELECT sentence, document_source, document_id
+				FROM semantic_knowledge
+				WHERE subject = '{}' AND object = '{}'",
+				subject, object
+			);
+
+			let mut sentences_response: Response =
+				self.db.query(sentences_query).await.map_err(|e| StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+
+			let sentences: Vec<(String, String, String)> =
+				sentences_response.take(0).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+
+			for (sentence, _document_source, document_id) in sentences {
+				let tag = format!("{} ({}), {} ({})", subject, subject_type, object, object_type);
+				sentence_pair_counts
+					.entry((sentence.clone(), document_id.clone()))
+					.or_insert_with(Vec::new)
+					.push(tag);
+			}
+		}
+
+		let mut sorted_sentences: Vec<_> = sentence_pair_counts.into_iter().collect();
+		sorted_sentences.sort_by(|a, b| b.1.len().cmp(&a.1.len()).reverse());
+
+		let mut suggestions = Vec::new();
+		for ((sentence, document_id), tags) in
+			sorted_sentences.into_iter().take(max_suggestions as usize)
+		{
+			let query = format!(
+				"In this document, several key pairs are related: '{}'. [Source Document: {}] ",
+				sentence.split('.').next().unwrap_or("").trim(),
+				document_id
+			);
+			suggestions.push(QuerySuggestion {
+				query,
+				frequency: tags.len() as i64,
+				document_source: document_id,
+				sentence: sentence.clone(),
+				tags,
+			});
+		}
+
+		Ok(suggestions)
+	}
 }
 
 pub async fn traverse_node<'a>(

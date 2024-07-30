@@ -9,8 +9,7 @@ use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, Insight
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::DiscoveredKnowledge;
-use crate::postgres_index::QuerySuggestion;
+use crate::{postgres_index::QuerySuggestion, DiscoveredKnowledge};
 
 pub const RIAN_API_KEY: &str = "RIAN_API_KEY";
 
@@ -216,10 +215,10 @@ pub trait Storage: Send + Sync + 'static {
 	async fn get_rian_api_key(&self) -> StorageResult<Option<String>>;
 
 	/// Asynchronously fetches popular queries .
-    async fn autogenerate_queries(
-        &self,
-        max_suggestions: i32,
-    ) -> StorageResult<Vec<QuerySuggestion>>;
+	async fn autogenerate_queries(
+		&self,
+		max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>>;
 }
 
 impl Debug for dyn Storage {

@@ -1,13 +1,21 @@
-use crate::{utils::traverse_node, DieselError};
+use crate::{
+	postgres_index::QuerySuggestion, semantic_knowledge, utils::traverse_node, ActualDbPool,
+	DieselError, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use diesel::{ExpressionMethods, QueryDsl};
+use deadpool::Runtime;
+use diesel::{
+	sql_types::BigInt, table, BoolExpressionMethods, ExpressionMethods, Insertable, QueryDsl,
+	Queryable, QueryableByName, Selectable,
+};
 use diesel_async::{
 	pg::AsyncPgConnection,
 	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
 	scoped_futures::ScopedFutureExt,
-	RunQueryDsl,
+	AsyncConnection, RunQueryDsl,
 };
+use pgvector::{Vector, VectorExpressionMethods};
 use proto::{
 	discovery::DiscoverySessionRequest,
 	insights::InsightAnalystRequest,
@@ -15,17 +23,6 @@ use proto::{
 };
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
-use crate::postgres_index::QuerySuggestion;
-use crate::{
-	semantic_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult,
-	POOL_TIMEOUT,
-};
-use pgvector::Vector;
-
-use deadpool::Runtime;
-use diesel::{table, Insertable, Queryable, QueryableByName, Selectable};
-use diesel_async::AsyncConnection;
-use pgvector::VectorExpressionMethods;
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = embedded_knowledge)]
@@ -124,16 +121,104 @@ impl Storage for PGVector {
 		Ok(())
 	}
 
+	/// Asynchronously fetches suggestions from semantic table.
+	async fn autogenerate_queries(
+		&self,
+		max_suggestions: i32,
+	) -> Result<Vec<QuerySuggestion>, StorageError> {
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 
-	/// Asynchronously fetches popular queries .
-    async fn autogenerate_queries(
-        &self,
-        _max_suggestions: i32,
-    ) -> StorageResult<Vec<QuerySuggestion>> {
-        // Return an empty vector
-        Ok(Vec::new())
-    }
+		let top_pairs_query_result = semantic_knowledge::dsl::semantic_knowledge
+			.select((
+				semantic_knowledge::dsl::subject,
+				semantic_knowledge::dsl::subject_type,
+				semantic_knowledge::dsl::object,
+				semantic_knowledge::dsl::object_type,
+				diesel::dsl::sql::<BigInt>("COUNT(*) as pair_frequency"),
+			))
+			.group_by((
+				semantic_knowledge::dsl::subject,
+				semantic_knowledge::dsl::subject_type,
+				semantic_knowledge::dsl::object,
+				semantic_knowledge::dsl::object_type,
+			))
+			.order_by(diesel::dsl::sql::<BigInt>("pair_frequency").desc())
+			.limit(10)
+			.load::<(String, String, String, String, i64)>(&mut conn)
+			.await;
 
+		let top_pairs = match top_pairs_query_result {
+			Ok(pairs) => pairs,
+			Err(e) => {
+				error!("Error fetching top pairs: {:?}", e);
+				return Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				});
+			},
+		};
+
+		let mut sentence_pair_counts = std::collections::HashMap::new();
+		for (subject, subject_type, object, object_type, _) in &top_pairs {
+			let sentences_query_result = semantic_knowledge::dsl::semantic_knowledge
+				.select((
+					semantic_knowledge::dsl::sentence,
+					semantic_knowledge::dsl::document_source,
+					semantic_knowledge::dsl::document_id,
+				))
+				.filter(
+					semantic_knowledge::dsl::subject
+						.eq(subject)
+						.and(semantic_knowledge::dsl::object.eq(object)),
+				)
+				.load::<(String, String, String)>(&mut conn)
+				.await;
+
+			match sentences_query_result {
+				Ok(sentences) =>
+					for (sentence, _document_source, document_id) in sentences {
+						let tag =
+							format!("{} ({}), {} ({})", subject, subject_type, object, object_type);
+						sentence_pair_counts
+							.entry((sentence.clone(), document_id.clone()))
+							.or_insert_with(Vec::new)
+							.push(tag);
+					},
+				Err(e) => {
+					error!("Error fetching sentences: {:?}", e);
+					return Err(StorageError {
+						kind: StorageErrorKind::Query,
+						source: Arc::new(anyhow::Error::from(e)),
+					});
+				},
+			}
+		}
+		let mut sorted_sentences: Vec<_> = sentence_pair_counts.into_iter().collect();
+		sorted_sentences.sort_by(|a, b| b.1.cmp(&a.1));
+
+		let mut suggestions = Vec::new();
+		for ((sentence, document_id), tags) in
+			sorted_sentences.into_iter().take(max_suggestions as usize)
+		{
+			let query = format!(
+				"In this document, several key pairs are related: '{}'. [Source Document: {}]",
+				sentence.split('.').next().unwrap_or("").trim(),
+				document_id
+			);
+			suggestions.push(QuerySuggestion {
+				query,
+				frequency: tags.len() as i64,
+				document_source: document_id,
+				sentence: sentence.clone(),
+				tags,
+			});
+		}
+
+		Ok(suggestions)
+	}
 
 	async fn insert_vector(
 		&self,
@@ -428,7 +513,7 @@ impl Storage for PGVector {
 			f32,
 		)> = Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-		println!("Fileterd Pairs inside Traverse ---------------{:?}",filtered_pairs );
+		println!("Fileterd Pairs inside Traverse ---------------{:?}", filtered_pairs);
 		for (head, tail) in filtered_pairs {
 			let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
@@ -446,7 +531,7 @@ impl Storage for PGVector {
 				"inward",
 			)
 			.await?;
-		
+
 			traverse_node(
 				&self.pool,
 				tail.clone(),
@@ -588,8 +673,6 @@ impl Storage for PGVector {
 	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
 		Ok(None)
 	}
-
-	
 }
 
 table! {
@@ -795,7 +878,15 @@ table! {
 // 		// Ensure that the connectivity check is successful
 // 		// Works when there is a database running on the test database URL
 // 		//assert!(_connectivity_result.is_ok());
-
+// let auto_results = storage.autogenerate_queries(5).await;
+// match auto_results {
+// 	Ok(results) => {
+// 		println!("These are the results ------------------{:?}", results);
+// 	}
+// 	Err(e) => {
+// 		println!("Error occurred ------------------{:?}", e);
+// 	}
+// }
 // 		// You can add more test cases or assertions based on your specific requirements
 // 	}
 // }

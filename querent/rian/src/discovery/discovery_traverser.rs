@@ -2,15 +2,17 @@ use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{DocumentPayload, EventType, RuntimeType};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-use insights::{rerank_documents, unique_sentences};
 use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 use storage::{
 	utils::{extract_unique_pairs, find_intersection, get_top_k_pairs},
-	Storage,
+	QuerySuggestion, Storage,
 };
 use tokio::runtime::Handle;
 
@@ -129,9 +131,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 				"Discovery agent embedding model is not initialized".to_string(),
 			)));
 		}
-		if message.query.is_empty() {
-			return Ok(Err(DiscoveryError::Internal("Discovery agent query is empty".to_string())));
-		}
+
 		if message.query != self.current_query {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
@@ -145,6 +145,25 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		for (event_type, storages) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storages.iter() {
+					if message.query.is_empty() {
+						let auto_suggestions = match storage.autogenerate_queries(10).await {
+							Ok(suggestions) => suggestions,
+							Err(e) => {
+								tracing::info!("Failed to auto-generate queries: {:?}", e);
+								vec![]
+							},
+						};
+
+						process_auto_generated_suggestions(&auto_suggestions, &mut insights);
+
+						let response = DiscoveryResponse {
+							session_id: message.session_id,
+							query: "Auto-generated suggestions".to_string(),
+							insights,
+						};
+
+						return Ok(Ok(response));
+					}
 					let search_results = storage
 						.similarity_search_l2(
 							message.session_id.clone(),
@@ -159,13 +178,14 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 						Ok(results) => {
 							self.current_offset += results.len() as i64;
 
-							// Filter results
 							let filtered_results = get_top_k_pairs(results.clone(), 3);
-							println!("These are the filtered results--------------------{:?}",filtered_results);
+							println!(
+								"These are the filtered results--------------------{:?}",
+								filtered_results
+							);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(filtered_results.clone()).await;
 
-							// Check and populate previous_query_results if empty
 							if self.previous_query_results.is_empty() ||
 								message.session_id != self.previous_session_id
 							{
@@ -313,11 +333,6 @@ fn process_documents(
 	session_id: String,
 	coll_id: String,
 ) {
-	let (unique_sentences, _count) = unique_sentences(&traverser_results);
-		if let Some(reranked_results) = rerank_documents(&query, unique_sentences.clone()) {
-			let top_10_reranked = reranked_results.into_iter().take(30).collect::<Vec<_>>();
-			println!("Reranked results --------------------: {:?}", top_10_reranked);
-			};
 	for document in traverser_results {
 		let tags = format!(
 			"{}, {}",
@@ -325,10 +340,10 @@ fn process_documents(
 			document.3.replace('_', " "), // object
 		);
 		let insight = proto::Insight {
-			document: document.1.to_string(),              
-			source: document.4.clone(),                    
-			relationship_strength: document.7.to_string(), 
-			sentence: document.5.clone(),                  
+			document: document.1.to_string(),
+			source: document.4.clone(),
+			relationship_strength: document.7.to_string(),
+			sentence: document.5.clone(),
 			tags,
 		};
 
@@ -350,5 +365,24 @@ fn process_documents(
 		};
 
 		document_payloads.push(document_payload);
+	}
+}
+fn process_auto_generated_suggestions(
+	suggestions: &Vec<QuerySuggestion>,
+	insights: &mut Vec<proto::Insight>,
+) {
+	for suggestion in suggestions {
+		let unique_tags: HashSet<String> = suggestion.tags.iter().cloned().collect();
+		let tags: Vec<String> = unique_tags.into_iter().collect();
+
+		let insight = proto::Insight {
+			document: suggestion.document_source.clone(),
+			source: suggestion.document_source.clone(),
+			relationship_strength: suggestion.frequency.to_string(),
+			sentence: suggestion.sentence.clone(),
+			tags: tags.join(", "),
+		};
+
+		insights.push(insight);
 	}
 }

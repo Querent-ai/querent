@@ -95,8 +95,7 @@ impl Handler<InsightQuery> for InsightAgent {
 		let runner = self.runner.clone();
 		let agent_id = self.agent_id.clone();
 		// Create a JSON object with session_id and query
-		let data_to_send =
-			serde_json::json!({ "session_id": message.session_id, "query": message.query });
+		let data_to_send = serde_json::json!({ "session_id": message.session_id, "query": message.query, "prompt": message.prompt });
 
 		// Directly use the JSON object as InsightInput
 		let insight_input = InsightInput { data: data_to_send };

@@ -36,6 +36,9 @@ pub struct InsightQuery {
     /// The query to be used for the insight
     #[prost(string, tag = "2")]
     pub query: ::prost::alloc::string::String,
+    /// Optional prompt
+    #[prost(string, optional, tag = "3")]
+    pub prompt: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]

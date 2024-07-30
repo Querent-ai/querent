@@ -1,5 +1,10 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
+use crate::{
+	postgres_index::QuerySuggestion, storage::Storage, DiscoveredKnowledge, StorageError,
+	StorageErrorKind, StorageResult,
+};
+use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use milvus::{
 	client::{Client as MilvusClient, ConsistencyLevel},
@@ -10,9 +15,6 @@ use proto::{
 	semantics::{MilvusConfig, SemanticPipelineRequest},
 	DiscoverySessionRequest, InsightAnalystRequest,
 };
-use crate::postgres_index::QuerySuggestion;
-use crate::{storage::Storage, DiscoveredKnowledge, StorageError, StorageErrorKind, StorageResult};
-use async_trait::async_trait;
 
 pub struct MilvusStorage {
 	pub client: Arc<MilvusClient>,
@@ -351,13 +353,13 @@ impl Storage for MilvusStorage {
 	}
 
 	/// Asynchronously fetches popular queries .
-    async fn autogenerate_queries(
-        &self,
-        _max_suggestions: i32,
-    ) -> StorageResult<Vec<QuerySuggestion>> {
-        // Return an empty vector
-        Ok(Vec::new())
-    }
+	async fn autogenerate_queries(
+		&self,
+		_max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>> {
+		// Return an empty vector
+		Ok(Vec::new())
+	}
 }
 
 impl MilvusStorage {
