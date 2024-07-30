@@ -83,37 +83,41 @@ impl BaseIngestor for JsonIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
+#[cfg(test)]
+mod tests {
+    use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_json_ingestor() {
+    use super::*;
+    use std::{io::Cursor, path::Path};
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/dummy.json").unwrap();
+    #[tokio::test]
+    async fn test_json_ingestor() {
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("dummy.json").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("json".to_string()),
-// 			size: Some(10),
-//         };
+        let included_bytes = include_bytes!("../../../test_data/dc_universe.json");
+		let bytes = included_bytes.to_vec();
 
-//         // Create a TxtIngestor instance
-//         let ingestor = JsonIngestor::new();
+        // Create a CollectedBytes instance
+        let collected_bytes = CollectedBytes {
+            data: Some(Box::pin(Cursor::new(bytes))),
+            file: Some(Path::new("dc_universe.json").to_path_buf()),
+            doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("json".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+        };
 
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+        // Create a TxtIngestor instance
+        let ingestor = JsonIngestor::new();
 
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+        // Ingest the file
+        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+        while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			println!("These are the tokens in file --------------{:?}", tokens);
+		}
+	}
+}

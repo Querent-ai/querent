@@ -143,36 +143,41 @@ impl BaseIngestor for DocIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
+#[cfg(test)]
+mod tests {
+    use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_doc_ingestor() {
+    use super::*;
+    use std::{io::Cursor, path::Path};
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/doc/Eagle Ford Shale variability_ Sedimentologic influences on source and reservoir character in an unconventional resource unit.doc").unwrap();
+    #[tokio::test]
+    async fn test_doc_ingestor() {
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("Eagle Ford Shale variability_ Sedimentologic influences on source and reservoir character in an unconventional resource unit.doc").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("doc".to_string()),
-// 			size: Some(10),
-//          source_id: "Filesystem".to_string(),
-//         };
+        let included_bytes = include_bytes!("../../../test_data/Decline curve analysis of shale oil production_ The case of Eagle Ford.doc");
+		let bytes = included_bytes.to_vec();
 
-//         let ingestor = DocIngestor::new();
+        // Create a CollectedBytes instance
+        let collected_bytes = CollectedBytes {
+            data: Some(Box::pin(Cursor::new(bytes))),
+            file: Some(Path::new("Decline curve analysis of shale oil production_ The case of Eagle Ford.doc").to_path_buf()),
+            doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("doc".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+        };
 
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+        // Create a TxtIngestor instance
+        let ingestor = DocIngestor::new();
 
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+        // Ingest the file
+        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+        while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			println!("These are the tokens in file --------------{:?}", tokens);
+		}
+	}
+}

@@ -174,3 +174,42 @@ impl OutputDev for PagePlainTextOutput {
 		self.inner.end_line()
 	}
 }
+
+#[cfg(test)]
+mod tests {
+    use futures::StreamExt;
+
+    use super::*;
+    use std::{io::Cursor, path::Path};
+
+    #[tokio::test]
+    async fn test_pdf_ingestor() {
+
+        let included_bytes = include_bytes!("../../../test_data/Demo.pdf");
+		let bytes = included_bytes.to_vec();
+
+        // Create a CollectedBytes instance
+        let collected_bytes = CollectedBytes {
+            data: Some(Box::pin(Cursor::new(bytes))),
+            file: Some(Path::new("dummy.pdf").to_path_buf()),
+            doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pdf".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+        };
+
+        // Create a TxtIngestor instance
+        let ingestor = PdfIngestor::new();
+
+        // Ingest the file
+        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+        while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			println!("These are the tokens in file --------------{:?}", tokens);
+		}
+	}
+}

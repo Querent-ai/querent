@@ -26,3 +26,4 @@ venv
 content/
 querent-env/
 models/
+querent/test_data/

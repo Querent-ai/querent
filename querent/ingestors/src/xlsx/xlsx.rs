@@ -99,38 +99,42 @@ impl BaseIngestor for XlsxIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_xlsx_ingestor() {
+#[cfg(test)]
+mod tests {
+    use futures::StreamExt;
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/about_the_avengers.xlsx").unwrap();
+    use super::*;
+    use std::{io::Cursor, path::Path};
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("about_the_avengers.xlsx").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("xlsx".to_string()),
-// 			size: Some(10),
-//         };
+    #[tokio::test]
+    async fn test_xlsx_ingestor() {
 
-//         // Create a TxtIngestor instance
-//         let ingestor = XlsxIngestor::new();
+        let included_bytes = include_bytes!("../../../test_data/about_the_avengers.xlsx");
+		let bytes = included_bytes.to_vec();
 
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+        // Create a CollectedBytes instance
+        let collected_bytes = CollectedBytes {
+            data: Some(Box::pin(Cursor::new(bytes))),
+            file: Some(Path::new("about_the_avengers.xlsx").to_path_buf()),
+            doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("xlsx".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+        };
 
-//         // Collect the stream into a Vec
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+        // Create a TxtIngestor instance
+        let ingestor = XlsxIngestor::new();
+
+        // Ingest the file
+        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+        while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			println!("These are the tokens in file --------------{:?}", tokens);
+		}
+	}
+}

@@ -87,38 +87,43 @@ impl BaseIngestor for PptxIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_pptx_ingestor() {
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/ppt/Eagle-Ford-Shale-Basin-Study-APR_22_2019.pptx").unwrap();
+#[cfg(test)]
+mod tests {
+    use futures::StreamExt;
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("Eagle-Ford-Shale-Basin-Study-APR_22_2019.pptx").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("pptx".to_string()),
-// 			size: Some(10),
-//          source_id: "Filesystem".to_string(),
-//         };
+    use super::*;
+    use std::{io::Cursor, path::Path};
 
-//         // Create a TxtIngestor instance
-//         let ingestor = PptxIngestor::new();
+    #[tokio::test]
+    async fn test_pptx_ingestor() {
 
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+        let included_bytes = include_bytes!("../../../test_data/samplepptx.pptx");
+		let bytes = included_bytes.to_vec();
 
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+        // Create a CollectedBytes instance
+        let collected_bytes = CollectedBytes {
+            data: Some(Box::pin(Cursor::new(bytes))),
+            file: Some(Path::new("samplepptx.pptx").to_path_buf()),
+            doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pptx".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+        };
+
+        // Create a TxtIngestor instance
+        let ingestor = PptxIngestor::new();
+
+        // Ingest the file
+        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+        while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			println!("These are the tokens in file --------------{:?}", tokens);
+		}
+	}
+}
