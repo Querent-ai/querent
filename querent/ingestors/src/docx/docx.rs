@@ -143,7 +143,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_docx_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/sample-document.docx");
+		let included_bytes = include_bytes!("../../../../test_data/sample-document.docx");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

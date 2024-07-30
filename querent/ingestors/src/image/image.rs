@@ -90,7 +90,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_image_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/1520206936825.jpeg");
+		let included_bytes = include_bytes!("../../../../test_data/1520206936825.jpeg");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

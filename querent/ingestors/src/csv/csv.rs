@@ -99,7 +99,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_csv_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/sample-csv.csv");
+		let included_bytes = include_bytes!("../../../../test_data/sample-csv.csv");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

@@ -152,7 +152,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_doc_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/Decline curve analysis of shale oil production_ The case of Eagle Ford.doc");
+		let included_bytes = include_bytes!("../../../../test_data/Decline curve analysis of shale oil production_ The case of Eagle Ford.doc");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

@@ -96,7 +96,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_pptx_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/samplepptx.pptx");
+		let included_bytes = include_bytes!("../../../../test_data/samplepptx.pptx");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

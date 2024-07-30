@@ -108,7 +108,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_xlsx_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/about_the_avengers.xlsx");
+		let included_bytes = include_bytes!("../../../../test_data/about_the_avengers.xlsx");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

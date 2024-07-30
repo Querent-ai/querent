@@ -100,7 +100,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_html_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/about_marvel.html");
+		let included_bytes = include_bytes!("../../../../test_data/about_marvel.html");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

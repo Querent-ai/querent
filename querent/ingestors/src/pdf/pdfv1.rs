@@ -184,7 +184,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_pdf_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/Demo.pdf");
+		let included_bytes = include_bytes!("../../../../test_data/Demo.pdf");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance

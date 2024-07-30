@@ -154,7 +154,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_odp_ingestor() {
-		let included_bytes = include_bytes!("../../../test_data/samplepptx.odp");
+		let included_bytes = include_bytes!("../../../../test_data/samplepptx.odp");
 		let bytes = included_bytes.to_vec();
 
 		// Create a CollectedBytes instance
