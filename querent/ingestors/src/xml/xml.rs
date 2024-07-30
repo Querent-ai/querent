@@ -97,40 +97,38 @@ impl BaseIngestor for XmlIngestor {
 	}
 }
 
-
 #[cfg(test)]
 mod tests {
-    use futures::StreamExt;
+	use futures::StreamExt;
 
-    use super::*;
-    use std::{io::Cursor, path::Path};
+	use super::*;
+	use std::{io::Cursor, path::Path};
 
-    #[tokio::test]
-    async fn test_xml_ingestor() {
-
-        let included_bytes = include_bytes!("../../../test_data/dc_universe.xml");
+	#[tokio::test]
+	async fn test_xml_ingestor() {
+		let included_bytes = include_bytes!("../../../test_data/dc_universe.xml");
 		let bytes = included_bytes.to_vec();
 
-        // Create a CollectedBytes instance
-        let collected_bytes = CollectedBytes {
-            data: Some(Box::pin(Cursor::new(bytes))),
-            file: Some(Path::new("dc_universe.xml").to_path_buf()),
-            doc_source: Some("test_source".to_string()),
+		// Create a CollectedBytes instance
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("dc_universe.xml").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
 			eof: false,
 			extension: Some("xml".to_string()),
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
 			_owned_permit: None,
-        };
+		};
 
-        // Create a TxtIngestor instance
-        let ingestor = XmlIngestor::new();
+		// Create a TxtIngestor instance
+		let ingestor = XmlIngestor::new();
 
-        // Ingest the file
-        let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		// Ingest the file
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
 		let mut stream = result_stream;
-        while let Some(tokens) = stream.next().await {
+		while let Some(tokens) = stream.next().await {
 			let tokens = tokens.unwrap();
 			println!("These are the tokens in file --------------{:?}", tokens);
 		}
