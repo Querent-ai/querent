@@ -130,13 +130,16 @@ impl Source for Collector {
 		ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
+		let mut is_finished = false;
 		if self.semaphore.available_permits() == 0 {
-			if self.source_counter_semaphore.available_permits() == self.data_pollers.len() {
-				// all data pollers have finished, exit
-				return Err(ActorExitStatus::Success);
-			}
 			ctx.record_progress();
-			return Ok(Duration::default());
+			if self.source_counter_semaphore.available_permits() == self.data_pollers.len() &&
+				self.leftover_collection_batches.is_empty()
+			{
+				is_finished = true;
+			} else {
+				return Ok(Duration::default());
+			}
 		}
 
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
@@ -208,6 +211,10 @@ impl Source for Collector {
 					},
 				}
 			}
+		}
+
+		if self.leftover_collection_batches.is_empty() && is_finished {
+			return Err(ActorExitStatus::Success);
 		}
 		Ok(Duration::default())
 	}
