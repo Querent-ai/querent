@@ -1,0 +1,98 @@
+{
+  "productName": "R!AN",
+  "version": "0.1.0",
+  "identifier": "xyz.querent.rian",
+  "build": {
+    "beforeDevCommand": "pnpm dev-tauri-renderer",
+    "devUrl": "http://localhost:3333",
+    "frontendDist": "../../clients/rian/build"
+  },
+  "plugins": {
+    "fs": {
+      "scope": {
+        "allow": [
+          "**",
+          "$CONFIG/*/**",
+          "$APPCONFIG/**",
+          "$APPCACHE/**"
+        ]
+      }
+    },
+    "shell": {
+      "open": true
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/querent-ai/distribution/releases/latest/download/latest.json"
+      ],
+      "active": true,
+      "windows": {
+        "installMode": "passive"
+      },
+      "pubkey": "something"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "linux": {
+      "deb": {
+        "depends": [
+          "xdotool"
+        ]
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
+    "category": "DeveloperTool",
+    "copyright": "",
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "longDescription": "",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [
+      "resources/*"
+    ],
+    "shortDescription": "",
+    "targets": ["deb", "appimage", "nsis", "app", "dmg", "updater"],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      }
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true,
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["$CACHE/**", "$CONFIG/**", "$APPCACHE/**" ]
+        }
+      }
+    },
+    "trayIcon": {
+      "id": "tray",
+      "iconAsTemplate": true,
+      "iconPath": "icons/favicon.ico"
+    },
+    "windows": []
+  }
+}
