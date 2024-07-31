@@ -490,83 +490,223 @@ impl Storage for SurrealDB {
 		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 
-	/// Asynchronously fetches suggestions from the semantic table.
+	/// Asynchronously fetches suggestions from the semantic table in SurrealDB.
 	async fn autogenerate_queries(
 		&self,
 		max_suggestions: i32,
-	) -> StorageResult<Vec<QuerySuggestion>> {
-		let top_pairs_query = format!(
-			"SELECT subject, subject_type, object, object_type, COUNT(*) as pair_frequency
+	) -> Result<Vec<QuerySuggestion>, StorageError> {
+		let top_pairs_query = "
+			SELECT subject, subject_type, object, object_type, COUNT(*) as pair_frequency
 			FROM semantic_knowledge
 			GROUP BY subject, subject_type, object, object_type
 			ORDER BY pair_frequency DESC
-			LIMIT 10"
-		);
+			LIMIT 5;
+		";
 
-		let mut top_pairs_response: Response =
-			self.db.query(top_pairs_query).await.map_err(|e| StorageError {
-				kind: StorageErrorKind::Query,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
+		let mut top_pairs_result = self.db.query(top_pairs_query).await.map_err(|e| {
+			StorageError { kind: StorageErrorKind::Query, source: Arc::new(anyhow::Error::from(e)) }
+		})?;
 
 		let top_pairs: Vec<(String, String, String, String, i64)> =
-			top_pairs_response.take(0).map_err(|e| StorageError {
+			top_pairs_result.take(0).map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		let mut sentence_pair_counts = std::collections::HashMap::new();
-		for (subject, subject_type, object, object_type, _) in &top_pairs {
-			let sentences_query = format!(
-				"SELECT sentence, document_source, document_id
-				FROM semantic_knowledge
-				WHERE subject = '{}' AND object = '{}'",
-				subject, object
-			);
+		let bottom_pairs_query = "
+			SELECT subject, subject_type, object, object_type, COUNT(*) as pair_frequency
+			FROM semantic_knowledge
+			GROUP BY subject, subject_type, object, object_type
+			ORDER BY pair_frequency ASC
+			LIMIT 5;
+		";
 
-			let mut sentences_response: Response =
-				self.db.query(sentences_query).await.map_err(|e| StorageError {
+		let mut bottom_pairs_result = self.db.query(bottom_pairs_query).await.map_err(|e| {
+			StorageError { kind: StorageErrorKind::Query, source: Arc::new(anyhow::Error::from(e)) }
+		})?;
+
+		let bottom_pairs: Vec<(String, String, String, String, i64)> =
+			bottom_pairs_result.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let most_mix_documents_query = "
+			SELECT document_id, COUNT(DISTINCT subject) + COUNT(DISTINCT object) as entity_mix
+			FROM semantic_knowledge
+			GROUP BY document_id
+			ORDER BY entity_mix DESC
+			LIMIT 5;
+		";
+
+		let mut most_mix_documents_result =
+			self.db.query(most_mix_documents_query).await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Query,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let most_mix_documents: Vec<(String, i64)> =
+			most_mix_documents_result.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let most_unique_sentences_documents_query = "
+			SELECT document_id, COUNT(DISTINCT sentence) as unique_sentences
+			FROM semantic_knowledge
+			GROUP BY document_id
+			ORDER BY unique_sentences DESC
+			LIMIT 5;
+		";
+
+		let mut most_unique_sentences_documents_result =
+			self.db.query(most_unique_sentences_documents_query).await.map_err(|e| {
+				StorageError {
 					kind: StorageErrorKind::Query,
 					source: Arc::new(anyhow::Error::from(e)),
-				})?;
+				}
+			})?;
 
-			let sentences: Vec<(String, String, String)> =
-				sentences_response.take(0).map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
+		let most_unique_sentences_documents: Vec<(String, i64)> =
+			most_unique_sentences_documents_result.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 
-			for (sentence, _document_source, document_id) in sentences {
-				let tag = format!("{} ({}), {} ({})", subject, subject_type, object, object_type);
-				sentence_pair_counts
-					.entry((sentence.clone(), document_id.clone()))
-					.or_insert_with(Vec::new)
-					.push(tag);
-			}
-		}
+		let high_impact_sentences_query = "
+			SELECT sentence, COUNT(*) as sentence_frequency
+			FROM semantic_knowledge
+			GROUP BY sentence
+			ORDER BY sentence_frequency DESC
+			LIMIT 5;
+		";
 
-		let mut sorted_sentences: Vec<_> = sentence_pair_counts.into_iter().collect();
-		sorted_sentences.sort_by(|a, b| b.1.len().cmp(&a.1.len()).reverse());
+		let mut high_impact_sentences_result =
+			self.db.query(high_impact_sentences_query).await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Query,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let high_impact_sentences: Vec<(String, i64)> =
+			high_impact_sentences_result.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 
 		let mut suggestions = Vec::new();
-		for ((sentence, document_id), tags) in
-			sorted_sentences.into_iter().take(max_suggestions as usize)
-		{
-			let query = format!(
-				"In this document, several key pairs are related: '{}'. [Source Document: {}] ",
-				sentence.split('.').next().unwrap_or("").trim(),
-				document_id
+
+		if !top_pairs.is_empty() {
+			let mut query_parts = Vec::new();
+			for (subject, subject_type, object, object_type, frequency) in top_pairs {
+				let part = format!(
+					"'{}' ({}) and '{}' ({}): {} times",
+					subject, subject_type, object, object_type, frequency
+				);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"Most frequently occurring entity pairs in the semantic data fabric: Understanding these pairs can provide insights into the most common relationships present in your data, helping you identify key patterns and trends. \n{}\n\n",
+				query_parts.join("\n")
 			);
 			suggestions.push(QuerySuggestion {
-				query,
-				frequency: tags.len() as i64,
-				document_source: document_id,
-				sentence: sentence.clone(),
-				tags,
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
 			});
 		}
 
-		Ok(suggestions)
+		if !bottom_pairs.is_empty() {
+			let mut query_parts = Vec::new();
+			for (subject, subject_type, object, object_type, frequency) in bottom_pairs {
+				let part = format!(
+					"'{}' ({}) and '{}' ({}): {} times",
+					subject, subject_type, object, object_type, frequency
+				);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"Most unique entity pairs in the semantic data fabric: These pairs represent rare and potentially significant relationships that might highlight unique interactions within your data. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !most_mix_documents.is_empty() {
+			let mut query_parts = Vec::new();
+			for (document_id, entity_mix) in most_mix_documents {
+				let part = format!(
+					"Document ID '{}': {} unique subjects and objects",
+					document_id, entity_mix
+				);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"Documents with the richest mix of entity pairs: These documents contain a diverse set of entities, indicating a wide range of topics and relationships. They can be valuable for comprehensive analysis and understanding of multifaceted data. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !most_unique_sentences_documents.is_empty() {
+			let mut query_parts = Vec::new();
+			for (document_id, unique_sentences) in most_unique_sentences_documents {
+				let part =
+					format!("Document ID '{}': {} unique context", document_id, unique_sentences);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"High impact documents that are part of the semantic data fabric: These documents contain a large number of unique context, suggesting they provide extensive and varied information. They are essential for gaining a broad and deep understanding of the content. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !high_impact_sentences.is_empty() {
+			let mut query_parts = Vec::new();
+			for (sentence, sentence_frequency) in high_impact_sentences {
+				let trimmed_sentence = sentence.split('.').next().unwrap_or("").trim();
+				if trimmed_sentence.split_whitespace().count() > 10 {
+					let part = format!("'{}': {} times", trimmed_sentence, sentence_frequency);
+					query_parts.push(part);
+				}
+			}
+
+			if !query_parts.is_empty() {
+				let combined_query = format!(
+					"High-impact context that provide crucial information in the semantic data fabric: These context are essential as they contain detailed and significant information, helping you understand important aspects of the data. \n{}\n\n",
+					query_parts.join("\n")
+				);
+				suggestions.push(QuerySuggestion {
+					query: combined_query,
+					frequency: 1,
+					document_source: String::new(),
+					sentence: String::new(),
+					tags: vec![],
+				});
+			}
+		}
+
+		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())
 	}
 }
 

@@ -130,15 +130,7 @@ impl Source for Collector {
 		ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
-		if self.semaphore.available_permits() == 0 {
-			if self.source_counter_semaphore.available_permits() == self.data_pollers.len() {
-				// all data pollers have finished, exit
-				return Err(ActorExitStatus::Success);
-			}
-			ctx.record_progress();
-			return Ok(Duration::default());
-		}
-
+		let mut collector_exit = false;
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut counter = 0;
@@ -154,6 +146,7 @@ impl Source for Collector {
 								&& event_data.bytes.is_empty() {
 								// clean up the workflow handles
 								self.workflow_handles.retain(|handle| !handle.is_finished());
+								collector_exit = true;
 								break;
 							}
 							self.counters.increment_total_docs(1);
@@ -172,6 +165,7 @@ impl Source for Collector {
 				}
 			}
 		}
+
 		if !files.is_empty() {
 			for mut batch in files {
 				let permit = self.semaphore.clone().acquire_owned().await;
@@ -209,7 +203,12 @@ impl Source for Collector {
 				}
 			}
 		}
-		Ok(Duration::default())
+
+		if collector_exit == true {
+			return Err(ActorExitStatus::Success);
+		}
+		ctx.record_progress();
+		return Ok(Duration::default());
 	}
 
 	fn name(&self) -> String {

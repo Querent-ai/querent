@@ -200,8 +200,6 @@ pub fn find_intersection(
 ) -> Vec<(String, String)> {
 	let set1: HashSet<(String, String)> = pairs1.into_iter().collect();
 	let set2: HashSet<(String, String)> = pairs2.into_iter().collect();
-	println!("Subsequent query results 11111------------{:?}", set1);
-	println!("Subsequent query results 22222------------{:?}", set2);
 	set1.intersection(&set2).cloned().collect()
 }
 

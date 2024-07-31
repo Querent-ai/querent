@@ -179,10 +179,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							self.current_offset += results.len() as i64;
 
 							let filtered_results = get_top_k_pairs(results.clone(), 3);
-							println!(
-								"These are the filtered results--------------------{:?}",
-								filtered_results
-							);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(filtered_results.clone()).await;
 
@@ -379,7 +375,7 @@ fn process_auto_generated_suggestions(
 			document: suggestion.document_source.clone(),
 			source: suggestion.document_source.clone(),
 			relationship_strength: suggestion.frequency.to_string(),
-			sentence: suggestion.sentence.clone(),
+			sentence: suggestion.query.clone(),
 			tags: tags.join(", "),
 		};
 
