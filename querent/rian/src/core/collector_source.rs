@@ -158,6 +158,7 @@ impl Source for Collector {
 								&& event_data.bytes.is_empty() {
 								// clean up the workflow handles
 								self.workflow_handles.retain(|handle| !handle.is_finished());
+								collector_exit = true;
 								break;
 							}
 							self.counters.increment_total_docs(1);
