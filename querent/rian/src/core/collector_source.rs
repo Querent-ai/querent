@@ -128,7 +128,7 @@ impl Source for Collector {
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
 		let mut is_finished = false;
-		if self.semaphore.available_petmits() == 0 {
+		if self.semaphore.available_permits() == 0 {
 			ctx.record_progress();
 			return Ok(Duration::default());
 		}
