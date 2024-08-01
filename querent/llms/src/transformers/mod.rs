@@ -10,6 +10,8 @@ pub mod roberta {
 	pub mod roberta_model_functions;
 }
 pub mod modelling_outputs;
+use std::path::PathBuf;
+
 use ordered_float::OrderedFloat;
 
 /// Describes the mean and sigma of distribution of embedding similarity in the embedding space.
@@ -27,4 +29,10 @@ pub struct DistributionShift {
 	///
 	/// Set below 0.4 to make the results less packed around the mean, and above 0.4 to make them more packed.
 	pub current_sigma: OrderedFloat<f32>,
+}
+
+
+fn get_querent_data_path() -> PathBuf {
+    let data_path = dirs::data_dir().expect("Failed to get Querent data directory");
+    data_path.join("querent_data")
 }

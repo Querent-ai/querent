@@ -1,14 +1,13 @@
 use crate::{
 	transformers::{
-		bert::bert_model_functions::DTYPE,
-		roberta::roberta_model_functions::{RobertaConfig, RobertaModel as CandleRobertaModel},
+		bert::bert_model_functions::DTYPE, get_querent_data_path, roberta::roberta_model_functions::{RobertaConfig, RobertaModel as CandleRobertaModel}
 	},
 	GenerateResult, Message,
 };
 use async_trait::async_trait;
 use candle_core::{DType, Tensor};
 use candle_nn::VarBuilder;
-use hf_hub::{api::sync::Api, Repo, RepoType};
+use hf_hub::{api::sync::{Api, ApiBuilder}, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokenizers::{PaddingParams, Tokenizer};
 
@@ -77,12 +76,17 @@ impl RobertaLLM {
 						Repo::with_revision(options.model.clone(), RepoType::Model, revision),
 					None => Repo::model(options.model.clone()),
 				};
-				let api = Api::new().map_err(|e| {
-					LLMError::new(
-						LLMErrorKind::Io,
-						Arc::new(anyhow::anyhow!("could not initialize Hugging Face API: {}", e)),
-					)
-				})?;
+				let cache_dir = get_querent_data_path();
+				println!("This is the cache directory-------------------{:?}", cache_dir);
+				let api = ApiBuilder::new()
+                .with_cache_dir(cache_dir.clone())
+                .build()
+                .map_err(|e| {
+                    LLMError::new(
+                        LLMErrorKind::Io,
+                        Arc::new(anyhow::anyhow!("could not initialize Hugging Face API: {}", e)),
+                    )
+                })?;
 				let api = api.repo(repo);
 				let config = api.get("config.json").map_err(|e| {
 					LLMError::new(
