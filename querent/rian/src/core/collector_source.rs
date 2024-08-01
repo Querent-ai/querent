@@ -55,7 +55,8 @@ impl Source for Collector {
 		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
-		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() || self.event_receiver.is_some(){
+		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() || 
+			self.event_receiver.is_some() {
 			return Ok(())
 		}
 
