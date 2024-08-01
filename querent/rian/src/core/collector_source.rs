@@ -55,14 +55,8 @@ impl Source for Collector {
 		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
-		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() {
-			if self.source_counter_semaphore.available_permits() == 0 &&
-				self.semaphore.available_permits() == NUMBER_FILES_IN_MEMORY &&
-				self.left
-			{
-				return Err(ActorExitStatus::Success);
-			}
-			return Ok(());
+		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() || self.event_receiver.is_some(){
+			return Ok(())
 		}
 
 		info!("Starting data source collection for {}", self.id);
