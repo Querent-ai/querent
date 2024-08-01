@@ -57,7 +57,8 @@ impl Source for Collector {
 	) -> Result<(), ActorExitStatus> {
 		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() {
 			if self.source_counter_semaphore.available_permits() == 0 &&
-				self.semaphore.available_permits() == 0
+				self.semaphore.available_permits() == NUMBER_FILES_IN_MEMORY &&
+				self.left
 			{
 				return Err(ActorExitStatus::Success);
 			}
@@ -131,7 +132,11 @@ impl Source for Collector {
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
 		let mut is_finished = false;
-		if self.semaphore.available_permits() == 0 {
+		if self.semaphore.available_petmits() == 0 {
+			ctx.record_progress();
+			return Ok(Duration::default());
+		}
+		if self.semaphore.available_permits() == NUMBER_FILES_IN_MEMORY {
 			ctx.record_progress();
 			if self.source_counter_semaphore.available_permits() == self.data_pollers.len() &&
 				self.leftover_collection_batches.is_empty()
