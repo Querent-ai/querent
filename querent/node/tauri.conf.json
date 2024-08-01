@@ -4,7 +4,7 @@
   "identifier": "xyz.querent.rian",
   "build": {
     "beforeDevCommand": "pnpm dev-tauri-renderer",
-    "devUrl": "http://localhost:3333",
+    "devUrl": "http://localhost:10074",
     "frontendDist": "../../clients/rian/build"
   },
   "plugins": {

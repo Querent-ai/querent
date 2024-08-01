@@ -72,6 +72,8 @@ async fn main_impl() -> Result<(), anyhow::Error> {
 	log::info!("Starting Querent RIAN Immersive Intelligence Node 🧠 {}", version);
 	let app = build_cli().about(about_text).version(version);
 	let matches = app.get_matches();
+	// check if matches has no subcommand then set ui to true
+	let is_default_run = matches.subcommand_name().is_none();
 	let command = match CliCommand::parse_cli_args(matches) {
 		Ok(command) => command,
 		Err(err) => {
@@ -79,16 +81,41 @@ async fn main_impl() -> Result<(), anyhow::Error> {
 			std::process::exit(1);
 		},
 	};
+	if is_default_run {
+		// Tauri application setup
+		tauri::Builder::default()
+			.setup(move |app| {
+				let handle = app.handle();
+				tokio::spawn(async move {
+					// Execute the command within the Tauri setup
+					let return_code: i32 = if let Err(err) = command.execute().await {
+						eprintln!("{} Command failed: {:?}\n", "✘".color(RED_COLOR), err);
+						1
+					} else {
+						0
+					};
 
-	let return_code: i32 = if let Err(err) = command.execute().await {
-		eprintln!("{} Command failed: {:?}\n", "✘".color(RED_COLOR), err);
-		1
+					global::shutdown_tracer_provider();
+					std::process::exit(return_code);
+				});
+				Ok(())
+			})
+			.run(tauri::generate_context!())
+			.expect("Failed to run Tauri application");
 	} else {
-		0
-	};
+		// Execute the command directly if Tauri UI is not started
+		let return_code: i32 = if let Err(err) = command.execute().await {
+			eprintln!("{} Command failed: {:?}\n", "✘".color(RED_COLOR), err);
+			1
+		} else {
+			0
+		};
 
-	global::shutdown_tracer_provider();
-	std::process::exit(return_code)
+		global::shutdown_tracer_provider();
+		std::process::exit(return_code);
+	}
+
+	Ok(())
 }
 
 /// Return the about text with telemetry info.
