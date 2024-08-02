@@ -23,8 +23,6 @@ message InsightQuery {
     string session_id = 1;
     // The query to be used for the insight
     string query = 2;
-    // Optional prompt
-    optional string prompt = 3;
 }
 
 message InsightQueryResponse {

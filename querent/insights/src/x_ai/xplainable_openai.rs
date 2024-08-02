@@ -45,11 +45,28 @@ impl XAI {
 				tooltip: Some("OpenAI API Key".to_string()),
 			},
 		);
+		additional_options.insert(
+			"prompt".to_string(),
+			CustomInsightOption {
+				id: "prompt".to_string(),
+				label: "Prompt".to_string(),
+				default_value: Some(InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				}),
+				value: InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				},
+				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using OpenAI.".to_string()),
+
+			},
+		);
 		Self {
 			info: InsightInfo {
 				id: "querent.insights.x_ai.openai".to_string(),
 				name: "Querent xAI with GPT".to_string(),
-				description: "xAI utilizes generative models to perform a directed traversal in Querent's attention data fabric.".to_string(),
+				description: "xAI utilizes generative models to perform a directed traversal in R!AN's attention data fabric.".to_string(),
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
@@ -69,6 +86,7 @@ pub struct XAIRunner {
 	pub previous_query_results: RwLock<String>,
 	pub previous_filtered_results: RwLock<Vec<(String, String)>>,
 	pub previous_session_id: RwLock<String>,
+	pub prompt: String,
 }
 
 #[async_trait]
@@ -107,6 +125,18 @@ impl Insight for XAI {
 			OpenAIConfig::default().with_api_key(openai_api_key);
 		let openai_llm = OpenAI::new(default_openai_config);
 
+		let prompt_option = config.get_custom_option("prompt");
+		if prompt_option.is_none() {
+			tracing::info!("No prompt provided.");
+		}
+		let prompt = prompt_option.map_or_else(
+			|| "".to_string(),
+			|opt| match opt.value.clone() {
+				InsightCustomOptionValue::String { value, .. } => value,
+				_ => "".to_string(),
+			},
+		);
+
 		let embedding_model = TextEmbedding::try_new(InitOptions {
 			model_name: EmbeddingModel::AllMiniLML6V2,
 			show_download_progress: true,
@@ -121,6 +151,7 @@ impl Insight for XAI {
 			previous_query_results: RwLock::new(String::new()),
 			previous_filtered_results: RwLock::new(Vec::new()),
 			previous_session_id: RwLock::new(String::new()),
+			prompt,
 		}))
 	}
 }
@@ -144,13 +175,12 @@ impl InsightRunner for XAIRunner {
 			},
 		};
 
-		let prompt = input.data.get("prompt").and_then(Value::as_str);
-		let prompt = match prompt {
-			Some(q) => q,
-			None => {
-				tracing::info!("Prompt is missing. Going to use default prompt.");
-				"Default Prompt"
+		let prompt = match self.prompt.as_str() {
+			"" => {
+				tracing::info!("User did not provide a prompt. Going to use default prompt.");
+				"Default Prompt".to_string()
 			},
+			_ => self.prompt.clone(),
 		};
 
 		let embedding_model = self.embedding_model.as_ref().ok_or_else(|| {
@@ -187,7 +217,6 @@ impl InsightRunner for XAIRunner {
 							suggestions.iter().map(|s| s.query.clone()).collect();
 						let suggestions_prompt = get_suggestions_prompt(&suggestion_texts);
 						let human_message = vec![Message::new_human_message(&suggestions_prompt)];
-						println!("Human Message -----------------{:?}", human_message);
 						let suggestions_response =
 							self.llm.generate(&human_message).await.map_err(|e| {
 								InsightError::new(
@@ -464,12 +493,12 @@ impl InsightRunner for XAIRunner {
 						}
 					};
 
-					let prompt = match input.data.get("prompt").and_then(Value::as_str) {
-						Some(p) => p.to_string(),
-						None => {
-							tracing::info!("Prompt is missing. Going to use default prompt.");
+					let prompt = match self.prompt.as_str() {
+						"" => {
+							tracing::info!("User did not provide a prompt. Going to use default prompt.");
 							"Default Prompt".to_string()
-						}
+						},
+						_ => self.prompt.clone(),
 					};
 
 					let embedding_model = match embedding_model.as_ref() {
