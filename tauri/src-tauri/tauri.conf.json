@@ -1,13 +1,12 @@
 {
+  "productName": "RIAN",
+  "version": "0.4.0",
+  "identifier": "xyz.querent.rian",
   "build": {
-    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:5173",
-    "distDir": "../build"
-  },
-  "package": {
-    "productName": "rian",
-    "version": "0.4.0"
+    "beforeBuildCommand": "npm run build"
   },
   "plugins": {
     "fs": {
@@ -31,71 +30,76 @@
       "windows": {
         "installMode": "passive"
       },
-      "pubkey": "TODO::ADD a key here"
+      "pubkey": "TODO: add a key"
     }
   },
-  "tauri": {
-    "allowlist": {
-      "all": false
-    },
-    "bundle": {
-      "active": true,
-      "category": "DeveloperTool",
-      "copyright": "Querent AI LLC",
+  "bundle": {
+    "active": true,
+    "linux": {
       "deb": {
         "depends": [
           "xdotool"
         ]
       },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "xyz.querent.rian",
-      "longDescription": "R!AN is real time information aggregation network, that provides a new type of analytics system utilizing philosophy of data fabric with AI to derive deeper insights from data.",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [],
-      "shortDescription": "R!AN is real time information aggregation network, that provides a new type of analytics system utilizing philosophy of data fabric with AI to derive deeper insights from data.",
-      "targets": ["deb", "appimage", "nsis", "app", "dmg", "updater"],
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": "",
-        "webviewInstallMode": {
-          "type": "embedBootstrapper"
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
+    "category": "DeveloperTool",
+    "copyright": "",
+    "externalBin": [],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "longDescription": "R!AN: Realtime Information Aggregator Network",
+    "macOS": {
+      "entitlements": null,
+      "exceptionDomain": "",
+      "frameworks": [],
+      "providerShortName": null,
+      "signingIdentity": null
+    },
+    "resources": [
+    ],
+    "shortDescription": "R!AN: Realtime Information Aggregator Network",
+    "targets": "all",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "",
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      }
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "macOSPrivateApi": true,
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["$CACHE/**", "$CONFIG/**", "$APPCACHE/**" ]
         }
       }
     },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "endpoints": [
-        "https://github.com/querent-ai/distribution/releases/latest/download/latest.json"
-      ],
-      "active": true,
-      "windows": {
-        "installMode": "passive"
-      },
-      "pubkey": "TODO::ADD a key here"
+    "trayIcon": {
+      "id": "tray",
+      "iconAsTemplate": true,
+      "iconPath": "icons/icon.ico"
     },
     "windows": [
       {
-        "fullscreen": false,
+        "title": "R!AN: Realtime Information Aggregator Network",
+        "width": 800,
         "height": 600,
         "resizable": true,
-        "title": "R!AN: Realtime Information Aggregation Network",
-        "width": 800
+        "fullscreen": false
       }
     ]
   }
