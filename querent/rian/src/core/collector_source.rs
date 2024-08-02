@@ -55,13 +55,10 @@ impl Source for Collector {
 		_ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<(), ActorExitStatus> {
-		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() {
-			if self.source_counter_semaphore.available_permits() == 0 &&
-				self.semaphore.available_permits() == 0
-			{
-				return Err(ActorExitStatus::Success);
-			}
-			return Ok(());
+		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() ||
+			self.event_receiver.is_some()
+		{
+			return Ok(())
 		}
 
 		info!("Starting data source collection for {}", self.id);
@@ -130,7 +127,22 @@ impl Source for Collector {
 		ingestor_messagebus: &MessageBus<IngestorService>,
 		ctx: &SourceContext,
 	) -> Result<Duration, ActorExitStatus> {
-		let mut collector_exit = false;
+		let mut is_finished = false;
+		if self.semaphore.available_permits() == 0 {
+			ctx.record_progress();
+			return Ok(Duration::default());
+		}
+		if self.semaphore.available_permits() == NUMBER_FILES_IN_MEMORY {
+			ctx.record_progress();
+			if self.source_counter_semaphore.available_permits() == self.data_pollers.len() &&
+				self.leftover_collection_batches.is_empty()
+			{
+				is_finished = true;
+			} else {
+				return Ok(Duration::default());
+			}
+		}
+
 		let deadline = time::sleep(EMIT_BATCHES_TIMEOUT);
 		tokio::pin!(deadline);
 		let mut counter = 0;
@@ -146,7 +158,6 @@ impl Source for Collector {
 								&& event_data.bytes.is_empty() {
 								// clean up the workflow handles
 								self.workflow_handles.retain(|handle| !handle.is_finished());
-								collector_exit = true;
 								break;
 							}
 							self.counters.increment_total_docs(1);
@@ -204,11 +215,10 @@ impl Source for Collector {
 			}
 		}
 
-		if collector_exit == true {
+		if self.leftover_collection_batches.is_empty() && is_finished {
 			return Err(ActorExitStatus::Success);
 		}
-		ctx.record_progress();
-		return Ok(Duration::default());
+		Ok(Duration::default())
 	}
 
 	fn name(&self) -> String {
