@@ -28,8 +28,8 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
-      "longDescription": "",
+      "identifier": "xyz.querent.rian",
+      "longDescription": "R!AN is real time information aggregation network, that provides a new type of analytics system utilizing philosophy of data fabric with AI to derive deeper insights from data.",
       "macOS": {
         "entitlements": null,
         "exceptionDomain": "",
@@ -57,7 +57,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "R!AN",
+        "title": "R!AN: Realtime Information Aggregation Network",
         "width": 800
       }
     ]
