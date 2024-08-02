@@ -138,8 +138,6 @@ impl Source for Collector {
 				self.leftover_collection_batches.is_empty()
 			{
 				is_finished = true;
-			} else {
-				return Ok(Duration::default());
 			}
 		}
 
