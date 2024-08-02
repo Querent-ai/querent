@@ -7,7 +7,32 @@
   },
   "package": {
     "productName": "rian",
-    "version": "0.1.0"
+    "version": "0.4.0"
+  },
+  "plugins": {
+    "fs": {
+      "scope": {
+        "allow": [
+          "**",
+          "$CONFIG/*/**",
+          "$APPCONFIG/**",
+          "$APPCACHE/**"
+        ]
+      }
+    },
+    "shell": {
+      "open": true
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/querent-ai/distribution/releases/latest/download/latest.json"
+      ],
+      "active": true,
+      "windows": {
+        "installMode": "passive"
+      },
+      "pubkey": "TODO::ADD a key here"
+    }
   },
   "tauri": {
     "allowlist": {
@@ -16,9 +41,11 @@
     "bundle": {
       "active": true,
       "category": "DeveloperTool",
-      "copyright": "",
+      "copyright": "Querent AI LLC",
       "deb": {
-        "depends": []
+        "depends": [
+          "xdotool"
+        ]
       },
       "externalBin": [],
       "icon": [
@@ -38,19 +65,29 @@
         "signingIdentity": null
       },
       "resources": [],
-      "shortDescription": "",
-      "targets": "all",
+      "shortDescription": "R!AN is real time information aggregation network, that provides a new type of analytics system utilizing philosophy of data fabric with AI to derive deeper insights from data.",
+      "targets": ["deb", "appimage", "nsis", "app", "dmg", "updater"],
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
-        "timestampUrl": ""
+        "timestampUrl": "",
+        "webviewInstallMode": {
+          "type": "embedBootstrapper"
+        }
       }
     },
     "security": {
       "csp": null
     },
     "updater": {
-      "active": false
+      "endpoints": [
+        "https://github.com/querent-ai/distribution/releases/latest/download/latest.json"
+      ],
+      "active": true,
+      "windows": {
+        "installMode": "passive"
+      },
+      "pubkey": "TODO::ADD a key here"
     },
     "windows": [
       {
