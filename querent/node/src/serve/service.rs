@@ -202,7 +202,6 @@ pub async fn serve_quester(
 /// The caller is also responsible for shutting down the Querent node by calling `quit` on the returned handle.
 pub async fn serve_quester_without_servers(
 	node_config: NodeConfig,
-	_runtimes_config: RuntimesConfig,
 ) -> anyhow::Result<Arc<QuerentServices>> {
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();

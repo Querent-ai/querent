@@ -33,6 +33,7 @@ tauri-plugin-shell = "2.0.0-rc.0"
 tauri-plugin-os = "2.0.0-rc.0"
 tauri-plugin-dialog = "2.0.0-rc.0"
 tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta.git", branch = "main" }
+specta = "=2.0.0-rc.19"
 
 # Querent AI dependencies
 node = { path = "../../querent/node" }

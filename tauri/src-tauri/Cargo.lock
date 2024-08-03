@@ -24,6 +24,7 @@ dependencies = [
  "proto",
  "serde",
  "serde_json",
+ "specta",
  "tauri",
  "tauri-build",
  "tauri-plugin-autostart",
