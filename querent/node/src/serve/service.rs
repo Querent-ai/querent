@@ -24,7 +24,7 @@ const _READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "tes
 	Duration::from_secs(10)
 };
 
-pub struct QuesterServices {
+pub struct QuerentServices {
 	pub node_config: NodeConfig,
 	pub cluster: Cluster,
 	pub event_broker: PubSubBroker,
@@ -115,7 +115,7 @@ pub async fn serve_quester(
 		}
 	});
 
-	let services = Arc::new(QuesterServices {
+	let services = Arc::new(QuerentServices {
 		node_config,
 		cluster: cluster.clone(),
 		event_broker,
@@ -203,7 +203,7 @@ pub async fn serve_quester(
 pub async fn serve_quester_without_servers(
 	node_config: NodeConfig,
 	_runtimes_config: RuntimesConfig,
-) -> anyhow::Result<Arc<QuesterServices>> {
+) -> anyhow::Result<Arc<QuerentServices>> {
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Querent::new();
@@ -253,7 +253,7 @@ pub async fn serve_quester_without_servers(
 	)
 	.await?;
 
-	Ok(Arc::new(QuesterServices {
+	Ok(Arc::new(QuerentServices {
 		node_config,
 		cluster,
 		event_broker,
