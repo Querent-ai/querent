@@ -9,16 +9,6 @@
     "beforeBuildCommand": "npm run build"
   },
   "plugins": {
-    "fs": {
-      "scope": {
-        "allow": [
-          "**",
-          "$CONFIG/*/**",
-          "$APPCONFIG/**",
-          "$APPCACHE/**"
-        ]
-      }
-    },
     "shell": {
       "open": true
     },

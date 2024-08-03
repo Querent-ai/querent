@@ -32,8 +32,12 @@ tauri-plugin-fs = "2.0.0-rc.0"
 tauri-plugin-shell = "2.0.0-rc.0"
 tauri-plugin-os = "2.0.0-rc.0"
 tauri-plugin-dialog = "2.0.0-rc.0"
-tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta.git", branch = "main" }
+tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta", branch = "main", features = ["derive", "javascript", "typescript"] }
 specta = "=2.0.0-rc.19"
+specta-typescript = "=0.0.6"
+specta-jsdoc = "=0.0.6"
+macos-accessibility-client = "0.0.1"
+sysinfo = "0.28.3"
 
 # Querent AI dependencies
 node = { path = "../../querent/node" }
