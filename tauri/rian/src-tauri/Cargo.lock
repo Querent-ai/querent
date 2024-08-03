@@ -44,6 +44,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tauri-specta",
  "tauri-utils",
+ "tokio",
 ]
 
 [[package]]
