@@ -9,6 +9,12 @@ export const commands = {
  */
 async getUpdateResult()  {
     return await TAURI_INVOKE("get_update_result");
+},
+/**
+ * @returns { Promise<boolean> }
+ */
+async checkIfServiceIsRunning()  {
+    return await TAURI_INVOKE("check_if_service_is_running");
 }
     }
 

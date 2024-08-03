@@ -7,6 +7,9 @@
 export const commands = {
 async getUpdateResult() : Promise<[boolean, UpdateResult | null]> {
     return await TAURI_INVOKE("get_update_result");
+},
+async checkIfServiceIsRunning() : Promise<boolean> {
+    return await TAURI_INVOKE("check_if_service_is_running");
 }
 }
 

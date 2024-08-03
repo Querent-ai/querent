@@ -48,6 +48,17 @@ fn get_update_result() -> (bool, Option<UpdateResult>) {
     }
 }
 
+#[tauri::command]
+#[specta::specta]
+fn check_if_service_is_running() -> bool {
+    let services: Option<&Arc<QuerentServices>> = QUERENT_SERVICES.get();
+    if let Some(_services) = services {
+        true
+    } else {
+        false
+    }
+}
+
 #[cfg(target_os = "macos")]
 fn query_accessibility_permissions() -> bool {
     let trusted = macos_accessibility_client::accessibility::application_is_trusted_with_prompt();
@@ -77,7 +88,10 @@ pub fn run(node_config: NodeConfig) {
     }
 
     let builder = Builder::<tauri::Wry>::new()
-        .commands(tauri_specta::collect_commands![get_update_result])
+        .commands(tauri_specta::collect_commands![
+            get_update_result,
+            check_if_service_is_running
+        ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
             CheckUpdateResultEvent,
