@@ -19,6 +19,7 @@ async getUpdateResult()  {
  * @type {typeof __makeEvents__<{
  * checkUpdateEvent: CheckUpdateEvent
  * checkUpdateResultEvent: CheckUpdateResultEvent
+ * pinnedFromWindowEvent: PinnedFromWindowEvent
  * }>}
  */
 
@@ -26,7 +27,8 @@ async getUpdateResult()  {
 
     export const events = __typedMakeEvents__({
     checkUpdateEvent: "check-update-event",
-checkUpdateResultEvent: "check-update-result-event"
+checkUpdateResultEvent: "check-update-result-event",
+pinnedFromWindowEvent: "pinned-from-window-event"
     })
 
 /** user-defined constants **/
@@ -45,6 +47,10 @@ export const universalConstant = 42;
 
 /**
  * @typedef { string } Custom
+ */
+
+/**
+ * @typedef { { pinned: boolean } } PinnedFromWindowEvent
  */
 
 /**

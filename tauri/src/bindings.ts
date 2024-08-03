@@ -15,10 +15,12 @@ async getUpdateResult() : Promise<[boolean, UpdateResult | null]> {
 
 export const events = __makeEvents__<{
 checkUpdateEvent: CheckUpdateEvent,
-checkUpdateResultEvent: CheckUpdateResultEvent
+checkUpdateResultEvent: CheckUpdateResultEvent,
+pinnedFromWindowEvent: PinnedFromWindowEvent
 }>({
 checkUpdateEvent: "check-update-event",
-checkUpdateResultEvent: "check-update-result-event"
+checkUpdateResultEvent: "check-update-result-event",
+pinnedFromWindowEvent: "pinned-from-window-event"
 })
 
 /** user-defined constants **/
@@ -30,6 +32,7 @@ export const universalConstant = 42 as const;
 export type CheckUpdateEvent = null
 export type CheckUpdateResultEvent = UpdateResult
 export type Custom = string
+export type PinnedFromWindowEvent = { pinned: boolean }
 export type UpdateResult = { version: string; currentVersion: string; body: string | null }
 
 /** tauri-specta globals **/

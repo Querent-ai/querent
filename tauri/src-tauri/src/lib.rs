@@ -6,12 +6,15 @@ use proto::NodeConfig;
 use specta_typescript::Typescript;
 use std::env;
 use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use sysinfo::{CpuExt, System, SystemExt};
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_notification::NotificationExt;
 use tauri_specta::Builder;
+use tauri_specta::Event;
+use windows::PinnedFromWindowEvent;
 mod windows;
 use windows::CheckUpdateEvent;
 use windows::CheckUpdateResultEvent;
@@ -72,6 +75,7 @@ pub fn run(node_config: NodeConfig) {
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
             CheckUpdateResultEvent,
+            PinnedFromWindowEvent,
         ])
         .ty::<Custom>()
         .constant("universalConstant", 42);
@@ -133,6 +137,11 @@ pub fn run(node_config: NodeConfig) {
                     .show()
                     .unwrap();
             }
+            let handle = app_handle.clone();
+            PinnedFromWindowEvent::listen_any(app_handle, move |event| {
+                let pinned = event.payload.pinned();
+                ALWAYS_ON_TOP.store(*pinned, Ordering::Release);
+            });
             Ok(())
         })
         .run(tauri::generate_context!())
