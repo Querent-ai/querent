@@ -12,6 +12,7 @@ use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_updater::UpdaterExt;
 use tauri_specta::Builder;
 use tauri_specta::Event;
 use windows::PinnedFromWindowEvent;
@@ -138,6 +139,33 @@ pub fn run(node_config: NodeConfig) {
                     .unwrap();
             }
             let handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(60 * 10));
+                    let builder = handle.updater_builder();
+                    let updater = builder.build().unwrap();
+
+                    match updater.check().await {
+                        Ok(Some(update)) => {
+                            *UPDATE_RESULT.lock() = Some(Some(UpdateResult {
+                                version: update.version,
+                                current_version: update.current_version,
+                                body: update.body,
+                            }));
+                        }
+                        Ok(None) => {
+                            if UPDATE_RESULT.lock().is_some() {
+                                if let Some(Some(_)) = *UPDATE_RESULT.lock() {
+                                    *UPDATE_RESULT.lock() = Some(None);
+                                }
+                            } else {
+                                *UPDATE_RESULT.lock() = Some(None);
+                            }
+                        }
+                        Err(_) => {}
+                    }
+                }
+            });
             PinnedFromWindowEvent::listen_any(app_handle, move |event| {
                 let pinned = event.payload.pinned();
                 ALWAYS_ON_TOP.store(*pinned, Ordering::Release);

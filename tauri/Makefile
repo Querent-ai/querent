@@ -1,24 +1,29 @@
 .PHONY:check
-check:
+check-rian:
 	@echo "Running cargo check"
-	@cd src-tauri && cargo check
+	@cd rian/src-tauri && cargo check
 
 .PHONY:test
-test:
+test-rian:
 	@echo "Running cargo test"
-	@cd src-tauri && cargo test
+	@cd rian/src-tauri && cargo test
 
-.PHONY:build
+.PHONY:build-rian
 build:
 	@echo "Running cargo build"
-	@cd src-tauri && cargo build
+	@cd rian/src-tauri && cargo build
 
-.PHONY:run
+.PHONY:run-rian
 run:
 	@echo "Running tauri dev"
-	@cd src-tauri && cargo tauri dev
+	@cd rian/src-tauri && cargo tauri dev
 
-.PHONY:format
+.PHONY:format-rian
 format:
 	@echo "Running cargo fmt"
-	@cd src-tauri && cargo +nightly fmt
+	@cd rian/src-tauri && cargo +nightly fmt
+
+.PHONY:clean-rian
+clean:
+	@echo "Running cargo clean"
+	@cd rian/src-tauri && cargo clean
