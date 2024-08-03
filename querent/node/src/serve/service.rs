@@ -194,3 +194,75 @@ pub async fn serve_quester(
 	let actor_exit_statuses = shutdown_handle.await?;
 	Ok(actor_exit_statuses)
 }
+
+/// Serve Querent without starting REST and gRPC servers.
+/// This is useful for testing and other scenarios where REST and gRPC servers are not needed.
+/// This function returns a handle to the services that can be used to interact with the Querent node.
+/// The caller is responsible for shutting down the Querent node by calling `quit` on the returned handle.
+/// The caller is also responsible for shutting down the Querent node by calling `quit` on the returned handle.
+pub async fn serve_quester_without_servers(
+	node_config: NodeConfig,
+	_runtimes_config: RuntimesConfig,
+) -> anyhow::Result<Arc<QuesterServices>> {
+	let cluster = start_cluster_service(&node_config).await?;
+	let event_broker = PubSubBroker::default();
+	let quester_cloud = Querent::new();
+	info!("Creating storages 🗄️");
+	let querent_data_path = get_querent_data_path();
+	let secret_store = create_secret_store(querent_data_path.clone().to_path_buf()).await?;
+	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
+
+	let (event_storages, index_storages) =
+		create_storages(&node_config.storage_configs.0, querent_data_path.to_path_buf()).await?;
+
+	info!("Serving Querent RIAN Node 🚀");
+	info!("Node ID: {}", node_config.node_id);
+	info!("Starting Querent RIAN 🏁");
+	log::info!("Node ID: {}", node_config.node_id);
+	let semantic_service_bus: MessageBus<SemanticService> = start_semantic_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		&event_broker,
+		secret_store.clone(),
+	)
+	.await
+	.expect("Failed to start semantic service");
+
+	info!("Starting Discovery Service 🕵️");
+	let discovery_service = start_discovery_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+		metadata_store.clone(),
+		secret_store.clone(),
+	)
+	.await?;
+
+	log::info!("Starting Insight Service 🧠");
+	let insight_service = start_insight_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+		metadata_store.clone(),
+		secret_store.clone(),
+	)
+	.await?;
+
+	Ok(Arc::new(QuesterServices {
+		node_config,
+		cluster,
+		event_broker,
+		semantic_service_bus,
+		discovery_service: Some(discovery_service),
+		insight_service: Some(insight_service),
+		event_storages,
+		index_storages,
+		secret_store,
+		metadata_store,
+	}))
+}
