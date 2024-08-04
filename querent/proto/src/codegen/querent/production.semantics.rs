@@ -464,9 +464,9 @@ pub struct SlackCollectorConfig {
 	/// Includive of the Slack collector.
 	#[prost(bool, tag = "5")]
 	pub includive: bool,
-	/// Limit of the Slack collector.
-	#[prost(int64, tag = "6")]
-	pub limit: i64,
+    /// Limit of the Slack collector
+    #[prost(int32, tag = "6")]
+    pub limit: i32,
 	/// Id for the collector
 	#[prost(string, tag = "7")]
 	pub id: ::prost::alloc::string::String,

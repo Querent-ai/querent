@@ -295,8 +295,8 @@ message SlackCollectorConfig {
   bool include_all_metadata = 4;
   // Includive of the Slack collector.
   bool includive = 5;
-  // Limit of the Slack collector.
-  int64 limit = 6;
+  // Limit of the Slack collector
+  int32 limit = 6;
   // Id for the collector
   string id = 7;
 }
