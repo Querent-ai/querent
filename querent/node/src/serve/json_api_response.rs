@@ -12,7 +12,7 @@ use super::BodyFormat;
 const JSON_SERIALIZATION_ERROR: &str = "JSON serialization failed.";
 
 #[derive(Serialize)]
-pub(crate) struct ApiError {
+pub struct ApiError {
 	// For now, we want to keep ApiError as simple as possible
 	// and return just a message.
 	#[serde(skip_serializing)]

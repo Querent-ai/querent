@@ -1,3 +1,6 @@
+use api::{
+    check_if_service_is_running, get_update_result, has_rian_license_key, set_rian_license_key,
+};
 use log::{error, info};
 use node::{
     service::serve_quester_without_servers, shutdown_querent, tokio_runtime, QuerentServices,
@@ -16,6 +19,8 @@ use tauri_specta::{Builder, Event};
 use windows::{
     show_updater_window, CheckUpdateEvent, CheckUpdateResultEvent, PinnedFromWindowEvent,
 };
+
+mod api;
 mod tray;
 mod windows;
 
@@ -31,23 +36,6 @@ pub struct UpdateResult {
     version: String,
     current_version: String,
     body: Option<String>,
-}
-
-#[tauri::command]
-#[specta::specta]
-fn get_update_result() -> (bool, Option<UpdateResult>) {
-    let result = UPDATE_RESULT.lock();
-    if let Some(update_result) = &*result {
-        (true, update_result.clone())
-    } else {
-        (false, None)
-    }
-}
-
-#[tauri::command]
-#[specta::specta]
-fn check_if_service_is_running() -> bool {
-    QUERENT_SERVICES.get().is_some()
 }
 
 #[cfg(target_os = "macos")]
@@ -81,7 +69,9 @@ pub fn run(node_config: NodeConfig) {
     let builder = Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
             get_update_result,
-            check_if_service_is_running
+            check_if_service_is_running,
+            has_rian_license_key,
+            set_rian_license_key
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
