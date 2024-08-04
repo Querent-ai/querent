@@ -278,11 +278,8 @@ pub struct AzureCollectorConfig {
 	/// Prefix of the Azure collector.
 	#[prost(string, tag = "4")]
 	pub prefix: ::prost::alloc::string::String,
-	/// Chunk size of the Azure collector.
-	#[prost(int64, tag = "5")]
-	pub chunk_size: i64,
 	/// Id for the collector
-	#[prost(string, tag = "7")]
+	#[prost(string, tag = "5")]
 	pub id: ::prost::alloc::string::String,
 }
 /// GCSCollectorConfig is a message to hold configuration for a GCS collector.

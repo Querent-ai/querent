@@ -294,22 +294,19 @@ pub struct FileCollectorConfig {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AzureCollectorConfig {
     /// Connection string of the Azure collector.
-    #[prost(string, tag = "2")]
+    #[prost(string, tag = "1")]
     pub connection_string: ::prost::alloc::string::String,
     /// Container of the Azure collector.
-    #[prost(string, tag = "3")]
+    #[prost(string, tag = "2")]
     pub container: ::prost::alloc::string::String,
     /// Credentials of the Azure collector.
-    #[prost(string, tag = "4")]
+    #[prost(string, tag = "3")]
     pub credentials: ::prost::alloc::string::String,
     /// Prefix of the Azure collector.
-    #[prost(string, tag = "5")]
+    #[prost(string, tag = "4")]
     pub prefix: ::prost::alloc::string::String,
-    /// Chunk size of the Azure collector.
-    #[prost(int64, tag = "6")]
-    pub chunk_size: i64,
     /// Id for the collector
-    #[prost(string, tag = "7")]
+    #[prost(string, tag = "5")]
     pub id: ::prost::alloc::string::String,
 }
 /// GCSCollectorConfig is a message to hold configuration for a GCS collector.

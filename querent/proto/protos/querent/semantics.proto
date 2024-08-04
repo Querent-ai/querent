@@ -164,17 +164,15 @@ message FileCollectorConfig {
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
 message AzureCollectorConfig {
   // Connection string of the Azure collector.
-  string connection_string = 2;
+  string connection_string = 1;
   // Container of the Azure collector.
-  string container = 3;
+  string container = 2;
   // Credentials of the Azure collector.
-  string credentials = 4;
+  string credentials = 3;
   // Prefix of the Azure collector.
-  string prefix = 5;
-  // Chunk size of the Azure collector.
-  int64 chunk_size = 6;
+  string prefix = 4;
   // Id for the collector
-  string id = 7;
+  string id = 5;
 }
 
 // GCSCollectorConfig is a message to hold configuration for a GCS collector.
