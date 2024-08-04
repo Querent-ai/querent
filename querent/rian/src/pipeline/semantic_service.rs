@@ -224,6 +224,19 @@ impl Actor for SemanticService {
 	async fn initialize(&mut self, ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
 		self.handle(SuperviseLoop, ctx).await
 	}
+
+	async fn finalize(
+		&mut self,
+		_exit_status: &ActorExitStatus,
+		_ctx: &ActorContext<Self>,
+	) -> anyhow::Result<()> {
+		// kill all pipelines
+		for pipeline_handle in self.semantic_pipelines.values() {
+			let shutdown = ShutdownPipe { pipeline_id: pipeline_handle.pipeline_id.clone() };
+			let _ = pipeline_handle.mailbox.send_message(shutdown).await;
+		}
+		Ok(())
+	}
 }
 
 #[derive(Debug)]

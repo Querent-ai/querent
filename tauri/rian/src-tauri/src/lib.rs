@@ -1,5 +1,6 @@
 use log::error;
 use node::service::serve_quester_without_servers;
+use node::shutdown_querent;
 use node::tokio_runtime;
 use node::QuerentServices;
 use once_cell::sync::OnceCell;
@@ -10,7 +11,7 @@ use std::env;
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use sysinfo::{CpuExt, System, SystemExt};
+use sysinfo::System;
 use tauri::AppHandle;
 use tauri::Manager;
 use tauri_plugin_autostart::MacosLauncher;
@@ -18,7 +19,9 @@ use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
 use tauri_specta::Builder;
 use tauri_specta::Event;
+use windows::show_updater_window;
 use windows::PinnedFromWindowEvent;
+mod tray;
 mod windows;
 use windows::CheckUpdateEvent;
 use windows::CheckUpdateResultEvent;
@@ -82,7 +85,7 @@ pub struct Custom(pub String);
 pub fn run(node_config: NodeConfig) {
     log::info!("Starting R!AN 🧠 with config: {:?}", node_config);
     let mut sys = System::new();
-    sys.refresh_cpu(); // Refreshing CPU information.
+    sys.refresh_cpu_all(); // Refreshing CPU information.
     if let Some(cpu) = sys.cpus().first() {
         *CPU_VENDOR.lock() = cpu.vendor_id().to_string();
     }
@@ -120,7 +123,7 @@ pub fn run(node_config: NodeConfig) {
         )
         .expect("Failed to export TypeScript bindings");
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -144,6 +147,7 @@ pub fn run(node_config: NodeConfig) {
             builder.mount_events(app);
             let app_handle = app.handle();
             APP_HANDLE.set(app_handle.clone()).unwrap();
+            tray::create_tray(&app_handle)?;
             app_handle.plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
             app_handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             // Ensure Tokio runtime is initialized and used for async tasks
@@ -192,11 +196,13 @@ pub fn run(node_config: NodeConfig) {
                                 current_version: update.current_version,
                                 body: update.body,
                             }));
+                            tray::create_tray(&handle).unwrap();
                         }
                         Ok(None) => {
                             if UPDATE_RESULT.lock().is_some() {
                                 if let Some(Some(_)) = *UPDATE_RESULT.lock() {
                                     *UPDATE_RESULT.lock() = Some(None);
+                                    tray::create_tray(&handle).unwrap();
                                 }
                             } else {
                                 *UPDATE_RESULT.lock() = Some(None);
@@ -207,12 +213,60 @@ pub fn run(node_config: NodeConfig) {
                 }
             });
 
+            let handle = app_handle.clone();
             PinnedFromWindowEvent::listen_any(app_handle, move |event| {
                 ALWAYS_ON_TOP.store(event.payload.pinned().clone(), Ordering::Release);
+                tray::create_tray(&handle).unwrap();
             });
 
             Ok(())
         })
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    #[cfg(target_os = "macos")]
+    {
+        app.set_activation_policy(tauri::ActivationPolicy::Regular);
+    }
+
+    app.run(|app, event| match event {
+        tauri::RunEvent::Exit { .. } => {
+            let services: Option<&Arc<QuerentServices>> = QUERENT_SERVICES.get();
+            if let Some(services) = services {
+                let _ = shutdown_querent(services);
+            }
+        }
+        tauri::RunEvent::Ready => {
+            let handle = app.clone();
+            tauri::async_runtime::spawn(async move {
+                let builder = handle.updater_builder();
+                let updater = builder.build().unwrap();
+
+                match updater.check().await {
+                    Ok(Some(update)) => {
+                        *UPDATE_RESULT.lock() = Some(Some(UpdateResult {
+                            version: update.version,
+                            current_version: update.current_version,
+                            body: update.body,
+                        }));
+                        tray::create_tray(&handle).unwrap();
+                        std::thread::sleep(std::time::Duration::from_secs(3));
+                        show_updater_window();
+                    }
+                    Ok(None) => {
+                        if UPDATE_RESULT.lock().is_some() {
+                            if let Some(Some(_)) = *UPDATE_RESULT.lock() {
+                                *UPDATE_RESULT.lock() = Some(None);
+                                tray::create_tray(&handle).unwrap();
+                            }
+                        } else {
+                            *UPDATE_RESULT.lock() = Some(None);
+                        }
+                    }
+                    Err(_) => {}
+                }
+            });
+        }
+        _ => {}
+    });
 }

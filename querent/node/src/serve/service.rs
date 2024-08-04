@@ -11,7 +11,7 @@ use actors::{ActorExitStatus, MessageBus, Querent};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig};
 use proto::config::NodeConfig;
-use rian::{start_semantic_service, SemanticService};
+use rian::{start_semantic_service, SemanticService, ShutdownPipeline};
 use storage::{create_metadata_store, create_secret_store, create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info};
@@ -25,6 +25,7 @@ const _READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "tes
 };
 
 pub struct QuerentServices {
+	pub pipeline_id: Option<String>,
 	pub node_config: NodeConfig,
 	pub cluster: Cluster,
 	pub event_broker: PubSubBroker,
@@ -116,6 +117,7 @@ pub async fn serve_quester(
 	});
 
 	let services = Arc::new(QuerentServices {
+		pipeline_id: None,
 		node_config,
 		cluster: cluster.clone(),
 		event_broker,
@@ -253,6 +255,7 @@ pub async fn serve_quester_without_servers(
 	.await?;
 
 	Ok(Arc::new(QuerentServices {
+		pipeline_id: None,
 		node_config,
 		cluster,
 		event_broker,
@@ -264,4 +267,17 @@ pub async fn serve_quester_without_servers(
 		secret_store,
 		metadata_store,
 	}))
+}
+
+
+pub async fn shutdown_querent(services: &Arc<QuerentServices>) -> anyhow::Result<()> {
+	info!("Shutting down Querent RIAN Node 🛑");
+	if services.pipeline_id.is_none() {
+		info!("Querent RIAN Node is not running");
+		return Ok(());
+	}
+	let shutdown = ShutdownPipeline{ pipeline_id : services.pipeline_id.clone().unwrap() };
+	let _ = services.semantic_service_bus.send_message(shutdown).await;
+	info!("Shutting down Discovery Service 🛑");
+	Ok(())
 }

@@ -1,4 +1,4 @@
-.PHONY:check
+.PHONY:check-rian
 check-rian:
 	@echo "Running cargo check"
 	@cd rian/src-tauri && cargo check
