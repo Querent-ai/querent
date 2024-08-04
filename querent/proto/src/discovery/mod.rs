@@ -56,7 +56,7 @@ impl From<AskError<DiscoveryError>> for DiscoveryError {
 	}
 }
 
-#[derive(Clone, Default, Eq, PartialEq, Hash, Ord, PartialOrd, utoipa::ToSchema)]
+#[derive(Clone, Default, Eq, PartialEq, Hash, Ord, PartialOrd, utoipa::ToSchema, specta::Type)]
 pub enum DiscoveryAgentType {
 	#[default]
 	Retriever,

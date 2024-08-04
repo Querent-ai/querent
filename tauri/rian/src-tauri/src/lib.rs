@@ -1,5 +1,6 @@
 use api::{
-    check_if_service_is_running, get_update_result, has_rian_license_key, set_rian_license_key,
+    check_if_service_is_running, get_update_result, has_rian_license_key, set_collectors,
+    set_rian_license_key,
 };
 use log::{error, info};
 use node::{
@@ -71,7 +72,8 @@ pub fn run(node_config: NodeConfig) {
             get_update_result,
             check_if_service_is_running,
             has_rian_license_key,
-            set_rian_license_key
+            set_rian_license_key,
+            set_collectors
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,

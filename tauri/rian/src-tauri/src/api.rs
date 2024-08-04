@@ -61,3 +61,17 @@ pub async fn set_rian_license_key(key: String) -> bool {
         false
     }
 }
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_collectors(collectors: Vec<proto::semantics::CollectorConfig>) -> bool {
+    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let result = node::serve::semantic_api::set_collectors_all(collectors, secret_store).await;
+    if result.is_ok() {
+        info!("Collectors set successfully");
+        true
+    } else {
+        info!("Failed to set collectors");
+        false
+    }
+}
