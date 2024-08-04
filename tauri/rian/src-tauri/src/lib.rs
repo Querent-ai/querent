@@ -1,30 +1,29 @@
-use log::error;
-use node::service::serve_quester_without_servers;
-use node::shutdown_querent;
-use node::tokio_runtime;
-use node::QuerentServices;
+use api::{
+    check_if_service_is_running, get_collectors, get_update_result, has_rian_license_key,
+    set_collectors, set_rian_license_key,
+};
+use log::{error, info};
+use node::{
+    service::serve_quester_without_servers, shutdown_querent, tokio_runtime, QuerentServices,
+};
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use proto::NodeConfig;
 use specta_typescript::Typescript;
-use std::env;
-use std::sync::atomic::AtomicBool;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
+use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use sysinfo::System;
-use tauri::AppHandle;
-use tauri::Manager;
+use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 use tauri_plugin_notification::NotificationExt;
 use tauri_plugin_updater::UpdaterExt;
-use tauri_specta::Builder;
-use tauri_specta::Event;
-use windows::show_updater_window;
-use windows::PinnedFromWindowEvent;
+use tauri_specta::{Builder, Event};
+use windows::{
+    show_updater_window, CheckUpdateEvent, CheckUpdateResultEvent, PinnedFromWindowEvent,
+};
+
+mod api;
 mod tray;
 mod windows;
-use windows::CheckUpdateEvent;
-use windows::CheckUpdateResultEvent;
 
 pub static APP_HANDLE: OnceCell<AppHandle> = OnceCell::new();
 pub static ALWAYS_ON_TOP: AtomicBool = AtomicBool::new(false);
@@ -40,35 +39,13 @@ pub struct UpdateResult {
     body: Option<String>,
 }
 
-#[tauri::command]
-#[specta::specta]
-fn get_update_result() -> (bool, Option<UpdateResult>) {
-    let result = UPDATE_RESULT.lock();
-    if result.is_none() {
-        (false, None)
-    } else {
-        (true, result.clone().unwrap())
-    }
-}
-
-#[tauri::command]
-#[specta::specta]
-fn check_if_service_is_running() -> bool {
-    let services: Option<&Arc<QuerentServices>> = QUERENT_SERVICES.get();
-    if let Some(_services) = services {
-        true
-    } else {
-        false
-    }
-}
-
 #[cfg(target_os = "macos")]
 fn query_accessibility_permissions() -> bool {
     let trusted = macos_accessibility_client::accessibility::application_is_trusted_with_prompt();
     if trusted {
-        println!("Application is trusted!");
+        info!("Application is trusted!");
     } else {
-        println!("Application isn't trusted :(");
+        warn!("Application isn't trusted :(");
     }
     trusted
 }
@@ -83,9 +60,9 @@ pub struct Custom(pub String);
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(node_config: NodeConfig) {
-    log::info!("Starting R!AN 🧠 with config: {:?}", node_config);
+    info!("Starting R!AN 🧠 with config: {:?}", node_config);
     let mut sys = System::new();
-    sys.refresh_cpu_all(); // Refreshing CPU information.
+    sys.refresh_cpu_all();
     if let Some(cpu) = sys.cpus().first() {
         *CPU_VENDOR.lock() = cpu.vendor_id().to_string();
     }
@@ -93,35 +70,40 @@ pub fn run(node_config: NodeConfig) {
     let builder = Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
             get_update_result,
-            check_if_service_is_running
+            check_if_service_is_running,
+            has_rian_license_key,
+            set_rian_license_key,
+            set_collectors,
+            get_collectors
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
             CheckUpdateResultEvent,
-            PinnedFromWindowEvent,
+            PinnedFromWindowEvent
         ])
         .ty::<Custom>()
         .constant("universalConstant", 42);
 
     #[cfg(debug_assertions)]
-    builder
-        .export(
-            Typescript::default()
-                .formatter(specta_typescript::formatter::prettier)
-                .header("/* eslint-disable */"),
-            "../src/bindings.ts",
-        )
-        .expect("Failed to export TypeScript bindings");
+    {
+        builder
+            .export(
+                Typescript::default()
+                    .formatter(specta_typescript::formatter::prettier)
+                    .header("/* eslint-disable */"),
+                "../src/bindings.ts",
+            )
+            .expect("Failed to export TypeScript bindings");
 
-    #[cfg(debug_assertions)]
-    builder
-        .export(
-            specta_jsdoc::JSDoc::default()
-                .formatter(specta_typescript::formatter::prettier)
-                .header("/* eslint-disable */"),
-            "../src/bindings-jsdoc.js",
-        )
-        .expect("Failed to export TypeScript bindings");
+        builder
+            .export(
+                specta_jsdoc::JSDoc::default()
+                    .formatter(specta_typescript::formatter::prettier)
+                    .header("/* eslint-disable */"),
+                "../src/bindings-jsdoc.js",
+            )
+            .expect("Failed to export JSDoc bindings");
+    }
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
@@ -129,7 +111,7 @@ pub fn run(node_config: NodeConfig) {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
-            println!("{}, {argv:?}, {cwd}", app.package_info().name);
+            info!("{}, {argv:?}, {cwd}", app.package_info().name);
             app.notification()
                 .builder()
                 .title("R!AN is already running!")
@@ -150,25 +132,10 @@ pub fn run(node_config: NodeConfig) {
             tray::create_tray(&app_handle)?;
             app_handle.plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
             app_handle.plugin(tauri_plugin_updater::Builder::new().build())?;
-            // Ensure Tokio runtime is initialized and used for async tasks
-            let runtime = tokio_runtime().expect("failed to initialize tokio runtime");
+            let runtime = tokio_runtime().expect("Failed to initialize Tokio runtime");
 
-            // Start QuerentServices asynchronously within the Tokio runtime
-            let node_config_clone = node_config.clone();
-            runtime.spawn(async move {
-                match serve_quester_without_servers(node_config_clone).await {
-                    Ok(services) => {
-                        let set_services_res = QUERENT_SERVICES.set(services);
+            start_querent_services(runtime, node_config.clone());
 
-                        if set_services_res.is_err() {
-                            error!("Failed to set QuerentServices");
-                        }
-                    }
-                    Err(err) => {
-                        error!("Failed to start QuerentServices: {:?}", err);
-                    }
-                }
-            });
             if !query_accessibility_permissions() {
                 if let Some(window) = app.get_webview_window("rian") {
                     window.minimize().unwrap();
@@ -182,58 +149,26 @@ pub fn run(node_config: NodeConfig) {
                     .unwrap();
             }
 
-            let handle = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
-                loop {
-                    tokio::time::sleep(tokio::time::Duration::from_secs(60 * 10)).await;
-                    let builder = handle.updater_builder();
-                    let updater = builder.build().unwrap();
-
-                    match updater.check().await {
-                        Ok(Some(update)) => {
-                            *UPDATE_RESULT.lock() = Some(Some(UpdateResult {
-                                version: update.version,
-                                current_version: update.current_version,
-                                body: update.body,
-                            }));
-                            tray::create_tray(&handle).unwrap();
-                        }
-                        Ok(None) => {
-                            if UPDATE_RESULT.lock().is_some() {
-                                if let Some(Some(_)) = *UPDATE_RESULT.lock() {
-                                    *UPDATE_RESULT.lock() = Some(None);
-                                    tray::create_tray(&handle).unwrap();
-                                }
-                            } else {
-                                *UPDATE_RESULT.lock() = Some(None);
-                            }
-                        }
-                        Err(_) => {}
-                    }
-                }
-            });
-
-            let handle = app_handle.clone();
-            PinnedFromWindowEvent::listen_any(app_handle, move |event| {
-                ALWAYS_ON_TOP.store(event.payload.pinned().clone(), Ordering::Release);
-                tray::create_tray(&handle).unwrap();
-            });
+            schedule_update_checks(app_handle.clone());
+            monitor_pinned_event(app_handle.clone());
 
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("Error while running tauri application");
 
     #[cfg(target_os = "macos")]
-    {
-        app.set_activation_policy(tauri::ActivationPolicy::Regular);
-    }
+    app.set_activation_policy(tauri::ActivationPolicy::Regular);
 
-    app.run(|app, event| match event {
+    app.run(move |app, event| match event {
         tauri::RunEvent::Exit { .. } => {
-            let services: Option<&Arc<QuerentServices>> = QUERENT_SERVICES.get();
-            if let Some(services) = services {
-                let _ = shutdown_querent(services);
+            if let Some(services) = QUERENT_SERVICES.get() {
+                let services = services.clone();
+                tauri::async_runtime::spawn(async move {
+                    if let Err(err) = shutdown_querent(&services).await {
+                        error!("Failed to shut down QuerentServices: {:?}", err);
+                    }
+                });
             }
         }
         tauri::RunEvent::Ready => {
@@ -254,19 +189,73 @@ pub fn run(node_config: NodeConfig) {
                         show_updater_window();
                     }
                     Ok(None) => {
-                        if UPDATE_RESULT.lock().is_some() {
-                            if let Some(Some(_)) = *UPDATE_RESULT.lock() {
-                                *UPDATE_RESULT.lock() = Some(None);
-                                tray::create_tray(&handle).unwrap();
-                            }
+                        if let Some(Some(_)) = *UPDATE_RESULT.lock() {
+                            *UPDATE_RESULT.lock() = Some(None);
+                            tray::create_tray(&handle).unwrap();
                         } else {
                             *UPDATE_RESULT.lock() = Some(None);
                         }
                     }
-                    Err(_) => {}
+                    Err(err) => {
+                        error!("Update check failed: {:?}", err);
+                    }
                 }
             });
         }
         _ => {}
+    });
+}
+
+fn start_querent_services(runtime: &tokio::runtime::Runtime, node_config: NodeConfig) {
+    runtime.spawn(async move {
+        match serve_quester_without_servers(node_config).await {
+            Ok(services) => {
+                if QUERENT_SERVICES.set(services).is_err() {
+                    error!("Failed to set QuerentServices");
+                }
+            }
+            Err(err) => {
+                error!("Failed to start QuerentServices: {:?}", err);
+            }
+        }
+    });
+}
+
+fn schedule_update_checks(app_handle: AppHandle) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            tokio::time::sleep(tokio::time::Duration::from_secs(60 * 10)).await;
+            let builder = app_handle.updater_builder();
+            let updater = builder.build().unwrap();
+
+            match updater.check().await {
+                Ok(Some(update)) => {
+                    *UPDATE_RESULT.lock() = Some(Some(UpdateResult {
+                        version: update.version,
+                        current_version: update.current_version,
+                        body: update.body,
+                    }));
+                    tray::create_tray(&app_handle).unwrap();
+                }
+                Ok(None) => {
+                    if let Some(Some(_)) = *UPDATE_RESULT.lock() {
+                        *UPDATE_RESULT.lock() = Some(None);
+                        tray::create_tray(&app_handle).unwrap();
+                    } else {
+                        *UPDATE_RESULT.lock() = Some(None);
+                    }
+                }
+                Err(err) => {
+                    error!("Update check failed: {:?}", err);
+                }
+            }
+        }
+    });
+}
+
+fn monitor_pinned_event(app_handle: AppHandle) {
+    PinnedFromWindowEvent::listen_any(&app_handle.clone(), move |event| {
+        ALWAYS_ON_TOP.store(event.payload.pinned().clone(), Ordering::Release);
+        tray::create_tray(&app_handle).unwrap();
     });
 }

@@ -23,7 +23,7 @@ use crate::{
 pub struct HealthCheckApi;
 
 /// Health check handlers.
-pub(crate) fn health_check_handlers(
+pub fn health_check_handlers(
 	cluster: Cluster,
 	semantic_service: Option<MessageBus<SemanticService>>,
 	secret_store: Arc<dyn Storage>,
@@ -116,7 +116,7 @@ pub struct ApiKeyResponse {
 	),
 )]
 /// Set the API Key
-async fn set_api_key(
+pub async fn set_api_key(
 	payload: ApiKeyPayload,
 	secret_store: Arc<dyn Storage>,
 ) -> Result<ApiKeyPayload, ApiError> {

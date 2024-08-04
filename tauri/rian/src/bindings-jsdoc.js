@@ -15,6 +15,26 @@ async getUpdateResult()  {
  */
 async checkIfServiceIsRunning()  {
     return await TAURI_INVOKE("check_if_service_is_running");
+},
+/**
+ * @returns { Promise<boolean> }
+ */
+async hasRianLicenseKey()  {
+    return await TAURI_INVOKE("has_rian_license_key");
+},
+/**
+ * @param { string } key
+ * @returns { Promise<boolean> }
+ */
+async setRianLicenseKey(key)  {
+    return await TAURI_INVOKE("set_rian_license_key", { key });
+},
+/**
+ * @param { CollectorConfig[] } collectors
+ * @returns { Promise<boolean> }
+ */
+async setCollectors(collectors)  {
+    return await TAURI_INVOKE("set_collectors", { collectors });
 }
     }
 
@@ -44,6 +64,15 @@ export const universalConstant = 42;
 /** user-defined types **/
 
 /**
+ * AzureCollectorConfig is a message to hold configuration for an Azure collector.
+ * @typedef { { connection_string: string; container: string; credentials: string; prefix: string; id: string } } AzureCollectorConfig
+ */
+
+/**
+ * @typedef { { azure: AzureCollectorConfig } | { gcs: GcsCollectorConfig } | { s3: S3CollectorConfig } | { jira: JiraCollectorConfig } | { drive: GoogleDriveCollectorConfig } | { email: EmailCollectorConfig } | { dropbox: DropBoxCollectorConfig } | { github: GithubCollectorConfig } | { slack: SlackCollectorConfig } | { news: NewsCollectorConfig } | { files: FileCollectorConfig } | { onedrive: OneDriveConfig } } Backend
+ */
+
+/**
  * @typedef { null } CheckUpdateEvent
  */
 
@@ -52,11 +81,71 @@ export const universalConstant = 42;
  */
 
 /**
+ * CollectorConfig is a message to hold configuration for a collector.
+ * Defines a collector with a specific configuration.
+ * @typedef { { name: string; backend: Backend | null } } CollectorConfig
+ */
+
+/**
  * @typedef { string } Custom
  */
 
 /**
+ * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
+ * @typedef { { dropbox_app_key: string; dropbox_app_secret: string; dropbox_refresh_token: string; folder_path: string; id: string } } DropBoxCollectorConfig
+ */
+
+/**
+ * EmailCollectorConfig is a message to hold configuration for an Email collector.
+ * @typedef { { imap_server: string; imap_port: number; imap_username: string; imap_password: string; imap_folder: string; id: string } } EmailCollectorConfig
+ */
+
+/**
+ * FileCollectorConfig is a message to hold configuration for a file collector.
+ * @typedef { { root_path: string; id: string } } FileCollectorConfig
+ */
+
+/**
+ * GCSCollectorConfig is a message to hold configuration for a GCS collector.
+ * @typedef { { bucket: string; credentials: string; id: string } } GcsCollectorConfig
+ */
+
+/**
+ * GithubCollectorConfig is a message to hold configuration for a Github collector.
+ * @typedef { { github_username: string; github_access_token: string; repository: string; id: string } } GithubCollectorConfig
+ */
+
+/**
+ * GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
+ * @typedef { { drive_client_id: string; drive_client_secret: string; drive_refresh_token: string; folder_to_crawl: string; id: string } } GoogleDriveCollectorConfig
+ */
+
+/**
+ * JiraCollectorConfig is a message to hold configuration for a Jira collector.
+ * @typedef { { jira_server: string; jira_username: string; jira_password: string; jira_api_token: string; jira_certfile: string; jira_keyfile: string; jira_verify: boolean; jira_project: string; jira_query: string; jira_start_at: number; jira_max_results: number; id: string } } JiraCollectorConfig
+ */
+
+/**
+ * NewsCollectorConfig is a message to hold configuration for a News collector.
+ * @typedef { { api_key: string; query: string; from_date: string; to_date: string; language: string; domains: string; exclude_domains: string; sources: string; id: string } } NewsCollectorConfig
+ */
+
+/**
+ * @typedef { { client_id: string; client_secret: string; redirect_uri: string; refresh_token: string; folder_path: string; id: string } } OneDriveConfig
+ */
+
+/**
  * @typedef { { pinned: boolean } } PinnedFromWindowEvent
+ */
+
+/**
+ * S3CollectorConfig is a message to hold configuration for an S3 collector.
+ * @typedef { { access_key: string; secret_key: string; region: string; bucket: string; id: string } } S3CollectorConfig
+ */
+
+/**
+ * SlackCollectorConfig is a message to hold configuration for a Slack collector.
+ * @typedef { { access_token: string; channel_name: string; cursor: string; include_all_metadata: boolean; includive: boolean; limit: number; id: string } } SlackCollectorConfig
  */
 
 /**

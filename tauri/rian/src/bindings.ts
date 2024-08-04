@@ -10,6 +10,15 @@ async getUpdateResult() : Promise<[boolean, UpdateResult | null]> {
 },
 async checkIfServiceIsRunning() : Promise<boolean> {
     return await TAURI_INVOKE("check_if_service_is_running");
+},
+async hasRianLicenseKey() : Promise<boolean> {
+    return await TAURI_INVOKE("has_rian_license_key");
+},
+async setRianLicenseKey(key: string) : Promise<boolean> {
+    return await TAURI_INVOKE("set_rian_license_key", { key });
+},
+async setCollectors(collectors: CollectorConfig[]) : Promise<boolean> {
+    return await TAURI_INVOKE("set_collectors", { collectors });
 }
 }
 
@@ -32,10 +41,333 @@ export const universalConstant = 42 as const;
 
 /** user-defined types **/
 
+/**
+ * AzureCollectorConfig is a message to hold configuration for an Azure collector.
+ */
+export type AzureCollectorConfig = { 
+/**
+ * Connection string of the Azure collector.
+ */
+connection_string: string; 
+/**
+ * Container of the Azure collector.
+ */
+container: string; 
+/**
+ * Credentials of the Azure collector.
+ */
+credentials: string; 
+/**
+ * Prefix of the Azure collector.
+ */
+prefix: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type Backend = { azure: AzureCollectorConfig } | { gcs: GcsCollectorConfig } | { s3: S3CollectorConfig } | { jira: JiraCollectorConfig } | { drive: GoogleDriveCollectorConfig } | { email: EmailCollectorConfig } | { dropbox: DropBoxCollectorConfig } | { github: GithubCollectorConfig } | { slack: SlackCollectorConfig } | { news: NewsCollectorConfig } | { files: FileCollectorConfig } | { onedrive: OneDriveConfig }
 export type CheckUpdateEvent = null
 export type CheckUpdateResultEvent = UpdateResult
+/**
+ * CollectorConfig is a message to hold configuration for a collector.
+ * Defines a collector with a specific configuration.
+ */
+export type CollectorConfig = { name: string; backend: Backend | null }
 export type Custom = string
+/**
+ * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
+ */
+export type DropBoxCollectorConfig = { 
+/**
+ * App key of the DropBox collector.
+ */
+dropbox_app_key: string; 
+/**
+ * App secret of the DropBox collector.
+ */
+dropbox_app_secret: string; 
+/**
+ * Refresh token of the DropBox collector.
+ */
+dropbox_refresh_token: string; 
+/**
+ * Folder path of the DropBox collector.
+ */
+folder_path: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * EmailCollectorConfig is a message to hold configuration for an Email collector.
+ */
+export type EmailCollectorConfig = { 
+/**
+ * Server of the Email collector.
+ */
+imap_server: string; 
+/**
+ * Port of the Email collector.
+ */
+imap_port: number; 
+/**
+ * Username of the Email collector.
+ */
+imap_username: string; 
+/**
+ * Password of the Email collector.
+ */
+imap_password: string; 
+/**
+ * Folder of the Email collector.
+ */
+imap_folder: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * FileCollectorConfig is a message to hold configuration for a file collector.
+ */
+export type FileCollectorConfig = { root_path: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * GCSCollectorConfig is a message to hold configuration for a GCS collector.
+ */
+export type GcsCollectorConfig = { 
+/**
+ * Bucket of the GCS collector.
+ */
+bucket: string; 
+/**
+ * Credentials of the GCS collector.
+ */
+credentials: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * GithubCollectorConfig is a message to hold configuration for a Github collector.
+ */
+export type GithubCollectorConfig = { 
+/**
+ * Username of the Github collector.
+ */
+github_username: string; 
+/**
+ * Access token of the Github collector.
+ */
+github_access_token: string; 
+/**
+ * Repository of the Github collector.
+ */
+repository: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
+ */
+export type GoogleDriveCollectorConfig = { 
+/**
+ * Client ID of the Google Drive collector.
+ */
+drive_client_id: string; 
+/**
+ * Client secret of the Google Drive collector.
+ */
+drive_client_secret: string; 
+/**
+ * Refresh token of the Google Drive collector.
+ */
+drive_refresh_token: string; 
+/**
+ * Folder to crawl of the Google Drive collector.
+ */
+folder_to_crawl: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * JiraCollectorConfig is a message to hold configuration for a Jira collector.
+ */
+export type JiraCollectorConfig = { 
+/**
+ * Server of the Jira collector.
+ */
+jira_server: string; 
+/**
+ * Username of the Jira collector.
+ */
+jira_username: string; 
+/**
+ * Password of the Jira collector.
+ */
+jira_password: string; 
+/**
+ * API token of the Jira collector.
+ */
+jira_api_token: string; 
+/**
+ * Certificate file of the Jira collector.
+ */
+jira_certfile: string; 
+/**
+ * Key file of the Jira collector.
+ */
+jira_keyfile: string; 
+/**
+ * Verify of the Jira collector.
+ */
+jira_verify: boolean; 
+/**
+ * Project of the Jira collector.
+ */
+jira_project: string; 
+/**
+ * Query of the Jira collector.
+ */
+jira_query: string; 
+/**
+ * Start at of the Jira collector.
+ */
+jira_start_at: number; 
+/**
+ * Max results of the Jira collector.
+ */
+jira_max_results: number; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * NewsCollectorConfig is a message to hold configuration for a News collector.
+ */
+export type NewsCollectorConfig = { 
+/**
+ * API key of the News collector.
+ */
+api_key: string; 
+/**
+ * Query of the News collector.
+ */
+query: string; 
+/**
+ * From date of the News collector.
+ */
+from_date: string; 
+/**
+ * To date of the News collector.
+ */
+to_date: string; 
+/**
+ * Language of the News collector.
+ */
+language: string; 
+/**
+ * Domains of the News collector.
+ */
+domains: string; 
+/**
+ * Exclude domains of the News collector.
+ */
+exclude_domains: string; 
+/**
+ * Sources of the News collector.
+ */
+sources: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type OneDriveConfig = { 
+/**
+ * Client ID of the app
+ */
+client_id: string; 
+/**
+ * Client secret of the app
+ */
+client_secret: string; 
+/**
+ * Redirect URI
+ */
+redirect_uri: string; 
+/**
+ * Refresh token of the app
+ */
+refresh_token: string; 
+/**
+ * / Folder path of the app
+ */
+folder_path: string; 
+/**
+ * / Id for the collector
+ */
+id: string }
 export type PinnedFromWindowEvent = { pinned: boolean }
+/**
+ * S3CollectorConfig is a message to hold configuration for an S3 collector.
+ */
+export type S3CollectorConfig = { 
+/**
+ * Access key of the S3 collector.
+ */
+access_key: string; 
+/**
+ * Secret key of the S3 collector.
+ */
+secret_key: string; 
+/**
+ * Region of the S3 collector.
+ */
+region: string; 
+/**
+ * Bucket of the S3 collector.
+ */
+bucket: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+/**
+ * SlackCollectorConfig is a message to hold configuration for a Slack collector.
+ */
+export type SlackCollectorConfig = { 
+/**
+ * Access token of the Slack collector.
+ */
+access_token: string; 
+/**
+ * Channel name of the Slack collector.
+ */
+channel_name: string; 
+/**
+ * Cursor of the Slack collector.
+ */
+cursor: string; 
+/**
+ * Include all metadata of the Slack collector.
+ */
+include_all_metadata: boolean; 
+/**
+ * Includive of the Slack collector.
+ */
+includive: boolean; 
+/**
+ * Limit of the Slack collector
+ */
+limit: number; 
+/**
+ * Id for the collector
+ */
+id: string }
 export type UpdateResult = { version: string; currentVersion: string; body: string | null }
 
 /** tauri-specta globals **/

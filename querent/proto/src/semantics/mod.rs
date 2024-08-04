@@ -150,7 +150,7 @@ impl Display for IndexingStatistics {
 	}
 }
 
-#[derive(Clone, Default, Eq, PartialEq, Hash, Ord, PartialOrd, utoipa::ToSchema)]
+#[derive(Clone, Default, Eq, PartialEq, Hash, Ord, PartialOrd, utoipa::ToSchema, specta::Type)]
 pub enum StorageType {
 	Index,
 	Vector,

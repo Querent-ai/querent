@@ -627,6 +627,43 @@ pub async fn set_collectors(
 	Ok(CollectorConfigResponse { id })
 }
 
+pub async fn set_collectors_all(
+	collectors: Vec<CollectorConfig>,
+	secret_store: Arc<dyn storage::Storage>,
+) -> Result<CollectorConfigResponse, PipelineErrors> {
+	for collector in collectors {
+		let collector_string = serde_json::to_string(&collector).map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!(
+				"Unable to convert to json string: {:?}",
+				e
+			))
+		})?;
+		let collector_json: &serde_json::Value =
+			&serde_json::from_str(&collector_string).map_err(|e| {
+				PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json {:?}", e))
+			})?;
+		let id = collector_json["backend"]
+			.as_object()
+			.and_then(|backend| {
+				backend.values().find_map(|backend_value| {
+					backend_value.as_object()?.get("id")?.as_str().map(|s| s.to_string())
+				})
+			})
+			.ok_or_else(|| anyhow::anyhow!("Failed to extract id from CollectorConfig"))
+			.map_err(|e| {
+				PipelineErrors::InvalidParams(anyhow::anyhow!(
+					"Failed to extract id from CollectorConfig {:?}",
+					e
+				))
+			})?;
+
+		secret_store.store_secret(&id, &collector_string).await.map_err(|e| {
+			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to store key: {:?}", e))
+		})?;
+	}
+	Ok(CollectorConfigResponse { id: "".to_string() })
+}
+
 pub fn delete_collectors_delete_handler(
 	secret_store: Arc<dyn storage::Storage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {

@@ -132,6 +132,7 @@ serde_qs = { version = "0.12", features = ["warp"] }
 serde_with = "3.4.0"
 serde_yaml = "0.9"
 siphasher = "1.0.0"
+specta = { version = "=2.0.0-rc.20" }
 syn = { version = "2.0.11", features = ["extra-traits", "full", "parsing"] }
 sync_wrapper = "0.1.2"
 tabled = { version = "0.14", features = ["color"] }
@@ -266,6 +267,9 @@ sha2 = "0.10.8"
 pdf-extract = { git = "https://github.com/Querent-ai/pdf-extract", branch = "master" }
 lopdf = "0.33.0"
 dirs = "5.0.1"
+tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta", branch = "main", features = ["derive", "javascript", "typescript"] }
+specta-typescript = "=0.0.7"
+specta-jsdoc = "=0.0.7"
 
 # patch unicode-normalization to version 1.22.0
 [patch.crates-io]
