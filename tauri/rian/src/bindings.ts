@@ -19,6 +19,9 @@ async setRianLicenseKey(key: string) : Promise<boolean> {
 },
 async setCollectors(collectors: CollectorConfig[]) : Promise<boolean> {
     return await TAURI_INVOKE("set_collectors", { collectors });
+},
+async getCollectors() : Promise<ListCollectorConfig> {
+    return await TAURI_INVOKE("get_collectors");
 }
 }
 
@@ -246,6 +249,7 @@ jira_max_results: number;
  * Id for the collector
  */
 id: string }
+export type ListCollectorConfig = { config: CollectorConfig[] }
 /**
  * NewsCollectorConfig is a message to hold configuration for a News collector.
  */
