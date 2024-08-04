@@ -2,7 +2,8 @@ use colored::Colorize;
 use common::RED_COLOR;
 use node::{
 	cli::{build_cli, setup_logging_and_tracing, CliCommand},
-	serve::build_info::BuildInfo, tokio_runtime,
+	serve::build_info::BuildInfo,
+	tokio_runtime,
 };
 use opentelemetry::global;
 

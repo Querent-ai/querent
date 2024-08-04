@@ -269,14 +269,13 @@ pub async fn serve_quester_without_servers(
 	}))
 }
 
-
 pub async fn shutdown_querent(services: &Arc<QuerentServices>) -> anyhow::Result<()> {
 	info!("Shutting down Querent RIAN Node 🛑");
 	if services.pipeline_id.is_none() {
 		info!("Querent RIAN Node is not running");
 		return Ok(());
 	}
-	let shutdown = ShutdownPipeline{ pipeline_id : services.pipeline_id.clone().unwrap() };
+	let shutdown = ShutdownPipeline { pipeline_id: services.pipeline_id.clone().unwrap() };
 	let _ = services.semantic_service_bus.send_message(shutdown).await;
 	info!("Shutting down Discovery Service 🛑");
 	Ok(())

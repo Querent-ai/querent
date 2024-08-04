@@ -21,7 +21,6 @@ fn config_cli_arg() -> Arg {
 		.display_order(1)
 }
 
-
 /// The main tokio runtime takes num_cores / 3 threads by default, and can be overridden by the
 /// QUERENT_RUNTIME_NUM_THREADS environment variable.
 fn get_main_runtime_num_threads() -> usize {
@@ -50,4 +49,3 @@ pub fn tokio_runtime() -> Result<&'static Runtime, anyhow::Error> {
 			.map_err(|err| anyhow::anyhow!("Failed to create tokio runtime: {}", err))
 	})
 }
-
