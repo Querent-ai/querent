@@ -75,3 +75,17 @@ pub async fn set_collectors(collectors: Vec<proto::semantics::CollectorConfig>) 
         false
     }
 }
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
+    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let result = node::serve::semantic_api::list_collectors(secret_store).await;
+    if result.is_ok() {
+        info!("Collectors retrieved successfully");
+        result.unwrap()
+    } else {
+        info!("Failed to retrieve collectors");
+        proto::semantics::ListCollectorConfig { config: vec![] }
+    }
+}
