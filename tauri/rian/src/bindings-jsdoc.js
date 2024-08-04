@@ -15,6 +15,19 @@ async getUpdateResult()  {
  */
 async checkIfServiceIsRunning()  {
     return await TAURI_INVOKE("check_if_service_is_running");
+},
+/**
+ * @returns { Promise<boolean> }
+ */
+async hasRianLicenseKey()  {
+    return await TAURI_INVOKE("has_rian_license_key");
+},
+/**
+ * @param { string } key
+ * @returns { Promise<boolean> }
+ */
+async setRianLicenseKey(key)  {
+    return await TAURI_INVOKE("set_rian_license_key", { key });
 }
     }
 

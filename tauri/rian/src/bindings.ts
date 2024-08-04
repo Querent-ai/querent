@@ -10,6 +10,12 @@ async getUpdateResult() : Promise<[boolean, UpdateResult | null]> {
 },
 async checkIfServiceIsRunning() : Promise<boolean> {
     return await TAURI_INVOKE("check_if_service_is_running");
+},
+async hasRianLicenseKey() : Promise<boolean> {
+    return await TAURI_INVOKE("has_rian_license_key");
+},
+async setRianLicenseKey(key: string) : Promise<boolean> {
+    return await TAURI_INVOKE("set_rian_license_key", { key });
 }
 }
 
