@@ -1,6 +1,6 @@
 use api::{
-    check_if_service_is_running, get_collectors, get_update_result, has_rian_license_key,
-    set_collectors, set_rian_license_key,
+    check_if_service_is_running, get_collectors, get_running_pipeline_id, get_update_result,
+    has_rian_license_key, set_collectors, set_rian_license_key, start_agn_fabric, stop_agn_fabric,
 };
 use log::{error, info};
 use node::{
@@ -30,7 +30,7 @@ pub static ALWAYS_ON_TOP: AtomicBool = AtomicBool::new(false);
 pub static CPU_VENDOR: Mutex<String> = Mutex::new(String::new());
 pub static QUERENT_SERVICES: OnceCell<Arc<QuerentServices>> = OnceCell::new();
 pub static UPDATE_RESULT: Mutex<Option<Option<UpdateResult>>> = Mutex::new(None);
-
+pub static RUNNING_PIPELINE_ID: Mutex<Option<String>> = Mutex::new(None);
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateResult {
@@ -74,7 +74,10 @@ pub fn run(node_config: NodeConfig) {
             has_rian_license_key,
             set_rian_license_key,
             set_collectors,
-            get_collectors
+            get_collectors,
+            start_agn_fabric,
+            get_running_pipeline_id,
+            stop_agn_fabric
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,

@@ -1,6 +1,7 @@
 use log::info;
+use proto::semantics::SemanticPipelineResponse;
 
-use crate::{UpdateResult, QUERENT_SERVICES, UPDATE_RESULT};
+use crate::{UpdateResult, QUERENT_SERVICES, RUNNING_PIPELINE_ID, UPDATE_RESULT};
 use node::ApiKeyPayload;
 
 #[tauri::command]
@@ -87,5 +88,65 @@ pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
     } else {
         info!("Failed to retrieve collectors");
         proto::semantics::ListCollectorConfig { config: vec![] }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn start_agn_fabric(
+    request: proto::semantics::SemanticPipelineRequest,
+) -> Result<SemanticPipelineResponse, String> {
+    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let event_storages = QUERENT_SERVICES.get().unwrap().event_storages.clone();
+    let index_storages = QUERENT_SERVICES.get().unwrap().index_storages.clone();
+    let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
+
+    let result = node::serve::semantic_api::start_pipeline(
+        request,
+        semantic_service_mailbox,
+        event_storages,
+        index_storages,
+        secret_store,
+        metadata_store,
+    )
+    .await;
+
+    match result {
+        Ok(response) => {
+            info!("Pipeline started successfully");
+            let pipeline_id = response.pipeline_id.clone();
+            RUNNING_PIPELINE_ID.lock().replace(pipeline_id);
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to start pipeline: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_running_pipeline_id() -> Option<String> {
+    let pipeline_id = RUNNING_PIPELINE_ID.lock();
+    pipeline_id.clone()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
+    let message_bus = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let result = node::serve::semantic_api::stop_pipeline(pipeline_id, message_bus).await;
+    match result {
+        Ok(_) => {
+            info!("Pipeline stopped successfully");
+            RUNNING_PIPELINE_ID.lock().take();
+            Ok(())
+        }
+        Err(e) => {
+            info!("Failed to stop pipeline: {:?}", e);
+            Err(e.to_string())
+        }
     }
 }
