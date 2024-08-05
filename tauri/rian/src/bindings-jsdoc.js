@@ -73,12 +73,12 @@ async stopAgnFabric(pipelineId)  {
 }
 },
 /**
- * @param { DiscoveryRequest } request
+ * @param { string } searchQuery
  * @returns { Promise<Result<DiscoveryResponse, string>> }
  */
-async sendDiscoveryRetrieverRequest(request)  {
+async sendDiscoveryRetrieverRequest(searchQuery)  {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { request }) };
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
@@ -136,11 +136,6 @@ export const universalConstant = 42;
 
 /**
  * @typedef { string } Custom
- */
-
-/**
- * Request message for querying insights from data
- * @typedef { { session_id: string; query: string } } DiscoveryRequest
  */
 
 /**

@@ -42,9 +42,9 @@ async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async sendDiscoveryRetrieverRequest(request: DiscoveryRequest) : Promise<Result<DiscoveryResponse, string>> {
+async sendDiscoveryRetrieverRequest(searchQuery: string) : Promise<Result<DiscoveryResponse, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { request }) };
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -104,18 +104,6 @@ export type CheckUpdateResultEvent = UpdateResult
  */
 export type CollectorConfig = { name: string; backend: Backend | null }
 export type Custom = string
-/**
- * Request message for querying insights from data
- */
-export type DiscoveryRequest = { 
-/**
- * The ID of the discovery session
- */
-session_id: string; 
-/**
- * The query or question posed by the user
- */
-query: string }
 /**
  * Response message containing insights discovered from the data
  */

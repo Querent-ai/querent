@@ -1,3 +1,4 @@
+use insights::InsightInfo;
 use log::info;
 use proto::semantics::SemanticPipelineResponse;
 
@@ -201,6 +202,22 @@ pub async fn send_discovery_retriever_request(
         }
         Err(e) => {
             info!("Failed to handle discovery request: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_available_insights() -> Result<Vec<InsightInfo>, String> {
+    let result = node::serve::insight_api::rest::list_insights().await;
+    match result {
+        Ok(response) => {
+            info!("Insights retrieved successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to retrieve insights: {:?}", e);
             Err(e.to_string())
         }
     }
