@@ -83,7 +83,8 @@ jobs:
               libgtk-3-dev \
               libayatana-appindicator3-dev \
               librsvg2-dev \
-              libsoup-3.0-dev
+              libsoup-3.0-dev \
+              libjavascriptcoregtk-4.0-dev
 
       - name: Cargo check
         run: cd querent && make check
