@@ -49,6 +49,14 @@ async sendDiscoveryRetrieverRequest(searchQuery: string) : Promise<Result<Discov
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async listAvailableInsights() : Promise<Result<InsightInfo[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_available_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -104,6 +112,26 @@ export type CheckUpdateResultEvent = UpdateResult
  */
 export type CollectorConfig = { name: string; backend: Backend | null }
 export type Custom = string
+/**
+ * A custom option for insights.
+ */
+export type CustomInsightOption = { 
+/**
+ * Unique identifier for the option.
+ */
+id: string; 
+/**
+ * Display label for the option.
+ */
+label: string; 
+/**
+ * Tooltip text for the option.
+ */
+tooltip: string | null; 
+/**
+ * Value of the custom option.
+ */
+value: InsightCustomOptionValue }
 /**
  * Response message containing insights discovered from the data
  */
@@ -265,6 +293,70 @@ sentence: string;
  * The tags of the search result, comma separated subject, object , predicate
  */
 tags: string }
+/**
+ * Possible custom option values for insights.
+ */
+export type InsightCustomOptionValue = 
+/**
+ * Boolean switch.
+ */
+{ type: "boolean"; value: boolean } | 
+/**
+ * Numeric slider.
+ */
+{ type: "number"; min: number; max: number; step: number; value: number } | 
+/**
+ * Text input field.
+ */
+{ type: "string"; value: string; hidden: boolean | null } | 
+/**
+ * Dropdown select option.
+ */
+{ type: "option"; values: string[]; value: string } | 
+/**
+ * Callback button.
+ */
+{ type: "button" }
+/**
+ * Insight Information.
+ */
+export type InsightInfo = { 
+/**
+ * ID is  namespaced which is used to identify the insight.
+ */
+id: string; 
+/**
+ * Insight name.
+ */
+name: string; 
+/**
+ * Insight description.
+ */
+description: string; 
+/**
+ * Insight version.
+ */
+version: string; 
+/**
+ * Is this insight conversational.
+ */
+conversational: boolean; 
+/**
+ * Insight author.
+ */
+author: string; 
+/**
+ * Insight license.
+ */
+license: string; 
+/**
+ * Insight options
+ */
+additionalOptions: { [key in string]: CustomInsightOption }; 
+/**
+ * Is a premium insight.
+ */
+premium: boolean }
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
  */

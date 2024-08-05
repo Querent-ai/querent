@@ -83,6 +83,17 @@ async sendDiscoveryRetrieverRequest(searchQuery)  {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
 }
+},
+/**
+ * @returns { Promise<Result<InsightInfo[], string>> }
+ */
+async listAvailableInsights()  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_available_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -139,6 +150,11 @@ export const universalConstant = 42;
  */
 
 /**
+ * A custom option for insights.
+ * @typedef { { id: string; label: string; tooltip: string | null; value: InsightCustomOptionValue } } CustomInsightOption
+ */
+
+/**
  * Response message containing insights discovered from the data
  * @typedef { { session_id: string; query: string; insights: Insight[] } } DiscoveryResponse
  */
@@ -180,6 +196,16 @@ export const universalConstant = 42;
 /**
  * Represents an insight discovered from the data
  * @typedef { { document: string; source: string; relationship_strength: string; sentence: string; tags: string } } Insight
+ */
+
+/**
+ * Possible custom option values for insights.
+ * @typedef { { type: "boolean"; value: boolean } | { type: "number"; min: number; max: number; step: number; value: number } | { type: "string"; value: string; hidden: boolean | null } | { type: "option"; values: string[]; value: string } | { type: "button" } } InsightCustomOptionValue
+ */
+
+/**
+ * Insight Information.
+ * @typedef { { id: string; name: string; description: string; version: string; conversational: boolean; author: string; license: string; additionalOptions: { [key in string]: CustomInsightOption }; premium: boolean } } InsightInfo
  */
 
 /**
