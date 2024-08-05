@@ -218,17 +218,22 @@ impl LLM for RobertaLLM {
 		let cls_token_id = 0;
 		// Tokenize input text
 		let sep_token_id = 2;
-		
+
 		let tokenized_sequence =
 			vec![vec![cls_token_id], tokenized_sequence, vec![sep_token_id]].concat();
-		let tokenized_sequence_u32: Vec<u32> = tokenized_sequence.iter().map(|&x| x as u32).collect();
+		let tokenized_sequence_u32: Vec<u32> =
+			tokenized_sequence.iter().map(|&x| x as u32).collect();
 		let tokenized_sequence_slice: &[u32] = &tokenized_sequence_u32;
 		let input_ids = Tensor::new(tokenized_sequence_slice, &self.device)
-        .map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?
-        .reshape((1, tokenized_sequence_u32.len()))
-		.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
-		let token_type_ids = input_ids.zeros_like().map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
-		let attention_mask = input_ids.ones_like().map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
+			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?
+			.reshape((1, tokenized_sequence_u32.len()))
+			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
+		let token_type_ids = input_ids
+			.zeros_like()
+			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
+		let attention_mask = input_ids
+			.ones_like()
+			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
 		let mut input_map = HashMap::new();
 		input_map.insert("input_ids".to_string(), input_ids);
 		input_map.insert("token_type_ids".to_string(), token_type_ids);
@@ -395,14 +400,17 @@ impl LLM for RobertaLLM {
 			})?;
 			let input_ids_vec: Vec<u32> = input_ids_vec_2d.into_iter().flatten().collect();
 			let input_ids_u32: Vec<u32> = input_ids_vec.iter().map(|&id| id as u32).collect();
-			let token_string: Result<Vec<String>, LLMError> = input_ids_u32.iter().map(|&id| {
-				self.tokenizer.decode(&[id], false).map_err(|e| {
-					LLMError::new(
-						LLMErrorKind::ModelError,
-						Arc::new(anyhow::anyhow!("token decoding failed: {}", e)),
-					)
+			let token_string: Result<Vec<String>, LLMError> = input_ids_u32
+				.iter()
+				.map(|&id| {
+					self.tokenizer.decode(&[id], false).map_err(|e| {
+						LLMError::new(
+							LLMErrorKind::ModelError,
+							Arc::new(anyhow::anyhow!("token decoding failed: {}", e)),
+						)
+					})
 				})
-			}).collect();
+				.collect();
 			let tokens: Vec<String> = token_string?;
 			let config = &self
 				.token_classification_model
@@ -457,14 +465,12 @@ impl LLM for RobertaLLM {
 	}
 }
 
-
 // #[cfg(test)]
 // mod tests {
 
 // use super::*;
 // use anyhow::Error;
 // use tokio::test;
-
 
 // 	#[test]
 // 	async fn test_inference_and_attention_processing() {
@@ -494,7 +500,7 @@ impl LLM for RobertaLLM {
 
 // 		let ner_results = embedder.token_classification(model_input, None).await.map_err(|e| Error::from(e));
 // 		println!("The ner results are ------------- {:?}", ner_results);
-			
+
 // 	}
 // 	#[tokio::test]
 //     async fn test_roberta_token_classification_with_tokens_to_words() {
@@ -511,12 +517,11 @@ impl LLM for RobertaLLM {
 
 //         // Pre-defined input IDs for testing
 //         let input_ids = vec![0u32, 87, 25, 1181, 186, 29966, 214, 10, 108870, 23, 19660, 19386, 11737, 31150, 2];
-        
+
 //         // Convert tokens to words using the tokens_to_words method
 //         let tokens: Vec<i32> = input_ids.iter().map(|&x| x as i32).collect();
 //         let words = embedder.tokens_to_words(&tokens).await;
 //         println!("Words: {:?}", words);
 //     }
-	
 
 // }
