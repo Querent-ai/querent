@@ -96,10 +96,6 @@ pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
 pub async fn start_agn_fabric(
     request: proto::semantics::SemanticPipelineRequest,
 ) -> Result<SemanticPipelineResponse, String> {
-    // if a pipeline is already running, return an error
-    if let Some(pipeline_id) = RUNNING_PIPELINE_ID.lock().as_ref() {
-        return Err(format!("A Pipeline {} is already running", pipeline_id));
-    }
     let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
     let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
     let event_storages = QUERENT_SERVICES.get().unwrap().event_storages.clone();
@@ -107,7 +103,7 @@ pub async fn start_agn_fabric(
     let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
 
     let result = node::serve::semantic_api::start_pipeline(
-        request,
+        request.clone(),
         semantic_service_mailbox,
         event_storages,
         index_storages,
@@ -120,7 +116,7 @@ pub async fn start_agn_fabric(
         Ok(response) => {
             info!("Pipeline started successfully");
             let pipeline_id = response.pipeline_id.clone();
-            RUNNING_PIPELINE_ID.lock().replace(pipeline_id);
+            RUNNING_PIPELINE_ID.lock().push((pipeline_id, request));
             Ok(response)
         }
         Err(e) => {
@@ -132,20 +128,22 @@ pub async fn start_agn_fabric(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_running_pipeline_id() -> Option<String> {
-    let pipeline_id = RUNNING_PIPELINE_ID.lock();
-    pipeline_id.clone()
+pub async fn get_running_pipelines() -> Vec<(String, proto::semantics::SemanticPipelineRequest)> {
+    let running_pipelines = RUNNING_PIPELINE_ID.lock();
+    running_pipelines.clone()
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
     let message_bus = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
-    let result = node::serve::semantic_api::stop_pipeline(pipeline_id, message_bus).await;
+    let result = node::serve::semantic_api::stop_pipeline(pipeline_id.clone(), message_bus).await;
     match result {
         Ok(_) => {
             info!("Pipeline stopped successfully");
-            RUNNING_PIPELINE_ID.lock().take();
+            RUNNING_PIPELINE_ID
+                .lock()
+                .retain(|(id, _)| id != &pipeline_id);
             Ok(())
         }
         Err(e) => {
