@@ -105,6 +105,36 @@ async listPastInsights()  {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
 }
+},
+/**
+ * @param { InsightAnalystRequest } request
+ * @returns { Promise<Result<InsightAnalystResponse, string>> }
+ */
+async triggerInsightAnalyst(request)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("trigger_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @returns { Promise<([string, InsightAnalystRequest])[]> }
+ */
+async getRunningInsightAnalysts()  {
+    return await TAURI_INVOKE("get_running_insight_analysts");
+},
+/**
+ * @param { string } sessionId
+ * @returns { Promise<Result<null, string>> }
+ */
+async stopInsightAnalyst(sessionId)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_insight_analyst", { sessionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -211,6 +241,10 @@ export const universalConstant = 42;
 
 /**
  * @typedef { { id: string; discovery_session_id: string | null; semantic_pipeline_id: string | null; additional_options: { [key in string]: string } } } InsightAnalystRequest
+ */
+
+/**
+ * @typedef { { session_id: string } } InsightAnalystResponse
  */
 
 /**

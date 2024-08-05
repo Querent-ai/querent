@@ -65,6 +65,25 @@ async listPastInsights() : Promise<Result<InsightRequestInfoList, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async triggerInsightAnalyst(request: InsightAnalystRequest) : Promise<Result<InsightAnalystResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("trigger_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRunningInsightAnalysts() : Promise<([string, InsightAnalystRequest])[]> {
+    return await TAURI_INVOKE("get_running_insight_analysts");
+},
+async stopInsightAnalyst(sessionId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_insight_analyst", { sessionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -318,6 +337,11 @@ semantic_pipeline_id: string | null;
  * Additional insight-specific parameters corresponding to the ID
  */
 additional_options: { [key in string]: string } }
+export type InsightAnalystResponse = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string }
 /**
  * Possible custom option values for insights.
  */

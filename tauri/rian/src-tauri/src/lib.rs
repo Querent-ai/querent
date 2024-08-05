@@ -1,8 +1,8 @@
 use api::{
-    check_if_service_is_running, get_collectors, get_running_pipelines, get_update_result,
-    has_rian_license_key, list_available_insights, list_past_insights,
-    send_discovery_retriever_request, set_collectors, set_rian_license_key, start_agn_fabric,
-    stop_agn_fabric,
+    check_if_service_is_running, get_collectors, get_running_insight_analysts,
+    get_running_pipelines, get_update_result, has_rian_license_key, list_available_insights,
+    list_past_insights, send_discovery_retriever_request, set_collectors, set_rian_license_key,
+    start_agn_fabric, stop_agn_fabric, stop_insight_analyst, trigger_insight_analyst,
 };
 use log::{error, info};
 use node::{
@@ -10,7 +10,7 @@ use node::{
 };
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
-use proto::{semantics::SemanticPipelineRequest, NodeConfig};
+use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
 use specta_typescript::Typescript;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use sysinfo::System;
@@ -35,6 +35,8 @@ pub static UPDATE_RESULT: Mutex<Option<Option<UpdateResult>>> = Mutex::new(None)
 pub static RUNNING_PIPELINE_ID: Mutex<Vec<(String, SemanticPipelineRequest)>> =
     Mutex::new(Vec::new());
 pub static RUNNING_DISCOVERY_SESSION_ID: Mutex<String> = Mutex::new(String::new());
+pub static RUNNING_INSIGHTS_SESSIONS: Mutex<Vec<(String, InsightAnalystRequest)>> =
+    Mutex::new(Vec::new());
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -85,7 +87,10 @@ pub fn run(node_config: NodeConfig) {
             stop_agn_fabric,
             send_discovery_retriever_request,
             list_available_insights,
-            list_past_insights
+            list_past_insights,
+            trigger_insight_analyst,
+            get_running_insight_analysts,
+            stop_insight_analyst
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
