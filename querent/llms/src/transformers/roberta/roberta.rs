@@ -8,7 +8,7 @@ use crate::{
 };
 
 use async_trait::async_trait;
-use candle_core::{DType, Tensor};
+use candle_core::Tensor;
 use candle_nn::VarBuilder;
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
