@@ -57,6 +57,41 @@ async listAvailableInsights() : Promise<Result<InsightInfo[], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async listPastInsights() : Promise<Result<InsightRequestInfoList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_past_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async triggerInsightAnalyst(request: InsightAnalystRequest) : Promise<Result<InsightAnalystResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("trigger_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRunningInsightAnalysts() : Promise<([string, InsightAnalystRequest])[]> {
+    return await TAURI_INVOKE("get_running_insight_analysts");
+},
+async stopInsightAnalyst(sessionId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_insight_analyst", { sessionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async promptInsightAnalyst(request: InsightQuery) : Promise<Result<InsightQueryResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -293,6 +328,28 @@ sentence: string;
  * The tags of the search result, comma separated subject, object , predicate
  */
 tags: string }
+export type InsightAnalystRequest = { 
+/**
+ * Registered ID of the insight; call /insights endpoint for available insights
+ */
+id: string; 
+/**
+ * Optional discovery session ID
+ */
+discovery_session_id: string | null; 
+/**
+ * Optional semantic pipeline ID
+ */
+semantic_pipeline_id: string | null; 
+/**
+ * Additional insight-specific parameters corresponding to the ID
+ */
+additional_options: { [key in string]: string } }
+export type InsightAnalystResponse = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string }
 /**
  * Possible custom option values for insights.
  */
@@ -357,6 +414,30 @@ additionalOptions: { [key in string]: CustomInsightOption };
  * Is a premium insight.
  */
 premium: boolean }
+export type InsightQuery = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string; 
+/**
+ * The query to be used for the insight
+ */
+query: string }
+export type InsightQueryResponse = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string; 
+/**
+ * Hash of the query
+ */
+query_hash: string; 
+/**
+ * The response from the insight
+ */
+response: string }
+export type InsightRequestInfo = { session_id: string; request: InsightAnalystRequest | null }
+export type InsightRequestInfoList = { requests: InsightRequestInfo[] }
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
  */

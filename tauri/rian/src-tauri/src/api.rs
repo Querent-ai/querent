@@ -1,10 +1,10 @@
 use insights::InsightInfo;
 use log::info;
-use proto::semantics::SemanticPipelineResponse;
+use proto::{semantics::SemanticPipelineResponse, InsightAnalystResponse};
 
 use crate::{
-    UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_PIPELINE_ID,
-    UPDATE_RESULT,
+    UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
+    RUNNING_PIPELINE_ID, UPDATE_RESULT,
 };
 use node::ApiKeyPayload;
 
@@ -218,6 +218,102 @@ pub async fn list_available_insights() -> Result<Vec<InsightInfo>, String> {
         }
         Err(e) => {
             info!("Failed to retrieve insights: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_past_insights() -> Result<proto::insights::InsightRequestInfoList, String> {
+    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let result = node::serve::insight_api::rest::get_pipelines_history(insight_service).await;
+    match result {
+        Ok(response) => {
+            info!("Insights retrieved successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to retrieve insights: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn trigger_insight_analyst(
+    request: proto::insights::InsightAnalystRequest,
+) -> Result<InsightAnalystResponse, String> {
+    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let result = node::serve::insight_api::rest::start_insight_session_handler(
+        request.clone(),
+        insight_service,
+    )
+    .await;
+    match result {
+        Ok(response) => {
+            info!("Insight triggered successfully");
+            RUNNING_INSIGHTS_SESSIONS
+                .lock()
+                .push((response.session_id.clone(), request));
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to trigger insight: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_running_insight_analysts() -> Vec<(String, proto::insights::InsightAnalystRequest)>
+{
+    let running_insights = RUNNING_INSIGHTS_SESSIONS.lock();
+    running_insights.clone()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_insight_analyst(session_id: String) -> Result<(), String> {
+    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let stop_req = proto::insights::StopInsightSessionRequest {
+        session_id: session_id.clone(),
+    };
+    let result =
+        node::serve::insight_api::rest::stop_insight_session_handler(stop_req, insight_service)
+            .await;
+    match result {
+        Ok(_) => {
+            info!("Insight stopped successfully");
+            RUNNING_INSIGHTS_SESSIONS
+                .lock()
+                .retain(|(id, _)| id != &session_id);
+            Ok(())
+        }
+        Err(e) => {
+            info!("Failed to stop insight: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn prompt_insight_analyst(
+    request: proto::insights::InsightQuery,
+) -> Result<proto::insights::InsightQueryResponse, String> {
+    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let result =
+        node::serve::insight_api::rest::insights_prompt_handler(request, insight_service).await;
+    match result {
+        Ok(response) => {
+            info!("Insight prompted successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to prompt insight: {:?}", e);
             Err(e.to_string())
         }
     }
