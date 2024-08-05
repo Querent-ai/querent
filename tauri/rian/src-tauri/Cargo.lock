@@ -6644,6 +6644,7 @@ dependencies = [
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
+ "dirs 5.0.1",
  "futures",
  "futures-util",
  "google-drive3",
