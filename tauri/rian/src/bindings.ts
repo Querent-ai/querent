@@ -84,6 +84,14 @@ async stopInsightAnalyst(sessionId: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async promptInsightAnalyst(request: InsightQuery) : Promise<Result<InsightQueryResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -406,6 +414,28 @@ additionalOptions: { [key in string]: CustomInsightOption };
  * Is a premium insight.
  */
 premium: boolean }
+export type InsightQuery = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string; 
+/**
+ * The query to be used for the insight
+ */
+query: string }
+export type InsightQueryResponse = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string; 
+/**
+ * Hash of the query
+ */
+query_hash: string; 
+/**
+ * The response from the insight
+ */
+response: string }
 export type InsightRequestInfo = { session_id: string; request: InsightAnalystRequest | null }
 export type InsightRequestInfoList = { requests: InsightRequestInfo[] }
 /**

@@ -298,3 +298,23 @@ pub async fn stop_insight_analyst(session_id: String) -> Result<(), String> {
         }
     }
 }
+
+#[tauri::command]
+#[specta::specta]
+pub async fn prompt_insight_analyst(
+    request: proto::insights::InsightQuery,
+) -> Result<proto::insights::InsightQueryResponse, String> {
+    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let result =
+        node::serve::insight_api::rest::insights_prompt_handler(request, insight_service).await;
+    match result {
+        Ok(response) => {
+            info!("Insight prompted successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to prompt insight: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}

@@ -135,6 +135,18 @@ async stopInsightAnalyst(sessionId)  {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
 }
+},
+/**
+ * @param { InsightQuery } request
+ * @returns { Promise<Result<InsightQueryResponse, string>> }
+ */
+async promptInsightAnalyst(request)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -255,6 +267,14 @@ export const universalConstant = 42;
 /**
  * Insight Information.
  * @typedef { { id: string; name: string; description: string; version: string; conversational: boolean; author: string; license: string; additionalOptions: { [key in string]: CustomInsightOption }; premium: boolean } } InsightInfo
+ */
+
+/**
+ * @typedef { { session_id: string; query: string } } InsightQuery
+ */
+
+/**
+ * @typedef { { session_id: string; query_hash: string; response: string } } InsightQueryResponse
  */
 
 /**
