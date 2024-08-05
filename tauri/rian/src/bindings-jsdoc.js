@@ -41,6 +41,59 @@ async setCollectors(collectors)  {
  */
 async getCollectors()  {
     return await TAURI_INVOKE("get_collectors");
+},
+/**
+ * @param { SemanticPipelineRequest } request
+ * @returns { Promise<Result<SemanticPipelineResponse, string>> }
+ */
+async startAgnFabric(request)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_agn_fabric", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @returns { Promise<([string, SemanticPipelineRequest])[]> }
+ */
+async getRunningPipelines()  {
+    return await TAURI_INVOKE("get_running_pipelines");
+},
+/**
+ * @param { string } pipelineId
+ * @returns { Promise<Result<null, string>> }
+ */
+async stopAgnFabric(pipelineId)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_agn_fabric", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @param { string } searchQuery
+ * @returns { Promise<Result<DiscoveryResponse, string>> }
+ */
+async sendDiscoveryRetrieverRequest(searchQuery)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @returns { Promise<Result<InsightInfo[], string>> }
+ */
+async listAvailableInsights()  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_available_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -97,6 +150,16 @@ export const universalConstant = 42;
  */
 
 /**
+ * A custom option for insights.
+ * @typedef { { id: string; label: string; tooltip: string | null; value: InsightCustomOptionValue } } CustomInsightOption
+ */
+
+/**
+ * Response message containing insights discovered from the data
+ * @typedef { { session_id: string; query: string; insights: Insight[] } } DiscoveryResponse
+ */
+
+/**
  * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
  * @typedef { { dropbox_app_key: string; dropbox_app_secret: string; dropbox_refresh_token: string; folder_path: string; id: string } } DropBoxCollectorConfig
  */
@@ -112,6 +175,10 @@ export const universalConstant = 42;
  */
 
 /**
+ * @typedef { { entities: string[] } } FixedEntities
+ */
+
+/**
  * GCSCollectorConfig is a message to hold configuration for a GCS collector.
  * @typedef { { bucket: string; credentials: string; id: string } } GcsCollectorConfig
  */
@@ -124,6 +191,21 @@ export const universalConstant = 42;
 /**
  * GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
  * @typedef { { drive_client_id: string; drive_client_secret: string; drive_refresh_token: string; folder_to_crawl: string; id: string } } GoogleDriveCollectorConfig
+ */
+
+/**
+ * Represents an insight discovered from the data
+ * @typedef { { document: string; source: string; relationship_strength: string; sentence: string; tags: string } } Insight
+ */
+
+/**
+ * Possible custom option values for insights.
+ * @typedef { { type: "boolean"; value: boolean } | { type: "number"; min: number; max: number; step: number; value: number } | { type: "string"; value: string; hidden: boolean | null } | { type: "option"; values: string[]; value: string } | { type: "button" } } InsightCustomOptionValue
+ */
+
+/**
+ * Insight Information.
+ * @typedef { { id: string; name: string; description: string; version: string; conversational: boolean; author: string; license: string; additionalOptions: { [key in string]: CustomInsightOption }; premium: boolean } } InsightInfo
  */
 
 /**
@@ -151,6 +233,18 @@ export const universalConstant = 42;
 /**
  * S3CollectorConfig is a message to hold configuration for an S3 collector.
  * @typedef { { access_key: string; secret_key: string; region: string; bucket: string; id: string } } S3CollectorConfig
+ */
+
+/**
+ * @typedef { { entities: string[] } } SampleEntities
+ */
+
+/**
+ * @typedef { { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null } } SemanticPipelineRequest
+ */
+
+/**
+ * @typedef { { pipeline_id: string } } SemanticPipelineResponse
  */
 
 /**

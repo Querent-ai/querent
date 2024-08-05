@@ -1,6 +1,11 @@
+use insights::InsightInfo;
 use log::info;
+use proto::semantics::SemanticPipelineResponse;
 
-use crate::{UpdateResult, QUERENT_SERVICES, UPDATE_RESULT};
+use crate::{
+    UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_PIPELINE_ID,
+    UPDATE_RESULT,
+};
 use node::ApiKeyPayload;
 
 #[tauri::command]
@@ -87,5 +92,133 @@ pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
     } else {
         info!("Failed to retrieve collectors");
         proto::semantics::ListCollectorConfig { config: vec![] }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn start_agn_fabric(
+    request: proto::semantics::SemanticPipelineRequest,
+) -> Result<SemanticPipelineResponse, String> {
+    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let event_storages = QUERENT_SERVICES.get().unwrap().event_storages.clone();
+    let index_storages = QUERENT_SERVICES.get().unwrap().index_storages.clone();
+    let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
+
+    let result = node::serve::semantic_api::start_pipeline(
+        request.clone(),
+        semantic_service_mailbox,
+        event_storages,
+        index_storages,
+        secret_store,
+        metadata_store,
+    )
+    .await;
+
+    match result {
+        Ok(response) => {
+            info!("Pipeline started successfully");
+            let pipeline_id = response.pipeline_id.clone();
+            RUNNING_PIPELINE_ID.lock().push((pipeline_id, request));
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to start pipeline: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_running_pipelines() -> Vec<(String, proto::semantics::SemanticPipelineRequest)> {
+    let running_pipelines = RUNNING_PIPELINE_ID.lock();
+    running_pipelines.clone()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
+    let message_bus = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let result = node::serve::semantic_api::stop_pipeline(pipeline_id.clone(), message_bus).await;
+    match result {
+        Ok(_) => {
+            info!("Pipeline stopped successfully");
+            RUNNING_PIPELINE_ID
+                .lock()
+                .retain(|(id, _)| id != &pipeline_id);
+            Ok(())
+        }
+        Err(e) => {
+            info!("Failed to stop pipeline: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn send_discovery_retriever_request(
+    search_query: String,
+) -> Result<proto::discovery::DiscoveryResponse, String> {
+    let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
+    if discovery_session_id.is_empty() {
+        let discovery_session_request = proto::discovery::DiscoverySessionRequest {
+            agent_name: "R!AN".to_string(),
+            semantic_pipeline_id: "".to_string(),
+            session_type: Some(proto::discovery::DiscoveryAgentType::Retriever),
+        };
+        let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
+        let result = node::serve::discovery_api::start_discovery_session_handler(
+            discovery_session_request.clone(),
+            discover_service,
+        )
+        .await;
+        match result {
+            Ok(response) => {
+                info!("Discovery session started successfully");
+                *RUNNING_DISCOVERY_SESSION_ID.lock() = response.session_id.clone();
+            }
+            Err(e) => {
+                info!("Failed to start discovery session: {:?}", e);
+                return Err(e.to_string());
+            }
+        }
+    }
+
+    let discovery_request = proto::discovery::DiscoveryRequest {
+        query: search_query.clone(),
+        session_id: discovery_session_id,
+    };
+    let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
+    let result =
+        node::serve::discovery_api::discovery_post_handler(discovery_request, discover_service)
+            .await;
+    match result {
+        Ok(response) => {
+            info!("Discovery request handled successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to handle discovery request: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_available_insights() -> Result<Vec<InsightInfo>, String> {
+    let result = node::serve::insight_api::rest::list_insights().await;
+    match result {
+        Ok(response) => {
+            info!("Insights retrieved successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to retrieve insights: {:?}", e);
+            Err(e.to_string())
+        }
     }
 }

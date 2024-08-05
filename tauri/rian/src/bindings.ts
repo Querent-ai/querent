@@ -22,6 +22,41 @@ async setCollectors(collectors: CollectorConfig[]) : Promise<boolean> {
 },
 async getCollectors() : Promise<ListCollectorConfig> {
     return await TAURI_INVOKE("get_collectors");
+},
+async startAgnFabric(request: SemanticPipelineRequest) : Promise<Result<SemanticPipelineResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_agn_fabric", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRunningPipelines() : Promise<([string, SemanticPipelineRequest])[]> {
+    return await TAURI_INVOKE("get_running_pipelines");
+},
+async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_agn_fabric", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async sendDiscoveryRetrieverRequest(searchQuery: string) : Promise<Result<DiscoveryResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listAvailableInsights() : Promise<Result<InsightInfo[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_available_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -77,6 +112,42 @@ export type CheckUpdateResultEvent = UpdateResult
  */
 export type CollectorConfig = { name: string; backend: Backend | null }
 export type Custom = string
+/**
+ * A custom option for insights.
+ */
+export type CustomInsightOption = { 
+/**
+ * Unique identifier for the option.
+ */
+id: string; 
+/**
+ * Display label for the option.
+ */
+label: string; 
+/**
+ * Tooltip text for the option.
+ */
+tooltip: string | null; 
+/**
+ * Value of the custom option.
+ */
+value: InsightCustomOptionValue }
+/**
+ * Response message containing insights discovered from the data
+ */
+export type DiscoveryResponse = { 
+/**
+ * The ID of the discovery session
+ */
+session_id: string; 
+/**
+ * Query or question posed by the user
+ */
+query: string; 
+/**
+ * The insights discovered based on the user's query
+ */
+insights: Insight[] }
 /**
  * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
  */
@@ -137,6 +208,7 @@ export type FileCollectorConfig = { root_path: string;
  * Id for the collector
  */
 id: string }
+export type FixedEntities = { entities: string[] }
 /**
  * GCSCollectorConfig is a message to hold configuration for a GCS collector.
  */
@@ -197,6 +269,94 @@ folder_to_crawl: string;
  * Id for the collector
  */
 id: string }
+/**
+ * Represents an insight discovered from the data
+ */
+export type Insight = { 
+/**
+ * The document id of the search result
+ */
+document: string; 
+/**
+ * The document source
+ */
+source: string; 
+/**
+ * The attention score retrieved from the search result
+ */
+relationship_strength: string; 
+/**
+ * The sentence retrieved from the search resulty
+ */
+sentence: string; 
+/**
+ * The tags of the search result, comma separated subject, object , predicate
+ */
+tags: string }
+/**
+ * Possible custom option values for insights.
+ */
+export type InsightCustomOptionValue = 
+/**
+ * Boolean switch.
+ */
+{ type: "boolean"; value: boolean } | 
+/**
+ * Numeric slider.
+ */
+{ type: "number"; min: number; max: number; step: number; value: number } | 
+/**
+ * Text input field.
+ */
+{ type: "string"; value: string; hidden: boolean | null } | 
+/**
+ * Dropdown select option.
+ */
+{ type: "option"; values: string[]; value: string } | 
+/**
+ * Callback button.
+ */
+{ type: "button" }
+/**
+ * Insight Information.
+ */
+export type InsightInfo = { 
+/**
+ * ID is  namespaced which is used to identify the insight.
+ */
+id: string; 
+/**
+ * Insight name.
+ */
+name: string; 
+/**
+ * Insight description.
+ */
+description: string; 
+/**
+ * Insight version.
+ */
+version: string; 
+/**
+ * Is this insight conversational.
+ */
+conversational: boolean; 
+/**
+ * Insight author.
+ */
+author: string; 
+/**
+ * Insight license.
+ */
+license: string; 
+/**
+ * Insight options
+ */
+additionalOptions: { [key in string]: CustomInsightOption }; 
+/**
+ * Is a premium insight.
+ */
+premium: boolean }
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
  */
@@ -340,6 +500,9 @@ bucket: string;
  * Id for the collector
  */
 id: string }
+export type SampleEntities = { entities: string[] }
+export type SemanticPipelineRequest = { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null }
+export type SemanticPipelineResponse = { pipeline_id: string }
 /**
  * SlackCollectorConfig is a message to hold configuration for a Slack collector.
  */
