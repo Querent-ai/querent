@@ -1,16 +1,20 @@
-use std::{collections::{HashMap, HashSet}, path::PathBuf, sync::Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	path::PathBuf,
+	sync::Arc,
+};
 
 use crate::{
 	postgres_index::QuerySuggestion, DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError,
 	StorageErrorKind, StorageResult, RIAN_API_KEY,
 };
-use itertools::Itertools;
-use serde_json::Value;
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use itertools::Itertools;
 use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use surrealdb::{
 	engine::local::{Db, RocksDb},
 	opt::Config,
@@ -42,13 +46,12 @@ struct QueryResultEmbedded {
 
 #[derive(Deserialize, Debug)]
 struct AutoSuggestPairs {
-    subject: String,
-    subject_type: String,
-    object: String,
-    object_type: String,
-    pair_frequency: i64,
+	subject: String,
+	subject_type: String,
+	object: String,
+	object_type: String,
+	pair_frequency: i64,
 }
-
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
 struct QueryResultEmbedded1 {
@@ -266,13 +269,13 @@ impl Storage for SurrealDB {
 					source: Arc::new(anyhow::Error::from(e)),
 				}
 			})?;
-		
+
 		let query_results =
 			response.take::<Vec<QueryResultEmbedded>>(0).map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-		
+
 		let mut results: Vec<DocumentPayload> = Vec::new();
 		for query_result in query_results {
 			let query_string_semantic = format!(
@@ -301,7 +304,7 @@ impl Storage for SurrealDB {
 				doc_payload.subject = query_result_semantic.subject.clone();
 				doc_payload.object = query_result_semantic.object.clone();
 				doc_payload.doc_source = query_result_semantic.document_source.clone();
-				doc_payload.cosine_distance =  Some(1.0 - query_result.cosine_distance.clone());
+				doc_payload.cosine_distance = Some(1.0 - query_result.cosine_distance.clone());
 				doc_payload.score = query_result.score.clone();
 				doc_payload.sentence = query_result_semantic.sentence.clone();
 				doc_payload.session_id = Some(session_id.clone());
@@ -330,7 +333,6 @@ impl Storage for SurrealDB {
 		)> = Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
 		for (head, tail) in filtered_pairs {
-			
 			// Traverse depth 1
 			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 0)
 				.await?;
@@ -375,7 +377,6 @@ impl Storage for SurrealDB {
 						source: Arc::new(anyhow::Error::from(e)),
 					}
 				})?;
-			
 		}
 		Ok(())
 	}
@@ -518,10 +519,11 @@ impl Storage for SurrealDB {
 			StorageError { kind: StorageErrorKind::Query, source: Arc::new(anyhow::Error::from(e)) }
 		})?;
 
-		let top_pairs: Vec<AutoSuggestPairs> = top_pairs_result.take::<Vec<AutoSuggestPairs>>(0).map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+		let top_pairs: Vec<AutoSuggestPairs> =
+			top_pairs_result.take::<Vec<AutoSuggestPairs>>(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 
 		let bottom_pairs_query = "
 			SELECT subject, subject_type, object, object_type, COUNT() as pair_frequency
@@ -532,7 +534,7 @@ impl Storage for SurrealDB {
 		let mut bottom_pairs_result = self.db.query(bottom_pairs_query).await.map_err(|e| {
 			StorageError { kind: StorageErrorKind::Query, source: Arc::new(anyhow::Error::from(e)) }
 		})?;
-	
+
 		let bottom_pairs: Vec<AutoSuggestPairs> =
 			bottom_pairs_result.take::<Vec<AutoSuggestPairs>>(0).map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
@@ -556,14 +558,20 @@ impl Storage for SurrealDB {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 		let most_mix_documents: Vec<(String, i64)> = most_mix_documents_result
-			.take::<Vec<HashMap<String, Value>>>(0).map_err(|e| StorageError {
+			.take::<Vec<HashMap<String, Value>>>(0)
+			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?
 			.into_iter()
 			.map(|item| {
-				let document_id = item.get("document_id").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-				let entity_mix = item.get("entity_mix").and_then(|v| v.as_i64()).unwrap_or_default();
+				let document_id = item
+					.get("document_id")
+					.and_then(|v| v.as_str())
+					.unwrap_or_default()
+					.to_string();
+				let entity_mix =
+					item.get("entity_mix").and_then(|v| v.as_i64()).unwrap_or_default();
 				(document_id, entity_mix)
 			})
 			.collect();
@@ -572,19 +580,26 @@ impl Storage for SurrealDB {
 		SELECT document_id, count(sentence) AS sentence_count
 		FROM semantic_knowledge
 		GROUP BY document_id, sentence_count";
-		let mut count_sentences_documents_result = self.db.query(count_sentences_documents_query).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Query,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
+		let mut count_sentences_documents_result =
+			self.db.query(count_sentences_documents_query).await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Query,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 		let count_sentences_documents: Vec<(String, i64)> = count_sentences_documents_result
-			.take::<Vec<HashMap<String, Value>>>(0).map_err(|e| StorageError {
+			.take::<Vec<HashMap<String, Value>>>(0)
+			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?
 			.into_iter()
 			.map(|item| {
-				let document_id = item.get("document_id").and_then(|v| v.as_str()).unwrap_or_default().to_string();
-				let sentence_count = item.get("sentence_count").and_then(|v| v.as_i64()).unwrap_or_default();
+				let document_id = item
+					.get("document_id")
+					.and_then(|v| v.as_str())
+					.unwrap_or_default()
+					.to_string();
+				let sentence_count =
+					item.get("sentence_count").and_then(|v| v.as_i64()).unwrap_or_default();
 				(document_id, sentence_count)
 			})
 			.collect();
@@ -594,8 +609,9 @@ impl Storage for SurrealDB {
 		}
 		let mut aggregated_counts: Vec<(String, i64)> = sentence_counts.into_iter().collect();
 		aggregated_counts.sort_by(|a, b| b.1.cmp(&a.1));
-		let most_unique_sentences_documents: Vec<(String, i64)> = aggregated_counts.into_iter().take(5).collect();
-		
+		let most_unique_sentences_documents: Vec<(String, i64)> =
+			aggregated_counts.into_iter().take(5).collect();
+
 		let high_impact_sentences_query = "
 			SELECT sentence, COUNT() as sentence_frequency
 			FROM semantic_knowledge
@@ -608,15 +624,20 @@ impl Storage for SurrealDB {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-			let high_impact_sentences: Vec<(String, i64)> =
-			high_impact_sentences_result.take::<Vec<HashMap<String, Value>>>(0).map_err(|e| StorageError {
+		let high_impact_sentences: Vec<(String, i64)> = high_impact_sentences_result
+			.take::<Vec<HashMap<String, Value>>>(0)
+			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?
 			.into_iter()
 			.map(|mut row| {
-				let sentence = row.remove("sentence").and_then(|v| v.as_str().map(String::from)).unwrap_or_default();
-				let sentence_frequency = row.remove("sentence_frequency").and_then(|v| v.as_i64()).unwrap_or(0);
+				let sentence = row
+					.remove("sentence")
+					.and_then(|v| v.as_str().map(String::from))
+					.unwrap_or_default();
+				let sentence_frequency =
+					row.remove("sentence_frequency").and_then(|v| v.as_i64()).unwrap_or(0);
 				(sentence, sentence_frequency)
 			})
 			.collect();
@@ -625,7 +646,9 @@ impl Storage for SurrealDB {
 
 		if !top_pairs.is_empty() {
 			let mut query_parts = Vec::new();
-			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in top_pairs {
+			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in
+				top_pairs
+			{
 				let part = format!(
 					"'{}' ({}) and '{}' ({}): {} times",
 					subject, subject_type, object, object_type, pair_frequency
@@ -647,7 +670,9 @@ impl Storage for SurrealDB {
 
 		if !bottom_pairs.is_empty() {
 			let mut query_parts = Vec::new();
-			for AutoSuggestPairs {subject, subject_type, object, object_type, pair_frequency} in bottom_pairs {
+			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in
+				bottom_pairs
+			{
 				let part = format!(
 					"'{}' ({}) and '{}' ({}): {} times",
 					subject, subject_type, object, object_type, pair_frequency
@@ -957,44 +982,43 @@ pub async fn traverse_node<'a>(
 // 		Ok(())
 // 	}
 
-	// #[tokio::test]
-	// async fn test_surrealdb_integration() -> Result<(), Box<dyn std::error::Error>> {
-	// 	let path = Path::new("../../../../db").to_path_buf();
-	// 	let surreal_db = SurrealDB::new(path).await?;
+// #[tokio::test]
+// async fn test_surrealdb_integration() -> Result<(), Box<dyn std::error::Error>> {
+// 	let path = Path::new("../../../../db").to_path_buf();
+// 	let surreal_db = SurrealDB::new(path).await?;
 
-	// 	let mut current_query_embedding: Vec<f32> = Vec::new();
+// 	let mut current_query_embedding: Vec<f32> = Vec::new();
 
-	// 	let embedding_model = TextEmbedding::try_new(InitOptions {
-	// 		model_name: EmbeddingModel::AllMiniLML6V2,
-	// 		show_download_progress: true,
-	// 		..Default::default()
-	// 	});
-	// 	let embedder = embedding_model?;
+// 	let embedding_model = TextEmbedding::try_new(InitOptions {
+// 		model_name: EmbeddingModel::AllMiniLML6V2,
+// 		show_download_progress: true,
+// 		..Default::default()
+// 	});
+// 	let embedder = embedding_model?;
 
-	// 	let query = "What is the temperature for high-Mg calcite in biogenic carbonates ?".to_string();
-	// 	let embeddings = embedder.embed(vec![query.clone()], None)?;
-	// 	current_query_embedding = embeddings[0].clone();
-		
-	// 	// Step 4: Perform a similarity search
-	// 	let results = surreal_db
-	// 		.similarity_search_l2(
-	// 			"session1".to_string(),
-	// 			query,
-	// 			"collection1".to_string(),
-	// 			&current_query_embedding,
-	// 			10,
-	// 			0,
-	// 		)
-	// 		.await?;
+// 	let query = "What is the temperature for high-Mg calcite in biogenic carbonates ?".to_string();
+// 	let embeddings = embedder.embed(vec![query.clone()], None)?;
+// 	current_query_embedding = embeddings[0].clone();
 
-	// 	println!("Results: {:?}", results);
+// 	// Step 4: Perform a similarity search
+// 	let results = surreal_db
+// 		.similarity_search_l2(
+// 			"session1".to_string(),
+// 			query,
+// 			"collection1".to_string(),
+// 			&current_query_embedding,
+// 			10,
+// 			0,
+// 		)
+// 		.await?;
 
-	// 	// Assertions
-	// 	assert!(!results.is_empty());
+// 	println!("Results: {:?}", results);
 
-	// 	Ok(())
-	// }
+// 	// Assertions
+// 	assert!(!results.is_empty());
 
+// 	Ok(())
+// }
 
 // 	#[tokio::test]
 // 	async fn test_vector_dimensions() -> Result<(), Box<dyn std::error::Error>> {
