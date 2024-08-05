@@ -96,6 +96,10 @@ pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
 pub async fn start_agn_fabric(
     request: proto::semantics::SemanticPipelineRequest,
 ) -> Result<SemanticPipelineResponse, String> {
+    // if a pipeline is already running, return an error
+    if let Some(pipeline_id) = RUNNING_PIPELINE_ID.lock().as_ref() {
+        return Err(format!("A Pipeline {} is already running", pipeline_id));
+    }
     let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
     let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
     let event_storages = QUERENT_SERVICES.get().unwrap().event_storages.clone();
