@@ -12,14 +12,14 @@ use tracing::info;
 
 use crate::{
 	discovery_api::grpc_discovery_adapter::DiscoveryAdapter,
-	insight_api::grpc_insight_adapter::InsightAdapter, QuesterServices, SemanticsGrpcAdapter,
+	insight_api::grpc_insight_adapter::InsightAdapter, QuerentServices, SemanticsGrpcAdapter,
 };
 
 /// Starts and binds gRPC services to `grpc_listen_addr`.
 pub(crate) async fn start_grpc_server(
 	grpc_listen_addr: SocketAddr,
 	max_message_size: ByteSize,
-	services: Arc<QuesterServices>,
+	services: Arc<QuerentServices>,
 	readiness_trigger: BoxFutureInfaillible<()>,
 	shutdown_signal: BoxFutureInfaillible<()>,
 ) -> anyhow::Result<()> {

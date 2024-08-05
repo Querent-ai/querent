@@ -13,6 +13,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	// Semantic service proto code generation
 	let mut prost_config: prost_build::Config = prost_build::Config::default();
+	prost_config
+		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]");
 	prost_config.extern_path(".querent.semantics.StorageType", "StorageType");
 	ProtoGenerator::builder()
 		.with_prost_config(prost_config)
@@ -37,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	tonic_build::configure()
 		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")
-		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema)]")
+		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]")
 		.type_attribute("DiscoveryRequest", "#[derive(Eq, Hash)]")
 		.type_attribute("SortFld", "#[derive(Eq, Hash)]")
 		.out_dir("src/codegen/querent")
@@ -48,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	prost_config.protoc_arg("--experimental_allow_proto3_optional");
 	tonic_build::configure()
 		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")
-		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema)]")
+		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]")
 		.type_attribute("SortFld", "#[derive(Eq, Hash)]")
 		.out_dir("src/codegen/querent")
 		.compile_with_config(prost_config, &["protos/querent/insights.proto"], &["protos"])?;

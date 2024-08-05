@@ -17,6 +17,7 @@ pub mod discovery_api;
 pub mod insight_api;
 pub use insight_api::*;
 pub mod health_check_api;
+pub use health_check_api::*;
 pub mod openapi;
 pub use openapi::*;
 pub mod node_info_handler;
