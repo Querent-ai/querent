@@ -22,6 +22,25 @@ async setCollectors(collectors: CollectorConfig[]) : Promise<boolean> {
 },
 async getCollectors() : Promise<ListCollectorConfig> {
     return await TAURI_INVOKE("get_collectors");
+},
+async startAgnFabric(request: SemanticPipelineRequest) : Promise<Result<SemanticPipelineResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_agn_fabric", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRunningPipelines() : Promise<([string, SemanticPipelineRequest])[]> {
+    return await TAURI_INVOKE("get_running_pipelines");
+},
+async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_agn_fabric", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -137,6 +156,7 @@ export type FileCollectorConfig = { root_path: string;
  * Id for the collector
  */
 id: string }
+export type FixedEntities = { entities: string[] }
 /**
  * GCSCollectorConfig is a message to hold configuration for a GCS collector.
  */
@@ -340,6 +360,9 @@ bucket: string;
  * Id for the collector
  */
 id: string }
+export type SampleEntities = { entities: string[] }
+export type SemanticPipelineRequest = { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null }
+export type SemanticPipelineResponse = { pipeline_id: string }
 /**
  * SlackCollectorConfig is a message to hold configuration for a Slack collector.
  */

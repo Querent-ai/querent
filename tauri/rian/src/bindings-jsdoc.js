@@ -41,6 +41,36 @@ async setCollectors(collectors)  {
  */
 async getCollectors()  {
     return await TAURI_INVOKE("get_collectors");
+},
+/**
+ * @param { SemanticPipelineRequest } request
+ * @returns { Promise<Result<SemanticPipelineResponse, string>> }
+ */
+async startAgnFabric(request)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_agn_fabric", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @returns { Promise<([string, SemanticPipelineRequest])[]> }
+ */
+async getRunningPipelines()  {
+    return await TAURI_INVOKE("get_running_pipelines");
+},
+/**
+ * @param { string } pipelineId
+ * @returns { Promise<Result<null, string>> }
+ */
+async stopAgnFabric(pipelineId)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_agn_fabric", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -112,6 +142,10 @@ export const universalConstant = 42;
  */
 
 /**
+ * @typedef { { entities: string[] } } FixedEntities
+ */
+
+/**
  * GCSCollectorConfig is a message to hold configuration for a GCS collector.
  * @typedef { { bucket: string; credentials: string; id: string } } GcsCollectorConfig
  */
@@ -151,6 +185,18 @@ export const universalConstant = 42;
 /**
  * S3CollectorConfig is a message to hold configuration for an S3 collector.
  * @typedef { { access_key: string; secret_key: string; region: string; bucket: string; id: string } } S3CollectorConfig
+ */
+
+/**
+ * @typedef { { entities: string[] } } SampleEntities
+ */
+
+/**
+ * @typedef { { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null } } SemanticPipelineRequest
+ */
+
+/**
+ * @typedef { { pipeline_id: string } } SemanticPipelineResponse
  */
 
 /**
