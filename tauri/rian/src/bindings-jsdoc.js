@@ -94,6 +94,17 @@ async listAvailableInsights()  {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
 }
+},
+/**
+ * @returns { Promise<Result<InsightRequestInfoList, string>> }
+ */
+async listPastInsights()  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_past_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -199,6 +210,10 @@ export const universalConstant = 42;
  */
 
 /**
+ * @typedef { { id: string; discovery_session_id: string | null; semantic_pipeline_id: string | null; additional_options: { [key in string]: string } } } InsightAnalystRequest
+ */
+
+/**
  * Possible custom option values for insights.
  * @typedef { { type: "boolean"; value: boolean } | { type: "number"; min: number; max: number; step: number; value: number } | { type: "string"; value: string; hidden: boolean | null } | { type: "option"; values: string[]; value: string } | { type: "button" } } InsightCustomOptionValue
  */
@@ -206,6 +221,14 @@ export const universalConstant = 42;
 /**
  * Insight Information.
  * @typedef { { id: string; name: string; description: string; version: string; conversational: boolean; author: string; license: string; additionalOptions: { [key in string]: CustomInsightOption }; premium: boolean } } InsightInfo
+ */
+
+/**
+ * @typedef { { session_id: string; request: InsightAnalystRequest | null } } InsightRequestInfo
+ */
+
+/**
+ * @typedef { { requests: InsightRequestInfo[] } } InsightRequestInfoList
  */
 
 /**

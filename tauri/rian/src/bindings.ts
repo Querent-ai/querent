@@ -57,6 +57,14 @@ async listAvailableInsights() : Promise<Result<InsightInfo[], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async listPastInsights() : Promise<Result<InsightRequestInfoList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_past_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -293,6 +301,23 @@ sentence: string;
  * The tags of the search result, comma separated subject, object , predicate
  */
 tags: string }
+export type InsightAnalystRequest = { 
+/**
+ * Registered ID of the insight; call /insights endpoint for available insights
+ */
+id: string; 
+/**
+ * Optional discovery session ID
+ */
+discovery_session_id: string | null; 
+/**
+ * Optional semantic pipeline ID
+ */
+semantic_pipeline_id: string | null; 
+/**
+ * Additional insight-specific parameters corresponding to the ID
+ */
+additional_options: { [key in string]: string } }
 /**
  * Possible custom option values for insights.
  */
@@ -357,6 +382,8 @@ additionalOptions: { [key in string]: CustomInsightOption };
  * Is a premium insight.
  */
 premium: boolean }
+export type InsightRequestInfo = { session_id: string; request: InsightAnalystRequest | null }
+export type InsightRequestInfoList = { requests: InsightRequestInfo[] }
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
  */

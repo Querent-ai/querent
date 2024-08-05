@@ -222,3 +222,20 @@ pub async fn list_available_insights() -> Result<Vec<InsightInfo>, String> {
         }
     }
 }
+
+#[tauri::command]
+#[specta::specta]
+pub async fn list_past_insights() -> Result<proto::insights::InsightRequestInfoList, String> {
+    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let result = node::serve::insight_api::rest::get_pipelines_history(insight_service).await;
+    match result {
+        Ok(response) => {
+            info!("Insights retrieved successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to retrieve insights: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}

@@ -1,7 +1,8 @@
 use api::{
     check_if_service_is_running, get_collectors, get_running_pipelines, get_update_result,
-    has_rian_license_key, list_available_insights, send_discovery_retriever_request,
-    set_collectors, set_rian_license_key, start_agn_fabric, stop_agn_fabric,
+    has_rian_license_key, list_available_insights, list_past_insights,
+    send_discovery_retriever_request, set_collectors, set_rian_license_key, start_agn_fabric,
+    stop_agn_fabric,
 };
 use log::{error, info};
 use node::{
@@ -83,7 +84,8 @@ pub fn run(node_config: NodeConfig) {
             get_running_pipelines,
             stop_agn_fabric,
             send_discovery_retriever_request,
-            list_available_insights
+            list_available_insights,
+            list_past_insights
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
