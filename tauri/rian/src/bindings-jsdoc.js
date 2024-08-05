@@ -71,6 +71,18 @@ async stopAgnFabric(pipelineId)  {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
 }
+},
+/**
+ * @param { DiscoveryRequest } request
+ * @returns { Promise<Result<DiscoveryResponse, string>> }
+ */
+async sendDiscoveryRetrieverRequest(request)  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
 }
     }
 
@@ -127,6 +139,16 @@ export const universalConstant = 42;
  */
 
 /**
+ * Request message for querying insights from data
+ * @typedef { { session_id: string; query: string } } DiscoveryRequest
+ */
+
+/**
+ * Response message containing insights discovered from the data
+ * @typedef { { session_id: string; query: string; insights: Insight[] } } DiscoveryResponse
+ */
+
+/**
  * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
  * @typedef { { dropbox_app_key: string; dropbox_app_secret: string; dropbox_refresh_token: string; folder_path: string; id: string } } DropBoxCollectorConfig
  */
@@ -158,6 +180,11 @@ export const universalConstant = 42;
 /**
  * GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
  * @typedef { { drive_client_id: string; drive_client_secret: string; drive_refresh_token: string; folder_to_crawl: string; id: string } } GoogleDriveCollectorConfig
+ */
+
+/**
+ * Represents an insight discovered from the data
+ * @typedef { { document: string; source: string; relationship_strength: string; sentence: string; tags: string } } Insight
  */
 
 /**

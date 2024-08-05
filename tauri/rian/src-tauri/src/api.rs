@@ -1,7 +1,10 @@
 use log::info;
 use proto::semantics::SemanticPipelineResponse;
 
-use crate::{UpdateResult, QUERENT_SERVICES, RUNNING_PIPELINE_ID, UPDATE_RESULT};
+use crate::{
+    UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_PIPELINE_ID,
+    UPDATE_RESULT,
+};
 use node::ApiKeyPayload;
 
 #[tauri::command]
@@ -148,6 +151,56 @@ pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
         }
         Err(e) => {
             info!("Failed to stop pipeline: {:?}", e);
+            Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn send_discovery_retriever_request(
+    search_query: String,
+) -> Result<proto::discovery::DiscoveryResponse, String> {
+    let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
+    if discovery_session_id.is_empty() {
+        let discovery_session_request = proto::discovery::DiscoverySessionRequest {
+            agent_name: "R!AN".to_string(),
+            semantic_pipeline_id: "".to_string(),
+            session_type: Some(proto::discovery::DiscoveryAgentType::Retriever),
+        };
+        let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
+        let result = node::serve::discovery_api::start_discovery_session_handler(
+            discovery_session_request.clone(),
+            discover_service,
+        )
+        .await;
+        match result {
+            Ok(response) => {
+                info!("Discovery session started successfully");
+                *RUNNING_DISCOVERY_SESSION_ID.lock() = response.session_id.clone();
+            }
+            Err(e) => {
+                info!("Failed to start discovery session: {:?}", e);
+                return Err(e.to_string());
+            }
+        }
+    }
+
+    let discovery_request = proto::discovery::DiscoveryRequest {
+        query: search_query.clone(),
+        session_id: discovery_session_id,
+    };
+    let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
+    let result =
+        node::serve::discovery_api::discovery_post_handler(discovery_request, discover_service)
+            .await;
+    match result {
+        Ok(response) => {
+            info!("Discovery request handled successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to handle discovery request: {:?}", e);
             Err(e.to_string())
         }
     }

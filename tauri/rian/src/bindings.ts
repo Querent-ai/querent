@@ -41,6 +41,14 @@ async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async sendDiscoveryRetrieverRequest(request: DiscoveryRequest) : Promise<Result<DiscoveryResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -96,6 +104,34 @@ export type CheckUpdateResultEvent = UpdateResult
  */
 export type CollectorConfig = { name: string; backend: Backend | null }
 export type Custom = string
+/**
+ * Request message for querying insights from data
+ */
+export type DiscoveryRequest = { 
+/**
+ * The ID of the discovery session
+ */
+session_id: string; 
+/**
+ * The query or question posed by the user
+ */
+query: string }
+/**
+ * Response message containing insights discovered from the data
+ */
+export type DiscoveryResponse = { 
+/**
+ * The ID of the discovery session
+ */
+session_id: string; 
+/**
+ * Query or question posed by the user
+ */
+query: string; 
+/**
+ * The insights discovered based on the user's query
+ */
+insights: Insight[] }
 /**
  * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
  */
@@ -217,6 +253,30 @@ folder_to_crawl: string;
  * Id for the collector
  */
 id: string }
+/**
+ * Represents an insight discovered from the data
+ */
+export type Insight = { 
+/**
+ * The document id of the search result
+ */
+document: string; 
+/**
+ * The document source
+ */
+source: string; 
+/**
+ * The attention score retrieved from the search result
+ */
+relationship_strength: string; 
+/**
+ * The sentence retrieved from the search resulty
+ */
+sentence: string; 
+/**
+ * The tags of the search result, comma separated subject, object , predicate
+ */
+tags: string }
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
  */
