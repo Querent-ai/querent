@@ -1,122 +1,122 @@
 name: Release Tauri Rian
 
 on:
-    push:
-      tags:
-        - 'v[0-9]+.[0-9]+.[0-9]+' # ex. v1.0.0
-        - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+' # ex. v1.1.0-rc1
-        - 'v0.0.1' # used for testing only
-        - 'v0.0.1-rc[0-9]+' # used for testing only
-    workflow_dispatch:
-      inputs:
-        release-version:
-          description: 'Release version (v#.#.#[-rc#])'
-          required: true
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+' # ex. v1.0.0
+      - 'v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+' # ex. v1.1.0-rc1
+      - 'v0.0.1' # used for testing only
+      - 'v0.0.1-rc[0-9]+' # used for testing only
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: 'Release version (v#.#.#[-rc#])'
+        required: true
+  pull_request:
+    branches:
+      - main
 
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
 
 jobs:
-    build-tauri-rian-ui:
-        permissions:
-          contents: write
-          packages: write
-        runs-on: ubuntu-latest
-        steps:
-          - uses: actions/checkout@v4
-          - name: setup node
-            uses: actions/setup-node@v3
-            with:
-              node-version: 20
-              cache: 'npm'
-          - name: install frontend dependencies
-            run: npm install --no-frozen-lockfile
-          - name: build tauri rian
-            run: npm run build
-          - uses: actions/upload-artifact@v3
-            with:
-              name: tauri-rian
-              path: /build
+  build-tauri-rian-ui:
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: install frontend dependencies
+        run: npm install --no-frozen-lockfile
+      - name: build tauri rian
+        run: npm run build
+      - uses: actions/upload-artifact@v3
+        with:
+          name: tauri-rian
+          path: /build
 
-    build-tauri-rian-nodes:
-        needs: build-tauri-rian-ui
-        permissions:
-          contents: write
-          packages: write
-        strategy:
-          fail-fast: false
-          matrix:
-            config:
-              - os: ubuntu-latest
-                arch: x86_64
-                rust_target: x86_64-unknown-linux-gnu
-              - os: macos-13
-                arch: x86_64
-                rust_target: x86_64-apple-darwin
-              - os: macos-latest
-                arch: aarch64
-                rust_target: aarch64-apple-darwin
-              - os: windows-latest
-                arch: x86_64
-                rust_target: x86_64-pc-windows-msvc
-            
-        runs-on: ${{ matrix.config.os }}
-        steps:
-          - uses: actions/checkout@v4
-          - name: Setup node
-            uses: actions/setup-node@v3
-            with:
-              node-version: 20
-              cache: 'npm'
-          - name: Install frontend dependencies
-            run: npm install --no-frozen-lockfile
-          - name: Install Rust nightly
-            uses: dtolnay/rust-toolchain@nightly
-            with:
-              targets: ${{ matrix.config.rust_target }}
-              toolchain: '1.79.0'
-          - name: Install dependencies (ubuntu only)
-            if: matrix.config.os == 'ubuntu-latest'
-            run: |
-              sudo apt-get update
-              sudo apt-get install javascriptcoregtk-4.1  libsoup-3.0 librust-atk-dev libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
-              sudo apt-get install -y libunwind-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
-          - name: Install dependencies (mac only)
-            if: matrix.config.os == 'macos-latest'
-            run: |
-              rustup target add aarch64-apple-darwin
-          - uses: actions/download-artifact@v3
-            with:
-              name: tauri-rian
-              path: /tauri/rian/build
-          - name: Install Cargo Tauri for info
-            run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-          - name: Tauri info
-            run: cargo tauri info
-          - uses: oNaiPs/secrets-to-env-action@v1
-            with:
-              secrets: ${{ toJSON(secrets) }}
-          - name: Build Tauri App
-            uses: tauri-apps/tauri-action@v0
-            if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            with:
-              tagName: ${{ env.INPUT_RELEASE_VERSION }}
-              tauriScript: cargo tauri
-              updaterJsonPreferNsis: true
-              projectPath: /tauri/rian
-          - name: Build Tauri App (macOS aarch64)
-            uses: tauri-apps/tauri-action@v0
-            if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
-            env:
-              GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            with:
-              tagName: ${{ env.INPUT_RELEASE_VERSION }}
-              args: --target aarch64-apple-darwin
-              tauriScript: cargo tauri
-              updaterJsonPreferNsis: true
-              projectPath: /tauri/rian
+  build-tauri-rian-nodes:
+    needs: build-tauri-rian-ui
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - os: ubuntu-latest
+            arch: x86_64
+            rust_target: x86_64-unknown-linux-gnu
+          - os: macos-13
+            arch: x86_64
+            rust_target: x86_64-apple-darwin
+          - os: macos-latest
+            arch: aarch64
+            rust_target: aarch64-apple-darwin
+          - os: windows-latest
+            arch: x86_64
+            rust_target: x86_64-pc-windows-msvc
 
-            
-            
+    runs-on: ${{ matrix.config.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: 'npm'
+      - name: Install frontend dependencies
+        run: npm install --no-frozen-lockfile
+      - name: Install Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          targets: ${{ matrix.config.rust_target }}
+          toolchain: '1.79.0'
+      - name: Install dependencies (ubuntu only)
+        if: matrix.config.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install javascriptcoregtk-4.1  libsoup-3.0 librust-atk-dev libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libunwind-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio
+      - name: Install dependencies (mac only)
+        if: matrix.config.os == 'macos-latest'
+        run: |
+          rustup target add aarch64-apple-darwin
+      - uses: actions/download-artifact@v3
+        with:
+          name: tauri-rian
+          path: /tauri/rian/build
+      - name: Install Cargo Tauri for info
+        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+      - name: Tauri info
+        run: cargo tauri info
+      - uses: oNaiPs/secrets-to-env-action@v1
+        with:
+          secrets: ${{ toJSON(secrets) }}
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.INPUT_RELEASE_VERSION }}
+          tauriScript: cargo tauri
+          updaterJsonPreferNsis: true
+          projectPath: /tauri/rian
+      - name: Build Tauri App (macOS aarch64)
+        uses: tauri-apps/tauri-action@v0
+        if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ env.INPUT_RELEASE_VERSION }}
+          args: --target aarch64-apple-darwin
+          tauriScript: cargo tauri
+          updaterJsonPreferNsis: true
+          projectPath: /tauri/rian
