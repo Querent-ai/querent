@@ -12,6 +12,7 @@ use node::{
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
+#[cfg(debug_assertions)]
 use specta_typescript::Typescript;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use sysinfo::System;
@@ -53,7 +54,7 @@ fn query_accessibility_permissions() -> bool {
     if trusted {
         info!("Application is trusted!");
     } else {
-        warn!("Application isn't trusted :(");
+        error!("Application isn't trusted :(");
     }
     trusted
 }
@@ -124,7 +125,8 @@ pub fn run(node_config: NodeConfig) {
             .expect("Failed to export JSDoc bindings");
     }
 
-    let app = tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
