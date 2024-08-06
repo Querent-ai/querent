@@ -43,7 +43,7 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: tauri-rian
-          path: /tauri/rian/build
+          path: tauri/rian/build
 
   build-tauri-rian-nodes:
     needs: build-tauri-rian-ui
