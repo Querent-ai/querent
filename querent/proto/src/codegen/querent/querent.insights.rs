@@ -1,4 +1,4 @@
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InsightAnalystRequest {
@@ -18,7 +18,7 @@ pub struct InsightAnalystRequest {
         ::prost::alloc::string::String,
     >,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InsightAnalystResponse {
@@ -26,7 +26,7 @@ pub struct InsightAnalystResponse {
     #[prost(string, tag = "1")]
     pub session_id: ::prost::alloc::string::String,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InsightQuery {
@@ -37,7 +37,7 @@ pub struct InsightQuery {
     #[prost(string, tag = "2")]
     pub query: ::prost::alloc::string::String,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InsightQueryResponse {
@@ -46,12 +46,12 @@ pub struct InsightQueryResponse {
     pub session_id: ::prost::alloc::string::String,
     /// Hash of the query
     #[prost(string, tag = "2")]
-    pub query_hash: ::prost::alloc::string::String,
+    pub query: ::prost::alloc::string::String,
     /// The response from the insight
     #[prost(string, tag = "3")]
     pub response: ::prost::alloc::string::String,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StopInsightSessionRequest {
@@ -59,7 +59,7 @@ pub struct StopInsightSessionRequest {
     #[prost(string, tag = "1")]
     pub session_id: ::prost::alloc::string::String,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StopInsightSessionResponse {
@@ -67,11 +67,11 @@ pub struct StopInsightSessionResponse {
     #[prost(string, tag = "1")]
     pub session_id: ::prost::alloc::string::String,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EmptyInput {}
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InsightRequestInfo {
@@ -80,7 +80,7 @@ pub struct InsightRequestInfo {
     #[prost(message, optional, tag = "2")]
     pub request: ::core::option::Option<InsightAnalystRequest>,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct InsightRequestInfoList {

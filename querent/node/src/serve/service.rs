@@ -11,7 +11,7 @@ use actors::{ActorExitStatus, MessageBus, Querent};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig};
 use proto::config::NodeConfig;
-use rian::{start_semantic_service, SemanticService};
+use rian::{start_semantic_service, SemanticService, ShutdownPipeline};
 use storage::{create_metadata_store, create_secret_store, create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info};
@@ -24,7 +24,8 @@ const _READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "tes
 	Duration::from_secs(10)
 };
 
-pub struct QuesterServices {
+pub struct QuerentServices {
+	pub pipeline_id: Option<String>,
 	pub node_config: NodeConfig,
 	pub cluster: Cluster,
 	pub event_broker: PubSubBroker,
@@ -115,7 +116,8 @@ pub async fn serve_quester(
 		}
 	});
 
-	let services = Arc::new(QuesterServices {
+	let services = Arc::new(QuerentServices {
+		pipeline_id: None,
 		node_config,
 		cluster: cluster.clone(),
 		event_broker,
@@ -193,4 +195,88 @@ pub async fn serve_quester(
 
 	let actor_exit_statuses = shutdown_handle.await?;
 	Ok(actor_exit_statuses)
+}
+
+/// Serve Querent without starting REST and gRPC servers.
+/// This is useful for testing and other scenarios where REST and gRPC servers are not needed.
+/// This function returns a handle to the services that can be used to interact with the Querent node.
+/// The caller is responsible for shutting down the Querent node by calling `quit` on the returned handle.
+/// The caller is also responsible for shutting down the Querent node by calling `quit` on the returned handle.
+pub async fn serve_quester_without_servers(
+	node_config: NodeConfig,
+) -> anyhow::Result<Arc<QuerentServices>> {
+	let cluster = start_cluster_service(&node_config).await?;
+	let event_broker = PubSubBroker::default();
+	let quester_cloud = Querent::new();
+	info!("Creating storages 🗄️");
+	let querent_data_path = get_querent_data_path();
+	let secret_store = create_secret_store(querent_data_path.clone().to_path_buf()).await?;
+	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
+
+	let (event_storages, index_storages) =
+		create_storages(&node_config.storage_configs.0, querent_data_path.to_path_buf()).await?;
+
+	info!("Serving Querent RIAN Node 🚀");
+	info!("Node ID: {}", node_config.node_id);
+	info!("Starting Querent RIAN 🏁");
+	log::info!("Node ID: {}", node_config.node_id);
+	let semantic_service_bus: MessageBus<SemanticService> = start_semantic_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		&event_broker,
+		secret_store.clone(),
+	)
+	.await
+	.expect("Failed to start semantic service");
+
+	info!("Starting Discovery Service 🕵️");
+	let discovery_service = start_discovery_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+		metadata_store.clone(),
+		secret_store.clone(),
+	)
+	.await?;
+
+	log::info!("Starting Insight Service 🧠");
+	let insight_service = start_insight_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+		metadata_store.clone(),
+		secret_store.clone(),
+	)
+	.await?;
+
+	Ok(Arc::new(QuerentServices {
+		pipeline_id: None,
+		node_config,
+		cluster,
+		event_broker,
+		semantic_service_bus,
+		discovery_service: Some(discovery_service),
+		insight_service: Some(insight_service),
+		event_storages,
+		index_storages,
+		secret_store,
+		metadata_store,
+	}))
+}
+
+pub async fn shutdown_querent(services: &Arc<QuerentServices>) -> anyhow::Result<()> {
+	info!("Shutting down Querent RIAN Node 🛑");
+	if services.pipeline_id.is_none() {
+		info!("Querent RIAN Node is not running");
+		return Ok(());
+	}
+	let shutdown = ShutdownPipeline { pipeline_id: services.pipeline_id.clone().unwrap() };
+	let _ = services.semantic_service_bus.send_message(shutdown).await;
+	info!("Shutting down Discovery Service 🛑");
+	Ok(())
 }

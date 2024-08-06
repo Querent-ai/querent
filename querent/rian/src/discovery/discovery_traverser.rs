@@ -6,10 +6,13 @@ use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 use storage::{
 	utils::{extract_unique_pairs, find_intersection, get_top_k_pairs},
-	Storage,
+	QuerySuggestion, Storage,
 };
 use tokio::runtime::Handle;
 
@@ -128,10 +131,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 				"Discovery agent embedding model is not initialized".to_string(),
 			)));
 		}
-		if message.query.is_empty() {
-			return Ok(Err(DiscoveryError::Internal("Discovery agent query is empty".to_string())));
-		}
-		// Reset offset if new query
+
 		if message.query != self.current_query {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
@@ -145,6 +145,25 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		for (event_type, storages) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storages.iter() {
+					if message.query.is_empty() {
+						let auto_suggestions = match storage.autogenerate_queries(10).await {
+							Ok(suggestions) => suggestions,
+							Err(e) => {
+								tracing::info!("Failed to auto-generate queries: {:?}", e);
+								vec![]
+							},
+						};
+
+						process_auto_generated_suggestions(&auto_suggestions, &mut insights);
+
+						let response = DiscoveryResponse {
+							session_id: message.session_id,
+							query: "Auto-generated suggestions".to_string(),
+							insights,
+						};
+
+						return Ok(Ok(response));
+					}
 					let search_results = storage
 						.similarity_search_l2(
 							message.session_id.clone(),
@@ -159,12 +178,10 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 						Ok(results) => {
 							self.current_offset += results.len() as i64;
 
-							// Filter results
-							let filtered_results = get_top_k_pairs(results.clone(), 2);
+							let filtered_results = get_top_k_pairs(results.clone(), 3);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(filtered_results.clone()).await;
 
-							// Check and populate previous_query_results if empty
 							if self.previous_query_results.is_empty() ||
 								message.session_id != self.previous_session_id
 							{
@@ -259,8 +276,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 										log::error!("Failed to search for similar documents in traverser: {:?}", e);
 									},
 								}
-
-								// Format documents and insert discovered knowledge for final results
 								if let Ok(ref traverser_results) = final_traverser_results {
 									process_documents(
 										traverser_results,
@@ -321,10 +336,10 @@ fn process_documents(
 			document.3.replace('_', " "), // object
 		);
 		let insight = proto::Insight {
-			document: document.1.to_string(),              // doc_id
-			source: document.4.clone(),                    // doc_source
-			relationship_strength: document.7.to_string(), // knowledge (score)
-			sentence: document.5.clone(),                  // sentence
+			document: document.1.to_string(),
+			source: document.4.clone(),
+			relationship_strength: document.7.to_string(),
+			sentence: document.5.clone(),
 			tags,
 		};
 
@@ -337,14 +352,33 @@ fn process_documents(
 			knowledge: document.7.to_string(),
 			subject: document.2.clone(),
 			object: document.3.clone(),
-			cosine_distance: None, // Assign appropriately if available
+			cosine_distance: None,
 			query_embedding: Some(current_query_embedding.clone()),
 			query: Some(query.clone()),
 			session_id: Some(session_id.clone()),
-			score: document.7, // Use the correct field for score if different
+			score: document.7,
 			collection_id: coll_id.clone(),
 		};
 
 		document_payloads.push(document_payload);
+	}
+}
+fn process_auto_generated_suggestions(
+	suggestions: &Vec<QuerySuggestion>,
+	insights: &mut Vec<proto::Insight>,
+) {
+	for suggestion in suggestions {
+		let unique_tags: HashSet<String> = suggestion.tags.iter().cloned().collect();
+		let tags: Vec<String> = unique_tags.into_iter().collect();
+
+		let insight = proto::Insight {
+			document: suggestion.document_source.clone(),
+			source: suggestion.document_source.clone(),
+			relationship_strength: suggestion.frequency.to_string(),
+			sentence: suggestion.query.clone(),
+			tags: tags.join(", "),
+		};
+
+		insights.push(insight);
 	}
 }

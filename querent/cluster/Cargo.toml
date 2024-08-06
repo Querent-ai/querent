@@ -70,3 +70,6 @@ futures-util = { workspace = true }
 common = { workspace = true }
 proto = { workspace = true }
 rand = { workspace = true }
+
+[features]
+testsuite = []

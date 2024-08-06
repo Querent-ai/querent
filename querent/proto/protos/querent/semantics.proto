@@ -64,7 +64,6 @@ message SemanticPipelineRequest {
   optional FixedEntities fixed_entities = 2;
   optional SampleEntities sample_entities = 3;
   optional Model model = 4;
-  optional float attention_threshold = 5;
 }
 
 enum Model {
@@ -164,17 +163,15 @@ message FileCollectorConfig {
 // AzureCollectorConfig is a message to hold configuration for an Azure collector.
 message AzureCollectorConfig {
   // Connection string of the Azure collector.
-  string connection_string = 2;
+  string connection_string = 1;
   // Container of the Azure collector.
-  string container = 3;
+  string container = 2;
   // Credentials of the Azure collector.
-  string credentials = 4;
+  string credentials = 3;
   // Prefix of the Azure collector.
-  string prefix = 5;
-  // Chunk size of the Azure collector.
-  int64 chunk_size = 6;
+  string prefix = 4;
   // Id for the collector
-  string id = 7;
+  string id = 5;
 }
 
 // GCSCollectorConfig is a message to hold configuration for a GCS collector.
@@ -297,8 +294,8 @@ message SlackCollectorConfig {
   bool include_all_metadata = 4;
   // Includive of the Slack collector.
   bool includive = 5;
-  // Limit of the Slack collector.
-  int64 limit = 6;
+  // Limit of the Slack collector
+  int32 limit = 6;
   // Id for the collector
   string id = 7;
 }

@@ -73,3 +73,6 @@ xlsx_reader = { workspace = true }
 xml = { workspace = true }
 rusty-tesseract = { workspace = true }
 zip = { workspace = true }
+specta-typescript  = { workspace = true }
+tauri-specta = { workspace = true }
+specta = { workspace = true }

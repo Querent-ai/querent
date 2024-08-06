@@ -36,7 +36,7 @@ use crate::{
 	list_collectors_list_handler, metrics_handler, node_info_handler, observe_pipeline_get_handler,
 	pipelines_get_all_handler, restart_pipeline_post_handler, set_collectors_post_handler,
 	start_pipeline_post_handler, stop_pipeline_delete_handler, BodyFormat, BuildInfo,
-	QuesterServices, RuntimeInfo,
+	QuerentServices, RuntimeInfo,
 };
 
 /// The minimum size a response body must be in order to
@@ -83,7 +83,7 @@ async fn serve_swagger(
 /// Starts REST services.
 pub(crate) async fn start_rest_server(
 	rest_listen_addr: SocketAddr,
-	services: Arc<QuesterServices>,
+	services: Arc<QuerentServices>,
 	readiness_trigger: BoxFutureInfaillible<()>,
 	shutdown_signal: BoxFutureInfaillible<()>,
 ) -> anyhow::Result<()> {
@@ -168,7 +168,7 @@ pub(crate) async fn start_rest_server(
 }
 
 fn api_v1_routes(
-	services: Arc<QuesterServices>,
+	services: Arc<QuerentServices>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	if !services.node_config.rest_config.extra_headers.is_empty() {
 		info!(

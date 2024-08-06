@@ -25,6 +25,7 @@ diesel-async = { workspace = true, features = [
   "deadpool",
 ]}
 diesel  = { workspace = true }
+dirs = { workspace = true }
 deadpool = { workspace = true }
 rustls = { workspace = true }
 tracing = { workspace = true }

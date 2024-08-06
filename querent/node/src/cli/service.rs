@@ -1,5 +1,5 @@
 use clap::{ArgMatches, Command};
-use common::{initialize_runtimes, RuntimesConfig};
+pub use common::{initialize_runtimes, RuntimesConfig};
 use tokio::signal;
 use tracing::{debug, info};
 
