@@ -3,7 +3,7 @@ use crate::{
 	GenerateResult, LLMError, LLMErrorKind, LLMResult, Message, LLM,
 };
 use async_trait::async_trait;
-use candle_core::{DType, Tensor};
+use candle_core::Tensor;
 use candle_nn::VarBuilder;
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
@@ -242,22 +242,19 @@ impl LLM for BertLLM {
 
 		let tokenized_sequence =
 			vec![vec![cls_token_id], tokenized_sequence, vec![sep_token_id]].concat();
-
-		// Convert tokenized_sequence to Vec<i64>
-		let tokenized_sequence_i64: Vec<i64> =
-			tokenized_sequence.iter().map(|&x| x as i64).collect();
-
-		// Define the shape as a Vec<usize>
-		let shape: Vec<usize> = vec![1, tokenized_sequence_i64.len()];
-
-		// Create the input_ids tensor with the correct shape
-		let input_ids = Tensor::from_vec(tokenized_sequence_i64, shape.clone(), &self.device)
+		let tokenized_sequence_u32: Vec<u32> =
+			tokenized_sequence.iter().map(|&x| x as u32).collect();
+		let tokenized_sequence_slice: &[u32] = &tokenized_sequence_u32;
+		let input_ids = Tensor::new(tokenized_sequence_slice, &self.device)
+			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?
+			.reshape((1, tokenized_sequence_u32.len()))
 			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
-		let token_type_ids = Tensor::zeros(shape.clone(), DType::I64, &self.device)
+		let token_type_ids = input_ids
+			.zeros_like()
 			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
-		let attention_mask = Tensor::ones(shape, DType::I64, &self.device)
+		let attention_mask = input_ids
+			.ones_like()
 			.map_err(|e| LLMError::new(LLMErrorKind::ModelError, Arc::new(e.into())))?;
-
 		let mut input_map = HashMap::new();
 		input_map.insert("input_ids".to_string(), input_ids);
 		input_map.insert("token_type_ids".to_string(), token_type_ids);
@@ -383,7 +380,7 @@ impl LLM for BertLLM {
 				)
 			})?;
 			let output = token_classification_model
-				.forward(input_ids, token_type_ids, labels)
+				.forward(&input_ids, &token_type_ids, None)
 				.map_err(|e| {
 					LLMError::new(
 						LLMErrorKind::ModelError,
@@ -396,7 +393,7 @@ impl LLM for BertLLM {
 
 			// Calculate softmax probabilities
 			let logits = output.logits;
-			let probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)
+			let _probabilities = candle_nn::ops::softmax(&logits, candle_core::D::Minus1)
 				.map_err(|e| {
 					LLMError::new(
 						LLMErrorKind::ModelError,
@@ -410,26 +407,32 @@ impl LLM for BertLLM {
 						Arc::new(anyhow::anyhow!("conversion to Vec3 failed: {}", e)),
 					)
 				})?;
-			// Get tokens
-			let input_ids_vec_2d = input_ids.to_vec2::<i64>().map_err(|e| {
+			let final_classification_logits = logits.to_vec3::<f32>().map_err(|e| {
+				LLMError::new(
+					LLMErrorKind::ModelError,
+					Arc::new(anyhow::anyhow!("conversion to Vec3 failed: {}", e)),
+				)
+			})?;
+			let input_ids_vec_2d = input_ids.to_vec2::<u32>().map_err(|e| {
 				LLMError::new(
 					LLMErrorKind::ModelError,
 					Arc::new(anyhow::anyhow!("conversion to Vec2 failed: {}", e)),
 				)
 			})?;
-
-			// Flatten the 2-dimensional vector to 1-dimensional
-			let input_ids_vec: Vec<i64> = input_ids_vec_2d.into_iter().flatten().collect();
+			let input_ids_vec: Vec<u32> = input_ids_vec_2d.into_iter().flatten().collect();
 			let input_ids_u32: Vec<u32> = input_ids_vec.iter().map(|&id| id as u32).collect();
-			let tokens_string = self.tokenizer.decode(&input_ids_u32, false).map_err(|e| {
-				LLMError::new(
-					LLMErrorKind::ModelError,
-					Arc::new(anyhow::anyhow!("token decoding failed: {}", e)),
-				)
-			})?;
-			let tokens: Vec<String> = tokens_string.split_whitespace().map(String::from).collect();
-
-			// Decode logits to get predicted labels
+			let token_string: Result<Vec<String>, LLMError> = input_ids_u32
+				.iter()
+				.map(|&id| {
+					self.tokenizer.decode(&[id], false).map_err(|e| {
+						LLMError::new(
+							LLMErrorKind::ModelError,
+							Arc::new(anyhow::anyhow!("token decoding failed: {}", e)),
+						)
+					})
+				})
+				.collect();
+			let tokens: Vec<String> = token_string?;
 			let config = &self
 				.token_classification_model
 				.as_ref()
@@ -449,12 +452,11 @@ impl LLM for BertLLM {
 					));
 				},
 			};
-
 			// Map tokens to their predicted labels
 			let mut entity_predictions = Vec::new();
 			let default_label = "O".to_string();
 
-			for (token, probs) in tokens.iter().zip(probabilities[0].iter()) {
+			for (token, probs) in tokens.iter().zip(final_classification_logits[0].iter()) {
 				let max_prob = probs.iter().copied().fold(f32::NEG_INFINITY, f32::max);
 				let label_idx = probs.iter().position(|&p| p == max_prob).ok_or_else(|| {
 					LLMError::new(
@@ -484,47 +486,98 @@ impl LLM for BertLLM {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-// 	use super::*;
-// 	use tokio::test;
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use tokio::test;
+	use anyhow::Error;
 
-// 	#[test]
-// 	async fn test_inference_and_attention_processing() {
-// 		let options = EmbedderOptions {
-// 			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
-// 			local_dir: None,
-// 			revision: None,
-// 			distribution: None,
-// 		};
-// 		let embedder = BertLLM::new(options).unwrap();
-// 		let input_text = "The tectonic movements in the Jurassic era are not common.";
-// 		let tokens = match embedder.tokenize(&input_text).await {
-// 			Ok(tokens) => tokens,
-// 			Err(e) => {
-// 				println!("Tokenization failed: {:?}", e);
-// 				return;
-// 			},
-// 		};
+	#[test]
+	async fn test_inference_and_attention_processing() {
+		let options = EmbedderOptions {
+			model: "sentence-transformers/all-MiniLM-L6-v2".to_string(),
+			local_dir: None,
+			revision: None,
+			distribution: None,
+		};
+		let embedder = BertLLM::new(options).unwrap();
+		// let entities = vec![
+		// 	"oil".to_string(),
+		// 	"gas".to_string(),
+		// 	"porosity".to_string(),
+		// 	"joel".to_string(),
+		// 	"india".to_string(),
+		// 	"microsoft".to_string(),
+		// 	"nitrogen gas".to_string(),
+		// 	"deposition".to_string(),
+		// ];
+		let entities: Vec<String> = vec![];
 
-// 		let model_input = match embedder.model_input(tokens.clone()).await {
-// 			Ok(model_input) => model_input,
-// 			Err(e) => {
-// 				println!("Model input creation failed: {:?}", e);
-// 				return;
-// 			},
-// 		};
+		// let entities = vec![];
+				// Initialize NER model only if fixed_entities is not defined or empty
+		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
+		let ner_options = EmbedderOptions {
+			model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+			local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+			// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+			// model: "deepset/roberta-base-squad2".to_string(),
+			// local_dir : None,
+			revision: None,
+			distribution: None,
+		};
 
-// 		// Perform inference to get attention weights
-// 		match embedder.inference_attention(model_input).await {
-// 			Ok(tensor) => {
-// 				// Process the attention weights to remove CLS and SEP tokens
-// 				match embedder.attention_tensor_to_2d_vector(&tensor).await {
-// 					Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
-// 					Err(e) => println!("Failed to process attention weights: {:?}", e),
-// 				}
-// 			},
-// 			Err(e) => println!("Failed to perform inference: {:?}", e),
-// 		}
-// 	}
-// }
+			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+			// Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+		} else {
+			None  // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
+		};
+		let input_text = "The tectonic movements in the Jurassic era are not common.";
+		let tokens = match embedder.tokenize(&input_text).await {
+			Ok(tokens) => tokens,
+			Err(e) => {
+				println!("Tokenization failed: {:?}", e);
+				return;
+			},
+		};
+
+		let model_input = match embedder.model_input(tokens.clone()).await {
+			Ok(model_input) => model_input,
+			Err(e) => {
+				println!("Model input creation failed: {:?}", e);
+				return;
+			},
+		};
+		if let Some(ner_llm) = ner_llm {
+			let tokens = match ner_llm.tokenize(&input_text).await {
+				Ok(tokens) => tokens,
+				Err(e) => {
+					println!("Tokenization failed: {:?}", e);
+					return;
+				},
+			};
+	
+			let model_input = match ner_llm.model_input(tokens.clone()).await {
+				Ok(model_input) => model_input,
+				Err(e) => {
+					println!("Model input creation failed: {:?}", e);
+					return;
+				},
+			};
+			let ner_results = ner_llm.token_classification(model_input, None).await.map_err(|e| Error::from(e));
+			println!("The ner results are ------------- {:?}", ner_results);
+		} else {
+			println!("No NER LLM available.");
+		}
+		// Perform inference to get attention weights
+		// match embedder.inference_attention(model_input).await {
+		// 	Ok(tensor) => {
+		// 		// Process the attention weights to remove CLS and SEP tokens
+		// 		match embedder.attention_tensor_to_2d_vector(&tensor).await {
+		// 			Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
+		// 			Err(e) => println!("Failed to process attention weights: {:?}", e),
+		// 		}
+		// 	},
+		// 	Err(e) => println!("Failed to perform inference: {:?}", e),
+		// }
+	}
+}
