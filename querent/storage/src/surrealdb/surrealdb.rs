@@ -53,13 +53,6 @@ struct AutoSuggestPairs {
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
-struct QueryResultEmbedded1 {
-	embeddings: Option<Vec<f32>>,
-	score: f32,
-	event_id: String,
-}
-
-#[derive(Serialize, Debug, Clone, Deserialize)]
 
 pub struct InsightKnowledgeSurrealDb {
 	pub session_id: String,

@@ -5,7 +5,7 @@ use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 
 /// Insight Information.
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
 pub struct InsightInfo {
@@ -33,7 +33,7 @@ pub struct InsightInfo {
 }
 
 /// Possible custom option values for insights.
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[serde(tag = "type")]
 #[serde(rename_all = "camelCase")]
 #[repr(C)]
@@ -64,7 +64,7 @@ impl InsightCustomOptionValue {
 }
 
 /// A custom option for insights.
-#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomInsightOption {
 	/// Unique identifier for the option.

@@ -1,3 +1,4 @@
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -5,6 +6,7 @@ pub struct PipelineRequestInfoList {
     #[prost(message, repeated, tag = "1")]
     pub requests: ::prost::alloc::vec::Vec<PipelineRequestInfo>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -14,18 +16,22 @@ pub struct PipelineRequestInfo {
     #[prost(message, optional, tag = "2")]
     pub request: ::core::option::Option<SemanticPipelineRequest>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EmptyObserve {}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EmptyList {}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct EmptyGetPipelinesMetadata {}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -33,6 +39,7 @@ pub struct StopPipelineRequest {
     #[prost(string, tag = "1")]
     pub pipeline_id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -40,6 +47,7 @@ pub struct DescribePipelineRequest {
     #[prost(string, tag = "1")]
     pub pipeline_id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -47,6 +55,7 @@ pub struct RestartPipelineRequest {
     #[prost(string, tag = "1")]
     pub pipeline_id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -54,6 +63,7 @@ pub struct CollectorConfigResponse {
     #[prost(string, tag = "1")]
     pub id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -61,6 +71,7 @@ pub struct DeleteCollectorRequest {
     #[prost(string, repeated, tag = "1")]
     pub id: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -68,10 +79,12 @@ pub struct DeleteCollectorResponse {
     #[prost(string, repeated, tag = "1")]
     pub id: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ListCollectorRequest {}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -79,6 +92,7 @@ pub struct ListCollectorConfig {
     #[prost(message, repeated, tag = "1")]
     pub config: ::prost::alloc::vec::Vec<CollectorConfig>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -92,6 +106,7 @@ pub struct SemanticPipelineRequest {
     #[prost(enumeration = "Model", optional, tag = "4")]
     pub model: ::core::option::Option<i32>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -99,6 +114,7 @@ pub struct FixedEntities {
     #[prost(string, repeated, tag = "1")]
     pub entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -106,6 +122,7 @@ pub struct SampleEntities {
     #[prost(string, repeated, tag = "1")]
     pub entities: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -113,6 +130,7 @@ pub struct SemanticPipelineResponse {
     #[prost(string, tag = "1")]
     pub pipeline_id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -124,6 +142,7 @@ pub struct SemanticServiceCounters {
     #[prost(int32, tag = "3")]
     pub num_failed_pipelines: i32,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -139,6 +158,7 @@ pub struct IngestedTokens {
     #[prost(string, tag = "5")]
     pub source_id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -148,6 +168,7 @@ pub struct SendIngestedTokens {
     #[prost(message, repeated, tag = "2")]
     pub tokens: ::prost::alloc::vec::Vec<IngestedTokens>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -179,6 +200,7 @@ pub struct IndexingStatistics {
     #[prost(uint64, tag = "13")]
     pub total_data_processed_size: u64,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -186,6 +208,7 @@ pub struct PipelineMetadata {
     #[prost(string, tag = "1")]
     pub pipeline_id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -193,6 +216,7 @@ pub struct PipelinesMetadata {
     #[prost(message, repeated, tag = "1")]
     pub pipelines: ::prost::alloc::vec::Vec<PipelineMetadata>,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -202,6 +226,7 @@ pub struct BooleanResponse {
 }
 /// CollectorConfig is a message to hold configuration for a collector.
 /// Defines a collector with a specific configuration.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -216,6 +241,7 @@ pub struct CollectorConfig {
 }
 /// Nested message and enum types in `CollectorConfig`.
 pub mod collector_config {
+    #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
     #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
     #[serde(rename_all = "snake_case")]
     #[allow(clippy::derive_partial_eq_without_eq)]
@@ -248,6 +274,7 @@ pub mod collector_config {
     }
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -259,30 +286,29 @@ pub struct FileCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// AzureCollectorConfig is a message to hold configuration for an Azure collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct AzureCollectorConfig {
     /// Connection string of the Azure collector.
-    #[prost(string, tag = "2")]
+    #[prost(string, tag = "1")]
     pub connection_string: ::prost::alloc::string::String,
     /// Container of the Azure collector.
-    #[prost(string, tag = "3")]
+    #[prost(string, tag = "2")]
     pub container: ::prost::alloc::string::String,
     /// Credentials of the Azure collector.
-    #[prost(string, tag = "4")]
+    #[prost(string, tag = "3")]
     pub credentials: ::prost::alloc::string::String,
     /// Prefix of the Azure collector.
-    #[prost(string, tag = "5")]
+    #[prost(string, tag = "4")]
     pub prefix: ::prost::alloc::string::String,
-    /// Chunk size of the Azure collector.
-    #[prost(int64, tag = "6")]
-    pub chunk_size: i64,
     /// Id for the collector
-    #[prost(string, tag = "7")]
+    #[prost(string, tag = "5")]
     pub id: ::prost::alloc::string::String,
 }
 /// GCSCollectorConfig is a message to hold configuration for a GCS collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -298,6 +324,7 @@ pub struct GcsCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// S3CollectorConfig is a message to hold configuration for an S3 collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -319,6 +346,7 @@ pub struct S3CollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// JiraCollectorConfig is a message to hold configuration for a Jira collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -361,6 +389,7 @@ pub struct JiraCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -382,6 +411,7 @@ pub struct GoogleDriveCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -406,6 +436,7 @@ pub struct EmailCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -427,6 +458,7 @@ pub struct DropBoxCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// GithubCollectorConfig is a message to hold configuration for a Github collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -445,6 +477,7 @@ pub struct GithubCollectorConfig {
     pub id: ::prost::alloc::string::String,
 }
 /// SlackCollectorConfig is a message to hold configuration for a Slack collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -464,14 +497,15 @@ pub struct SlackCollectorConfig {
     /// Includive of the Slack collector.
     #[prost(bool, tag = "5")]
     pub includive: bool,
-    /// Limit of the Slack collector.
-    #[prost(int64, tag = "6")]
-    pub limit: i64,
+    /// Limit of the Slack collector
+    #[prost(int32, tag = "6")]
+    pub limit: i32,
     /// Id for the collector
     #[prost(string, tag = "7")]
     pub id: ::prost::alloc::string::String,
 }
 /// NewsCollectorConfig is a message to hold configuration for a News collector.
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -504,6 +538,7 @@ pub struct NewsCollectorConfig {
     #[prost(string, tag = "9")]
     pub id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -527,6 +562,7 @@ pub struct OneDriveConfig {
     #[prost(string, tag = "6")]
     pub id: ::prost::alloc::string::String,
 }
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]

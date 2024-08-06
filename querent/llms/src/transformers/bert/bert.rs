@@ -1,16 +1,15 @@
-use crate::transformers::bert::bert_model_functions::{
-	BertConfig, BertModel as CandleBertModel, DTYPE,
+use crate::{
+	transformers::bert::bert_model_functions::{BertConfig, BertModel as CandleBertModel, DTYPE},
+	GenerateResult, LLMError, LLMErrorKind, LLMResult, Message, LLM,
 };
 use async_trait::async_trait;
 use candle_core::{DType, Tensor};
 use candle_nn::VarBuilder;
-use hf_hub::{api::sync::Api, Repo, RepoType};
+use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokenizers::{PaddingParams, Tokenizer};
 
-use crate::{GenerateResult, LLMError, LLMErrorKind, LLMResult, Message, LLM};
-
-use crate::transformers::DistributionShift;
+use crate::transformers::{get_querent_data_path, DistributionShift};
 
 use super::BertForTokenClassification;
 
@@ -101,12 +100,17 @@ impl BertLLM {
 					),
 					None => Repo::model(options.model.clone()),
 				};
-				let api = Api::new().map_err(|e| {
-					LLMError::new(
-						LLMErrorKind::Io,
-						Arc::new(anyhow::anyhow!("could not initialize Hugging Face API: {}", e)),
-					)
-				})?;
+				let cache_dir = get_querent_data_path();
+				let api =
+					ApiBuilder::new().with_cache_dir(cache_dir.clone()).build().map_err(|e| {
+						LLMError::new(
+							LLMErrorKind::Io,
+							Arc::new(anyhow::anyhow!(
+								"could not initialize Hugging Face API: {}",
+								e
+							)),
+						)
+					})?;
 				let api = api.repo(repo);
 				let config = api.get("config.json").map_err(|e| {
 					LLMError::new(

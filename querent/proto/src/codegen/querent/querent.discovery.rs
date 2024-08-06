@@ -1,7 +1,7 @@
 /// Start a discovery agent to query insights from data
 /// The agent will respond with insights discovered based on the user's query
 /// The agent use vector and graph embeddings to discover insights from data
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoverySessionRequest {
@@ -16,7 +16,7 @@ pub struct DiscoverySessionRequest {
     pub session_type: ::core::option::Option<DiscoveryAgentType>,
 }
 /// Session AgentID as a response
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoverySessionResponse {
@@ -25,7 +25,7 @@ pub struct DiscoverySessionResponse {
     pub session_id: ::prost::alloc::string::String,
 }
 /// Request message for querying insights from data
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(Eq, Hash)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -38,7 +38,7 @@ pub struct DiscoveryRequest {
     pub query: ::prost::alloc::string::String,
 }
 /// Response message containing insights discovered from the data
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoveryResponse {
@@ -53,7 +53,7 @@ pub struct DiscoveryResponse {
     pub insights: ::prost::alloc::vec::Vec<Insight>,
 }
 /// Request to stop the discovery session
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StopDiscoverySessionRequest {
@@ -62,7 +62,7 @@ pub struct StopDiscoverySessionRequest {
     pub session_id: ::prost::alloc::string::String,
 }
 /// Response to stop the discovery session
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct StopDiscoverySessionResponse {
@@ -71,7 +71,7 @@ pub struct StopDiscoverySessionResponse {
     pub session_id: ::prost::alloc::string::String,
 }
 /// Represents an insight discovered from the data
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Insight {
@@ -91,7 +91,7 @@ pub struct Insight {
     #[prost(string, tag = "5")]
     pub tags: ::prost::alloc::string::String,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoverySessionRequestInfo {
@@ -100,14 +100,14 @@ pub struct DiscoverySessionRequestInfo {
     #[prost(message, optional, tag = "2")]
     pub request: ::core::option::Option<DiscoverySessionRequest>,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct DiscoverySessionRequestInfoList {
     #[prost(message, repeated, tag = "1")]
     pub requests: ::prost::alloc::vec::Vec<DiscoverySessionRequestInfo>,
 }
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct Empty {}
