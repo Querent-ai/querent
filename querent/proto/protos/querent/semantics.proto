@@ -64,7 +64,6 @@ message SemanticPipelineRequest {
   optional FixedEntities fixed_entities = 2;
   optional SampleEntities sample_entities = 3;
   optional Model model = 4;
-  optional float attention_threshold = 5;
 }
 
 enum Model {

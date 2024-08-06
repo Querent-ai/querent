@@ -3,15 +3,15 @@ use std::{
 	sync::Arc,
 };
 
+use crate::{
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, Storage, StorageError, StorageErrorKind,
+	StorageResult, RIAN_API_KEY,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
-
-use crate::{
-	DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, RIAN_API_KEY,
-};
 
 const TABLE: TableDefinition<&str, &[u8]> = TableDefinition::new("querent_secrets");
 
@@ -327,5 +327,14 @@ impl Storage for SecretStore {
 	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
 		// Inner Key: RIAN_API_KEY
 		self.get_secret(&RIAN_API_KEY.to_string()).await
+	}
+
+	/// Asynchronously fetches popular queries .
+	async fn autogenerate_queries(
+		&self,
+		_max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>> {
+		// Return an empty vector
+		Ok(Vec::new())
 	}
 }

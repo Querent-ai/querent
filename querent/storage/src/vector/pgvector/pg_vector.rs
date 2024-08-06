@@ -1,13 +1,21 @@
-use crate::{utils::traverse_node, DieselError};
+use crate::{
+	postgres_index::QuerySuggestion, semantic_knowledge, utils::traverse_node, ActualDbPool,
+	DieselError, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use diesel::{ExpressionMethods, QueryDsl};
+use deadpool::Runtime;
+use diesel::{
+	sql_types::BigInt, table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName,
+	Selectable,
+};
 use diesel_async::{
 	pg::AsyncPgConnection,
 	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
 	scoped_futures::ScopedFutureExt,
-	RunQueryDsl,
+	AsyncConnection, RunQueryDsl,
 };
+use pgvector::{Vector, VectorExpressionMethods};
 use proto::{
 	discovery::DiscoverySessionRequest,
 	insights::InsightAnalystRequest,
@@ -15,17 +23,6 @@ use proto::{
 };
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
-
-use crate::{
-	semantic_knowledge, ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult,
-	POOL_TIMEOUT,
-};
-use pgvector::Vector;
-
-use deadpool::Runtime;
-use diesel::{table, Insertable, Queryable, QueryableByName, Selectable};
-use diesel_async::AsyncConnection;
-use pgvector::VectorExpressionMethods;
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = embedded_knowledge)]
@@ -122,6 +119,261 @@ impl Storage for PGVector {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self.pool.get().await?;
 		Ok(())
+	}
+
+	/// Asynchronously fetches suggestions from semantic table.
+	async fn autogenerate_queries(
+		&self,
+		max_suggestions: i32,
+	) -> Result<Vec<QuerySuggestion>, StorageError> {
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		let top_pairs_query_result = semantic_knowledge::dsl::semantic_knowledge
+			.select((
+				semantic_knowledge::dsl::subject,
+				semantic_knowledge::dsl::subject_type,
+				semantic_knowledge::dsl::object,
+				semantic_knowledge::dsl::object_type,
+				diesel::dsl::sql::<BigInt>("COUNT(*) as pair_frequency"),
+			))
+			.group_by((
+				semantic_knowledge::dsl::subject,
+				semantic_knowledge::dsl::subject_type,
+				semantic_knowledge::dsl::object,
+				semantic_knowledge::dsl::object_type,
+			))
+			.order_by(diesel::dsl::sql::<BigInt>("pair_frequency").desc())
+			.limit(5)
+			.load::<(String, String, String, String, i64)>(&mut conn)
+			.await;
+
+		let top_pairs = match top_pairs_query_result {
+			Ok(pairs) => pairs,
+			Err(e) => {
+				error!("Error fetching top pairs: {:?}", e);
+				return Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				});
+			},
+		};
+
+		let bottom_pairs_query_result = semantic_knowledge::dsl::semantic_knowledge
+			.select((
+				semantic_knowledge::dsl::subject,
+				semantic_knowledge::dsl::subject_type,
+				semantic_knowledge::dsl::object,
+				semantic_knowledge::dsl::object_type,
+				diesel::dsl::sql::<BigInt>("COUNT(*) as pair_frequency"),
+			))
+			.group_by((
+				semantic_knowledge::dsl::subject,
+				semantic_knowledge::dsl::subject_type,
+				semantic_knowledge::dsl::object,
+				semantic_knowledge::dsl::object_type,
+			))
+			.order_by(diesel::dsl::sql::<BigInt>("pair_frequency").asc())
+			.limit(5)
+			.load::<(String, String, String, String, i64)>(&mut conn)
+			.await;
+
+		let bottom_pairs = match bottom_pairs_query_result {
+			Ok(pairs) => pairs,
+			Err(e) => {
+				error!("Error fetching bottom pairs: {:?}", e);
+				return Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				});
+			},
+		};
+
+		let most_mix_documents_query_result = semantic_knowledge::dsl::semantic_knowledge
+			.select((
+				semantic_knowledge::dsl::document_id,
+				diesel::dsl::sql::<BigInt>(
+					"COUNT(DISTINCT subject) + COUNT(DISTINCT object) as entity_mix",
+				),
+			))
+			.group_by(semantic_knowledge::dsl::document_id)
+			.order_by(diesel::dsl::sql::<BigInt>("entity_mix").desc())
+			.limit(5)
+			.load::<(String, i64)>(&mut conn)
+			.await;
+
+		let most_mix_documents = match most_mix_documents_query_result {
+			Ok(docs) => docs,
+			Err(e) => {
+				error!("Error fetching documents with most mix of entities: {:?}", e);
+				return Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				});
+			},
+		};
+
+		let most_unique_sentences_documents_query_result =
+			semantic_knowledge::dsl::semantic_knowledge
+				.select((
+					semantic_knowledge::dsl::document_id,
+					diesel::dsl::sql::<BigInt>("COUNT(DISTINCT sentence) as unique_sentences"),
+				))
+				.group_by(semantic_knowledge::dsl::document_id)
+				.order_by(diesel::dsl::sql::<BigInt>("unique_sentences").desc())
+				.limit(5)
+				.load::<(String, i64)>(&mut conn)
+				.await;
+
+		let most_unique_sentences_documents = match most_unique_sentences_documents_query_result {
+			Ok(docs) => docs,
+			Err(e) => {
+				error!("Error fetching documents with most unique sentences: {:?}", e);
+				return Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				});
+			},
+		};
+
+		let high_impact_sentences_query_result = semantic_knowledge::dsl::semantic_knowledge
+			.select((
+				semantic_knowledge::dsl::sentence,
+				diesel::dsl::sql::<BigInt>("COUNT(*) as sentence_frequency"),
+			))
+			.group_by(semantic_knowledge::dsl::sentence)
+			.order_by(diesel::dsl::sql::<BigInt>("sentence_frequency").desc())
+			.limit(5)
+			.load::<(String, i64)>(&mut conn)
+			.await;
+
+		let high_impact_sentences = match high_impact_sentences_query_result {
+			Ok(sents) => sents,
+			Err(e) => {
+				error!("Error fetching high-impact sentences: {:?}", e);
+				return Err(StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				});
+			},
+		};
+
+		let mut suggestions = Vec::new();
+
+		if !top_pairs.is_empty() {
+			let mut query_parts = Vec::new();
+			for (subject, subject_type, object, object_type, frequency) in top_pairs {
+				let part = format!(
+					"'{}' ({}) and '{}' ({}): {} times",
+					subject, subject_type, object, object_type, frequency
+				);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"Most frequently occurring entity pairs in the semantic data fabric: Understanding these pairs can provide insights into the most common relationships present in your data, helping you identify key patterns and trends. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !bottom_pairs.is_empty() {
+			let mut query_parts = Vec::new();
+			for (subject, subject_type, object, object_type, frequency) in bottom_pairs {
+				let part = format!(
+					"'{}' ({}) and '{}' ({}): {} times",
+					subject, subject_type, object, object_type, frequency
+				);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"Most unique entity pairs in the semantic data fabric: These pairs represent rare and potentially significant relationships that might highlight unique interactions within your data. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !most_mix_documents.is_empty() {
+			let mut query_parts = Vec::new();
+			for (document_id, entity_mix) in most_mix_documents {
+				let part = format!(
+					"Document ID '{}': {} unique subjects and objects",
+					document_id, entity_mix
+				);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"Documents with the richest mix of entity pairs: These documents contain a diverse set of entities, indicating a wide range of topics and relationships. They can be valuable for comprehensive analysis and understanding of multifaceted data. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !most_unique_sentences_documents.is_empty() {
+			let mut query_parts = Vec::new();
+			for (document_id, unique_sentences) in most_unique_sentences_documents {
+				let part =
+					format!("Document ID '{}': {} unique context", document_id, unique_sentences);
+				query_parts.push(part);
+			}
+			let combined_query = format!(
+				"High impact documents that are part of the semantic data fabric: These documents contain a large number of unique context, suggesting they provide extensive and varied information. They are essential for gaining a broad and deep understanding of the content. \n{}\n\n",
+				query_parts.join("\n")
+			);
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec![],
+			});
+		}
+
+		if !high_impact_sentences.is_empty() {
+			let mut query_parts = Vec::new();
+			for (sentence, sentence_frequency) in high_impact_sentences {
+				let trimmed_sentence = sentence.split('.').next().unwrap_or("").trim();
+				if trimmed_sentence.split_whitespace().count() > 10 {
+					let part = format!("'{}': {} times", trimmed_sentence, sentence_frequency);
+					query_parts.push(part);
+				}
+			}
+
+			if !query_parts.is_empty() {
+				let combined_query = format!(
+					"High-impact context that provide crucial information in the semantic data fabric: These context are essential as they contain detailed and significant information, helping you understand important aspects of the data. \n{}\n\n",
+					query_parts.join("\n")
+				);
+				suggestions.push(QuerySuggestion {
+					query: combined_query,
+					frequency: 1,
+					document_source: String::new(),
+					sentence: String::new(),
+					tags: vec![],
+				});
+			}
+		}
+
+		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())
 	}
 
 	async fn insert_vector(
@@ -336,7 +588,7 @@ impl Storage for PGVector {
 				embedded_knowledge::dsl::event_id,
 				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
 			))
-			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.2))
+			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.5))
 			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
 			.limit(max_results as i64)
 			.offset(offset)
@@ -357,7 +609,7 @@ impl Storage for PGVector {
 							semantic_knowledge::dsl::sentence,
 						))
 						.filter(semantic_knowledge::dsl::event_id.eq(event_id))
-						.offset(offset)
+						.offset(0)
 						.load::<(String, String, String, String, String)>(&mut conn)
 						.await;
 
@@ -417,7 +669,6 @@ impl Storage for PGVector {
 			f32,
 		)> = Vec::new();
 		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-
 		for (head, tail) in filtered_pairs {
 			let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
@@ -431,16 +682,19 @@ impl Storage for PGVector {
 				&mut combined_results,
 				&mut visited_pairs,
 				conn,
-				1,
+				0,
+				"inward",
 			)
 			.await?;
+
 			traverse_node(
 				&self.pool,
 				tail.clone(),
 				&mut combined_results,
 				&mut visited_pairs,
 				conn,
-				1,
+				0,
+				"outward",
 			)
 			.await?;
 		}
@@ -779,7 +1033,15 @@ table! {
 // 		// Ensure that the connectivity check is successful
 // 		// Works when there is a database running on the test database URL
 // 		//assert!(_connectivity_result.is_ok());
-
+// let auto_results = storage.autogenerate_queries(5).await;
+// match auto_results {
+// 	Ok(results) => {
+// 		println!("These are the results ------------------{:?}", results);
+// 	}
+// 	Err(e) => {
+// 		println!("Error occurred ------------------{:?}", e);
+// 	}
+// }
 // 		// You can add more test cases or assertions based on your specific requirements
 // 	}
 // }

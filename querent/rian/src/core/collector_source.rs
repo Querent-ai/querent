@@ -138,8 +138,6 @@ impl Source for Collector {
 				self.leftover_collection_batches.is_empty()
 			{
 				is_finished = true;
-			} else {
-				return Ok(Duration::default());
 			}
 		}
 
@@ -176,6 +174,7 @@ impl Source for Collector {
 				}
 			}
 		}
+
 		if !files.is_empty() {
 			for mut batch in files {
 				let permit = self.semaphore.clone().acquire_owned().await;

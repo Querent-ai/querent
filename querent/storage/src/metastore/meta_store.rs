@@ -3,13 +3,15 @@ use std::{
 	sync::Arc,
 };
 
+use crate::{
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, Storage, StorageError, StorageErrorKind,
+	StorageResult,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
-
-use crate::{DiscoveredKnowledge, Storage, StorageError, StorageErrorKind, StorageResult};
 
 const TABLE_PIPELINES: TableDefinition<&str, &[u8]> = TableDefinition::new("querent_pipelines");
 const TABLE_DISCOVERY_SESSIONS: TableDefinition<&str, &[u8]> =
@@ -471,5 +473,14 @@ impl Storage for MetaStore {
 	/// Get API key for RIAN
 	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
 		Ok(None)
+	}
+
+	/// Asynchronously fetches popular queries .
+	async fn autogenerate_queries(
+		&self,
+		_max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>> {
+		// Return an empty vector
+		Ok(Vec::new())
 	}
 }
