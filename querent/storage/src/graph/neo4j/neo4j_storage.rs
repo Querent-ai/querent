@@ -1,4 +1,7 @@
-use crate::{storage::Storage, DiscoveredKnowledge, StorageError, StorageErrorKind, StorageResult};
+use crate::{
+	postgres_index::QuerySuggestion, storage::Storage, DiscoveredKnowledge, StorageError,
+	StorageErrorKind, StorageResult,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
@@ -296,6 +299,15 @@ impl Storage for Neo4jStorage {
 
 	//Get all collectors key value pairs
 	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
+		Ok(Vec::new())
+	}
+
+	/// Asynchronously fetches popular queries .
+	async fn autogenerate_queries(
+		&self,
+		_max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>> {
+		// Return an empty vector
 		Ok(Vec::new())
 	}
 }

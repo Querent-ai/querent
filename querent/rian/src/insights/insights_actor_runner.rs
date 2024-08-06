@@ -106,7 +106,7 @@ impl Handler<InsightQuery> for InsightAgent {
 				Ok(output) => Ok(InsightQueryResponse {
 					session_id: agent_id,
 					response: output.data.to_string(),
-					query_hash: message.query,
+					query: message.query,
 				}),
 				Err(e) => Err(e),
 			}

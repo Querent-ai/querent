@@ -7,6 +7,7 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	RunQueryDsl,
 };
+
 use proto::{
 	discovery::DiscoverySessionRequest,
 	insights::InsightAnalystRequest,
@@ -43,6 +44,14 @@ pub struct SemanticKnowledge {
 pub struct PostgresStorage {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
+}
+#[derive(Debug)]
+pub struct QuerySuggestion {
+	pub query: String,
+	pub frequency: i64,
+	pub document_source: String,
+	pub sentence: String,
+	pub tags: Vec<String>,
 }
 
 impl PostgresStorage {
@@ -198,6 +207,15 @@ impl Storage for PostgresStorage {
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
 		Ok(())
+	}
+
+	/// Asynchronously fetches suggestions from semantic table.
+	async fn autogenerate_queries(
+		&self,
+		_max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>> {
+		// Return an empty vector
+		Ok(Vec::new())
 	}
 
 	/// Store key value pair

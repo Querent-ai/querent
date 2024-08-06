@@ -105,8 +105,6 @@ pub struct SemanticPipelineRequest {
     pub sample_entities: ::core::option::Option<SampleEntities>,
     #[prost(enumeration = "Model", optional, tag = "4")]
     pub model: ::core::option::Option<i32>,
-    #[prost(float, optional, tag = "5")]
-    pub attention_threshold: ::core::option::Option<f32>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
