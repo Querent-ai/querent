@@ -439,7 +439,7 @@ session_id: string;
 /**
  * Hash of the query
  */
-query_hash: string; 
+query: string; 
 /**
  * The response from the insight
  */
@@ -592,7 +592,7 @@ bucket: string;
  */
 id: string }
 export type SampleEntities = { entities: string[] }
-export type SemanticPipelineRequest = { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null }
+export type SemanticPipelineRequest = { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null }
 export type SemanticPipelineResponse = { pipeline_id: string }
 /**
  * SlackCollectorConfig is a message to hold configuration for a Slack collector.

@@ -285,7 +285,7 @@ export const universalConstant = 42;
  */
 
 /**
- * @typedef { { session_id: string; query_hash: string; response: string } } InsightQueryResponse
+ * @typedef { { session_id: string; query: string; response: string } } InsightQueryResponse
  */
 
 /**
@@ -336,7 +336,7 @@ export const universalConstant = 42;
  */
 
 /**
- * @typedef { { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null } } SemanticPipelineRequest
+ * @typedef { { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null } } SemanticPipelineRequest
  */
 
 /**
