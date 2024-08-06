@@ -85,10 +85,29 @@ jobs:
         with:
           targets: ${{ matrix.config.rust_target }}
           toolchain: '1.79.0'
-      - name: Install protoc
+      - name: Install protoc (ubuntu only)
+        if: matrix.config.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
+      - name: Install protoc (mac only)
+        if: matrix.config.os == 'macos-latest'
+        run: |
+          brew install protobuf
+          brew install postgresql libpq
+      - name: Install protoc (windows only)
+        if: matrix.config.os == 'windows-latest'
+        run: |
+          choco install protoc
+          choco install postgresql12 --force --params '/Password:root'
+          echo "C:\Program Files\PostgreSQL\12\bin" >> $GITHUB_PATH
+          echo "C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_PATH
+          echo "PQ_LIB_DIR=C:\Program Files\PostgreSQL\12\lib" >> $GITHUB_ENV
+          echo "PG_DATABASE_URL=postgres://postgres:root@localhost/" >> $GITHUB_ENV
+          echo "PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example" >> $GITHUB_ENV
+      - name: Install nasm(windows only)
+        if: matrix.config.os == 'windows-latest'
+        uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
       - name: Install dependencies (ubuntu only)
         if: matrix.config.os == 'ubuntu-latest'
         run: |
