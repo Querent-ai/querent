@@ -57,8 +57,8 @@ async startAgnFabric(request)  {
 /**
  * @returns { Promise<([string, SemanticPipelineRequest])[]> }
  */
-async getRunningPipelines()  {
-    return await TAURI_INVOKE("get_running_pipelines");
+async getRunningAgns()  {
+    return await TAURI_INVOKE("get_running_agns");
 },
 /**
  * @param { string } pipelineId
@@ -143,6 +143,17 @@ async stopInsightAnalyst(sessionId)  {
 async promptInsightAnalyst(request)  {
     try {
     return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @returns { Promise<Result<PipelineRequestInfoList, string>> }
+ */
+async getPastAgns()  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_past_agns") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
@@ -305,6 +316,14 @@ export const universalConstant = 42;
 
 /**
  * @typedef { { pinned: boolean } } PinnedFromWindowEvent
+ */
+
+/**
+ * @typedef { { pipeline_id: string; request: SemanticPipelineRequest | null } } PipelineRequestInfo
+ */
+
+/**
+ * @typedef { { requests: PipelineRequestInfo[] } } PipelineRequestInfoList
  */
 
 /**

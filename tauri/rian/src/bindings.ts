@@ -31,8 +31,8 @@ async startAgnFabric(request: SemanticPipelineRequest) : Promise<Result<Semantic
     else return { status: "error", error: e  as any };
 }
 },
-async getRunningPipelines() : Promise<([string, SemanticPipelineRequest])[]> {
-    return await TAURI_INVOKE("get_running_pipelines");
+async getRunningAgns() : Promise<([string, SemanticPipelineRequest])[]> {
+    return await TAURI_INVOKE("get_running_agns");
 },
 async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
     try {
@@ -88,6 +88,14 @@ async stopInsightAnalyst(sessionId: string) : Promise<Result<null, string>> {
 async promptInsightAnalyst(request: InsightQuery) : Promise<Result<InsightQueryResponse, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getPastAgns() : Promise<Result<PipelineRequestInfoList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_past_agns") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -557,6 +565,8 @@ folder_path: string;
  */
 id: string }
 export type PinnedFromWindowEvent = { pinned: boolean }
+export type PipelineRequestInfo = { pipeline_id: string; request: SemanticPipelineRequest | null }
+export type PipelineRequestInfoList = { requests: PipelineRequestInfo[] }
 /**
  * S3CollectorConfig is a message to hold configuration for an S3 collector.
  */
