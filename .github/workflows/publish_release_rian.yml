@@ -115,7 +115,7 @@ jobs:
           tagName: ${{ env.INPUT_RELEASE_VERSION }}
           tauriScript: cargo tauri
           updaterJsonPreferNsis: true
-          projectPath: /tauri/rian
+          projectPath: ./tauri/rian
           releaseName: rian-${{matrix.config.os}}-${{env.INPUT_RELEASE_VERSION}}
       - name: Build Tauri App (macOS aarch64)
         uses: tauri-apps/tauri-action@v0
@@ -127,5 +127,5 @@ jobs:
           args: --target aarch64-apple-darwin
           tauriScript: cargo tauri
           updaterJsonPreferNsis: true
-          projectPath: /tauri/rian
+          projectPath: ./tauri/rian
           releaseName: rian-${{matrix.config.os}}-${{env.INPUT_RELEASE_VERSION}}
