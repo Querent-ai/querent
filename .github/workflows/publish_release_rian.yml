@@ -27,19 +27,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: setup node
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+          cache-dependency-path: tauri/rian/package-lock.json
       - name: install frontend dependencies
         run: npm install --no-frozen-lockfile
+        working-directory: tauri/rian
       - name: build tauri rian
         run: npm run build
+        working-directory: tauri/rian
       - uses: actions/upload-artifact@v3
         with:
           name: tauri-rian
-          path: /build
+          path: /tauri/rian/build
 
   build-tauri-rian-nodes:
     needs: build-tauri-rian-ui
@@ -66,13 +70,16 @@ jobs:
     runs-on: ${{ matrix.config.os }}
     steps:
       - uses: actions/checkout@v4
-      - name: Setup node
-        uses: actions/setup-node@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+          cache-dependency-path: tauri/rian/package-lock.json
       - name: Install frontend dependencies
         run: npm install --no-frozen-lockfile
+        working-directory: tauri/rian
       - name: Install Rust nightly
         uses: dtolnay/rust-toolchain@nightly
         with:
