@@ -138,41 +138,41 @@ impl IndividualFilter {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+	use super::*;
 
-    #[test]
-    fn test_individual_filter() {
-        let doc = vec![
-            Token { text: "Joel".to_string(), lemma: "joel".to_string() },
-            Token { text: "lives".to_string(), lemma: "live".to_string() },
-            Token { text: "in".to_string(), lemma: "in".to_string() },
-            Token { text: "India".to_string(), lemma: "india".to_string() },
+	#[test]
+	fn test_individual_filter() {
+		let doc = vec![
+			Token { text: "Joel".to_string(), lemma: "joel".to_string() },
+			Token { text: "lives".to_string(), lemma: "live".to_string() },
+			Token { text: "in".to_string(), lemma: "in".to_string() },
+			Token { text: "India".to_string(), lemma: "india".to_string() },
 			Token { text: "and".to_string(), lemma: "and".to_string() },
-            Token { text: "works".to_string(), lemma: "work".to_string() },
-            Token { text: "for".to_string(), lemma: "for".to_string() },
+			Token { text: "works".to_string(), lemma: "work".to_string() },
+			Token { text: "for".to_string(), lemma: "for".to_string() },
 			Token { text: "the".to_string(), lemma: "the".to_string() },
 			Token { text: "company".to_string(), lemma: "company".to_string() },
-            Token { text: "Microsoft".to_string(), lemma: "microsoft".to_string() },
-            Token { text: ".".to_string(), lemma: ".".to_string() },
-        ];
+			Token { text: "Microsoft".to_string(), lemma: "microsoft".to_string() },
+			Token { text: ".".to_string(), lemma: ".".to_string() },
+		];
 
-        let filter = IndividualFilter::new(doc, true, 0.01);
+		let filter = IndividualFilter::new(doc, true, 0.01);
 
-        let candidates = vec![
-            SearchBeam { rel_tokens: vec![10], score: 0.0295431 },
-            SearchBeam { rel_tokens: vec![4], score: 0.027309928 },
-            SearchBeam { rel_tokens: vec![10, 9], score: 0.1413319 },
+		let candidates = vec![
+			SearchBeam { rel_tokens: vec![10], score: 0.0295431 },
+			SearchBeam { rel_tokens: vec![4], score: 0.027309928 },
+			SearchBeam { rel_tokens: vec![10, 9], score: 0.1413319 },
 			SearchBeam { rel_tokens: vec![10, 7], score: 0.07882523 },
-            SearchBeam { rel_tokens: vec![4, 9], score: 0.13442025 },
-            SearchBeam { rel_tokens: vec![4, 10], score: 0.081562 },
+			SearchBeam { rel_tokens: vec![4, 9], score: 0.13442025 },
+			SearchBeam { rel_tokens: vec![4, 10], score: 0.081562 },
 			SearchBeam { rel_tokens: vec![10, 9, 10], score: 0.18322358 },
-            SearchBeam { rel_tokens: vec![10, 9, 7], score: 0.17884201 },
-        ];
+			SearchBeam { rel_tokens: vec![10, 9, 7], score: 0.17884201 },
+		];
 
-        let head = Entity { name: "joel".to_string(), start_idx: 0, end_idx: 0};
-        let tail = Entity { name: "india".to_string(), start_idx:3, end_idx:3};
+		let head = Entity { name: "joel".to_string(), start_idx: 0, end_idx: 0 };
+		let tail = Entity { name: "india".to_string(), start_idx: 3, end_idx: 3 };
 
-        let result = filter.filter(candidates, &head, &tail);
-        assert_eq!(result.relations.len(), 1);
-    }
-    }
+		let result = filter.filter(candidates, &head, &tail);
+		assert_eq!(result.relations.len(), 1);
+	}
+}

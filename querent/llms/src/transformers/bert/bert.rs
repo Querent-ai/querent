@@ -488,9 +488,9 @@ impl LLM for BertLLM {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use tokio::test;
-	use anyhow::Error;
 	use crate::transformers::roberta::roberta::RobertaLLM;
+	use anyhow::Error;
+	use tokio::test;
 
 	#[test]
 	async fn test_inference_and_attention_processing() {
@@ -514,17 +514,17 @@ mod tests {
 		let entities: Vec<String> = vec![];
 
 		// let entities = vec![];
-				// Initialize NER model only if fixed_entities is not defined or empty
+		// Initialize NER model only if fixed_entities is not defined or empty
 		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
-		let ner_options = EmbedderOptions {
-			// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-			// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
-			model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
-			// model: "deepset/roberta-base-squad2".to_string(),
-			local_dir : None,
-			revision: None,
-			distribution: None,
-		};
+			let ner_options = EmbedderOptions {
+				// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+				// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+				model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+				// model: "deepset/roberta-base-squad2".to_string(),
+				local_dir: None,
+				revision: None,
+				distribution: None,
+			};
 
 			// Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
 			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
@@ -555,7 +555,7 @@ mod tests {
 					return;
 				},
 			};
-	
+
 			let model_input = match ner_llm.model_input(tokens.clone()).await {
 				Ok(model_input) => model_input,
 				Err(e) => {
@@ -563,17 +563,24 @@ mod tests {
 					return;
 				},
 			};
-			let ner_results = ner_llm.token_classification(model_input, None).await.map_err(|e| Error::from(e));
+			let ner_results = ner_llm
+				.token_classification(model_input, None)
+				.await
+				.map_err(|e| Error::from(e));
 			match ner_results {
 				Ok(results) => {
-					let contains_joel_per = results.iter().any(|(token, entity)| token == "Joel" && entity == "B-PER");
-					assert!(contains_joel_per, "Assertion failed: Expected 'Joel' to be identified as 'B-PER'");
-				}
+					let contains_joel_per =
+						results.iter().any(|(token, entity)| token == "Joel" && entity == "B-PER");
+					assert!(
+						contains_joel_per,
+						"Assertion failed: Expected 'Joel' to be identified as 'B-PER'"
+					);
+				},
 				Err(e) => {
 					panic!("NER model returned an error: {:?}", e);
-				}
+				},
 			}
-		} 
+		}
 		// Perform inference to get attention weights
 		match embedder.inference_attention(model_input).await {
 			Ok(tensor) => {
