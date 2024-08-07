@@ -98,6 +98,7 @@ jobs:
           powershell -Command "echo 'PQ_LIB_DIR=C:\\Program Files\\PostgreSQL\\12\\lib' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
           powershell -Command "echo 'PG_DATABASE_URL=postgres://postgres:root@localhost/' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
           powershell -Command "echo 'PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
+          refreshenv
       - name: Install nasm(windows only)
         if: matrix.config.os == 'windows-latest'
         uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
