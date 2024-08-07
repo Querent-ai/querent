@@ -125,14 +125,13 @@ mod tests {
 		let mut all_data = Vec::new();
 		while let Some(tokens) = stream.next().await {
 			match tokens {
-				Ok(tokens) => {
+				Ok(tokens) =>
 					if !tokens.data.is_empty() {
 						all_data.push(tokens.data);
-					}
-				}
+					},
 				Err(e) => {
 					eprintln!("Failed to get tokens: {:?}", e);
-				}
+				},
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest HTML file");
