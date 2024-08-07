@@ -98,8 +98,8 @@ impl Engine for AttentionTensorsEngine {
 				if token.data.is_empty() {
 					continue;
 				}
-				let doc_source = token.doc_source.clone(); // Assuming doc_source is of type Option<String>
-				let file = token.file.clone(); // Assuming file is of type Option<String>
+				let doc_source = token.doc_source.clone();
+				let file = token.file.clone();
 				let cleaned_data: Vec<String> =
 					token.data.into_iter().map(|s| remove_newlines(&s)).collect();
 				let source_id = token.source_id.clone();

@@ -109,7 +109,7 @@ impl IndividualFilter {
 			if valid {
 				let lemmatized_txt = self.simple_filter(&rel_txt);
 				if !lemmatized_txt.is_empty() && seen_relations.insert(lemmatized_txt.clone()) {
-					response.relations.push((lemmatized_txt, candidate.mean_score()));
+					response.relations.push((lemmatized_txt, candidate.score));
 				}
 			}
 		}
