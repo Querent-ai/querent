@@ -12,11 +12,12 @@ on:
       release-version:
         description: 'Release version (v#.#.#[-rc#])'
         required: true
+  pull_request:
+    branches:
+      - main
 
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
-  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
 jobs:
   build-tauri-rian-ui:
@@ -142,6 +143,8 @@ jobs:
         if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: ${{ env.INPUT_RELEASE_VERSION }}
           releaseName: ${{ env.INPUT_RELEASE_VERSION }}
@@ -154,6 +157,8 @@ jobs:
         if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
         with:
           tagName: ${{ env.INPUT_RELEASE_VERSION }}
           releaseName: ${{ env.INPUT_RELEASE_VERSION }}
