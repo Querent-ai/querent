@@ -1567,7 +1567,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "miniz_oxide",
- "object 0.36.2",
+ "object 0.36.3",
  "rustc-demangle",
 ]
 
@@ -2229,9 +2229,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.1.7"
+version = "1.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "26a5c3fd7bfa1ce3897a3a3501d362b2d87b7f2583ebcb4a949ec25911025cbc"
+checksum = "504bdec147f2cc13c8b57ed9401fd8a147cc66b67ad5cb241394244f2c947549"
 dependencies = [
  "jobserver",
  "libc",
@@ -7809,9 +7809,9 @@ dependencies = [
 
 [[package]]
 name = "object"
-version = "0.36.2"
+version = "0.36.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f203fa8daa7bb185f760ae12bd8e097f63d17041dcdcaf675ac54cdf863170e"
+checksum = "27b64972346851a39438c60b341ebc01bba47464ae329e55cf343eb93964efd9"
 dependencies = [
  "memchr",
 ]
@@ -11398,7 +11398,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -11441,7 +11441,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11462,7 +11462,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -11561,7 +11561,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -11593,7 +11593,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "Inflector",
  "expander",
@@ -11632,7 +11632,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 
 [[package]]
 name = "sp-storage"
@@ -11650,7 +11650,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -11674,7 +11674,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -11722,7 +11722,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#291c082cbbb0c838c886f38040e54424c55d9618"
+source = "git+https://github.com/paritytech/polkadot-sdk#efdc1e9b1615c5502ed63ffc9683d99af6397263"
 dependencies = [
  "impl-trait-for-tuples",
  "log 0.4.22",

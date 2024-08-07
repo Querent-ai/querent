@@ -18,6 +18,8 @@ on:
 
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
+  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
 jobs:
   build-tauri-rian-ui:
@@ -54,15 +56,15 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - os: ubuntu-latest
-            arch: x86_64
-            rust_target: x86_64-unknown-linux-gnu
-          - os: macos-latest
-            arch: x86_64
-            rust_target: x86_64-apple-darwin
-          - os: macos-latest
-            arch: aarch64
-            rust_target: aarch64-apple-darwin
+          # - os: ubuntu-latest
+          #   arch: x86_64
+          #   rust_target: x86_64-unknown-linux-gnu
+          # - os: macos-latest
+          #   arch: x86_64
+          #   rust_target: x86_64-apple-darwin
+          # - os: macos-latest
+          #   arch: aarch64
+          #   rust_target: aarch64-apple-darwin
           - os: windows-latest
             arch: x86_64
             rust_target: x86_64-pc-windows-msvc
@@ -118,6 +120,10 @@ jobs:
         if: matrix.config.os == 'macos-latest'
         run: |
           rustup target add aarch64-apple-darwin
+      - name: Install dependencies (windows only)
+        if: matrix.config.os == 'windows-latest'
+        run: |
+          rustup target add x86_64-pc-windows-msvc
       - uses: actions/download-artifact@v3
         with:
           name: tauri-rian
