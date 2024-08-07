@@ -112,17 +112,10 @@ pub fn sort_by_mean_score(path: &SearchContextualRelationship) -> f32 {
 pub fn is_valid_token(
 	token_id: usize,
 	pair: &EntityPair,
-	candidate_paths: &mut Vec<SearchContextualRelationship>,
-	current_path: &mut SearchContextualRelationship,
-	score: f32,
+	_candidate_paths: &mut Vec<SearchContextualRelationship>,
+	_current_path: &mut SearchContextualRelationship,
+	_score: f32,
 ) -> bool {
-	if (pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id) {
-		if current_path.has_relation() {
-			current_path.finalize_path(score);
-			candidate_paths.push(current_path.clone());
-			return false;
-		}
-	}
 
 	!(pair.head_entity.start_idx..=pair.head_entity.end_idx).contains(&token_id) &&
 		!(pair.tail_entity.start_idx..=pair.tail_entity.end_idx).contains(&token_id)
@@ -169,7 +162,6 @@ pub fn perform_search(
 		{
 			continue;
 		}
-
 		let mut new_paths = Vec::new();
 
 		// Get attention scores for the current token
@@ -195,72 +187,80 @@ pub fn perform_search(
 		}
 
 		new_paths.sort_by(|a, b| b.mean_score().partial_cmp(&a.mean_score()).unwrap());
-		queue.extend(new_paths.into_iter().take(search_candidates));
+		queue.extend(new_paths.iter().take(search_candidates).cloned());
+		candidate_paths.extend(new_paths.into_iter().take(search_candidates));
 	}
 	Ok(candidate_paths)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::utils::{
-//         ClassifiedSentenceWithAttention, ClassifiedSentenceWithPairs
-//     };
-//     #[test]
-//     fn test_perform_search() {
-//         // Define the classified sentence with attention
-//         let classified_sentence_with_attention = ClassifiedSentenceWithAttention {
-//             classified_sentence: ClassifiedSentenceWithPairs {
-//                 sentence: "Joel 1 2 India.".to_string(),
-//                 entities: vec![
-//                     ("joel".to_string(), "Unlabelled".to_string(), 0, 0),
-//                     ("india".to_string(), "Unlabelled".to_string(), 3, 3),
-//                 ],
-//                 pairs: vec![("joel".to_string(), 0, 0, "india".to_string(), 3, 3)],
-//             },
-//             attention_matrix: Some(vec![
-//                 vec![0.17606843, 0.027115423, 0.02369972, 0.035531946, 0.040166296],
-//                 vec![0.1329437, 0.095136136, 0.035234112, 0.03919317, 0.05276324],
-//                 vec![0.2027459, 0.10026775, 0.056107037, 0.09195952, 0.07401152],
-//                 vec![0.097249776, 0.04050471, 0.038452335, 0.12229665, 0.04973845],
-//                 vec![0.22857486, 0.06029765, 0.04682016, 0.06759972, 0.07255538],
-//             ]),
-//         };
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::{
+        ClassifiedSentenceWithAttention, ClassifiedSentenceWithPairs
+    };
+    #[test]
+    fn test_perform_search() {
+        // Define the classified sentence with attention
+        let classified_sentence_with_attention = ClassifiedSentenceWithAttention {
+            classified_sentence: ClassifiedSentenceWithPairs {
+                sentence: "Joel lives in India and works for the company Microsoft.".to_string(),
+                entities: vec![
+                    ("joel".to_string(), "Unlabelled".to_string(), 0, 0),
+                    ("india".to_string(), "Unlabelled".to_string(), 3, 3),
+                ],
+                pairs: vec![("joel".to_string(), 0, 0, "india".to_string(), 3, 3)],
+            },
+            attention_matrix: Some(vec![
+                vec![0.13502377, 0.012803437, 0.011252308, 0.015802609, 0.027309928, 0.009818904, 0.012140005, 0.025747687, 0.0043754, 0.020907244, 0.0295431],
+                vec![0.13478802, 0.066507995, 0.020229138, 0.026512176, 0.025660124, 0.011827423, 0.011404252, 0.025268737, 0.004008913, 0.037393562, 0.030990984],
+                vec![0.13898054, 0.09479028, 0.042532742, 0.08783322, 0.03801919, 0.030534245, 0.021959677, 0.038614187, 0.012880332, 0.09460007, 0.044915613],
+                vec![0.09276669, 0.035715688, 0.0424971, 0.10774943, 0.029270511, 0.011864416, 0.013519686, 0.031020513, 0.0042336946, 0.052985482, 0.0329762],
+                vec![0.20369516, 0.035270546, 0.025600951, 0.03861624, 0.044166528, 0.021856476, 0.021034244, 0.050156906, 0.011540355, 0.107110314, 0.05425207],
+				vec![0.11678322, 0.06576122, 0.037255622, 0.030063821, 0.038573496, 0.029480545, 0.023706809, 0.043959837, 0.019370556, 0.12732796, 0.050349392],
+				vec![0.18498766, 0.06920747, 0.032483988, 0.04456716, 0.042830132, 0.037516907, 0.02314554, 0.04599428, 0.01437487, 0.1060448, 0.05249863],
+				vec![0.1758304, 0.03140701, 0.026071362, 0.038915604, 0.04276128, 0.022609502, 0.021729475, 0.05100949, 0.012336625, 0.12250277, 0.054477],
+				vec![0.16627596, 0.07487679, 0.029465174, 0.049319558, 0.027568977, 0.040357854, 0.022713376, 0.035723224, 0.02342438, 0.15214828, 0.03951955],
+				vec![0.099376574, 0.011397831, 0.012472602, 0.020036485, 0.029697232, 0.0074168434, 0.010215441, 0.037510116, 0.0054607852, 0.103350274, 0.041891687],
+				vec![0.16987151, 0.027351653, 0.021941576, 0.03672465, 0.041878443, 0.017951945, 0.017710153, 0.049282126, 0.009208344, 0.111788794, 0.053433176]
+			]),
+        };
+		
 
-//         // Define the entity pair
-//         let entity_pair = EntityPair {
-//             head_entity: Entity {
-//                 name: "joel".to_string(),
-//                 start_idx: 0,
-//                 end_idx: 0,
-//             },
-//             tail_entity: Entity {
-//                 name: "india".to_string(),
-//                 start_idx: 3,
-//                 end_idx: 3,
-//             },
-//             context: "Joel lives in India.".to_string(),
-//         };
 
-//         // Get the attention matrix from the classified sentence with attention
-//         let attention_matrix = classified_sentence_with_attention.attention_matrix.unwrap();
+        // Define the entity pair
+        let entity_pair = EntityPair {
+            head_entity: Entity {
+                name: "joel".to_string(),
+                start_idx: 0,
+                end_idx: 0,
+            },
+            tail_entity: Entity {
+                name: "india".to_string(),
+                start_idx: 3,
+                end_idx: 3,
+            },
+            context: "Joel lives in India and works in Microsoft.".to_string(),
+        };
 
-//         // Perform search
-//         let result = perform_search(
-//             0, // entity_start_index
-//             &attention_matrix,
-//             &entity_pair,
-//             2, // search_candidates
-//             true, // require_contiguous
-//             2, // max_relation_length
-//         );
+        // Get the attention matrix from the classified sentence with attention
+        let attention_matrix = classified_sentence_with_attention.attention_matrix.unwrap();
 
-//         match result {
-//             Ok(paths) => {
-//                 println!("Found paths: {:?}", paths);
-//                 assert!(!paths.is_empty(), "No paths found");
-//             },
-//             Err(e) => println!("Error: {}", e),
-//         }
-//     }
-// }
+        // Perform search
+        let result = perform_search(
+            0, // entity_start_index
+            &attention_matrix,
+            &entity_pair,
+            2, // search_candidates
+            true, // require_contiguous
+            2, // max_relation_length
+        );
+
+        match result {
+            Ok(paths) => {
+                assert!(!paths.is_empty(), "No paths found");
+            },
+            Err(e) => tracing::error!("Error: {}", e),
+        }
+    }
+}

@@ -76,7 +76,7 @@ impl IndividualFilter {
 		let mut seen_relations = HashSet::new();
 
 		for candidate in candidates {
-			if candidate.mean_score() < self.threshold {
+			if candidate.score < self.threshold {
 				continue;
 			}
 
@@ -100,15 +100,12 @@ impl IndividualFilter {
 					rel_txt.push(' ');
 				}
 				let lowered_word = word.to_lowercase();
-
-				// Only skip if the entire word is equal to head or tail entity text
 				if !head.name.eq_ignore_ascii_case(&lowered_word) &&
 					!tail.name.eq_ignore_ascii_case(&lowered_word)
 				{
 					rel_txt.push_str(&lowered_word);
 				}
 			}
-
 			if valid {
 				let lemmatized_txt = self.simple_filter(&rel_txt);
 				if !lemmatized_txt.is_empty() && seen_relations.insert(lemmatized_txt.clone()) {
@@ -139,35 +136,43 @@ impl IndividualFilter {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_individual_filter() {
-//         let doc = vec![
-//             Token { text: "Joel".to_string(), lemma: "joel".to_string() },
-//             Token { text: "lives".to_string(), lemma: "live".to_string() },
-//             Token { text: "in".to_string(), lemma: "in".to_string() },
-//             Token { text: "India".to_string(), lemma: "india".to_string() },
-//             Token { text: ".".to_string(), lemma: ".".to_string() },
-//         ];
+    #[test]
+    fn test_individual_filter() {
+        let doc = vec![
+            Token { text: "Joel".to_string(), lemma: "joel".to_string() },
+            Token { text: "lives".to_string(), lemma: "live".to_string() },
+            Token { text: "in".to_string(), lemma: "in".to_string() },
+            Token { text: "India".to_string(), lemma: "india".to_string() },
+			Token { text: "and".to_string(), lemma: "and".to_string() },
+            Token { text: "works".to_string(), lemma: "work".to_string() },
+            Token { text: "for".to_string(), lemma: "for".to_string() },
+			Token { text: "the".to_string(), lemma: "the".to_string() },
+			Token { text: "company".to_string(), lemma: "company".to_string() },
+            Token { text: "Microsoft".to_string(), lemma: "microsoft".to_string() },
+            Token { text: ".".to_string(), lemma: ".".to_string() },
+        ];
 
-//         let filter = IndividualFilter::new(doc, true, 0.05);
+        let filter = IndividualFilter::new(doc, true, 0.01);
 
-//         let candidates = vec![
-//             SearchBeam { rel_tokens: vec![1], score: 0.1 },
-//             SearchBeam { rel_tokens: vec![1, 2], score: 0.2 },
-//             SearchBeam { rel_tokens: vec![1, 2, 3], score: 0.3 },
-//         ];
+        let candidates = vec![
+            SearchBeam { rel_tokens: vec![10], score: 0.0295431 },
+            SearchBeam { rel_tokens: vec![4], score: 0.027309928 },
+            SearchBeam { rel_tokens: vec![10, 9], score: 0.1413319 },
+			SearchBeam { rel_tokens: vec![10, 7], score: 0.07882523 },
+            SearchBeam { rel_tokens: vec![4, 9], score: 0.13442025 },
+            SearchBeam { rel_tokens: vec![4, 10], score: 0.081562 },
+			SearchBeam { rel_tokens: vec![10, 9, 10], score: 0.18322358 },
+            SearchBeam { rel_tokens: vec![10, 9, 7], score: 0.17884201 },
+        ];
 
-//         let head = Entity { name: "joel".to_string(), start_idx: 0, end_idx: 0};
-//         let tail = Entity { name: "india".to_string(), start_idx:0, end_idx:0};
+        let head = Entity { name: "joel".to_string(), start_idx: 0, end_idx: 0};
+        let tail = Entity { name: "india".to_string(), start_idx:3, end_idx:3};
 
-//         let result = filter.filter(candidates, &head, &tail);
-
-//         // assert_eq!(result.relations.len(), 2);
-//         // assert!(result.relations.contains(&"lives in".to_string()));
-//         // assert!(result.relations.contains(&"lives in india".to_string()));
-//     }
-//     }
+        let result = filter.filter(candidates, &head, &tail);
+        assert_eq!(result.relations.len(), 1);
+    }
+    }
