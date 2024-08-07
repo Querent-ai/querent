@@ -357,14 +357,13 @@ impl LLM for BertLLM {
 			.iter()
 			.map(|row| row[1..row.len() - 1].to_vec())
 			.collect();
-
 		Ok(trimmed_attention_weights)
 	}
 
 	async fn token_classification(
 		&self,
 		model_input: HashMap<String, Tensor>,
-		labels: Option<&Tensor>,
+		_labels: Option<&Tensor>,
 	) -> Result<Vec<(String, String)>, LLMError> {
 		if let Some(token_classification_model) = &self.token_classification_model {
 			let input_ids = model_input.get("input_ids").ok_or_else(|| {
@@ -491,6 +490,7 @@ mod tests {
 	use super::*;
 	use tokio::test;
 	use anyhow::Error;
+	use crate::transformers::roberta::roberta::RobertaLLM;
 
 	#[test]
 	async fn test_inference_and_attention_processing() {
@@ -517,25 +517,25 @@ mod tests {
 				// Initialize NER model only if fixed_entities is not defined or empty
 		let ner_llm: Option<Arc<dyn LLM>> = if entities.is_empty() {
 		let ner_options = EmbedderOptions {
-			model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
-			local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
-			// model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
+			// model: "/home/nishantg/querent-main/local models/geobert_files".to_string(),
+			// local_dir : Some("/home/nishantg/querent-main/local models/geobert_files".to_string()),
+			model: "Davlan/xlm-roberta-base-wikiann-ner".to_string(),
 			// model: "deepset/roberta-base-squad2".to_string(),
-			// local_dir : None,
+			local_dir : None,
 			revision: None,
 			distribution: None,
 		};
 
-			Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
-			// Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+			// Some(Arc::new(BertLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
+			Some(Arc::new(RobertaLLM::new(ner_options).unwrap()) as Arc<dyn LLM>)
 		} else {
-			None  // Some(Arc::new(DummyLLM) as Arc<dyn LLM>)
+			None
 		};
-		let input_text = "The tectonic movements in the Jurassic era are not common.";
+		let input_text = "Joel lives in India and works for the company microsoft.";
 		let tokens = match embedder.tokenize(&input_text).await {
 			Ok(tokens) => tokens,
 			Err(e) => {
-				println!("Tokenization failed: {:?}", e);
+				tracing::error!("Tokenization failed: {:?}", e);
 				return;
 			},
 		};
@@ -543,7 +543,7 @@ mod tests {
 		let model_input = match embedder.model_input(tokens.clone()).await {
 			Ok(model_input) => model_input,
 			Err(e) => {
-				println!("Model input creation failed: {:?}", e);
+				tracing::error!("Model input creation failed: {:?}", e);
 				return;
 			},
 		};
@@ -551,7 +551,7 @@ mod tests {
 			let tokens = match ner_llm.tokenize(&input_text).await {
 				Ok(tokens) => tokens,
 				Err(e) => {
-					println!("Tokenization failed: {:?}", e);
+					tracing::error!("Tokenization failed: {:?}", e);
 					return;
 				},
 			};
@@ -559,25 +559,31 @@ mod tests {
 			let model_input = match ner_llm.model_input(tokens.clone()).await {
 				Ok(model_input) => model_input,
 				Err(e) => {
-					println!("Model input creation failed: {:?}", e);
+					tracing::error!("Model input creation failed: {:?}", e);
 					return;
 				},
 			};
 			let ner_results = ner_llm.token_classification(model_input, None).await.map_err(|e| Error::from(e));
-			println!("The ner results are ------------- {:?}", ner_results);
-		} else {
-			println!("No NER LLM available.");
-		}
+			match ner_results {
+				Ok(results) => {
+					let contains_joel_per = results.iter().any(|(token, entity)| token == "Joel" && entity == "B-PER");
+					assert!(contains_joel_per, "Assertion failed: Expected 'Joel' to be identified as 'B-PER'");
+				}
+				Err(e) => {
+					panic!("NER model returned an error: {:?}", e);
+				}
+			}
+		} 
 		// Perform inference to get attention weights
-		// match embedder.inference_attention(model_input).await {
-		// 	Ok(tensor) => {
-		// 		// Process the attention weights to remove CLS and SEP tokens
-		// 		match embedder.attention_tensor_to_2d_vector(&tensor).await {
-		// 			Ok(weights) => println!("Processed Attention Weights: {:?}", weights),
-		// 			Err(e) => println!("Failed to process attention weights: {:?}", e),
-		// 		}
-		// 	},
-		// 	Err(e) => println!("Failed to perform inference: {:?}", e),
-		// }
+		match embedder.inference_attention(model_input).await {
+			Ok(tensor) => {
+				// Process the attention weights to remove CLS and SEP tokens
+				match embedder.attention_tensor_to_2d_vector(&tensor).await {
+					Ok(weights) => tracing::info!("Processed Attention Weights: {:?}", weights),
+					Err(e) => tracing::error!("Failed to process attention weights: {:?}", e),
+				}
+			},
+			Err(e) => tracing::error!("Failed to perform inference: {:?}", e),
+		}
 	}
 }
