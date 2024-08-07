@@ -119,11 +119,20 @@ mod tests {
 
 		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
-
+		let mut all_data = Vec::new();
 		let mut stream = result_stream;
 		while let Some(tokens) = stream.next().await {
-			let tokens = tokens.unwrap();
-			println!("These are the tokens in file --------------{:?}", tokens);
+			match tokens {
+				Ok(tokens) => {
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					}
+				}
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				}
+			}
 		}
-	}
+		assert!(all_data.len() >= 1, "Unable to ingest CSV file");
+	}			 
 }
