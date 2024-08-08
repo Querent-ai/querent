@@ -87,38 +87,49 @@ impl BaseIngestor for PptxIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
+#[cfg(test)]
+mod tests {
+	use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_pptx_ingestor() {
+	use super::*;
+	use std::{io::Cursor, path::Path};
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/ppt/Eagle-Ford-Shale-Basin-Study-APR_22_2019.pptx").unwrap();
+	#[tokio::test]
+	async fn test_pptx_ingestor() {
+		let included_bytes = include_bytes!("../../../../test_data/samplepptx.pptx");
+		let bytes = included_bytes.to_vec();
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("Eagle-Ford-Shale-Basin-Study-APR_22_2019.pptx").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("pptx".to_string()),
-// 			size: Some(10),
-//          source_id: "Filesystem".to_string(),
-//         };
+		// Create a CollectedBytes instance
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("samplepptx.pptx").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pptx".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+		};
 
-//         // Create a TxtIngestor instance
-//         let ingestor = PptxIngestor::new();
+		// Create a TxtIngestor instance
+		let ingestor = PptxIngestor::new();
 
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		// Ingest the file
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest DOC file");
+	}
+}
