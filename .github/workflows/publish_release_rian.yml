@@ -136,9 +136,6 @@ jobs:
         run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
       - name: Tauri info
         run: cargo tauri info
-      - uses: oNaiPs/secrets-to-env-action@v1
-        with:
-          secrets: ${{ toJSON(secrets) }}
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
