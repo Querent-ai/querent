@@ -6,9 +6,10 @@ use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::{HashMap, HashSet}, sync::Arc};
 use storage::Storage;
 use tokio::runtime::Handle;
+use crate::discovery_traverser::process_auto_generated_suggestions;
 
 use super::insert_discovered_knowledge_async;
 
@@ -119,9 +120,6 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 				"Discovery agent embedding model is not initialized".to_string(),
 			)));
 		}
-		if message.query.is_empty() {
-			return Ok(Err(DiscoveryError::Internal("Discovery agent query is empty".to_string())));
-		}
 		//reset offset if new query
 		if message.query != self.current_query {
 			self.current_offset = 0;
@@ -130,10 +128,31 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
+		let mut insights = Vec::new();
 		let mut documents = Vec::new();
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
+					if message.query.is_empty() {
+						let auto_suggestions = match storage.autogenerate_queries(10).await {
+							Ok(suggestions) => suggestions,
+							Err(e) => {
+								tracing::info!("Failed to auto-generate queries: {:?}", e);
+								vec![]
+							},
+						};
+
+						process_auto_generated_suggestions(&auto_suggestions, &mut insights);
+
+						let response = DiscoveryResponse {
+							session_id: message.session_id,
+							query: "Auto-generated suggestions".to_string(),
+							insights,
+						};
+
+						return Ok(Ok(response));
+					}
+
 					let search_results = storage
 						.similarity_search_l2(
 							message.session_id.clone(),
@@ -147,25 +166,45 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					match search_results {
 						Ok(results) => {
 							self.current_offset += results.len() as i64;
-							let res = results.clone();
-							for document in results {
-								let tags = format!(
+							let mut combined_results: HashMap<String, (HashSet<String>, f32)> = HashMap::new();
+							let mut ordered_sentences: Vec<String> = Vec::new();
+							for document in results.clone() {
+								let tag = format!(
 									"{}-{}",
 									document.subject.replace('_', " "),
 									document.object.replace('_', " "),
 								);
-								let formatted_document = proto::discovery::Insight {
-									document: document.doc_id,
-									source: document.doc_source,
-									relationship_strength: document.score.to_string(),
-									sentence: document.sentence,
-									tags,
-								};
-
-								documents.push(formatted_document);
+								if let Some((existing_tags, total_strength)) = combined_results.get_mut(&document.sentence) {
+									existing_tags.insert(tag);
+									*total_strength += document.score;
+								} else {
+									let mut tags_set = HashSet::new();
+									tags_set.insert(tag);
+									combined_results.insert(document.sentence.clone(), (tags_set, document.score));
+									ordered_sentences.push(document.sentence.clone());
+								}
 							}
-
-							tokio::spawn(insert_discovered_knowledge_async(storage.clone(), res));
+							for sentence in ordered_sentences {
+								if let Some((tags_set, total_strength)) = combined_results.get(&sentence) {
+									let formatted_tags = tags_set.clone().into_iter().collect::<Vec<_>>().join(", ");
+									if let Some(source) = results.iter().find(|doc| doc.sentence == sentence) {
+										let formatted_document = proto::discovery::Insight {
+											document: source.doc_id.clone(),
+											source: source.doc_source.clone(),
+											relationship_strength: total_strength.to_string(),
+											sentence: sentence.clone(),
+											tags: formatted_tags,
+										};
+							
+										documents.push(formatted_document);
+									} else {
+										tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
+									}
+								} else {
+									tracing::error!("Unable to process insights in Retriever: {}", sentence);
+								}
+							}
+							tokio::spawn(insert_discovered_knowledge_async(storage.clone(), results));
 						},
 						Err(e) => {
 							log::error!("Failed to search for similar documents: {}", e);

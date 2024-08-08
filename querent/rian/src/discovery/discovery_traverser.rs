@@ -363,7 +363,7 @@ fn process_documents(
 		document_payloads.push(document_payload);
 	}
 }
-fn process_auto_generated_suggestions(
+pub fn process_auto_generated_suggestions(
 	suggestions: &Vec<QuerySuggestion>,
 	insights: &mut Vec<proto::Insight>,
 ) {
