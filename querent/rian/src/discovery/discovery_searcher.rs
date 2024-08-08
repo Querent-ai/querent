@@ -1,3 +1,4 @@
+use crate::discovery_traverser::process_auto_generated_suggestions;
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{EventType, RuntimeType};
@@ -6,10 +7,12 @@ use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
 	DiscoveryError,
 };
-use std::{collections::{HashMap, HashSet}, sync::Arc};
+use std::{
+	collections::{HashMap, HashSet},
+	sync::Arc,
+};
 use storage::Storage;
 use tokio::runtime::Handle;
-use crate::discovery_traverser::process_auto_generated_suggestions;
 
 use super::insert_discovered_knowledge_async;
 
@@ -130,6 +133,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let current_query_embedding = embeddings[0].clone();
 		let mut insights = Vec::new();
 		let mut documents = Vec::new();
+		let mut unique_sentences: HashSet<String> = HashSet::new();
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
@@ -152,64 +156,115 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 
 						return Ok(Ok(response));
 					}
-
-					let search_results = storage
-						.similarity_search_l2(
-							message.session_id.clone(),
-							message.query.clone(),
-							self.discovery_agent_params.semantic_pipeline_id.clone(),
-							&current_query_embedding.clone(),
-							10,
-							self.current_offset,
-						)
-						.await;
-					match search_results {
-						Ok(results) => {
-							self.current_offset += results.len() as i64;
-							let mut combined_results: HashMap<String, (HashSet<String>, f32)> = HashMap::new();
-							let mut ordered_sentences: Vec<String> = Vec::new();
-							for document in results.clone() {
-								let tag = format!(
-									"{}-{}",
-									document.subject.replace('_', " "),
-									document.object.replace('_', " "),
-								);
-								if let Some((existing_tags, total_strength)) = combined_results.get_mut(&document.sentence) {
-									existing_tags.insert(tag);
-									*total_strength += document.score;
-								} else {
-									let mut tags_set = HashSet::new();
-									tags_set.insert(tag);
-									combined_results.insert(document.sentence.clone(), (tags_set, document.score));
-									ordered_sentences.push(document.sentence.clone());
+					let mut fetched_results = Vec::new();
+					let mut total_fetched = 0;
+					while documents.len() < 10 {
+						let search_results = storage
+							.similarity_search_l2(
+								message.session_id.clone(),
+								message.query.clone(),
+								self.discovery_agent_params.semantic_pipeline_id.clone(),
+								&current_query_embedding.clone(),
+								20,
+								self.current_offset + total_fetched,
+							)
+							.await;
+						match search_results {
+							Ok(results) => {
+								if results.is_empty() {
+									break;
 								}
-							}
-							for sentence in ordered_sentences {
-								if let Some((tags_set, total_strength)) = combined_results.get(&sentence) {
-									let formatted_tags = tags_set.clone().into_iter().collect::<Vec<_>>().join(", ");
-									if let Some(source) = results.iter().find(|doc| doc.sentence == sentence) {
-										let formatted_document = proto::discovery::Insight {
-											document: source.doc_id.clone(),
-											source: source.doc_source.clone(),
-											relationship_strength: total_strength.to_string(),
-											sentence: sentence.clone(),
-											tags: formatted_tags,
-										};
-							
-										documents.push(formatted_document);
+								total_fetched += results.len() as i64;
+								fetched_results.extend(results.clone());
+								let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
+									HashMap::new();
+								let mut ordered_sentences: Vec<String> = Vec::new();
+								for document in results.clone() {
+									let tag = format!(
+										"{}-{}",
+										document.subject.replace('_', " "),
+										document.object.replace('_', " "),
+									);
+									if let Some((existing_tags, total_strength)) =
+										combined_results.get_mut(&document.sentence)
+									{
+										existing_tags.insert(tag);
+										*total_strength += document.score;
 									} else {
-										tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
+										let mut tags_set = HashSet::new();
+										tags_set.insert(tag);
+										combined_results.insert(
+											document.sentence.clone(),
+											(tags_set, document.score),
+										);
+										ordered_sentences.push(document.sentence.clone());
 									}
-								} else {
-									tracing::error!("Unable to process insights in Retriever: {}", sentence);
 								}
-							}
-							tokio::spawn(insert_discovered_knowledge_async(storage.clone(), results));
-						},
-						Err(e) => {
-							log::error!("Failed to search for similar documents: {}", e);
-						},
+								for sentence in ordered_sentences {
+									if documents.len() >= 10 {
+										let index = match results
+											.iter()
+											.position(|doc| doc.sentence == sentence)
+										{
+											Some(idx) => idx,
+											None => {
+												tracing::error!(
+													"Unable to find sentence in results: {}",
+													sentence
+												);
+												continue;
+											},
+										};
+										total_fetched -= results.len() as i64 - index as i64;
+										break;
+									}
+									if unique_sentences.insert(sentence.clone()) {
+										if let Some((tags_set, total_strength)) =
+											combined_results.get(&sentence)
+										{
+											let formatted_tags = tags_set
+												.clone()
+												.into_iter()
+												.collect::<Vec<_>>()
+												.join(", ");
+											if let Some(source) =
+												results.iter().find(|doc| doc.sentence == sentence)
+											{
+												let formatted_document =
+													proto::discovery::Insight {
+														document: source.doc_id.clone(),
+														source: source.doc_source.clone(),
+														relationship_strength: total_strength
+															.to_string(),
+														sentence: sentence.clone(),
+														tags: formatted_tags,
+													};
+
+												documents.push(formatted_document);
+											} else {
+												tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
+											}
+										} else {
+											tracing::error!(
+												"Unable to process insights in Retriever: {}",
+												sentence
+											);
+										}
+									}
+								}
+							},
+							Err(e) => {
+								log::error!("Failed to search for similar documents: {}", e);
+								break;
+							},
+						}
 					}
+
+					self.current_offset += total_fetched;
+					tokio::spawn(insert_discovered_knowledge_async(
+						storage.clone(),
+						fetched_results,
+					));
 				}
 			}
 		}

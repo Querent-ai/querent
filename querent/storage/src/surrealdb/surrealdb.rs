@@ -245,14 +245,13 @@ impl Storage for SurrealDB {
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		let start = offset * max_results as i64;
 		let query_string = format!(
 			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance 
 			FROM embedded_knowledge 
 			WHERE vector::similarity::cosine(embeddings, $payload) > 0.5
 			ORDER BY cosine_distance DESC
 			LIMIT {} START {}",
-			max_results, start
+			max_results, offset
 		);
 		let mut response: Response =
 			self.db.query(query_string).bind(("payload", payload)).await.map_err(|e| {
