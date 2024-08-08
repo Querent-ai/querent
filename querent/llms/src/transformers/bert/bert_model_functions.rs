@@ -476,7 +476,7 @@ pub struct BertModel {
 	embeddings: BertEmbeddings,
 	encoder: BertEncoder,
 	pub device: Device,
-	_span: tracing::Span,
+	span: tracing::Span,
 }
 
 impl BertModel {
@@ -504,11 +504,12 @@ impl BertModel {
 			embeddings,
 			encoder,
 			device: vb.device().clone(),
-			_span: tracing::span!(tracing::Level::TRACE, "model"),
+			span: tracing::span!(tracing::Level::TRACE, "model"),
 		})
 	}
 
 	pub fn forward(&self, input_ids: &Tensor, token_type_ids: &Tensor) -> Result<Tensor> {
+		let _enter = self.span.enter();
 		let embedding_output = self.embeddings.forward(input_ids, token_type_ids, None, None)?;
 		let sequence_output = self.encoder.forward(&embedding_output)?;
 		Ok(sequence_output)
