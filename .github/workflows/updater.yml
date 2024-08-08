@@ -1,0 +1,30 @@
+name: Updater
+run-name: Release latest.json
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  release-update:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          registry-url: 'https://registry.npmjs.org'
+          cache-dependency-path: tauri/rian/package-lock.json
+      - name: install frontend dependencies
+        run: npm install --no-frozen-lockfile
+        working-directory: tauri/rian
+      - name: build tauri rian
+        run: npm run updater
+        working-directory: tauri/rian
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
