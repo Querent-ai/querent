@@ -12,9 +12,6 @@ on:
       release-version:
         description: 'Release version (v#.#.#[-rc#])'
         required: true
-  pull_request:
-    branches:
-      - main
 
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
