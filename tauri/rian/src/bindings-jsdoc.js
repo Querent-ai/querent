@@ -57,8 +57,8 @@ async startAgnFabric(request)  {
 /**
  * @returns { Promise<([string, SemanticPipelineRequest])[]> }
  */
-async getRunningPipelines()  {
-    return await TAURI_INVOKE("get_running_pipelines");
+async getRunningAgns()  {
+    return await TAURI_INVOKE("get_running_agns");
 },
 /**
  * @param { string } pipelineId
@@ -143,6 +143,17 @@ async stopInsightAnalyst(sessionId)  {
 async promptInsightAnalyst(request)  {
     try {
     return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  };
+}
+},
+/**
+ * @returns { Promise<Result<PipelineRequestInfoList, string>> }
+ */
+async getPastAgns()  {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_past_agns") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
@@ -274,7 +285,7 @@ export const universalConstant = 42;
  */
 
 /**
- * @typedef { { session_id: string; query_hash: string; response: string } } InsightQueryResponse
+ * @typedef { { session_id: string; query: string; response: string } } InsightQueryResponse
  */
 
 /**
@@ -308,6 +319,14 @@ export const universalConstant = 42;
  */
 
 /**
+ * @typedef { { pipeline_id: string; request: SemanticPipelineRequest | null } } PipelineRequestInfo
+ */
+
+/**
+ * @typedef { { requests: PipelineRequestInfo[] } } PipelineRequestInfoList
+ */
+
+/**
  * S3CollectorConfig is a message to hold configuration for an S3 collector.
  * @typedef { { access_key: string; secret_key: string; region: string; bucket: string; id: string } } S3CollectorConfig
  */
@@ -317,7 +336,7 @@ export const universalConstant = 42;
  */
 
 /**
- * @typedef { { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null; attention_threshold: number | null } } SemanticPipelineRequest
+ * @typedef { { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null } } SemanticPipelineRequest
  */
 
 /**

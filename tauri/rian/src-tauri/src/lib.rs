@@ -1,6 +1,6 @@
 use api::{
-    check_if_service_is_running, get_collectors, get_running_insight_analysts,
-    get_running_pipelines, get_update_result, has_rian_license_key, list_available_insights,
+    check_if_service_is_running, get_collectors, get_past_agns, get_running_agns,
+    get_running_insight_analysts, get_update_result, has_rian_license_key, list_available_insights,
     list_past_insights, prompt_insight_analyst, send_discovery_retriever_request, set_collectors,
     set_rian_license_key, start_agn_fabric, stop_agn_fabric, stop_insight_analyst,
     trigger_insight_analyst,
@@ -12,6 +12,7 @@ use node::{
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
+#[cfg(debug_assertions)]
 use specta_typescript::Typescript;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use sysinfo::System;
@@ -53,7 +54,7 @@ fn query_accessibility_permissions() -> bool {
     if trusted {
         info!("Application is trusted!");
     } else {
-        warn!("Application isn't trusted :(");
+        error!("Application isn't trusted :(");
     }
     trusted
 }
@@ -84,7 +85,7 @@ pub fn run(node_config: NodeConfig) {
             set_collectors,
             get_collectors,
             start_agn_fabric,
-            get_running_pipelines,
+            get_running_agns,
             stop_agn_fabric,
             send_discovery_retriever_request,
             list_available_insights,
@@ -92,7 +93,8 @@ pub fn run(node_config: NodeConfig) {
             trigger_insight_analyst,
             get_running_insight_analysts,
             stop_insight_analyst,
-            prompt_insight_analyst
+            prompt_insight_analyst,
+            get_past_agns
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
@@ -123,7 +125,8 @@ pub fn run(node_config: NodeConfig) {
             .expect("Failed to export JSDoc bindings");
     }
 
-    let app = tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
