@@ -49,9 +49,9 @@ impl BaseIngestor for ImageIngestor {
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
 					if let Err(e) = data.read_to_end(&mut buf).await {
-                        tracing::error!("Failed to read image data: {:?}", e);
-                        continue;
-                    }
+						tracing::error!("Failed to read image data: {:?}", e);
+						continue;
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
