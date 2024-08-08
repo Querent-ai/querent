@@ -23,7 +23,7 @@ jobs:
       - name: install frontend dependencies
         run: npm install --no-frozen-lockfile
         working-directory: tauri/rian
-      - name: build tauri rian
+      - name: Release latest.json
         run: npm run updater
         working-directory: tauri/rian
         env:
