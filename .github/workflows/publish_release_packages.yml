@@ -1,4 +1,4 @@
-name: Build and publish release packages
+name: Build and publish core querent packages
 
 on:
   push:

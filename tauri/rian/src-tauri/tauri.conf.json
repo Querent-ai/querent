@@ -1,5 +1,5 @@
 {
-  "productName": "RIAN",
+  "productName": "rian",
   "version": "0.4.0",
   "identifier": "xyz.querent.rian",
   "build": {
@@ -20,7 +20,7 @@
       "windows": {
         "installMode": "passive"
       },
-      "pubkey": "TODO: add a key"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcxMzM1MDAzMzcxMjVDNTgKUldSWVhCSTNBMUF6Y2FlSjYrc05YdEh4a0xUYjlOQ1UwOWxHSWt3TmRRWFZPZEhlUFlwc3o2OXQK"
     }
   },
   "bundle": {
