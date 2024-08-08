@@ -1,4 +1,4 @@
-name: Updater
+name: RiAN Updater
 run-name: Release latest.json
 
 on:
