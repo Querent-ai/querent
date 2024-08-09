@@ -184,6 +184,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           cargo tauri build --release --features "license-check","openssl-support" --bin rian
+        working-directory: tauri/rian
       - name: Build Tauri App (macOS aarch64)
         if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
         env:
@@ -192,6 +193,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           cargo tauri build --release --target ${{ matrix.config.rust_target }} --features "license-check","openssl-support" --bin rian
+        working-directory: tauri/rian
       - uses: actions/upload-artifact@v3
         with:
           name: tauri-rian-bundle-${{ matrix.config.os }}-${{ matrix.config.arch }}

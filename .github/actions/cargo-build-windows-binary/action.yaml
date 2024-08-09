@@ -80,5 +80,3 @@ runs:
       with:
         name: ${{ env.ASSET_FULL_NAME }}.tar.gz
         path: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
-
-
