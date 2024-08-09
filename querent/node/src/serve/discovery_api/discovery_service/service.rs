@@ -6,7 +6,7 @@ use proto::{
 	DiscoverySessionRequestInfoList, DiscoverySessionResponse, StopDiscoverySessionRequest,
 	StopDiscoverySessionResponse,
 };
-use rian::discovery_service::DiscoveryAgentService;
+use rian_core::discovery_service::DiscoveryAgentService;
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 

@@ -63,7 +63,7 @@ num_cpus = { workspace = true }
 hyper = { workspace = true }
 actors = { workspace = true }
 common = { workspace = true }
-rian = { workspace = true }
+rian-core = { workspace = true }
 cluster = { workspace = true }
 proto = { workspace = true }
 engines = { workspace = true }

@@ -187,7 +187,7 @@ log = { version = "^0.4.17", features = [
 ] }
 actors = { version = "0.7.0", path = "./actors" }
 common = { version = "0.7.0", path = "./common" }
-rian = { version = "0.7.0", path = "./rian" }
+rian-core = { version = "0.7.0", path = "./rian" }
 storage = { version = "0.7.0", path = "./storage" }
 cluster = { version = "0.7.0", path = "./cluster" }
 codegen = { version = "0.7.0", path = "./codegen" }

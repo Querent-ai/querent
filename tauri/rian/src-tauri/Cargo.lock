@@ -13,45 +13,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "RiAN"
-version = "0.7.0"
-dependencies = [
- "cocoa",
- "common 0.7.0",
- "insights",
- "log 0.4.22",
- "macos-accessibility-client",
- "node",
- "objc",
- "once_cell",
- "parking_lot",
- "proto",
- "serde",
- "serde_json",
- "specta",
- "specta-jsdoc",
- "specta-typescript",
- "sysinfo",
- "tauri",
- "tauri-build",
- "tauri-plugin-autostart",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-http",
- "tauri-plugin-notification",
- "tauri-plugin-os",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tauri-specta",
- "tauri-utils",
- "tokio",
- "windows 0.58.0",
-]
-
-[[package]]
 name = "RustyXML"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7330,7 +7291,7 @@ dependencies = [
  "proto",
  "regex",
  "reqwest 0.12.5",
- "rian",
+ "rian-core",
  "rust-embed",
  "rustls 0.23.12",
  "serde",
@@ -9973,6 +9934,45 @@ dependencies = [
 
 [[package]]
 name = "rian"
+version = "0.7.0"
+dependencies = [
+ "cocoa",
+ "common 0.7.0",
+ "insights",
+ "log 0.4.22",
+ "macos-accessibility-client",
+ "node",
+ "objc",
+ "once_cell",
+ "parking_lot",
+ "proto",
+ "serde",
+ "serde_json",
+ "specta",
+ "specta-jsdoc",
+ "specta-typescript",
+ "sysinfo",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-autostart",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-http",
+ "tauri-plugin-notification",
+ "tauri-plugin-os",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tauri-specta",
+ "tauri-utils",
+ "tokio",
+ "windows 0.58.0",
+]
+
+[[package]]
+name = "rian-core"
 version = "0.7.0"
 dependencies = [
  "actors",

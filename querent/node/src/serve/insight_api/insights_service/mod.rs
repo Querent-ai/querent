@@ -5,7 +5,7 @@ use actors::Querent;
 use cluster::Cluster;
 use common::EventType;
 use proto::NodeConfig;
-use rian::InsightAgentService;
+use rian_core::InsightAgentService;
 
 use storage::Storage;
 use tracing::info;

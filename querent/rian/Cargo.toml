@@ -1,5 +1,5 @@
 [package]
-name = "rian"
+name = "rian-core"
 version = "0.7.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"

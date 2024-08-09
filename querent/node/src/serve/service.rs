@@ -11,7 +11,7 @@ use actors::{ActorExitStatus, MessageBus, Querent};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig};
 use proto::config::NodeConfig;
-use rian::{start_semantic_service, SemanticService, ShutdownPipeline};
+use rian_core::{start_semantic_service, SemanticService, ShutdownPipeline};
 use storage::{create_metadata_store, create_secret_store, create_storages, Storage};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info};
