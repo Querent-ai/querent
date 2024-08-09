@@ -143,6 +143,7 @@ jobs:
         with:
           tagName: ${{ env.INPUT_RELEASE_VERSION }}
           releaseName: 'R!AN: Realtime Information Aggregator Network v__VERSION__'
+          tauriScript: cargo tauri
           projectPath: ./tauri/rian
           prerelease: false
       - name: Build Tauri App (macOS aarch64)
@@ -156,6 +157,7 @@ jobs:
           tagName: ${{ env.INPUT_RELEASE_VERSION }}
           releaseName: 'R!AN: Realtime Information Aggregator Network v__VERSION__'
           args: --target ${{ matrix.config.rust_target }}
+          tauriScript: cargo tauri
           projectPath: ./tauri/rian
           prerelease: false
           releaseDraft: true
