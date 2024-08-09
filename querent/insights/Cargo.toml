@@ -1,6 +1,6 @@
 [package]
 name = "insights"
-version = "0.4.0"
+version = "0.7.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
