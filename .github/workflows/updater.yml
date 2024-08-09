@@ -1,5 +1,5 @@
 name: RiAN Updater
-run-name: Release latest.json
+run-name: Release update.json
 
 on:
   release:
@@ -23,7 +23,7 @@ jobs:
       - name: install frontend dependencies
         run: npm install --no-frozen-lockfile
         working-directory: tauri/rian
-      - name: Release latest.json
+      - name: Release update.json
         run: npm run updater
         working-directory: tauri/rian
         env:
