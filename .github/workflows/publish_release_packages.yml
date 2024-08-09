@@ -185,7 +185,7 @@ jobs:
         with:
           tauriScript: cargo tauri
           projectPath: ./tauri/rian
-          args: -- --profile release --features "license-check","openssl-support"
+          args: -- --profile release --features license-check,openssl-support
       - uses: actions/upload-artifact@v3
         if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
         with:
@@ -208,7 +208,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          args: --target ${{ matrix.config.rust_target }} -- --profile release --features "license-check","openssl-support"
+          args: --target ${{ matrix.config.rust_target }} -- --profile release --features license-check,openssl-support
           tauriScript: cargo tauri
           projectPath: ./tauri/rian
       - uses: actions/upload-artifact@v3
