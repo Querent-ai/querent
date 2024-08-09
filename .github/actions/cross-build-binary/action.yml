@@ -45,7 +45,7 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build Qurent binary
-      run: cargo build --release --target ${{ inputs.target }} --features "license-check","openssl-probe" --bin rian
+      run: cargo build --release --target ${{ inputs.target }} --features "license-check","openssl-support" --bin rian
       shell: bash
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
