@@ -1,8 +1,8 @@
 import fetch from 'node-fetch';
 import { getOctokit, context } from '@actions/github';
 
-const UPDATE_TAG_NAME = 'latest';
-const UPDATE_JSON_FILE = 'latest.json';
+const UPDATE_TAG_NAME = 'updater';
+const UPDATE_JSON_FILE = 'update.json';
 
 async function resolveUpdater() {
   if (!process.env.GITHUB_TOKEN) {
@@ -80,7 +80,7 @@ async function resolveUpdater() {
     }
   });
 
-  // Handle the latest.json asset in the update release
+  // Handle the update.json asset in the update release
   const { data: updateRelease } = await github.rest.repos.getReleaseByTag({
     ...options,
     tag: UPDATE_TAG_NAME,
@@ -95,7 +95,7 @@ async function resolveUpdater() {
     }
   }
 
-  // Upload the new latest.json file
+  // Upload the new update.json file
   const response = await github.rest.repos.uploadReleaseAsset({
     ...options,
     release_id: updateRelease.id,
@@ -107,7 +107,7 @@ async function resolveUpdater() {
     },
   });
 
-  console.log('latest.json uploaded:', response.data.browser_download_url);
+  console.log('update.json uploaded:', response.data.browser_download_url);
 }
 
 async function getSignature(url) {

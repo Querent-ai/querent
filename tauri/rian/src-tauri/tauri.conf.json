@@ -14,7 +14,7 @@
     },
     "updater": {
       "endpoints": [
-        "https://github.com/querent-ai/distribution/releases/latest/download/latest.json"
+        "https://github.com/querent-ai/distribution/releases/download/updater/update.json"
       ],
       "active": true,
       "windows": {
