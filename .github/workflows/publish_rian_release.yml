@@ -2,13 +2,41 @@ name: Publish When Rian Release is Created
 on:
   release:
     types:
-      - created
+      - published
+  workflow_dispatch:
+    inputs:
+      release-version:
+        description: "Release version (v#.#.#[-rc#])"
+        required: true
 env:
-  INPUT_RELEASE_VERSION: ${{ github.event.release.tag_name }}
-  ASSET_VERSION: ${{ github.event.release.tag_name }}
-  RELEASE_ID: ${{ github.event.release.id }}
+  ASSET_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
 jobs:
+  release-rian-bare-metal:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin, 'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc.exe']
+
+    steps:
+      - name: Extract asset version
+        run: echo "ASSET_VERSION=${GITHUB_REF/refs\/tags\//}" >> $GITHUB_ENV
+      - run: echo "ASSET_FULL_NAME=querent-${{ env.ASSET_VERSION }}-${{ matrix.target }}" >> $GITHUB_ENV
+      - name: Download the release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+      - name: Upload archive
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: ${{ env.ASSET_FULL_NAME }}.tar.gz
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+
   publish-artifacts:
+    needs: release-rian-bare-metal
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -56,12 +84,13 @@ jobs:
         with:
           file: update.json
           overwrite: true
-          release_id: ${{ env.RELEASE_ID }}
+          tag_name: ${{ env.ASSET_VERSION }}
 
       - name: Run artifact uploader
         env:
           ASSET_VERSION: ${{ env.ASSET_VERSION }}
           RELEASE_ID: ${{ env.RELEASE_ID }}
+          TAG_NAME: ${{ env.ASSET_VERSION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: |
