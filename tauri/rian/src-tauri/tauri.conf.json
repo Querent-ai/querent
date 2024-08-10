@@ -1,6 +1,6 @@
 {
   "productName": "rian",
-  "version": "0.4.0",
+  "version": "0.7.0",
   "identifier": "xyz.querent.rian",
   "build": {
     "frontendDist": "../build",
@@ -14,7 +14,7 @@
     },
     "updater": {
       "endpoints": [
-        "https://github.com/querent-ai/distribution/releases/download/updater/update.json"
+        "https://github.com/querent-ai/distribution/releases/{{current_version}}/update.json"
       ],
       "active": true,
       "windows": {
