@@ -1,0 +1,68 @@
+name: Publish When Rian Release is Created
+on:
+  release:
+    types:
+      - created
+env:
+  INPUT_RELEASE_VERSION: ${{ github.event.release.tag_name }}
+  ASSET_VERSION: ${{ github.event.release.tag_name }}
+  RELEASE_ID: ${{ github.event.release.id }}
+jobs:
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download R!AN Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-windows-latest-x86_64
+          path: artifacts/windows-x86_64
+      - name: Download R!AN Mac (aarch64)
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-macos-latest-aarch64
+          path: artifacts/darwin-aarch64
+
+      - name: Download R!AN Mac (x86_64)
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-macos-latest-x86_64
+          path: artifacts/darwin-x86_64
+
+      - name: Download R!AN Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-ubuntu-latest-x86_64
+          path: artifacts/linux-x86_64
+
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Generate update.json
+        run: |
+          npm install
+          npm run updater
+
+      - name: Upload update.json to release
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: update.json
+          overwrite: true
+          release_id: ${{ env.RELEASE_ID }}
+
+      - name: Run artifact uploader
+        env:
+          ASSET_VERSION: ${{ env.ASSET_VERSION }}
+          RELEASE_ID: ${{ env.RELEASE_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+        run: |
+          npm run uploader

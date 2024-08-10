@@ -22,3 +22,4 @@ model/
 dev-env/
 querent/.fastembed_cache/
 **/build
+node_modules/

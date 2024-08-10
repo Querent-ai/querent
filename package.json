@@ -1,0 +1,16 @@
+{
+  "name": "distribution",
+  "version": "1.0.0",
+  "description": "* Offical Docker Hub [Profile](https://hub.docker.com/r/querent/) * Querent Docker Image [Querent RIAN Release] [Tags ](https://hub.docker.com/r/querent/rian/tags) * Latest Stable Version : **v4.2.0**",
+  "main": "index.js",
+  "scripts": {
+    "updater": "node scripts/updater.mjs",
+    "uploader": "node scripts/uploader.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@actions/github": "^6.0.0"
+  }
+}
