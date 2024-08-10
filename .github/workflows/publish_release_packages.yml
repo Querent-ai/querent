@@ -79,7 +79,7 @@ jobs:
       - name: build tauri rian
         run: npm run build
         working-directory: tauri/rian
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: tauri-rian
           path: tauri/rian/build
@@ -167,7 +167,7 @@ jobs:
         if: matrix.config.os == 'windows-latest'
         run: |
           rustup target add x86_64-pc-windows-msvc
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: tauri-rian
           path: tauri/rian/build
@@ -186,7 +186,7 @@ jobs:
           tauriScript: cargo tauri
           projectPath: ./tauri/rian
           args: -- --profile release --features license-check,openssl-support
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
         with:
           name: tauri-rian-bundle-${{ matrix.config.os }}-${{ matrix.config.arch }}
@@ -211,7 +211,7 @@ jobs:
           args: --target ${{ matrix.config.rust_target }} -- --profile release --features license-check,openssl-support
           tauriScript: cargo tauri
           projectPath: ./tauri/rian
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
         with:
           name: tauri-rian-bundle-${{ matrix.config.os }}-${{ matrix.config.arch }}
