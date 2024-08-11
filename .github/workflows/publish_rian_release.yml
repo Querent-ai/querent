@@ -50,32 +50,43 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
+      - name: Get the latest workflow run
+        id: get_workflow_run
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs \
+          | jq -r '.workflow_runs[] | select(.name=="Build and publish core querent packages") | .id' \
+          | head -n 1 > workflow_run_id.txt
+        shell: bash
+      - name: Download artifacts from previous workflow run
+        run: |
+          WORKFLOW_RUN_ID=$(cat workflow_run_id.txt)
+          echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_ENV
       - name: Download R!AN Windows
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-windows-latest-x86_64.zip
+          name: tauri-rian-bundle-windows-latest-x86_64
           path: artifacts/windows-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-macos-latest-aarch64.zip
+          name: tauri-rian-bundle-macos-latest-aarch64
           path: artifacts/darwin-aarch64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download R!AN Mac (x86_64)
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-macos-latest-x86_64.zip
+          name: tauri-rian-bundle-macos-latest-x86_64
           path: artifacts/darwin-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-ubuntu-latest-x86_64.zip
+          name: tauri-rian-bundle-ubuntu-latest-x86_64
           path: artifacts/linux-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
