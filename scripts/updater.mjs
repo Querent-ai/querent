@@ -22,9 +22,9 @@ function getFileNameAndSignature(directory) {
   let signaturePath = '';
 
   files.forEach(file => {
-    if (file.endsWith('.msi.zip') || file.endsWith('.app.tar.gz') || file.endsWith('.AppImage.tar.gz')) {
+    if (file.endsWith('.msi') || file.endsWith('.app.tar.gz') || file.endsWith('.AppImage')) {
       fileName = file;
-    } else if (file.endsWith('.msi.zip.sig') || file.endsWith('.app.tar.gz.sig') || file.endsWith('.AppImage.tar.gz.sig')) {
+    } else if (file.endsWith('.msi.sig') || file.endsWith('.app.tar.gz.sig') || file.endsWith('.AppImage.sig')) {
       signaturePath = path.join(directory, file);
     }
   });
@@ -41,6 +41,9 @@ function readSignature(signaturePath) {
   const { fileName, signaturePath } = getFileNameAndSignature(path.join(ARTIFACTS_DIR, platformKey));
   
   if (fileName) {
+    if (platformKey === 'darwin-aarch64') {
+      fileName = `aarch64-${fileName}`;
+    }
     updateData.platforms[platformKey].url = `https://github.com/querent-ai/distribution/releases/download/${process.env.ASSET_VERSION}/${fileName}`;
     updateData.platforms[platformKey].signature = readSignature(signaturePath);
   } else {

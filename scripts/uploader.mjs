@@ -14,16 +14,19 @@ async function uploadReleaseFiles() {
   }
   const github = getOctokit(process.env.GITHUB_TOKEN);
   const updateData = JSON.parse(fs.readFileSync(UPDATE_JSON_FILE, 'utf8'));
-
   for (const platform in updateData.platforms) {
     const platformData = updateData.platforms[platform];
     const fileName = platformData.url.split('/').pop();
-    const filePath = path.join(ARTIFACTS_DIR, platform, fileName);
+    let filenameLocal = fileName;
+    if (platform === 'darwin-aarch64') {
+      // Remove 'aarch64-' prefix
+      filenameLocal = fileName.slice(8);
+    }
+    const filePath = path.join(ARTIFACTS_DIR, platform, filenameLocal);
 
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath);
       console.log(`Uploading ${fileName} for platform ${platform}...`);
-
       if (!process.env.RELEASE_ID) {
         await github.rest.repos.uploadReleaseAsset({
           owner: context.repo.owner,
