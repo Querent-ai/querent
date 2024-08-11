@@ -70,6 +70,10 @@ jobs:
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/windows-x86_64/*/* artifacts/windows-x86_64/
+          ls -la artifacts/windows-x86_64
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
@@ -78,6 +82,10 @@ jobs:
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/darwin-aarch64/*/* artifacts/darwin-aarch64/
+          ls -la artifacts/darwin-aarch64
       - name: Download R!AN Mac (x86_64)
         uses: actions/download-artifact@v4
         with:
@@ -86,6 +94,10 @@ jobs:
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/darwin-x86_64/*/* artifacts/darwin-x86_64/
+          ls -la artifacts/darwin-x86_64
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
         with:
@@ -94,6 +106,10 @@ jobs:
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/linux-x86_64/*/* artifacts/linux-x86_64/
+          ls -la artifacts/linux-x86_64
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
