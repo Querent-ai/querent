@@ -87,7 +87,7 @@ jobs:
           merge-multiple: true
       - name: Move files to parent directory
         run: |
-          mv artifacts/darwin-aarch64/*/* artifacts/darwin-aarch64/
+          mv artifacts/darwin-aarch64/*/*/*/*/* artifacts/darwin-aarch64/
           ls -la artifacts/darwin-aarch64
       - name: Download R!AN Mac (x86_64)
         uses: actions/download-artifact@v4
@@ -99,7 +99,7 @@ jobs:
           merge-multiple: true
       - name: Move files to parent directory
         run: |
-          mv artifacts/darwin-x86_64/*/*/*/*/* artifacts/darwin-x86_64/
+          mv artifacts/darwin-x86_64/*/*/ artifacts/darwin-x86_64/
           ls -la artifacts/darwin-x86_64
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
