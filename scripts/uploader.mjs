@@ -14,6 +14,14 @@ async function uploadReleaseFiles() {
   }
   const github = getOctokit(process.env.GITHUB_TOKEN);
   const updateData = JSON.parse(fs.readFileSync(UPDATE_JSON_FILE, 'utf8'));
+  const release = await github.rest.repos.getReleaseByTag({
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    tag: process.env.TAG_NAME,
+  });
+  if (!release.data) {
+    throw new Error(`Release with tag ${process.env.TAG_NAME} not found`);
+  }
   for (const platform in updateData.platforms) {
     const platformData = updateData.platforms[platform];
     const fileName = platformData.url.split('/').pop();
@@ -27,11 +35,10 @@ async function uploadReleaseFiles() {
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath);
       console.log(`Uploading ${fileName} for platform ${platform}...`);
-      {
         await github.rest.repos.uploadReleaseAsset({
           owner: context.repo.owner,
           repo: context.repo.repo,
-          tag_name: process.env.TAG_NAME,
+          release_id: release.data.id,
           name: fileName,
           data,
           headers: {
@@ -39,7 +46,6 @@ async function uploadReleaseFiles() {
             'content-length': data.length,
           },
         });
-      }
     } else {
       console.error(`[Error]: File ${fileName} not found for platform ${platform}`);
     }
