@@ -5,7 +5,7 @@ on:
       - published
   workflow_dispatch:
 env:
-  ASSET_VERSION: ${{ github.event.release.tag_name }}
+  ASSET_VERSION: v0.7.0
 jobs:
   release-rian-bare-metal:
     name: Build ${{ matrix.target }}
