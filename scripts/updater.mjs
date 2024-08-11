@@ -56,9 +56,6 @@ function readSignature(signaturePath) {
 
   if (fileName) {
     let urlFileName = fileName;
-    if (platformKey === 'darwin-aarch64') {
-      urlFileName = `aarch64-${fileName}`;
-    }
     updateData.platforms[platformKey].url = `https://github.com/querent-ai/distribution/releases/download/${process.env.ASSET_VERSION}/${urlFileName}`;
     updateData.platforms[platformKey].signature = readSignature(signaturePath);
   }

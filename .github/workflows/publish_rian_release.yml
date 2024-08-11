@@ -113,6 +113,12 @@ jobs:
         run: |
           mv artifacts/darwin-aarch64/*/*/*/*/* artifacts/darwin-aarch64/
           ls -la artifacts/darwin-aarch64
+      - name: Add aarch64- as prefix to all files
+        run: |
+          for file in artifacts/darwin-aarch64/*; do
+            mv "$file" "artifacts/darwin-aarch64/aarch64-$(basename $file)"
+          done
+          ls -la artifacts/darwin-aarch64
       - name: Upload R!AN Mac (aarch64) dmg
         uses: quickwit-inc/upload-to-github-release@v1
         env:
