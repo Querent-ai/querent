@@ -8,8 +8,12 @@ env:
   ASSET_VERSION: v0.7.0
   RELEASE_ID: ${{ github.event.release.id }}
 jobs:
-  get_workflow_run_id:
+  release-rian-bare-metal:
+    name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin, 'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc.exe']
     steps:
       - name: Get the latest workflow run
         id: get_workflow_run
@@ -24,14 +28,6 @@ jobs:
         run: |
           WORKFLOW_RUN_ID=$(cat workflow_run_id.txt)
           echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_ENV
-  release-rian-bare-metal:
-    needs: get_workflow_run_id
-    name: Build ${{ matrix.target }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin, 'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc.exe']
-    steps:
       - run: echo "ASSET_FULL_NAME=rian-${{ env.ASSET_VERSION }}-${{ matrix.target }}" >> $GITHUB_ENV
       - name: Download the release artifact
         uses: actions/download-artifact@v4
