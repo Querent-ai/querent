@@ -64,6 +64,7 @@ function readSignature(signaturePath) {
   }
 });
 
+console.log('updateData:', updateData);
 // Remove platforms with no URLs
 Object.entries(updateData.platforms).forEach(([key, value]) => {
   if (!value.url) {
