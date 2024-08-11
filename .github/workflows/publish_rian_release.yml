@@ -74,6 +74,10 @@ jobs:
         run: |
           mv artifacts/windows-x86_64/*/* artifacts/windows-x86_64/
           ls -la artifacts/windows-x86_64
+      - name: Artifacts full path
+        run: |
+          echo "Artifacts full path"
+          ls -la artifacts
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 const UPDATE_JSON_FILE = 'update.json';
-const ARTIFACTS_DIR = path.resolve(__dirname, '../artifacts'); // Ensure absolute path
+const ARTIFACTS_DIR = path.resolve('artifacts');
 
 const updateData = {
   version: process.env.ASSET_VERSION || 'unknown',
