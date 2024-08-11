@@ -3,9 +3,7 @@ on:
   release:
     types:
       - published
-  push:
-    branches:
-      -main
+  workflow_dispatch:
 env:
   ASSET_VERSION: v0.7.0
   RELEASE_ID: ${{ github.event.release.id }}
