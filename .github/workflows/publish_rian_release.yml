@@ -34,6 +34,7 @@ jobs:
         with:
           name: ${{ env.ASSET_FULL_NAME }}.tar.gz
           run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Upload archive
         uses: quickwit-inc/upload-to-github-release@v1
         env:
@@ -56,24 +57,28 @@ jobs:
           name: tauri-rian-bundle-windows-latest-x86_64
           path: artifacts/windows-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
           name: tauri-rian-bundle-macos-latest-aarch64
           path: artifacts/darwin-aarch64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download R!AN Mac (x86_64)
         uses: actions/download-artifact@v4
         with:
           name: tauri-rian-bundle-macos-latest-x86_64
           path: artifacts/darwin-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
         with:
           name: tauri-rian-bundle-ubuntu-latest-x86_64
           path: artifacts/linux-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
