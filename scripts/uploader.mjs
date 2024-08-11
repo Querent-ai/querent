@@ -9,8 +9,8 @@ async function uploadReleaseFiles() {
   if (!process.env.GITHUB_TOKEN) {
     throw new Error('GITHUB_TOKEN is required');
   }
-  if(!process.env.RELEASE_ID && !process.env.TAG_NAME) {
-    throw new Error('RELEASE_ID or TAG_NAME is required');
+  if(!process.env.TAG_NAME) {
+    throw new Error('TAG_NAME is required');
   }
   const github = getOctokit(process.env.GITHUB_TOKEN);
   const updateData = JSON.parse(fs.readFileSync(UPDATE_JSON_FILE, 'utf8'));
@@ -27,19 +27,7 @@ async function uploadReleaseFiles() {
     if (fs.existsSync(filePath)) {
       const data = fs.readFileSync(filePath);
       console.log(`Uploading ${fileName} for platform ${platform}...`);
-      if (!process.env.RELEASE_ID) {
-        await github.rest.repos.uploadReleaseAsset({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
-          release_id: process.env.RELEASE_ID,
-          name: fileName,
-          data,
-          headers: {
-            'content-type': 'application/octet-stream',
-            'content-length': data.length,
-          },
-        });
-      } else {
+      {
         await github.rest.repos.uploadReleaseAsset({
           owner: context.repo.owner,
           repo: context.repo.repo,

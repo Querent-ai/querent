@@ -6,7 +6,6 @@ on:
   workflow_dispatch:
 env:
   ASSET_VERSION: ${{ github.event.release.tag_name }}
-  RELEASE_ID: ${{ github.event.release.id }}
 jobs:
   release-rian-bare-metal:
     name: Build ${{ matrix.target }}
@@ -135,7 +134,6 @@ jobs:
       - name: Run artifact uploader
         env:
           ASSET_VERSION: ${{ env.ASSET_VERSION }}
-          RELEASE_ID: ${{ env.RELEASE_ID }}
           TAG_NAME: ${{ env.ASSET_VERSION }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
