@@ -5,7 +5,7 @@ on:
       - published
   workflow_dispatch:
 env:
-  ASSET_VERSION: v0.7.0
+  ASSET_VERSION: ${{ github.event.release.tag_name }}
   RELEASE_ID: ${{ github.event.release.id }}
 jobs:
   release-rian-bare-metal:
