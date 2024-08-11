@@ -25,6 +25,7 @@ jobs:
           WORKFLOW_RUN_ID=$(cat workflow_run_id.txt)
           echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_ENV
   release-rian-bare-metal:
+    needs: get_workflow_run_id
     name: Build ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
