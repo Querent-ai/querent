@@ -100,7 +100,7 @@ jobs:
           merge-multiple: true
       - name: Move files to parent directory
         run: |
-          mv artifacts/darwin-x86_64/*/* artifacts/darwin-x86_64/
+          mv artifacts/darwin-x86_64/*/*/*/*/* artifacts/darwin-x86_64/
           ls -la artifacts/darwin-x86_64
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
