@@ -8,8 +8,14 @@ on:
       release-version:
         description: "Release version (v#.#.#[-rc#])"
         required: true
+      run-id:
+        description: "Run ID of the release workflow"
+        required: true
 env:
   ASSET_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
+  RUN_ID: ${{ github.event.inputs.run-id }}
+  RELEASE_ID: ${{ github.event.release.id }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   release-rian-bare-metal:
     name: Build ${{ matrix.target }}
@@ -26,6 +32,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+          run-id: ${{ env.RUN_ID }}
       - name: Upload archive
         uses: quickwit-inc/upload-to-github-release@v1
         env:
@@ -47,36 +54,35 @@ jobs:
         with:
           name: tauri-rian-bundle-windows-latest-x86_64
           path: artifacts/windows-x86_64
+          run-id: ${{ env.RUN_ID }}
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
           name: tauri-rian-bundle-macos-latest-aarch64
           path: artifacts/darwin-aarch64
-
+          run-id: ${{ env.RUN_ID }}
       - name: Download R!AN Mac (x86_64)
         uses: actions/download-artifact@v4
         with:
           name: tauri-rian-bundle-macos-latest-x86_64
           path: artifacts/darwin-x86_64
-
+          run-id: ${{ env.RUN_ID }}
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
         with:
           name: tauri-rian-bundle-ubuntu-latest-x86_64
           path: artifacts/linux-x86_64
-
+          run-id: ${{ env.RUN_ID }}
       - name: Use Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
           registry-url: "https://registry.npmjs.org"
-
       - name: Generate update.json
         run: |
           npm install
           npm run updater
-
       - name: Upload update.json to release
         uses: quickwit-inc/upload-to-github-release@v1
         env:
@@ -85,7 +91,6 @@ jobs:
           file: update.json
           overwrite: true
           tag_name: ${{ env.ASSET_VERSION }}
-
       - name: Run artifact uploader
         env:
           ASSET_VERSION: ${{ env.ASSET_VERSION }}
