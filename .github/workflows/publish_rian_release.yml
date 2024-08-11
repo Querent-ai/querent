@@ -1,11 +1,12 @@
-name: Publish When Rian Release is Created
+name: Publish R!AN Releases and Installers
 on:
-  release:
-    types:
-      - published
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of the release'
+        required: true
 env:
-  ASSET_VERSION: ${{ github.event.release.tag_name }}
+  ASSET_VERSION: ${{ github.event.inputs.version }}
 jobs:
   release-rian-bare-metal:
     name: Build ${{ matrix.target }}
