@@ -36,15 +36,15 @@ pub fn get_final_prompt(query: &str, context: &str) -> String {
     )
 }
 
-pub fn get_analysis_prompt(query: &str, answer: &str) -> String {
+pub fn get_analysis_prompt(query: &str, combined_summaries: &str) -> String {
 	format!(
-        "You are a helpful assistant responsible for analyzing the Question and Answer pair below for factual accuracy. \
-        If the provided Question and Answer pair are contradictory, please resolve the contradictions and provide a single, coherent summary that accurately answers the user query without introducing any new information. \
-        Make sure it is written in third person, and make sure we have the full context.\n\n\
+        "You are a helpful assistant responsible for analyzing the provided summaries below and combining them into a single, coherent summary. \
+        The summaries are numbered, with 1 being the most significant and relevant to the query. As the numbers increase, the relevance decreases. \
+        Please combine these summaries into a coherent summary that accurately answers the user query, and make sure it is written in the third person.\n\n\
         #######\n\
         -Data-\n\
-        Question: {query}\n\
-        Answer: {answer}\n\
+        Query: {query}\n\
+        Summaries: {combined_summaries}\n\
         #######\n\
         Output:"
     )
