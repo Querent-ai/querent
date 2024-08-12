@@ -58,3 +58,22 @@ pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(Stri
 			.collect(),
 	)
 }
+
+
+pub fn split_sentences(sentences: Vec<String>) -> Vec<Vec<String>> {
+    let mut result = Vec::new();
+    let mut chunk = Vec::new();
+
+    for sentence in sentences {
+        chunk.push(sentence);
+        if chunk.len() == 10 {
+            result.push(chunk);
+            chunk = Vec::new();
+        }
+    }
+    if !chunk.is_empty() {
+        result.push(chunk);
+    }
+
+    result
+}

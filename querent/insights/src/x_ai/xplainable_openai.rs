@@ -73,6 +73,7 @@ impl XAI {
 			},
 		);
 		Self {
+			
 			info: InsightInfo {
 				id: "querent.insights.x_ai.openai".to_string(),
 				name: "Querent xAI with GPT".to_string(),
@@ -80,7 +81,7 @@ impl XAI {
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
-				icon: &[], // Add your icon bytes here.
+				icon: include_bytes!("../../icons/xai_icon.png"),
 				additional_options,
 				conversational: true,
 				premium: false,
@@ -297,25 +298,11 @@ impl InsightRunner for XAIRunner {
 										all_discovered_data.extend(traverser_results.clone());
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
-										if let Some(reranked_results) =
-											rerank_documents(query, unique_sentences.clone())
-										{
-											let top_10_reranked = reranked_results
-												.into_iter()
-												.take(10)
-												.collect::<Vec<_>>();
-											numbered_sentences = top_10_reranked
-												.iter()
-												.enumerate()
-												.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
-												.collect();
-										} else {
-											numbered_sentences = unique_sentences
-												.iter()
-												.enumerate()
-												.map(|(i, s)| format!("{}. {}", i + 1, s))
-												.collect();
-										}
+										numbered_sentences = unique_sentences
+											.iter()
+											.enumerate()
+											.map(|(_i, s)| format!("{}", s))
+											.collect();
 									},
 									Err(e) => {
 										error!("Failed to serialize traverser results: {:?}", e);
@@ -405,10 +392,11 @@ impl InsightRunner for XAIRunner {
 										all_discovered_data.extend(results.clone());
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
+											
 										numbered_sentences = unique_sentences
 											.iter()
 											.enumerate()
-											.map(|(i, s)| format!("{}. {}", i + 1, s))
+											.map(|(_i, s)| format!("{}", s))
 											.collect();
 									},
 									Err(e) => {
@@ -416,7 +404,21 @@ impl InsightRunner for XAIRunner {
 									},
 								}
 							}
-
+							println!("These are the number of sentences----{:?}", numbered_sentences);
+							if let Some(reranked_results) =
+											rerank_documents(query, numbered_sentences.clone())
+										{
+											let top_10_reranked = reranked_results
+												.into_iter()
+												.take(numbered_sentences.len())
+												.collect::<Vec<_>>();
+											numbered_sentences = top_10_reranked
+												.iter()
+												.enumerate()
+												.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
+												.collect();
+										}
+							println!("-----------------These are the reranked sentences----{:?}", numbered_sentences);
 							let context = numbered_sentences.join("\n");
 							let final_prompt = if prompt.is_empty() {
 								get_final_prompt(query, &context)
