@@ -48,7 +48,10 @@ impl BaseIngestor for ImageIngestor {
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
-					data.read_to_end(&mut buf).await.unwrap();
+					if let Err(e) = data.read_to_end(&mut buf).await {
+						tracing::error!("Failed to read image data: {:?}", e);
+						continue;
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
@@ -81,38 +84,49 @@ impl BaseIngestor for ImageIngestor {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use std::path::Path;
-// 	use futures::StreamExt;
+#[cfg(test)]
+mod tests {
+	use futures::StreamExt;
 
-//     #[tokio::test]
-//     async fn test_img_ingestor() {
+	use super::*;
+	use std::{io::Cursor, path::Path};
 
-//         let bytes = std::fs::read("/home/ansh/pyg-trail/1520206936825.jpeg").unwrap();
+	#[tokio::test]
+	async fn test_image_ingestor() {
+		let included_bytes = include_bytes!("../../../../test_data/1520206936825.jpeg");
+		let bytes = included_bytes.to_vec();
 
-//         // Create a CollectedBytes instance
-//         let collected_bytes = CollectedBytes {
-//             data: Some(bytes),
-//             file: Some(Path::new("1520206936825.jpeg").to_path_buf()),
-//             doc_source: Some("test_source".to_string()),
-// 			eof: false,
-// 			extension: Some("jpeg".to_string()),
-// 			size: Some(10),
-//          source_id: "Filesystem".to_string(),
-//         };
+		// Create a CollectedBytes instance
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("1520206936825.jpeg").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("jpeg".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+		};
 
-//         // Create a TxtIngestor instance
-//         let ingestor = ImageIngestor::new();
+		// Create a TxtIngestor instance
+		let ingestor = ImageIngestor::new();
 
-//         // Ingest the file
-//         let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		// Ingest the file
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
-// 		let mut stream = result_stream;
-//         while let Some(tokens) = stream.next().await {
-// 			let tokens = tokens.unwrap();
-// 			println!("These are the tokens in file --------------{:?}", tokens);
-// 		}
-// 	}
-// }
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest Image file");
+	}
+}

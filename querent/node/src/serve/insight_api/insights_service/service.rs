@@ -11,7 +11,7 @@ use proto::{
 	},
 	InsightRequestInfo, InsightRequestInfoList,
 };
-use rian::InsightAgentService;
+use rian_core::InsightAgentService;
 use storage::Storage;
 
 #[async_trait]

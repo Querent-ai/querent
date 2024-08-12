@@ -3,7 +3,7 @@ use std::sync::Arc;
 use actors::{Healthz, MessageBus};
 use cluster::Cluster;
 use common::ServiceErrorCode;
-use rian::{verify_key, SemanticService};
+use rian_core::{verify_key, SemanticService};
 use serde::{Deserialize, Serialize};
 use storage::Storage;
 use tracing::error;

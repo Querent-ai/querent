@@ -45,11 +45,11 @@ format-check:
 .PHONY: build, build-without-license-check
 build:
 	@echo "Running Cargo build..."
-	@cargo build --release --features "license-check","openssl-probe" --bin rian
+	@cargo build --release --features "license-check","openssl-support" --bin rian
 
 build-without-license-check:
 	@echo "Running Cargo build..."
-	@cargo build --release --features "openssl-probe" --bin rian
+	@cargo build --release --features "openssl-support" --bin rian
 
 .PHONY: doc
 doc:

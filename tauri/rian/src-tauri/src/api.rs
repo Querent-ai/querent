@@ -132,9 +132,26 @@ pub async fn start_agn_fabric(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_running_pipelines() -> Vec<(String, proto::semantics::SemanticPipelineRequest)> {
+pub async fn get_running_agns() -> Vec<(String, proto::semantics::SemanticPipelineRequest)> {
     let running_pipelines = RUNNING_PIPELINE_ID.lock();
     running_pipelines.clone()
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_past_agns() -> Result<proto::semantics::PipelineRequestInfoList, String> {
+    let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
+    let result = node::serve::semantic_api::rest::get_pipelines_history(metadata_store).await;
+    match result {
+        Ok(response) => {
+            info!("Past pipelines retrieved successfully");
+            Ok(response)
+        }
+        Err(e) => {
+            info!("Failed to retrieve past pipelines: {:?}", e);
+            Err(e.to_string())
+        }
+    }
 }
 
 #[tauri::command]
