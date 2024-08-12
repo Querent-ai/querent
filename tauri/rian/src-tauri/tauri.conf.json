@@ -1,6 +1,6 @@
 {
-  "productName": "RIAN",
-  "version": "0.4.0",
+  "productName": "rian",
+  "version": "0.7.0",
   "identifier": "xyz.querent.rian",
   "build": {
     "frontendDist": "../build",
@@ -14,13 +14,13 @@
     },
     "updater": {
       "endpoints": [
-        "https://github.com/querent-ai/distribution/releases/latest/download/latest.json"
+        "https://github.com/querent-ai/distribution/releases/latest/download/update.json"
       ],
       "active": true,
       "windows": {
         "installMode": "passive"
       },
-      "pubkey": "TODO: add a key"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcxMzM1MDAzMzcxMjVDNTgKUldSWVhCSTNBMUF6Y2FlSjYrc05YdEh4a0xUYjlOQ1UwOWxHSWt3TmRRWFZPZEhlUFlwc3o2OXQK"
     }
   },
   "bundle": {
@@ -38,6 +38,7 @@
     "category": "DeveloperTool",
     "copyright": "",
     "externalBin": [],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

@@ -4,7 +4,7 @@ use cluster::Cluster;
 use common::{EventType, Pool};
 use error::DiscoveryError;
 use proto::NodeConfig;
-use rian::discovery_service::DiscoveryAgentService;
+use rian_core::discovery_service::DiscoveryAgentService;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use storage::Storage;
 use tracing::info;

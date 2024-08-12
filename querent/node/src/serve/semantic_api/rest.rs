@@ -27,7 +27,7 @@ use proto::{
 use serde_json::from_str;
 
 use proto::semantics::IngestedTokens;
-use rian::{
+use rian_core::{
 	create_dynamic_sources, ObservePipeline, PipelineErrors, PipelineSettings, RestartPipeline,
 	SemanticService, SemanticServiceCounters, ShutdownPipeline, SpawnPipeline,
 };

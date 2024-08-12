@@ -1,0 +1,244 @@
+name: Publish R!AN Releases and Installers
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of the release'
+        required: true
+env:
+  ASSET_VERSION: ${{ github.event.inputs.version }}
+jobs:
+  release-rian-bare-metal:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin, 'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc.exe']
+    steps:
+      - name: Get the latest workflow run
+        id: get_workflow_run
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs \
+          | jq -r '.workflow_runs[] | select(.name=="Build and publish core querent packages") | .id' \
+          | head -n 1 > workflow_run_id.txt
+        shell: bash
+
+      - name: Download artifacts from previous workflow run
+        run: |
+          WORKFLOW_RUN_ID=$(cat workflow_run_id.txt)
+          echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_ENV
+      - run: echo "ASSET_FULL_NAME=rian-${{ env.ASSET_VERSION }}-${{ matrix.target }}" >> $GITHUB_ENV
+      - name: Download the release artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+          run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload archive
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: ${{ env.ASSET_FULL_NAME }}.tar.gz
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+
+  publish-artifacts:
+    needs: release-rian-bare-metal
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Get the latest workflow run
+        id: get_workflow_run
+        run: |
+          curl -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+          https://api.github.com/repos/${{ github.repository }}/actions/runs \
+          | jq -r '.workflow_runs[] | select(.name=="Build and publish core querent packages") | .id' \
+          | head -n 1 > workflow_run_id.txt
+        shell: bash
+      - name: Download artifacts from previous workflow run
+        run: |
+          WORKFLOW_RUN_ID=$(cat workflow_run_id.txt)
+          echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_ENV
+      - name: Download R!AN Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-windows-latest-x86_64
+          path: artifacts/windows-x86_64
+          run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/windows-x86_64/*/* artifacts/windows-x86_64/
+          ls -la artifacts/windows-x86_64
+      - name: Upload R!AN Windows .msi
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/windows-x86_64/*.msi
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload R!AN Windows .exe
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/windows-x86_64/*.exe
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload Windows Signature
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/windows-x86_64/*.sig
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Artifacts full path
+        run: |
+          echo "Artifacts full path"
+          ls -la artifacts
+      - name: Download R!AN Mac (aarch64)
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-macos-latest-aarch64
+          path: artifacts/darwin-aarch64
+          run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/darwin-aarch64/*/*/*/*/* artifacts/darwin-aarch64/
+          ls -la artifacts/darwin-aarch64
+      - name: Add aarch64- as prefix to all files
+        run: |
+          for file in artifacts/darwin-aarch64/*; do
+            mv "$file" "artifacts/darwin-aarch64/aarch64-$(basename $file)"
+          done
+          ls -la artifacts/darwin-aarch64
+      - name: Upload R!AN Mac (aarch64) dmg
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/darwin-aarch64/*.dmg
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload R!AN Mac (aarch64) .app.tar.gz
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/darwin-aarch64/*.app.tar.gz
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload Mac (aarch64) Signature
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/darwin-aarch64/*.sig
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Download R!AN Mac (x86_64)
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-macos-latest-x86_64
+          path: artifacts/darwin-x86_64
+          run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/darwin-x86_64/*/* artifacts/darwin-x86_64/
+          ls -la artifacts/darwin-x86_64
+      - name: Upload R!AN Mac (x86_64) dmg
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/darwin-x86_64/*.dmg
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload R!AN Mac (x86_64) .app.tar.gz
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/darwin-x86_64/*.app.tar.gz
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload Mac (x86_64) Signature
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/darwin-x86_64/*.sig
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Download R!AN Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-ubuntu-latest-x86_64
+          path: artifacts/linux-x86_64
+          run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/linux-x86_64/*/* artifacts/linux-x86_64/
+          ls -la artifacts/linux-x86_64
+      - name: Upload R!AN Linux .deb
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/linux-x86_64/*.deb
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload R!AN Linux .rpm
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/linux-x86_64/*.rpm
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload Linux  AppImage
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/linux-x86_64/*.AppImage
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload Linux Signature
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/linux-x86_64/*.sig
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Use Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org"
+      - name: Generate update.json
+        run: |
+          npm install
+          npm run updater
+      - name: Upload update.json to release
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: update.json
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}

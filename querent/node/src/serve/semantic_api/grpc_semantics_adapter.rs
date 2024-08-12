@@ -5,7 +5,7 @@ use proto::semantics::{
 	semantics_service_grpc_server as grpc, BooleanResponse, IngestedTokens, PipelineRequestInfo,
 	PipelineRequestInfoList,
 };
-use rian::{PipelineErrors, SemanticService};
+use rian_core::{PipelineErrors, SemanticService};
 use std::{collections::HashMap, sync::Arc};
 use storage::Storage;
 use tracing::instrument;
