@@ -44,7 +44,7 @@ struct QueryResultEmbedded {
 }
 
 #[derive(Deserialize, Debug)]
-struct AutoSuggestPairs {
+pub struct AutoSuggestPairs {
 	subject: String,
 	subject_type: String,
 	object: String,
@@ -608,7 +608,7 @@ impl Storage for SurrealDB {
 			FROM semantic_knowledge
 			GROUP BY sentence
 			ORDER BY sentence_frequency DESC
-			LIMIT 5";
+			LIMIT 20";
 		let mut high_impact_sentences_result =
 			self.db.query(high_impact_sentences_query).await.map_err(|e| StorageError {
 				kind: StorageErrorKind::Query,
@@ -636,118 +636,132 @@ impl Storage for SurrealDB {
 		let mut suggestions = Vec::new();
 
 		if !top_pairs.is_empty() {
-			let mut query_parts = Vec::new();
+			let mut pairs = Vec::new();
 			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in
-				top_pairs
+				top_pairs.into_iter().take(5)
 			{
-				let part = format!(
-					"'{}' ({}) and '{}' ({}): {} times",
-					subject, subject_type, object, object_type, pair_frequency
-				);
-				query_parts.push(part);
+				pairs.push((subject, subject_type, object, object_type, pair_frequency));
 			}
 			let combined_query = format!(
-				"Most frequently occurring entity pairs in the semantic data fabric: Understanding these pairs can provide insights into the most common relationships present in your data, helping you identify key patterns and trends. \n{}\n\n",
-				query_parts.join("\n")
-			);
+					"The semantic data fabric reveals key patterns through the most frequently occurring entity pairs. For example, '{}' ({}) and '{}' ({}) appear {} times, followed by '{}' ({}) and '{}' ({}) at {} times. Other significant pairs include '{}' ({}) and '{}' ({}) with {} occurrences, '{}' ({}) and '{}' ({}) with {} occurrences, and '{}' ({}) and '{}' ({}) appearing {} times. These relationships provide insights into prevalent trends in your data.",
+					pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3, pairs[0].4,
+					pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3, pairs[1].4,
+					pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3, pairs[2].4,
+					pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3, pairs[3].4,
+					pairs[4].0, pairs[4].1, pairs[4].2, pairs[4].3, pairs[4].4
+				);
+
 			suggestions.push(QuerySuggestion {
 				query: combined_query,
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),
-				tags: vec![],
+				tags: vec!["Top Entity Pair Relationships".to_string()],
+				top_pairs: vec!["Top Entity Pair Relationships".to_string()],
 			});
 		}
 
 		if !bottom_pairs.is_empty() {
-			let mut query_parts = Vec::new();
+			let mut pairs = Vec::new();
 			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in
-				bottom_pairs
+				bottom_pairs.into_iter().take(5)
 			{
-				let part = format!(
-					"'{}' ({}) and '{}' ({}): {} times",
-					subject, subject_type, object, object_type, pair_frequency
-				);
-				query_parts.push(part);
+				pairs.push((subject, subject_type, object, object_type, pair_frequency));
 			}
 			let combined_query = format!(
-				"Most unique entity pairs in the semantic data fabric: These pairs represent rare and potentially significant relationships that might highlight unique interactions within your data. \n{}\n\n",
-				query_parts.join("\n")
-			);
+					"Discover rare and potentially significant relationships with unique entity pairs in the data. For instance, '{}' ({}) and '{}' ({}) are observed {} time(s), followed by '{}' ({}) and '{}' ({}) at {} time(s). Other unique pairs include '{}' ({}) and '{}' ({}) with {} time(s), '{}' ({}) and '{}' ({}) with {} time(s), and '{}' ({}) and '{}' ({}) appearing {} time(s). These pairs highlight unique interactions within your data.",
+					pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3, pairs[0].4,
+					pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3, pairs[1].4,
+					pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3, pairs[2].4,
+					pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3, pairs[3].4,
+					pairs[4].0, pairs[4].1, pairs[4].2, pairs[4].3, pairs[4].4
+				);
+
 			suggestions.push(QuerySuggestion {
 				query: combined_query,
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),
-				tags: vec![],
+				tags: vec!["Rare Entity Pair Interactions".to_string()],
+				top_pairs: vec!["Rare Entity Pair Interactions".to_string()],
 			});
 		}
 
 		if !most_mix_documents.is_empty() {
-			let mut query_parts = Vec::new();
-			for (document_id, entity_mix) in most_mix_documents {
-				let part = format!(
-					"Document ID '{}': {} unique subjects and objects",
-					document_id, entity_mix
-				);
-				query_parts.push(part);
+			let mut documents = Vec::new();
+			for (document_id, entity_mix) in most_mix_documents.into_iter().take(5) {
+				documents.push((document_id, entity_mix));
 			}
 			let combined_query = format!(
-				"Documents with the richest mix of entity pairs: These documents contain a diverse set of entities, indicating a wide range of topics and relationships. They can be valuable for comprehensive analysis and understanding of multifaceted data. \n{}\n\n",
-				query_parts.join("\n")
-			);
+					"Certain documents feature a rich diversity of entity pairs, indicating a wide range of topics and relationships. For example, the document '{}' contains {} unique subjects and objects, followed by '{}' with {} unique subjects and objects. Other diverse documents include '{}' with {}, '{}' with {}, and '{}' with {} unique subjects and objects. These documents are valuable for comprehensive analysis.",
+					documents[0].0, documents[0].1,
+					documents[1].0, documents[1].1,
+					documents[2].0, documents[2].1,
+					documents[3].0, documents[3].1,
+					documents[4].0, documents[4].1
+				);
+
 			suggestions.push(QuerySuggestion {
 				query: combined_query,
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),
-				tags: vec![],
+				tags: vec!["Diverse Entity Pair Documents".to_string()],
+				top_pairs: vec!["Diverse Entity Pair Documents".to_string()],
 			});
 		}
 
 		if !most_unique_sentences_documents.is_empty() {
-			let mut query_parts = Vec::new();
-			for (document_id, unique_sentences) in most_unique_sentences_documents {
-				let part =
-					format!("Document ID '{}': {} unique context", document_id, unique_sentences);
-				query_parts.push(part);
+			let mut documents = Vec::new();
+			for (document_id, unique_sentences) in
+				most_unique_sentences_documents.into_iter().take(5)
+			{
+				documents.push((document_id, unique_sentences));
 			}
 			let combined_query = format!(
-				"High impact documents that are part of the semantic data fabric: These documents contain a large number of unique context, suggesting they provide extensive and varied information. They are essential for gaining a broad and deep understanding of the content. \n{}\n\n",
-				query_parts.join("\n")
-			);
+					"High-impact documents are characterized by their extensive unique content, essential for a deep understanding of the data. For instance, the document '{}' contains {} unique contexts, followed by '{}' with {} unique contexts. Other impactful documents include '{}' with {}, '{}' with {}, and '{}' with {} unique contexts. These documents provide a broad range of critical information.",
+					documents[0].0, documents[0].1,
+					documents[1].0, documents[1].1,
+					documents[2].0, documents[2].1,
+					documents[3].0, documents[3].1,
+					documents[4].0, documents[4].1
+				);
+
 			suggestions.push(QuerySuggestion {
 				query: combined_query,
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),
-				tags: vec![],
+				tags: vec!["High-Impact Information Sources".to_string()],
+				top_pairs: vec!["High-Impact Information Sources".to_string()],
 			});
 		}
 
 		if !high_impact_sentences.is_empty() {
-			let mut query_parts = Vec::new();
-			for (sentence, sentence_frequency) in high_impact_sentences {
-				let trimmed_sentence = sentence.split('.').next().unwrap_or("").trim();
+			let mut contexts = Vec::new();
+			for (sentence, sentence_frequency) in high_impact_sentences.into_iter().take(5) {
+				let trimmed_sentence = sentence.split('.').next().unwrap_or("").trim().to_string();
 				if trimmed_sentence.split_whitespace().count() > 10 {
-					let part = format!("'{}': {} times", trimmed_sentence, sentence_frequency);
-					query_parts.push(part);
+					contexts.push((trimmed_sentence, sentence_frequency));
 				}
 			}
-
-			if !query_parts.is_empty() {
-				let combined_query = format!(
-					"High-impact context that provide crucial information in the semantic data fabric: These context are essential as they contain detailed and significant information, helping you understand important aspects of the data. \n{}\n\n",
-					query_parts.join("\n")
+			let combined_query = format!(
+					"Certain contexts within the data are frequently referenced, highlighting their importance. For example, the context '{}' appears {} times, followed by '{}' at {} times. Other significant contexts include '{}' with {} times, '{}' with {} times, and '{}' appearing {} times. These contexts are crucial for understanding key aspects of the data.",
+					contexts[0].0, contexts[0].1,
+					contexts[1].0, contexts[1].1,
+					contexts[2].0, contexts[2].1,
+					contexts[3].0, contexts[3].1,
+					contexts[4].0, contexts[4].1
 				);
-				suggestions.push(QuerySuggestion {
-					query: combined_query,
-					frequency: 1,
-					document_source: String::new(),
-					sentence: String::new(),
-					tags: vec![],
-				});
-			}
+
+			suggestions.push(QuerySuggestion {
+				query: combined_query,
+				frequency: 1,
+				document_source: String::new(),
+				sentence: String::new(),
+				tags: vec!["Crucial Context Insights".to_string()],
+				top_pairs: vec!["Crucial Context Insights".to_string()],
+			});
 		}
 
 		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())

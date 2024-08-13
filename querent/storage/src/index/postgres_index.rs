@@ -52,6 +52,7 @@ pub struct QuerySuggestion {
 	pub document_source: String,
 	pub sentence: String,
 	pub tags: Vec<String>,
+	pub top_pairs: Vec<String>,
 }
 
 impl PostgresStorage {

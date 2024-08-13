@@ -141,7 +141,7 @@ pub async fn discovery_get_handler(
 		return Err(DiscoveryError::Unavailable("Discovery service is not available".to_string()));
 	}
 	let request_required =
-		DiscoveryRequest { query: request.query, session_id: request.session_id };
+		DiscoveryRequest { query: request.query, session_id: request.session_id , triple_pairs: request.triple_pairs.unwrap_or_default()};
 	let response = discovery_service.unwrap().discover_insights(request_required).await?;
 	Ok(response)
 }
@@ -169,6 +169,9 @@ pub struct DiscoveryRequestParam {
 	pub session_id: String,
 	/// The query to search for.
 	pub query: String,
+	/// The subject-object pairs based on the user-selected filter. This field is optional.
+    pub triple_pairs: Option<Vec<String>>,
+
 }
 
 #[utoipa::path(

@@ -128,6 +128,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
 		}
+		println!("This is the triple pairs ----------------------{:?}", message.triple_pairs);
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
@@ -138,6 +139,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
 					if message.query.is_empty() {
+						println!("Inside query empty--------------------------");
 						let auto_suggestions = match storage.autogenerate_queries(10).await {
 							Ok(suggestions) => suggestions,
 							Err(e) => {
@@ -238,6 +240,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 															.to_string(),
 														sentence: sentence.clone(),
 														tags: formatted_tags,
+														top_pairs : vec!["".to_string()],
 													};
 
 												documents.push(formatted_document);

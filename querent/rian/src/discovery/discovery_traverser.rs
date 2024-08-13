@@ -341,6 +341,7 @@ fn process_documents(
 			relationship_strength: document.7.to_string(),
 			sentence: document.5.clone(),
 			tags,
+			top_pairs : vec!["".to_string()],
 		};
 
 		insights.push(insight);
@@ -377,6 +378,7 @@ pub fn process_auto_generated_suggestions(
 			relationship_strength: suggestion.frequency.to_string(),
 			sentence: suggestion.query.clone(),
 			tags: tags.join(", "),
+			top_pairs : suggestion.top_pairs.clone(),
 		};
 
 		insights.push(insight);
