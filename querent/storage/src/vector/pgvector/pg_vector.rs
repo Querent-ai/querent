@@ -7,7 +7,7 @@ use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use deadpool::Runtime;
 use diesel::{
 	sql_types::BigInt, table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName,
-	Selectable,{sql_types::{Array, Text}},
+	Selectable,{sql_types::{Array, Text, Integer}},
 };
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -74,7 +74,25 @@ impl DiscoveredKnowledge {
 		}
 	}
 }
-
+#[derive(QueryableByName)]
+struct QueryResult {
+    #[diesel(sql_type = diesel::sql_types::Integer)]
+    id: i32,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    document_id: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    subject: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    object: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    document_source: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    sentence: String,
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    event_id: String,
+    #[diesel(sql_type = diesel::sql_types::Float)]
+    score: f32,
+}
 pub struct PGVector {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
@@ -752,7 +770,7 @@ impl Storage for PGVector {
 	async fn filter_and_query(
 		&self,
 		top_pairs: &Vec<String>,
-		_offset: i64,
+		offset: i64,
 	) -> StorageResult<()> {
 		let subjects_objects: Vec<String> = top_pairs
 			.iter()
@@ -783,7 +801,8 @@ impl Storage for PGVector {
 			)
 			SELECT id, document_id, subject, object, document_source, sentence, event_id, score
 			FROM ranked_results
-			ORDER BY match_rank DESC, score DESC"
+			ORDER BY match_rank DESC, score DESC
+			OFFSET $3"
 		);
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -792,7 +811,8 @@ impl Storage for PGVector {
 		diesel::sql_query(query)
 			.bind::<Array<Text>, _>(top_pairs)
 			.bind::<Array<Text>, _>(subjects_objects)
-			.execute(&mut conn)
+			.bind::<BigInt, _>(offset)
+			.load::<QueryResult>(&mut conn)
 			.await
 			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
