@@ -80,7 +80,7 @@ impl XAI {
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
-				icon: &[], // Add your icon bytes here.
+				icon: include_bytes!("../icons/xai.png").as_slice(),
 				additional_options,
 				conversational: true,
 				premium: false,
