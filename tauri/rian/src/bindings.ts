@@ -417,7 +417,7 @@ license: string;
 /**
  * Insight icon. // standard icon size for plugins is 32x32
  */
-icon: number; 
+icon: number[]; 
 /**
  * Insight options
  */
