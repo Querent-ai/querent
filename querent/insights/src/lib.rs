@@ -12,6 +12,10 @@ pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
 		// xplainable insights: GraphRag algorithm to interact with data graph and generate insights
 		xplainable_openai::XAI::new().info().await,
+		// xplainable insights: GraphRag algorithm to interact with data graph and generate insights
+		xplainable_claude::XAIClaude::new().info().await,
+		// xplainable insights: GraphRag algorithm to interact with data graph and generate insights
+		xplainable_ollama::XAIOllama::new().info().await,
 	]
 }
 
