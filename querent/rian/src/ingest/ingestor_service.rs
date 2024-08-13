@@ -91,10 +91,10 @@ impl Actor for IngestorService {
 		_ctx: &ActorContext<Self>,
 	) -> anyhow::Result<()> {
 		match exit_status {
-			ActorExitStatus::DownstreamClosed
-			| ActorExitStatus::Killed
-			| ActorExitStatus::Failure(_)
-			| ActorExitStatus::Panicked => Ok(()),
+			ActorExitStatus::DownstreamClosed |
+			ActorExitStatus::Killed |
+			ActorExitStatus::Failure(_) |
+			ActorExitStatus::Panicked => Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
 				info!("IngestorService exiting with success");
 				if !self.workflow_handles.is_empty() {
@@ -117,9 +117,9 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if self.counters.get_current_memory_usage() as usize > MAX_DATA_SIZE_IN_MEMORY
-			|| message._permit.is_none()
-			|| self.workflow_semaphore.available_permits() == 0
+		if self.counters.get_current_memory_usage() as usize > MAX_DATA_SIZE_IN_MEMORY ||
+			message._permit.is_none() ||
+			self.workflow_semaphore.available_permits() == 0
 		{
 			error!("Permit is None or no available permits");
 			return Ok(Ok(Some(message)));
