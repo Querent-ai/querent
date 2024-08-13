@@ -128,7 +128,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
 		}
-		println!("This is the triple pairs ----------------------{:?}", message.triple_pairs);
+		println!("This is the triple pairs ----------------------{:?}", message.top_pairs);
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
 		let current_query_embedding = embeddings[0].clone();
@@ -240,7 +240,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 															.to_string(),
 														sentence: sentence.clone(),
 														tags: formatted_tags,
-														top_pairs : vec!["".to_string()],
+														top_pairs: vec!["".to_string()],
 													};
 
 												documents.push(formatted_document);

@@ -215,29 +215,6 @@ impl Storage for PGVector {
 			},
 		};
 
-		let most_unique_sentences_documents_query_result =
-			semantic_knowledge::dsl::semantic_knowledge
-				.select((
-					semantic_knowledge::dsl::document_id,
-					diesel::dsl::sql::<BigInt>("COUNT(DISTINCT sentence) as unique_sentences"),
-				))
-				.group_by(semantic_knowledge::dsl::document_id)
-				.order_by(diesel::dsl::sql::<BigInt>("unique_sentences").desc())
-				.limit(5)
-				.load::<(String, i64)>(&mut conn)
-				.await;
-
-		let most_unique_sentences_documents = match most_unique_sentences_documents_query_result {
-			Ok(docs) => docs,
-			Err(e) => {
-				error!("Error fetching documents with most unique sentences: {:?}", e);
-				return Err(StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(e)),
-				});
-			},
-		};
-
 		let high_impact_sentences_query_result = semantic_knowledge::dsl::semantic_knowledge
 			.select((
 				semantic_knowledge::dsl::sentence,
@@ -266,9 +243,7 @@ impl Storage for PGVector {
 			let mut pairs = Vec::new();
 			let mut pair_strings = Vec::new();
 			let mut seen_pairs = HashSet::new();
-			for (subject, subject_type, object, object_type, frequency) in
-				top_pairs.into_iter()
-			{
+			for (subject, subject_type, object, object_type, frequency) in top_pairs.into_iter() {
 				let pair = if subject < object {
 					(subject.clone(), object.clone())
 				} else {
@@ -288,28 +263,8 @@ impl Storage for PGVector {
 				document_source: String::new(),
 				sentence: String::new(),
 				tags: vec!["Filters".to_string()],
-				top_pairs : pair_strings,
+				top_pairs: pair_strings,
 			});
-
-
-			// let combined_query = format!(
-			// 		"The semantic data fabric reveals key patterns through the most frequently occurring entity pairs. For example, '{}' ({}) and '{}' ({}) appear {} times, followed by '{}' ({}) and '{}' ({}) at {} times. Other significant pairs include '{}' ({}) and '{}' ({}) with {} occurrences, '{}' ({}) and '{}' ({}) with {} occurrences, and '{}' ({}) and '{}' ({}) appearing {} times. These relationships provide insights into prevalent trends in your data.",
-			// 		pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3, pairs[0].4,
-			// 		pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3, pairs[1].4,
-			// 		pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3, pairs[2].4,
-			// 		pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3, pairs[3].4,
-			// 		pairs[4].0, pairs[4].1, pairs[4].2, pairs[4].3, pairs[4].4
-			// 	);
-			
-
-			// suggestions.push(QuerySuggestion {
-			// 	query: combined_query,
-			// 	frequency: 1,
-			// 	document_source: String::new(),
-			// 	sentence: String::new(),
-			// 	tags: vec!["Top Entity Pairs in Data Fabric".to_string()],
-			// 	top_pairs : vec!["Top Entity Pairs in Data Fabric".to_string()]
-			// });
 		}
 
 		if !bottom_pairs.is_empty() {
@@ -321,12 +276,10 @@ impl Storage for PGVector {
 			}
 			let combined_query = format!(
 				"Explore rare and potentially significant connections within your semantic data fabric. Noteworthy interactions are found between '{}' ({}) and '{}' ({}), along with the link between '{}' ({}) and '{}' ({}). Other intriguing associations include '{}' ({}) and '{}' ({}), '{}' ({}) and '{}' ({}), and finally, '{}' ({}) and '{}' ({}). These connections unveil the underlying patterns and dynamics woven into your data landscape.",
-					pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3, 
-					pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3, 
-					pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3, 
-					pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3, 
-					pairs[4].0, pairs[4].1, pairs[4].2, pairs[4].3, 
-				);
+				pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3,
+				pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3,
+				pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3,
+				pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3,pairs[4].0,pairs[4].1,pairs[4].2,pairs[4].3,);
 
 			suggestions.push(QuerySuggestion {
 				query: combined_query,
@@ -370,7 +323,7 @@ impl Storage for PGVector {
 					contexts.push((trimmed_sentence, sentence_frequency));
 				}
 			}
-		
+
 			if contexts.len() >= 5 {
 				let combined_query = format!(
 					"These high-impact fabrics semantically connect various nodes, contributing significantly to the overall structure of your semantic fabric. For example, the fabric '{}', followed by '{}', both illustrate key connections within the data. Additional pivotal fabrics include '{}', '{}', and '{}'.",
@@ -380,7 +333,7 @@ impl Storage for PGVector {
 					contexts[3].0,
 					contexts[4].0
 				);
-		
+
 				suggestions.push(QuerySuggestion {
 					query: combined_query,
 					frequency: 1,
@@ -391,7 +344,7 @@ impl Storage for PGVector {
 				});
 			}
 		}
-		
+
 		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())
 	}
 

@@ -38,7 +38,7 @@ pub struct DiscoveryRequest {
     pub query: ::prost::alloc::string::String,
     /// The subject - object pairs based on the user selected filter
     #[prost(string, repeated, tag = "3")]
-    pub triple_pairs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    pub top_pairs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Response message containing insights discovered from the data
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]

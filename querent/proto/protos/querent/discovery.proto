@@ -33,7 +33,7 @@ message DiscoveryRequest {
   // The query or question posed by the user
   string query = 2;
   // The subject - object pairs based on the user selected filter
-  repeated string triple_pairs = 3;
+  repeated string top_pairs = 3;
 }
 
 // Response message containing insights discovered from the data
