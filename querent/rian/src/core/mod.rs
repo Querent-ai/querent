@@ -18,6 +18,8 @@ pub type SourceContext = ActorContext<SourceActor>;
 
 pub const NUMBER_FILES_IN_MEMORY: usize = 100;
 
+pub const MAX_DATA_SIZE_IN_MEMORY: usize = 1_000_000 * 1 * 1000; // 1000 MB
+
 pub const BATCH_NUM_EVENTS_LIMIT: usize = 10;
 
 pub const EMIT_BATCHES_TIMEOUT: Duration =
