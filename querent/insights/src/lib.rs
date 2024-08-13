@@ -40,6 +40,14 @@ pub async fn get_insight_runner_by_id(insight_id: &str) -> Option<Arc<dyn Insigh
 			let insight = xplainable_openai::XAI::new();
 			Some(Arc::new(insight))
 		},
+		"querent.insights.x_ai.claude" => {
+			let insight = xplainable_claude::XAIClaude::new();
+			Some(Arc::new(insight))
+		},
+		"querent.insights.x_ai.ollama" => {
+			let insight = xplainable_ollama::XAIOllama::new();
+			Some(Arc::new(insight))
+		},
 		_ => None,
 	}
 }

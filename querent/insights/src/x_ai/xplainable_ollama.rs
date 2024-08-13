@@ -4,7 +4,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-use llms::{OpenAI, OpenAIConfig};
+use llms::client::{Ollama, OllamaClient};
 use serde_json::Value;
 use std::{
 	collections::HashMap,
@@ -13,18 +13,18 @@ use std::{
 
 use super::x_ai_runner::XAIRunner;
 /// XAI Insight struct.
-pub struct XAI {
+pub struct XAIOllama {
 	info: InsightInfo,
 }
 
-impl XAI {
+impl XAIOllama {
 	pub fn new() -> Self {
 		let mut additional_options = HashMap::new();
 		additional_options.insert(
-			"openai_api_key".to_string(),
+			"url".to_string(),
 			CustomInsightOption {
-				id: "openai_api_key".to_string(),
-				label: "OpenAI API Key".to_string(),
+				id: "url".to_string(),
+				label: "Ollama client url".to_string(),
 				default_value: Some(InsightCustomOptionValue::String {
 					value: "".to_string(),
 					hidden: Some(false),
@@ -33,7 +33,7 @@ impl XAI {
 					value: "".to_string(),
 					hidden: Some(false),
 				},
-				tooltip: Some("OpenAI API Key".to_string()),
+				tooltip: Some("Ollama client url".to_string()),
 			},
 		);
 		additional_options.insert(
@@ -59,19 +59,19 @@ impl XAI {
         Output:".to_string(),
 					hidden: Some(false),
 				},
-				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using OpenAI.".to_string()),
+				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using Ollama.".to_string()),
 
 			},
 		);
 		Self {
 			info: InsightInfo {
-				id: "querent.insights.x_ai.openai".to_string(),
-				name: "Querent xAI with GPT35 Turbo".to_string(),
+				id: "querent.insights.x_ai.ollama".to_string(),
+				name: "Querent xAI with Ollama".to_string(),
 				description: "xAI utilizes generative models to perform a directed traversal in R!AN's attention data fabric.".to_string(),
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
-				icon: include_bytes!("../icons/xai_openai_32x32.png").as_slice(),
+				icon: include_bytes!("../icons/xai_ollama_32x32.png").as_slice(),
 				additional_options,
 				conversational: true,
 				premium: false,
@@ -81,7 +81,7 @@ impl XAI {
 }
 
 #[async_trait]
-impl Insight for XAI {
+impl Insight for XAIOllama {
 	async fn info(&self) -> InsightInfo {
 		self.info.clone()
 	}
@@ -95,26 +95,36 @@ impl Insight for XAI {
 	}
 
 	fn get_runner(&self, config: &InsightConfig) -> InsightResult<Arc<dyn InsightRunner>> {
-		let openai_api_key = config.get_custom_option("openai_api_key");
-		if openai_api_key.is_none() {
+		let url = config.get_custom_option("url");
+		if url.is_none() {
 			return Err(InsightError::new(
 				InsightErrorKind::Unauthorized,
-				anyhow::anyhow!("OpenAI API Key is required").into(),
+				anyhow::anyhow!(
+					"Ollama Client Url is required. R!AN Does not download llama models"
+				)
+				.into(),
 			));
 		}
-		let openai_api_key = openai_api_key.unwrap().value.clone();
-		let openai_api_key = match openai_api_key {
+		let url = url.unwrap().value.clone();
+		let url = match url {
 			InsightCustomOptionValue::String { value, .. } => value,
 			_ => {
 				return Err(InsightError::new(
 					InsightErrorKind::Unauthorized,
-					anyhow::anyhow!("OpenAI API Key is required").into(),
+					anyhow::anyhow!(
+						"Ollama Client Url is required. R!AN Does not download llama models"
+					)
+					.into(),
 				));
 			},
 		};
-		let default_openai_config: OpenAIConfig =
-			OpenAIConfig::default().with_api_key(openai_api_key);
-		let openai_llm = OpenAI::new(default_openai_config);
+		let default_client: OllamaClient = OllamaClient::try_new(url).map_err(|e| {
+			InsightError::new(
+				InsightErrorKind::Internal,
+				anyhow::anyhow!("Failed to create Ollama client: {}", e).into(),
+			)
+		})?;
+		let ollama_llm = Ollama::new(Arc::new(default_client), String::from("llama3"), None);
 
 		let prompt_option = config.get_custom_option("prompt");
 		if prompt_option.is_none() {
@@ -137,7 +147,7 @@ impl Insight for XAI {
 
 		Ok(Arc::new(XAIRunner {
 			config: config.clone(),
-			llm: Arc::new(openai_llm),
+			llm: Arc::new(ollama_llm),
 			embedding_model: Some(embedding_model),
 			previous_query_results: RwLock::new(String::new()),
 			previous_filtered_results: RwLock::new(Vec::new()),

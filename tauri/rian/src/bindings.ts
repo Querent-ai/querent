@@ -415,6 +415,10 @@ author: string;
  */
 license: string; 
 /**
+ * Insight icon. // standard icon size for plugins is 32x32
+ */
+icon: number; 
+/**
  * Insight options
  */
 additionalOptions: { [key in string]: CustomInsightOption }; 
