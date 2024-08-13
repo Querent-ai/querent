@@ -24,7 +24,7 @@ pub struct InsightInfo {
 	/// Insight license.
 	pub license: String,
 	/// Insight icon. // standard icon size for plugins is 32x32
-	pub icon: &'static [u8],
+	pub icon: Vec<u8>,
 	/// Insight options
 	pub additional_options: HashMap<String, CustomInsightOption>,
 	/// Is a premium insight.

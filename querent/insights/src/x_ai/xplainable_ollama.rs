@@ -71,7 +71,7 @@ impl XAIOllama {
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
-				icon: include_bytes!("../icons/xai_ollama_32x32.png").as_slice(),
+				icon: include_bytes!("../icons/xai_ollama_32x32.png").to_vec(),
 				additional_options,
 				conversational: true,
 				premium: false,
