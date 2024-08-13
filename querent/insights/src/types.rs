@@ -23,8 +23,7 @@ pub struct InsightInfo {
 	pub author: String,
 	/// Insight license.
 	pub license: String,
-	/// Image bytes, use 1:1 aspect ratio, PNG for transparency recommended.
-	#[serde(skip)]
+	/// Insight icon. // standard icon size for plugins is 32x32
 	pub icon: &'static [u8],
 	/// Insight options
 	pub additional_options: HashMap<String, CustomInsightOption>,
