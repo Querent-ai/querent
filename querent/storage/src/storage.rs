@@ -219,6 +219,13 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		max_suggestions: i32,
 	) -> StorageResult<Vec<QuerySuggestion>>;
+
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		top_pairs: &Vec<String>,
+		offset: i64,
+	) -> StorageResult<()>;
 }
 
 impl Debug for dyn Storage {

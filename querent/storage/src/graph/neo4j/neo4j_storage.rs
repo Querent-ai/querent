@@ -67,6 +67,17 @@ impl Storage for Neo4jStorage {
 		Ok(None)
 	}
 
+
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_top_pairs: &Vec<String>,
+		_offset: i64,
+	) -> StorageResult<()>{
+		Ok(())
+	}
+
+	
 	async fn insert_vector(
 		&self,
 		_collection_id: String,

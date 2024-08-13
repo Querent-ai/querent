@@ -7,7 +7,7 @@ use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use deadpool::Runtime;
 use diesel::{
 	sql_types::BigInt, table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName,
-	Selectable,
+	Selectable,{sql_types::{Array, Text}},
 };
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -214,29 +214,6 @@ impl Storage for PGVector {
 				});
 			},
 		};
-
-		let high_impact_sentences_query_result = semantic_knowledge::dsl::semantic_knowledge
-			.select((
-				semantic_knowledge::dsl::sentence,
-				diesel::dsl::sql::<BigInt>("COUNT(*) as sentence_frequency"),
-			))
-			.group_by(semantic_knowledge::dsl::sentence)
-			.order_by(diesel::dsl::sql::<BigInt>("sentence_frequency").desc())
-			.limit(20)
-			.load::<(String, i64)>(&mut conn)
-			.await;
-
-		let high_impact_sentences = match high_impact_sentences_query_result {
-			Ok(sents) => sents,
-			Err(e) => {
-				error!("Error fetching high-impact sentences: {:?}", e);
-				return Err(StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(e)),
-				});
-			},
-		};
-
 		let mut suggestions = Vec::new();
 
 		if !top_pairs.is_empty() {
@@ -297,7 +274,7 @@ impl Storage for PGVector {
 				documents.push((document_id, entity_mix));
 			}
 			let combined_query = format!(
-				"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics and relationships. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'. Additional noteworthy documents include '{}' with a wide-ranging mix, '{}' with a similarly varied landscape, and '{}' which highlights numerous distinct relationships. These documents offer valuable insights for in-depth analysis and understanding.",
+				"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'. Additional important documents which offer valuable insights for in-depth analysis and understanding are '{}' , '{}' and '{}' .",
 				documents[0].0,
 				documents[1].0,
 				documents[2].0,
@@ -310,39 +287,9 @@ impl Storage for PGVector {
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),
-				tags: vec!["Diverse Semantic Connections".to_string()],
-				top_pairs: vec!["Diverse Semantic Connections".to_string()],
+				tags: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
+				top_pairs: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
 			});
-		}
-
-		if !high_impact_sentences.is_empty() {
-			let mut contexts = Vec::new();
-			for (sentence, sentence_frequency) in high_impact_sentences.into_iter().take(20) {
-				let trimmed_sentence = sentence.split('.').next().unwrap_or("").trim().to_string();
-				if trimmed_sentence.split_whitespace().count() > 10 {
-					contexts.push((trimmed_sentence, sentence_frequency));
-				}
-			}
-
-			if contexts.len() >= 5 {
-				let combined_query = format!(
-					"These high-impact fabrics semantically connect various nodes, contributing significantly to the overall structure of your semantic fabric. For example, the fabric '{}', followed by '{}', both illustrate key connections within the data. Additional pivotal fabrics include '{}', '{}', and '{}'.",
-					contexts[0].0,
-					contexts[1].0,
-					contexts[2].0,
-					contexts[3].0,
-					contexts[4].0
-				);
-
-				suggestions.push(QuerySuggestion {
-					query: combined_query,
-					frequency: 1,
-					document_source: String::new(),
-					sentence: String::new(),
-					tags: vec!["Crucial Fabrics".to_string()],
-					top_pairs: vec!["Crucial Fabrics".to_string()],
-				});
-			}
 		}
 
 		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())
@@ -799,6 +746,60 @@ impl Storage for PGVector {
 	/// Get API key for RIAN
 	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
 		Ok(None)
+	}
+
+
+	async fn filter_and_query(
+		&self,
+		top_pairs: &Vec<String>,
+		_offset: i64,
+	) -> StorageResult<()> {
+		let subjects_objects: Vec<String> = top_pairs
+			.iter()
+			.flat_map(|pair| pair.split(" - ").map(String::from))
+			.collect();
+	
+		let query = format!(
+			"WITH ranked_results AS (
+				SELECT 
+					semantic_knowledge.id, 
+					semantic_knowledge.document_id, 
+					semantic_knowledge.subject, 
+					semantic_knowledge.object, 
+					semantic_knowledge.document_source, 
+					semantic_knowledge.sentence, 
+					semantic_knowledge.event_id,
+					embedded_knowledge.score,
+					CASE
+						WHEN (semantic_knowledge.subject || ' - ' || semantic_knowledge.object) = ANY($1) 
+							OR (semantic_knowledge.object || ' - ' || semantic_knowledge.subject) = ANY($1) THEN 2
+						WHEN semantic_knowledge.subject = ANY($2) OR semantic_knowledge.object = ANY($2) THEN 1
+						ELSE 0
+					END AS match_rank
+				FROM 
+					semantic_knowledge
+				JOIN 
+					embedded_knowledge ON semantic_knowledge.event_id = embedded_knowledge.event_id
+			)
+			SELECT id, document_id, subject, object, document_source, sentence, event_id, score
+			FROM ranked_results
+			ORDER BY match_rank DESC, score DESC"
+		);
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		diesel::sql_query(query)
+			.bind::<Array<Text>, _>(top_pairs)
+			.bind::<Array<Text>, _>(subjects_objects)
+			.execute(&mut conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+	
+		Ok(())
 	}
 }
 

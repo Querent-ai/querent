@@ -83,6 +83,15 @@ impl Storage for MilvusStorage {
 		Ok(vec![])
 	}
 
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_top_pairs: &Vec<String>,
+		_offset: i64,
+	) -> StorageResult<()>{
+		Ok(())
+	}
+
 	/// Insert InsightKnowledge into storage
 	async fn insert_insight_knowledge(
 		&self,

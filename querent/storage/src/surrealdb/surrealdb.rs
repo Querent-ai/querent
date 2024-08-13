@@ -494,6 +494,16 @@ impl Storage for SurrealDB {
 		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_top_pairs: &Vec<String>,
+		_offset: i64,
+	) -> StorageResult<()>{
+		Ok(())
+	}
+
+	
 	/// Asynchronously fetches suggestions from the semantic table in SurrealDB.
 	async fn autogenerate_queries(
 		&self,
