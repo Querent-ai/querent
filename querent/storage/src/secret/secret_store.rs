@@ -65,7 +65,6 @@ impl Storage for SecretStore {
 		Ok(())
 	}
 
-
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
@@ -73,11 +72,10 @@ impl Storage for SecretStore {
 		_top_pairs: &Vec<String>,
 		_max_results: i32,
 		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>>{
+	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
 
-	
 	async fn index_knowledge(
 		&self,
 		_collection_id: String,

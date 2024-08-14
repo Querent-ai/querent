@@ -502,11 +502,10 @@ impl Storage for SurrealDB {
 		_top_pairs: &Vec<String>,
 		_max_results: i32,
 		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>>{
+	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
 
-	
 	/// Asynchronously fetches suggestions from the semantic table in SurrealDB.
 	async fn autogenerate_queries(
 		&self,

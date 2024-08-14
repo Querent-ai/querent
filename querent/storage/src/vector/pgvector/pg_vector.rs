@@ -6,8 +6,8 @@ use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use deadpool::Runtime;
 use diesel::{
-	sql_types::BigInt, table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName,
-	Selectable,sql_types::{Array, Text},
+	sql_types::{Array, BigInt, Text},
+	table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName, Selectable,
 };
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -79,18 +79,18 @@ impl DiscoveredKnowledge {
 
 #[derive(QueryableByName)]
 struct FilteredResults {
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    document_id: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    subject: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    object: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    document_source: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    sentence: String,
-    #[diesel(sql_type = diesel::sql_types::Float)]
-    score: f32,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	document_id: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	subject: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	object: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	document_source: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	sentence: String,
+	#[diesel(sql_type = diesel::sql_types::Float)]
+	score: f32,
 }
 
 pub struct PGVector {
@@ -519,7 +519,6 @@ impl Storage for PGVector {
 		})?;
 		let mut results: Vec<DocumentPayload> = Vec::new();
 
-		
 		if top_pairs_embeddings.is_empty() || top_pairs_embeddings.len() == 1 {
 			let embedding = if top_pairs_embeddings.is_empty() {
 				payload.clone()
@@ -528,42 +527,41 @@ impl Storage for PGVector {
 			};
 			results.extend(
 				fetch_documents_for_embedding(
-					&mut conn, 
-					&embedding, 
-					offset, 
-					max_results as i64, 
-					&session_id, 
-					&query, 
-					&collection_id, 
-					&payload
-				).await?
+					&mut conn,
+					&embedding,
+					offset,
+					max_results as i64,
+					&session_id,
+					&query,
+					&collection_id,
+					&payload,
+				)
+				.await?,
 			);
 		} else {
 			let num_embeddings = top_pairs_embeddings.len();
 			let full_cycles = offset / num_embeddings as i64;
 			let remaining = offset % num_embeddings as i64;
-	
+
 			for (i, embedding) in top_pairs_embeddings.iter().enumerate() {
-				let adjusted_offset = if i < remaining as usize {
-					full_cycles + 1
-				} else {
-					full_cycles
-				};
+				let adjusted_offset =
+					if i < remaining as usize { full_cycles + 1 } else { full_cycles };
 				results.extend(
 					fetch_documents_for_embedding(
-						&mut conn, 
-						embedding, 
-						adjusted_offset, 
+						&mut conn,
+						embedding,
+						adjusted_offset,
 						1,
-						&session_id, 
-						&query, 
-						&collection_id, 
-						&payload
-					).await?
+						&session_id,
+						&query,
+						&collection_id,
+						&payload,
+					)
+					.await?,
 				);
 			}
 		}
-	
+
 		Ok(results)
 	}
 
@@ -742,7 +740,6 @@ impl Storage for PGVector {
 		Ok(None)
 	}
 
-
 	async fn filter_and_query(
 		&self,
 		session_id: &String,
@@ -750,13 +747,11 @@ impl Storage for PGVector {
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		let subjects_objects: Vec<String> = top_pairs
-			.iter()
-			.flat_map(|pair| pair.split(" - ").map(String::from))
-			.collect();
-	
-			let query = format!(
-				"WITH ranked_results AS (
+		let subjects_objects: Vec<String> =
+			top_pairs.iter().flat_map(|pair| pair.split(" - ").map(String::from)).collect();
+
+		let query = format!(
+			"WITH ranked_results AS (
 					SELECT 
 						semantic_knowledge.id, 
 						semantic_knowledge.document_id, 
@@ -782,7 +777,7 @@ impl Storage for PGVector {
 				ORDER BY match_rank DESC, score DESC
 				OFFSET $4
 				LIMIT $3"
-			);
+		);
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -798,8 +793,10 @@ impl Storage for PGVector {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-	
-			let document_payloads = results.into_iter().map(|result| DocumentPayload {
+
+		let document_payloads = results
+			.into_iter()
+			.map(|result| DocumentPayload {
 				doc_id: result.document_id,
 				doc_source: result.document_source,
 				sentence: result.sentence,
@@ -807,14 +804,15 @@ impl Storage for PGVector {
 				subject: result.subject,
 				object: result.object,
 				cosine_distance: None,
-				query_embedding: None, 
+				query_embedding: None,
 				query: None,
 				session_id: Some(session_id.clone()),
 				score: result.score,
 				collection_id: String::new(),
-			}).collect();
-		
-			Ok(document_payloads)
+			})
+			.collect();
+
+		Ok(document_payloads)
 	}
 }
 

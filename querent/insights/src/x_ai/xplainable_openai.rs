@@ -1,5 +1,7 @@
-use crate::{ ConfigCallbackResponse,CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue, InsightError,
-	InsightErrorKind, InsightInfo, InsightResult, InsightRunner};
+use crate::{
+	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
+	InsightError, InsightErrorKind, InsightInfo, InsightResult, InsightRunner,
+};
 use async_trait::async_trait;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use llms::{OpenAI, OpenAIConfig};
@@ -144,6 +146,3 @@ impl Insight for XAI {
 		}))
 	}
 }
-
-
-

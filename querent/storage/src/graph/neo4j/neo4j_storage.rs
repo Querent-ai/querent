@@ -67,7 +67,6 @@ impl Storage for Neo4jStorage {
 		Ok(None)
 	}
 
-
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
@@ -75,11 +74,10 @@ impl Storage for Neo4jStorage {
 		_top_pairs: &Vec<String>,
 		_max_results: i32,
 		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>>{
+	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
 
-	
 	async fn insert_vector(
 		&self,
 		_collection_id: String,
@@ -122,7 +120,7 @@ impl Storage for Neo4jStorage {
 		_payload: &Vec<f32>,
 		_max_results: i32,
 		_offset: i64,
-		_top_pairs_embeddings: Vec<Vec<f32>>
+		_top_pairs_embeddings: Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		// Implement Neo4j similarity search logic (if needed)
 		Ok(vec![])

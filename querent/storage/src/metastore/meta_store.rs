@@ -71,7 +71,6 @@ impl Storage for MetaStore {
 		Ok(())
 	}
 
-
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
@@ -79,11 +78,10 @@ impl Storage for MetaStore {
 		_top_pairs: &Vec<String>,
 		_max_results: i32,
 		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>>{
+	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
 
-	
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,

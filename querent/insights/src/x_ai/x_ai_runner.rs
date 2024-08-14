@@ -1,6 +1,6 @@
 use crate::{
-	prompts::get_suggestions_prompt, rerank_documents, split_sentences, InsightConfig, InsightError,
-	InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
+	prompts::get_suggestions_prompt, rerank_documents, split_sentences, InsightConfig,
+	InsightError, InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;

@@ -14,7 +14,6 @@ use std::{
 use storage::Storage;
 use tokio::runtime::Handle;
 
-
 use super::insert_discovered_knowledge_async;
 
 pub struct DiscoverySearch {
@@ -43,7 +42,7 @@ impl DiscoverySearch {
 			embedding_model: None,
 			current_query: "".to_string(),
 			current_offset: 0,
-			current_top_pairs: vec![]
+			current_top_pairs: vec![],
 		}
 	}
 
@@ -138,32 +137,30 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let mut insights = Vec::new();
 		let mut documents = Vec::new();
 		let mut unique_sentences: HashSet<String> = HashSet::new();
-        let subjects_objects: Vec<String> = message
-            .top_pairs
-            .iter()
-            .flat_map(|pair| pair.split(" - ").map(String::from))
-            .collect();
-		println!("Thse are he top pairs------------{:?}", subjects_objects);
-        let mut top_pair_embeddings: Vec<Vec<f32>> = Vec::new();
-        for chunk in subjects_objects.chunks(2) {
-            if chunk.len() == 2 {
-                let subject_embedding = embedder.embed(vec![chunk[0].clone()], None)?;
-                let object_embedding = embedder.embed(vec![chunk[1].clone()], None)?;
-                let combined_embedding: Vec<f32> = current_query_embedding
-                    .iter()
-                    .zip(subject_embedding[0].iter())
-                    .zip(object_embedding[0].iter())
-                    .map(|((q, s), o)| q + s + o)
-                    .collect();
+		let subjects_objects: Vec<String> = message
+			.top_pairs
+			.iter()
+			.flat_map(|pair| pair.split(" - ").map(String::from))
+			.collect();
+		let mut top_pair_embeddings: Vec<Vec<f32>> = Vec::new();
+		for chunk in subjects_objects.chunks(2) {
+			if chunk.len() == 2 {
+				let subject_embedding = embedder.embed(vec![chunk[0].clone()], None)?;
+				let object_embedding = embedder.embed(vec![chunk[1].clone()], None)?;
+				let combined_embedding: Vec<f32> = current_query_embedding
+					.iter()
+					.zip(subject_embedding[0].iter())
+					.zip(object_embedding[0].iter())
+					.map(|((q, s), o)| q + s + o)
+					.collect();
 
-                top_pair_embeddings.push(combined_embedding);
-            }
-        }
+				top_pair_embeddings.push(combined_embedding);
+			}
+		}
 		for (event_type, storage) in self.event_storages.iter() {
 			if event_type.clone() == EventType::Vector {
 				for storage in storage.iter() {
 					if message.query.is_empty() && message.top_pairs.is_empty() {
-						println!("Inside query empty--------------------------");
 						let auto_suggestions = match storage.autogenerate_queries(10).await {
 							Ok(suggestions) => suggestions,
 							Err(e) => {
@@ -187,29 +184,26 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					while documents.len() < 10 {
 						let search_results;
 						if message.query.is_empty() && !message.top_pairs.is_empty() {
-							println!("In second scenario----------------");
 							search_results = storage
-							.filter_and_query(
-								&message.session_id.clone(),
-								&message.top_pairs,
-								10,
-								self.current_offset + total_fetched,
-							)
-							.await;
-						println!("These are the results --------------{:?}", search_results);
+								.filter_and_query(
+									&message.session_id.clone(),
+									&message.top_pairs,
+									10,
+									self.current_offset + total_fetched,
+								)
+								.await;
 						} else {
-							println!("This is the 3rd and 4th scenario--------------");
 							search_results = storage
-							.similarity_search_l2(
-								message.session_id.clone(),
-								message.query.clone(),
-								self.discovery_agent_params.semantic_pipeline_id.clone(),
-								&current_query_embedding.clone(),
-								10,
-								self.current_offset + total_fetched,
-								top_pair_embeddings.clone(),
-							)
-							.await;
+								.similarity_search_l2(
+									message.session_id.clone(),
+									message.query.clone(),
+									self.discovery_agent_params.semantic_pipeline_id.clone(),
+									&current_query_embedding.clone(),
+									10,
+									self.current_offset + total_fetched,
+									top_pair_embeddings.clone(),
+								)
+								.await;
 						}
 						match search_results {
 							Ok(results) => {

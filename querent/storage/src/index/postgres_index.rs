@@ -328,7 +328,7 @@ impl Storage for PostgresStorage {
 		_top_pairs: &Vec<String>,
 		_max_results: i32,
 		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>>{
+	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
 }
