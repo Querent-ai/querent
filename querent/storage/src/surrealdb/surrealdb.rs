@@ -244,6 +244,7 @@ impl Storage for SurrealDB {
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
+		_top_pairs_embeddings: Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let query_string = format!(
 			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance 
@@ -497,10 +498,12 @@ impl Storage for SurrealDB {
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
+		_session_id: &String,
 		_top_pairs: &Vec<String>,
+		_max_results: i32,
 		_offset: i64,
-	) -> StorageResult<()>{
-		Ok(())
+	) -> StorageResult<Vec<DocumentPayload>>{
+		Ok(vec![])
 	}
 
 	

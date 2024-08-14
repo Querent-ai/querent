@@ -121,6 +121,7 @@ pub trait Storage: Send + Sync + 'static {
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
+		top_pairs_embeddings: Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>>;
 
 	async fn traverse_metadata_table(
@@ -223,9 +224,11 @@ pub trait Storage: Send + Sync + 'static {
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
+		session_id: &String,
 		top_pairs: &Vec<String>,
+		max_results: i32,
 		offset: i64,
-	) -> StorageResult<()>;
+	) -> StorageResult<Vec<DocumentPayload>>;
 }
 
 impl Debug for dyn Storage {

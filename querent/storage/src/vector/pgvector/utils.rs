@@ -10,6 +10,7 @@ use std::{
 	sync::Arc,
 };
 use tracing::error;
+use pgvector::{Vector, VectorExpressionMethods};
 
 /// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
@@ -258,4 +259,87 @@ pub fn process_traverser_results(
 	}
 
 	formatted_output
+}
+
+pub async fn fetch_documents_for_embedding(
+    conn: &mut AsyncPgConnection,
+    embedding: &Vec<f32>,
+    adjusted_offset: i64,
+    limit: i64,
+    session_id: &String,
+    query: &String,
+    collection_id: &String,
+    payload: &Vec<f32>,
+) -> StorageResult<Vec<DocumentPayload>> {
+
+    let vector = Vector::from(embedding.clone());
+
+    let query_result = embedded_knowledge::dsl::embedded_knowledge
+        .select((
+            embedded_knowledge::dsl::embeddings,
+            embedded_knowledge::dsl::score,
+            embedded_knowledge::dsl::event_id,
+            embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
+        ))
+        .filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.5))
+        .order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()))
+        .limit(limit)
+        .offset(adjusted_offset)
+        .load::<(Option<Vector>, f32, String, Option<f64>)>(conn)
+        .await;
+
+    match query_result {
+        Ok(result) => {
+            let mut results = Vec::new();
+            for (_embeddings, score, event_id, other_cosine_distance) in result {
+                let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
+                    .select((
+                        semantic_knowledge::dsl::document_id,
+                        semantic_knowledge::dsl::subject,
+                        semantic_knowledge::dsl::object,
+                        semantic_knowledge::dsl::document_source,
+                        semantic_knowledge::dsl::sentence,
+                    ))
+                    .filter(semantic_knowledge::dsl::event_id.eq(event_id))
+                    .offset(0)
+                    .load::<(String, String, String, String, String)>(conn)
+                    .await;
+
+                match query_result_semantic {
+                    Ok(result_semantic) => {
+                        for (doc_id, subject, object, document_store, sentence) in result_semantic {
+                            let mut doc_payload = DocumentPayload::default();
+                            doc_payload.doc_id = doc_id.clone();
+                            doc_payload.subject = subject.clone();
+                            doc_payload.object = object.clone();
+                            doc_payload.doc_source = document_store.clone();
+                            doc_payload.cosine_distance = other_cosine_distance;
+                            doc_payload.score = score;
+                            doc_payload.sentence = sentence.clone();
+                            doc_payload.session_id = Some(session_id.clone());
+                            doc_payload.query_embedding = Some(payload.clone());
+                            doc_payload.query = Some(query.clone());
+                            doc_payload.collection_id = collection_id.clone();
+                            results.push(doc_payload);
+                        }
+                    },
+                    Err(e) => {
+                        error!("Error querying semantic data: {:?}", e);
+                        return Err(StorageError {
+                            kind: StorageErrorKind::Query,
+                            source: Arc::new(anyhow::Error::from(e)),
+                        });
+                    },
+                }
+            }
+            Ok(results)
+        },
+        Err(err) => {
+            log::error!("Query failed: {:?}", err);
+            Err(StorageError {
+                kind: StorageErrorKind::Query,
+                source: Arc::new(anyhow::Error::from(err)),
+            })
+        },
+    }
 }

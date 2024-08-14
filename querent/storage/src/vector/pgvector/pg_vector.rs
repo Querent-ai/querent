@@ -7,7 +7,7 @@ use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use deadpool::Runtime;
 use diesel::{
 	sql_types::BigInt, table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName,
-	Selectable,{sql_types::{Array, Text, Integer}},
+	Selectable,sql_types::{Array, Text},
 };
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -15,7 +15,7 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt,
 	AsyncConnection, RunQueryDsl,
 };
-use pgvector::{Vector, VectorExpressionMethods};
+use pgvector::Vector;
 use proto::{
 	discovery::DiscoverySessionRequest,
 	insights::InsightAnalystRequest,
@@ -23,6 +23,8 @@ use proto::{
 };
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
+
+use super::fetch_documents_for_embedding;
 
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = embedded_knowledge)]
@@ -74,10 +76,9 @@ impl DiscoveredKnowledge {
 		}
 	}
 }
+
 #[derive(QueryableByName)]
-struct QueryResult {
-    #[diesel(sql_type = diesel::sql_types::Integer)]
-    id: i32,
+struct FilteredResults {
     #[diesel(sql_type = diesel::sql_types::Text)]
     document_id: String,
     #[diesel(sql_type = diesel::sql_types::Text)]
@@ -88,11 +89,10 @@ struct QueryResult {
     document_source: String,
     #[diesel(sql_type = diesel::sql_types::Text)]
     sentence: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    event_id: String,
     #[diesel(sql_type = diesel::sql_types::Float)]
     score: f32,
 }
+
 pub struct PGVector {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
@@ -511,84 +511,60 @@ impl Storage for PGVector {
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
+		top_pairs_embeddings: Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+		let mut results: Vec<DocumentPayload> = Vec::new();
 
-		let vector = Vector::from(payload.clone());
-		let query_result = embedded_knowledge::dsl::embedded_knowledge
-			.select((
-				embedded_knowledge::dsl::embeddings,
-				embedded_knowledge::dsl::score,
-				embedded_knowledge::dsl::event_id,
-				embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
-			))
-			.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.5))
-			.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector))
-			.limit(max_results as i64)
-			.offset(offset)
-			.load::<(Option<Vector>, f32, String, Option<f64>)>(&mut conn)
-			.await;
-		match query_result {
-			Ok(result) => {
-				let mut results: Vec<DocumentPayload> = Vec::new();
-				for (_embeddings, score, event_id, other_cosine_distance) in result {
-					// Query to semantic knowledge table using uuid
-					// let other_cosine_distance_1: f64 = other_cosine_distance.unwrap_or(0.0); // Use a default value if None
-					let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
-						.select((
-							semantic_knowledge::dsl::document_id,
-							semantic_knowledge::dsl::subject,
-							semantic_knowledge::dsl::object,
-							semantic_knowledge::dsl::document_source,
-							semantic_knowledge::dsl::sentence,
-						))
-						.filter(semantic_knowledge::dsl::event_id.eq(event_id))
-						.offset(0)
-						.load::<(String, String, String, String, String)>(&mut conn)
-						.await;
-
-					match query_result_semantic {
-						Ok(result_semantic) => {
-							for (doc_id, subject, object, document_store, sentence) in
-								result_semantic
-							{
-								let mut doc_payload = DocumentPayload::default();
-								doc_payload.doc_id = doc_id.clone();
-								doc_payload.subject = subject.clone();
-								doc_payload.object = object.clone();
-								doc_payload.doc_source = document_store.clone();
-								doc_payload.cosine_distance = other_cosine_distance;
-								doc_payload.score = score;
-								doc_payload.sentence = sentence.clone();
-								doc_payload.session_id = Some(session_id.clone());
-								doc_payload.query_embedding = Some(payload.clone());
-								doc_payload.query = Some(query.clone());
-								doc_payload.collection_id = collection_id.clone();
-								results.push(doc_payload);
-							}
-						},
-						Err(e) => {
-							error!("Error querying semantic data: {:?}", e);
-							return Err(StorageError {
-								kind: StorageErrorKind::Query,
-								source: Arc::new(anyhow::Error::from(e)),
-							});
-						},
-					}
-				}
-				Ok(results)
-			},
-			Err(err) => {
-				log::error!("Query failed: {:?}", err);
-				Err(StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(err)),
-				})
-			},
+		
+		if top_pairs_embeddings.is_empty() || top_pairs_embeddings.len() == 1 {
+			let embedding = if top_pairs_embeddings.is_empty() {
+				payload.clone()
+			} else {
+				top_pairs_embeddings[0].clone()
+			};
+			results.extend(
+				fetch_documents_for_embedding(
+					&mut conn, 
+					&embedding, 
+					offset, 
+					max_results as i64, 
+					&session_id, 
+					&query, 
+					&collection_id, 
+					&payload
+				).await?
+			);
+		} else {
+			let num_embeddings = top_pairs_embeddings.len();
+			let full_cycles = offset / num_embeddings as i64;
+			let remaining = offset % num_embeddings as i64;
+	
+			for (i, embedding) in top_pairs_embeddings.iter().enumerate() {
+				let adjusted_offset = if i < remaining as usize {
+					full_cycles + 1
+				} else {
+					full_cycles
+				};
+				results.extend(
+					fetch_documents_for_embedding(
+						&mut conn, 
+						embedding, 
+						adjusted_offset, 
+						1,
+						&session_id, 
+						&query, 
+						&collection_id, 
+						&payload
+					).await?
+				);
+			}
 		}
+	
+		Ok(results)
 	}
 
 	async fn traverse_metadata_table(
@@ -769,57 +745,76 @@ impl Storage for PGVector {
 
 	async fn filter_and_query(
 		&self,
+		session_id: &String,
 		top_pairs: &Vec<String>,
+		max_results: i32,
 		offset: i64,
-	) -> StorageResult<()> {
+	) -> StorageResult<Vec<DocumentPayload>> {
 		let subjects_objects: Vec<String> = top_pairs
 			.iter()
 			.flat_map(|pair| pair.split(" - ").map(String::from))
 			.collect();
 	
-		let query = format!(
-			"WITH ranked_results AS (
-				SELECT 
-					semantic_knowledge.id, 
-					semantic_knowledge.document_id, 
-					semantic_knowledge.subject, 
-					semantic_knowledge.object, 
-					semantic_knowledge.document_source, 
-					semantic_knowledge.sentence, 
-					semantic_knowledge.event_id,
-					embedded_knowledge.score,
-					CASE
-						WHEN (semantic_knowledge.subject || ' - ' || semantic_knowledge.object) = ANY($1) 
-							OR (semantic_knowledge.object || ' - ' || semantic_knowledge.subject) = ANY($1) THEN 2
-						WHEN semantic_knowledge.subject = ANY($2) OR semantic_knowledge.object = ANY($2) THEN 1
-						ELSE 0
-					END AS match_rank
-				FROM 
-					semantic_knowledge
-				JOIN 
-					embedded_knowledge ON semantic_knowledge.event_id = embedded_knowledge.event_id
-			)
-			SELECT id, document_id, subject, object, document_source, sentence, event_id, score
-			FROM ranked_results
-			ORDER BY match_rank DESC, score DESC
-			OFFSET $3"
-		);
+			let query = format!(
+				"WITH ranked_results AS (
+					SELECT 
+						semantic_knowledge.id, 
+						semantic_knowledge.document_id, 
+						semantic_knowledge.subject, 
+						semantic_knowledge.object, 
+						semantic_knowledge.document_source, 
+						semantic_knowledge.sentence, 
+						semantic_knowledge.event_id,
+						embedded_knowledge.score,
+						CASE
+							WHEN (semantic_knowledge.subject || ' - ' || semantic_knowledge.object) = ANY($1) 
+								OR (semantic_knowledge.object || ' - ' || semantic_knowledge.subject) = ANY($1) THEN 2
+							WHEN semantic_knowledge.subject = ANY($2) OR semantic_knowledge.object = ANY($2) THEN 1
+							ELSE 0
+						END AS match_rank
+					FROM 
+						semantic_knowledge
+					JOIN 
+						embedded_knowledge ON semantic_knowledge.event_id = embedded_knowledge.event_id
+				)
+				SELECT id, document_id, subject, object, document_source, sentence, event_id, score
+				FROM ranked_results
+				ORDER BY match_rank DESC, score DESC
+				OFFSET $4
+				LIMIT $3"
+			);
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-		diesel::sql_query(query)
+		let results: Vec<FilteredResults> = diesel::sql_query(query)
 			.bind::<Array<Text>, _>(top_pairs)
 			.bind::<Array<Text>, _>(subjects_objects)
+			.bind::<diesel::sql_types::Integer, _>(max_results)
 			.bind::<BigInt, _>(offset)
-			.load::<QueryResult>(&mut conn)
+			.load::<FilteredResults>(&mut conn)
 			.await
 			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 	
-		Ok(())
+			let document_payloads = results.into_iter().map(|result| DocumentPayload {
+				doc_id: result.document_id,
+				doc_source: result.document_source,
+				sentence: result.sentence,
+				knowledge: format!("{} - {}", result.subject, result.object),
+				subject: result.subject,
+				object: result.object,
+				cosine_distance: None,
+				query_embedding: None, 
+				query: None,
+				session_id: Some(session_id.clone()),
+				score: result.score,
+				collection_id: String::new(),
+			}).collect();
+		
+			Ok(document_payloads)
 	}
 }
 
