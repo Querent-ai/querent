@@ -1,5 +1,5 @@
 use crate::{
-	prompts::get_suggestions_prompt, rerank_documents, InsightConfig, InsightError,
+	prompts::get_suggestions_prompt, rerank_documents, split_sentences, InsightConfig, InsightError,
 	InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
 };
 use async_stream::stream;
@@ -52,7 +52,7 @@ impl InsightRunner for XAIRunner {
 		let prompt = match self.prompt.as_str() {
 			"" => {
 				tracing::info!("User did not provide a prompt. Going to use default prompt.");
-				"Default Prompt".to_string()
+				"".to_string()
 			},
 			_ => self.prompt.clone(),
 		};
@@ -113,6 +113,7 @@ impl InsightRunner for XAIRunner {
 							query_embedding,
 							10,
 							0,
+							vec![],
 						)
 						.await;
 
@@ -161,25 +162,11 @@ impl InsightRunner for XAIRunner {
 										all_discovered_data.extend(traverser_results.clone());
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
-										if let Some(reranked_results) =
-											rerank_documents(query, unique_sentences.clone())
-										{
-											let top_10_reranked = reranked_results
-												.into_iter()
-												.take(10)
-												.collect::<Vec<_>>();
-											numbered_sentences = top_10_reranked
-												.iter()
-												.enumerate()
-												.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
-												.collect();
-										} else {
-											numbered_sentences = unique_sentences
-												.iter()
-												.enumerate()
-												.map(|(i, s)| format!("{}. {}", i + 1, s))
-												.collect();
-										}
+										numbered_sentences = unique_sentences
+											.iter()
+											.enumerate()
+											.map(|(_i, s)| format!("{}", s))
+											.collect();
 									},
 									Err(e) => {
 										error!("Failed to serialize traverser results: {:?}", e);
@@ -269,10 +256,11 @@ impl InsightRunner for XAIRunner {
 										all_discovered_data.extend(results.clone());
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
+
 										numbered_sentences = unique_sentences
 											.iter()
 											.enumerate()
-											.map(|(i, s)| format!("{}. {}", i + 1, s))
+											.map(|(_i, s)| format!("{}", s))
 											.collect();
 									},
 									Err(e) => {
@@ -280,21 +268,56 @@ impl InsightRunner for XAIRunner {
 									},
 								}
 							}
+							if let Some(reranked_results) =
+								rerank_documents(query, numbered_sentences.clone())
+							{
+								let reranked_context = reranked_results
+									.into_iter()
+									.take(numbered_sentences.len())
+									.collect::<Vec<_>>();
+								numbered_sentences = reranked_context
+									.iter()
+									.enumerate()
+									.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
+									.collect();
+							}
+							let reranked_sentences = split_sentences(numbered_sentences.clone());
+							let mut all_summaries = Vec::new();
+							for (i, sentence_group) in reranked_sentences.iter().enumerate() {
+								let context = sentence_group.join("\n");
+								let final_prompt = if prompt.is_empty() {
+									get_final_prompt(query, &context)
+								} else {
+									format!(
+										"{}\n\n#######\n\
+											-Data-\n\
+											Query: {}\n\
+											Summaries: {}\n\
+											#######\n\
+											Output:",
+										prompt.to_string(),
+										query,
+										context
+									)
+								};
+								let human_message = vec![Message::new_human_message(&final_prompt)];
+								let summary =
+									self.llm.generate(&human_message).await.map_err(|e| {
+										InsightError::new(
+											InsightErrorKind::Internal,
+											anyhow::anyhow!("Failed to generate summary: {:?}", e)
+												.into(),
+										)
+									})?;
+								all_summaries.push(format!(
+									"{}. {}",
+									i + 1,
+									summary.generation.replace("\\n", "\n")
+								));
+							}
 
-							let context = numbered_sentences.join("\n");
-							let final_prompt = if prompt.is_empty() {
-								get_final_prompt(query, &context)
-							} else {
-								prompt.to_string()
-							};
-							let human_message = vec![Message::new_human_message(&final_prompt)];
-							let summary = self.llm.generate(&human_message).await.map_err(|e| {
-								InsightError::new(
-									InsightErrorKind::Internal,
-									anyhow::anyhow!("Failed to generate summary: {:?}", e).into(),
-								)
-							})?;
-							let answer = summary.generation.replace("\\n", "\n");
+							let combined_summaries = all_summaries.join(", ");
+							let answer = combined_summaries;
 							let prompt = get_analysis_prompt(query, &answer);
 							let human_message = vec![Message::new_human_message(&prompt)];
 							let summary_2 =
@@ -370,7 +393,7 @@ impl InsightRunner for XAIRunner {
 					let prompt = match self.prompt.as_str() {
 						"" => {
 							tracing::info!("User did not provide a prompt. Going to use default prompt.");
-							"Default Prompt".to_string()
+							"".to_string()
 						},
 						_ => self.prompt.clone(),
 					};
@@ -442,6 +465,7 @@ impl InsightRunner for XAIRunner {
 									query_embedding,
 									10,
 									0,
+									vec![],
 								).await;
 
 								match search_results {
@@ -454,31 +478,44 @@ impl InsightRunner for XAIRunner {
 										{
 											match &traverser_results_1 {
 												Ok(ref traverser_results) => {
-													*self.previous_query_results.write().unwrap() = serde_json::to_string(traverser_results).unwrap_or_default();
-													*self.previous_filtered_results.write().unwrap() = filtered_results.clone();
-													*self.previous_session_id.write().unwrap() = session_id.to_string();
-													let (unique_sentences, _count) = unique_sentences(&all_discovered_data);
-													if let Some(reranked_results) = rerank_documents(&query, unique_sentences.clone()) {
+													if let Ok(mut prev_query_results) =
+											self.previous_query_results.write()
+										{
+											*prev_query_results =
+												serde_json::to_string(traverser_results)
+													.unwrap_or_default();
+										} else {
+											error!("Failed to acquire write lock on previous_query_results");
+										}
 
+										if let Ok(mut prev_filtered_results) =
+											self.previous_filtered_results.write()
+										{
+											*prev_filtered_results = filtered_results.clone();
+										} else {
+											error!("Failed to acquire write lock on previous_filtered_results");
+										}
 
-														let top_10_reranked = reranked_results.into_iter().take(10).collect::<Vec<_>>();
-														numbered_sentences = top_10_reranked
-															.iter()
-															.enumerate()
-															.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
-															.collect();
-													} else {
-														numbered_sentences = unique_sentences
-															.iter()
-															.enumerate()
-															.map(|(i, s)| format!("{}. {}", i + 1, s))
-															.collect();
-													}
-													all_discovered_data.extend(traverser_results.clone());
-												}
-												Err(e) => {
-													error!("Failed to serialize traverser results: {:?}", e);
-												}
+										if let Ok(mut prev_session_id) =
+											self.previous_session_id.write()
+										{
+											*prev_session_id = session_id.to_string();
+										} else {
+											error!("Failed to acquire write lock on previous_session_id");
+										}
+
+										all_discovered_data.extend(traverser_results.clone());
+										let (unique_sentences, _count) =
+											unique_sentences(&all_discovered_data);
+										numbered_sentences = unique_sentences
+											.iter()
+											.enumerate()
+											.map(|(_i, s)| format!("{}", s))
+											.collect();
+									},
+									Err(e) => {
+										error!("Failed to serialize traverser results: {:?}", e);
+									},
 											}
 										} else {
 											let previous_results: Vec<(
@@ -505,51 +542,99 @@ impl InsightRunner for XAIRunner {
 											let results_intersection = find_intersection(formatted_output_1.clone(), formatted_output_2.clone());
 
 											let final_traverser_results = if results_intersection.is_empty() {
-												*self.previous_filtered_results.write().unwrap() = formatted_output_1.clone();
-												storage.traverse_metadata_table(formatted_output_1.clone()).await
+												if let Ok(mut prev_filtered_results) =
+													self.previous_filtered_results.write()
+												{
+													*prev_filtered_results = formatted_output_1.clone();
+												} else {
+													error!("Failed to acquire write lock on previous_filtered_results when queries do not match");
+												}
+												storage
+													.traverse_metadata_table(formatted_output_1.clone())
+													.await
 											} else {
-												*self.previous_filtered_results.write().unwrap() = results_intersection.clone();
-												storage.traverse_metadata_table(results_intersection.clone()).await
+												if let Ok(mut prev_filtered_results) =
+													self.previous_filtered_results.write()
+												{
+													*prev_filtered_results = results_intersection.clone();
+												} else {
+													error!("Failed to acquire write lock on previous_filtered_resultswhen queries match");
+												}
+												storage
+													.traverse_metadata_table(results_intersection.clone())
+													.await
 											};
 
 											match final_traverser_results.clone() {
 												Ok(ref results) => {
-													*self.previous_query_results.write().unwrap() = serde_json::to_string(results).unwrap_or_default();
-													all_discovered_data.extend(results.clone());
-													let (unique_sentences, _count) = unique_sentences(&all_discovered_data);
-													numbered_sentences = unique_sentences
-															.iter()
-															.enumerate()
-															.map(|(i, s)| format!("{}. {}", i + 1, s))
-															.collect();
+													if let Ok(mut prev_query_results) =
+													self.previous_query_results.write()
+												{
+													*prev_query_results =
+														serde_json::to_string(results).unwrap_or_default();
+												} else {
+													error!("Failed to acquire write lock on previous_query_results post data fabric traversal");
+												}
+												all_discovered_data.extend(results.clone());
+												let (unique_sentences, _count) =
+													unique_sentences(&all_discovered_data);
 
-												}
-												Err(e) => {
-													error!("Failed to search for similar documents in traverser: {:?}", e);
-												}
+												numbered_sentences = unique_sentences
+													.iter()
+													.enumerate()
+													.map(|(_i, s)| format!("{}", s))
+													.collect();
+											},
+											Err(e) => {
+												error!("Failed to search for similar documents in traverser: {:?}", e);
+											},
 											}
 										}
-										let context = numbered_sentences.join("\n");
-										let final_prompt = if prompt.is_empty() {
-											get_final_prompt(&query, &context)
-										} else {
-											prompt.to_string()
-										};
+										if let Some(reranked_results) =
+											rerank_documents(&query, numbered_sentences.clone())
+											{
+												let reranked_context = reranked_results
+													.into_iter()
+													.take(numbered_sentences.len())
+													.collect::<Vec<_>>();
+												numbered_sentences = reranked_context
+													.iter()
+													.enumerate()
+													.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
+													.collect();
+											}
+										let reranked_sentences = split_sentences(numbered_sentences.clone());
+										let mut all_summaries = Vec::new();
+										for (i, sentence_group) in reranked_sentences.iter().enumerate() {
+											let context = sentence_group.join("\n");
+											let final_prompt = if prompt.is_empty() {
+												get_final_prompt(&query, &context)
+											} else {
+												format!(
+													"{}\n\n#######\n\
+													-Data-\n\
+													Query: {}\n\
+													Summaries: {}\n\
+													#######\n\
+													Output:",
+													prompt.to_string(),
+													query,
+													context
 
-									let human_message = vec![Message::new_human_message(&final_prompt)];
-
-									let summary = match llm.generate(&human_message).await {
-										Ok(sum) => sum,
-										Err(e) => {
-											yield Err(InsightError::new(
+												)
+											};
+										let human_message = vec![Message::new_human_message(&final_prompt)];
+										let summary = self.llm.generate(&human_message).await.map_err(|e| {
+											InsightError::new(
 												InsightErrorKind::Internal,
 												anyhow::anyhow!("Failed to generate summary: {:?}", e).into(),
-											));
-											continue;
-										}
-									};
+											)
+										})?;
+										all_summaries.push(format!("{}. {}", i + 1, summary.generation.replace("\\n", "\n")));
+									}
 
-									let answer = summary.generation.replace("\\n", "\n");
+									let combined_summaries = all_summaries.join(", ");
+									let answer = combined_summaries;
 									let prompt = get_analysis_prompt(&query, &answer);
 									let human_message = vec![Message::new_human_message(&prompt)];
 									let summary_2 = self.llm.generate(&human_message).await.map_err(|e| {
