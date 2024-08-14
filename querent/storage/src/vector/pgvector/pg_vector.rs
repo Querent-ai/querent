@@ -91,6 +91,8 @@ struct FilteredResults {
 	sentence: String,
 	#[diesel(sql_type = diesel::sql_types::Float)]
 	score: f32,
+	#[diesel(sql_type = pgvector::sql_types::Vector)]
+	embeddings: Vector,
 }
 
 pub struct PGVector {
@@ -270,11 +272,9 @@ impl Storage for PGVector {
 				pairs.push((subject, subject_type, object, object_type, frequency));
 			}
 			let combined_query = format!(
-				"Explore rare and potentially significant connections within your semantic data fabric. Noteworthy interactions are found between '{}' ({}) and '{}' ({}), along with the link between '{}' ({}) and '{}' ({}). Other intriguing associations include '{}' ({}) and '{}' ({}), '{}' ({}) and '{}' ({}), and finally, '{}' ({}) and '{}' ({}). These connections unveil the underlying patterns and dynamics woven into your data landscape.",
-				pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3,
-				pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3,
-				pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3,
-				pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3,pairs[4].0,pairs[4].1,pairs[4].2,pairs[4].3,);
+				"Explore rare and potentially significant connections within your semantic data fabric.  These connections unveil the underlying patterns and dynamics woven into your data landscape. Noteworthy interactions are found between '{}' and '{}', along with the link between '{}' and '{}'.",
+				pairs[0].0, pairs[0].2,
+				pairs[1].0, pairs[1].2);
 
 			suggestions.push(QuerySuggestion {
 				query: combined_query,
@@ -292,12 +292,9 @@ impl Storage for PGVector {
 				documents.push((document_id, entity_mix));
 			}
 			let combined_query = format!(
-				"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'. Additional important documents which offer valuable insights for in-depth analysis and understanding are '{}' , '{}' and '{}' .",
-				documents[0].0,
-				documents[1].0,
-				documents[2].0,
-				documents[3].0,
-				documents[4].0,
+				"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
+				documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
+				documents[1].0.rsplit('/').next().unwrap_or(&documents[1].0),
 			);
 
 			suggestions.push(QuerySuggestion {
@@ -761,6 +758,8 @@ impl Storage for PGVector {
 						semantic_knowledge.sentence, 
 						semantic_knowledge.event_id,
 						embedded_knowledge.score,
+						embedded_knowledge.embeddings,
+						
 						CASE
 							WHEN (semantic_knowledge.subject || ' - ' || semantic_knowledge.object) = ANY($1) 
 								OR (semantic_knowledge.object || ' - ' || semantic_knowledge.subject) = ANY($1) THEN 2
@@ -772,7 +771,7 @@ impl Storage for PGVector {
 					JOIN 
 						embedded_knowledge ON semantic_knowledge.event_id = embedded_knowledge.event_id
 				)
-				SELECT id, document_id, subject, object, document_source, sentence, event_id, score
+				SELECT id, document_id, subject, object, document_source, sentence, event_id, score, embeddings
 				FROM ranked_results
 				ORDER BY match_rank DESC, score DESC
 				OFFSET $4
@@ -793,7 +792,6 @@ impl Storage for PGVector {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-
 		let document_payloads = results
 			.into_iter()
 			.map(|result| DocumentPayload {
@@ -804,8 +802,8 @@ impl Storage for PGVector {
 				subject: result.subject,
 				object: result.object,
 				cosine_distance: None,
-				query_embedding: None,
-				query: None,
+				query_embedding: Some(result.embeddings.to_vec()),
+				query: Some("".to_string()),
 				session_id: Some(session_id.clone()),
 				score: result.score,
 				collection_id: String::new(),

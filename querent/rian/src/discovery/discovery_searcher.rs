@@ -25,6 +25,7 @@ pub struct DiscoverySearch {
 	current_query: String,
 	current_offset: i64,
 	current_top_pairs: Vec<String>,
+	current_page_rank: i32,
 }
 
 impl DiscoverySearch {
@@ -43,6 +44,7 @@ impl DiscoverySearch {
 			current_query: "".to_string(),
 			current_offset: 0,
 			current_top_pairs: vec![],
+			current_page_rank: 0,
 		}
 	}
 
@@ -128,8 +130,11 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		//reset offset if new query
 		if message.query != self.current_query || message.top_pairs != self.current_top_pairs {
 			self.current_offset = 0;
+			self.current_page_rank = 1;
 			self.current_query = message.query.clone();
 			self.current_top_pairs = message.top_pairs.clone();
+		} else{
+			self.current_page_rank += 1;
 		}
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
@@ -175,6 +180,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 							session_id: message.session_id,
 							query: "Auto-generated suggestions".to_string(),
 							insights,
+							page_ranking: self.current_page_rank,
 						};
 
 						return Ok(Ok(response));
@@ -309,6 +315,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			session_id: message.session_id,
 			query: message.query.clone(),
 			insights: documents.clone(),
+			page_ranking: self.current_page_rank,
 		};
 
 		Ok(Ok(response))

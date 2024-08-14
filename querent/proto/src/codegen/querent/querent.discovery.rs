@@ -54,6 +54,9 @@ pub struct DiscoveryResponse {
     /// The insights discovered based on the user's query
     #[prost(message, repeated, tag = "3")]
     pub insights: ::prost::alloc::vec::Vec<Insight>,
+    /// The search result page number
+    #[prost(int32, tag = "4")]
+    pub page_ranking: i32,
 }
 /// Request to stop the discovery session
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]

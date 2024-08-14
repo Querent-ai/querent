@@ -44,6 +44,8 @@ message DiscoveryResponse {
   string query = 2;
   // The insights discovered based on the user's query
   repeated Insight insights = 3;
+  // The search result page number
+  int32 page_ranking = 4;
 }
 
 // Request to stop the discovery session

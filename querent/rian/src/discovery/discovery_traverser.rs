@@ -29,6 +29,7 @@ pub struct DiscoveryTraverse {
 	previous_query_results: String,
 	previous_filtered_results: Vec<(String, String)>,
 	previous_session_id: String,
+	current_page_rank: i32,
 }
 
 impl DiscoveryTraverse {
@@ -49,6 +50,7 @@ impl DiscoveryTraverse {
 			previous_query_results: "".to_string(),
 			previous_filtered_results: Vec::new(),
 			previous_session_id: "".to_string(),
+			current_page_rank: 0,
 		}
 	}
 
@@ -135,6 +137,9 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		if message.query != self.current_query {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
+			self.current_page_rank = 1;
+		} else {
+			self.current_page_rank +=1;
 		}
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
@@ -160,6 +165,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							session_id: message.session_id,
 							query: "Auto-generated suggestions".to_string(),
 							insights,
+							page_ranking: self.current_page_rank,
 						};
 
 						return Ok(Ok(response));
@@ -315,6 +321,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 			session_id: message.session_id,
 			query: message.query.clone(),
 			insights,
+			page_ranking: self.current_page_rank,
 		};
 
 		Ok(Ok(response))
