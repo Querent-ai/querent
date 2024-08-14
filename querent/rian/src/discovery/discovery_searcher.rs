@@ -133,7 +133,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			self.current_page_rank = 1;
 			self.current_query = message.query.clone();
 			self.current_top_pairs = message.top_pairs.clone();
-		} else{
+		} else {
 			self.current_page_rank += 1;
 		}
 		let embedder = self.embedding_model.as_ref().unwrap();

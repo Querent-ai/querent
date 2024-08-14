@@ -139,7 +139,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 			self.current_query = message.query.clone();
 			self.current_page_rank = 1;
 		} else {
-			self.current_page_rank +=1;
+			self.current_page_rank += 1;
 		}
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
@@ -339,7 +339,7 @@ fn process_documents(
 ) {
 	for document in traverser_results {
 		let tags = format!(
-			"{}, {}",
+			"{}-{}",
 			document.2.replace('_', " "), // subject
 			document.3.replace('_', " "), // object
 		);
