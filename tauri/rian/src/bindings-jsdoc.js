@@ -277,7 +277,7 @@ export const universalConstant = 42;
 
 /**
  * Insight Information.
- * @typedef { { id: string; name: string; description: string; version: string; conversational: boolean; author: string; license: string; additionalOptions: { [key in string]: CustomInsightOption }; premium: boolean } } InsightInfo
+ * @typedef { { id: string; name: string; description: string; version: string; conversational: boolean; author: string; license: string; iconifyIcon: string; additionalOptions: { [key in string]: CustomInsightOption }; premium: boolean } } InsightInfo
  */
 
 /**

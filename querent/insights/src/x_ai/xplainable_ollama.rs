@@ -1,0 +1,158 @@
+use crate::{
+	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
+	InsightError, InsightErrorKind, InsightInfo, InsightResult, InsightRunner,
+};
+use async_trait::async_trait;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+use llms::client::{Ollama, OllamaClient};
+use serde_json::Value;
+use std::{
+	collections::HashMap,
+	sync::{Arc, RwLock},
+};
+
+use super::x_ai_runner::XAIRunner;
+/// XAI Insight struct.
+pub struct XAIOllama {
+	info: InsightInfo,
+}
+
+impl XAIOllama {
+	pub fn new() -> Self {
+		let mut additional_options = HashMap::new();
+		additional_options.insert(
+			"url".to_string(),
+			CustomInsightOption {
+				id: "url".to_string(),
+				label: "Ollama client url".to_string(),
+				default_value: Some(InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				}),
+				value: InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				},
+				tooltip: Some("Ollama client url".to_string()),
+			},
+		);
+		additional_options.insert(
+			"prompt".to_string(),
+			CustomInsightOption {
+				id: "prompt".to_string(),
+				label: "Prompt".to_string(),
+				default_value: Some(InsightCustomOptionValue::String {
+					value: "".to_string(),
+					hidden: Some(false),
+				}),
+				value: InsightCustomOptionValue::String {
+					value: "You are a helpful assistant responsible for generating a comprehensive summary of the data provided below. \
+        Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence. \
+        Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences. \
+        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary. \
+        Make sure it is written in third person, and make sure we have the full context.\n\n\
+        #######\n\
+        -Data-\n\
+        User Query: {query}\n\
+        Graph Traversal Results: {context}\n\
+        #######\n\
+        Output:".to_string(),
+					hidden: Some(false),
+				},
+				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using Ollama.".to_string()),
+
+			},
+		);
+		Self {
+			info: InsightInfo {
+				id: "querent.insights.x_ai.ollama".to_string(),
+				name: "Querent xAI with Ollama".to_string(),
+				description: "xAI utilizes generative models to perform a directed traversal in R!AN's attention data fabric.".to_string(),
+				version: "1.0.0".to_string(),
+				author: "Querent AI".to_string(),
+				license: "Apache-2.0".to_string(),
+				iconify_icon: "simple-icons:ollama".to_string(),
+				additional_options,
+				conversational: true,
+				premium: false,
+			},
+		}
+	}
+}
+
+#[async_trait]
+impl Insight for XAIOllama {
+	async fn info(&self) -> InsightInfo {
+		self.info.clone()
+	}
+
+	fn supports_streaming(&self) -> bool {
+		true
+	}
+
+	fn config_callback(&mut self, _name: &str, _config: Value) -> ConfigCallbackResponse {
+		ConfigCallbackResponse::Empty
+	}
+
+	fn get_runner(&self, config: &InsightConfig) -> InsightResult<Arc<dyn InsightRunner>> {
+		let url = config.get_custom_option("url");
+		if url.is_none() {
+			return Err(InsightError::new(
+				InsightErrorKind::Unauthorized,
+				anyhow::anyhow!(
+					"Ollama Client Url is required. R!AN Does not download llama models"
+				)
+				.into(),
+			));
+		}
+		let url = url.unwrap().value.clone();
+		let url = match url {
+			InsightCustomOptionValue::String { value, .. } => value,
+			_ => {
+				return Err(InsightError::new(
+					InsightErrorKind::Unauthorized,
+					anyhow::anyhow!(
+						"Ollama Client Url is required. R!AN Does not download llama models"
+					)
+					.into(),
+				));
+			},
+		};
+		let default_client: OllamaClient = OllamaClient::try_new(url).map_err(|e| {
+			InsightError::new(
+				InsightErrorKind::Internal,
+				anyhow::anyhow!("Failed to create Ollama client: {}", e).into(),
+			)
+		})?;
+		let ollama_llm = Ollama::new(Arc::new(default_client), String::from("llama3"), None);
+
+		let prompt_option = config.get_custom_option("prompt");
+		if prompt_option.is_none() {
+			tracing::info!("No prompt provided.");
+		}
+		let prompt = prompt_option.map_or_else(
+			|| "".to_string(),
+			|opt| match opt.value.clone() {
+				InsightCustomOptionValue::String { value, .. } => value,
+				_ => "".to_string(),
+			},
+		);
+
+		let embedding_model = TextEmbedding::try_new(InitOptions {
+			model_name: EmbeddingModel::AllMiniLML6V2,
+			show_download_progress: true,
+			..Default::default()
+		})
+		.map_err(|e| InsightError::new(InsightErrorKind::Internal, e.into()))?;
+
+		Ok(Arc::new(XAIRunner {
+			config: config.clone(),
+			llm: Arc::new(ollama_llm),
+			embedding_model: Some(embedding_model),
+			previous_query_results: RwLock::new(String::new()),
+			previous_filtered_results: RwLock::new(Vec::new()),
+			previous_session_id: RwLock::new(String::new()),
+			prompt,
+		}))
+	}
+}

@@ -9,7 +9,7 @@ use proto::semantics::IngestedTokens;
 use tokio::{runtime::Handle, sync::mpsc::Sender, task::JoinHandle};
 use tracing::{error, info};
 
-use crate::NUMBER_FILES_IN_MEMORY;
+use crate::{MAX_DATA_SIZE_IN_MEMORY, NUMBER_FILES_IN_MEMORY};
 
 pub struct IngestorService {
 	pub collector_id: String,
@@ -117,7 +117,10 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if message._permit.is_none() || self.workflow_semaphore.available_permits() == 0 {
+		if self.counters.get_current_memory_usage() as usize > MAX_DATA_SIZE_IN_MEMORY ||
+			message._permit.is_none() ||
+			self.workflow_semaphore.available_permits() == 0
+		{
 			error!("Permit is None or no available permits");
 			return Ok(Ok(Some(message)));
 		}
@@ -146,6 +149,9 @@ impl Handler<CollectionBatch> for IngestorService {
 		let total_mbs = (total_bytes + 1023) / 1024 / 1024;
 		self.counters.increment_total_megabytes(total_mbs as u64);
 		self.counters.increment_total_docs(1);
+		self.counters.set_current_memory_usage(
+			self.counters.get_current_memory_usage() + total_bytes as u64,
+		);
 		let term_sig = self.terminate_signal.clone();
 		let handle = tokio::spawn(async move {
 			let ingested_token_stream = file_ingestor.ingest(message.bytes).await;
@@ -177,6 +183,9 @@ impl Handler<CollectionBatch> for IngestorService {
 					// Drop the permits here to release them
 					drop(_permit);
 					drop(_permit_workflow);
+					counters.set_current_memory_usage(
+						counters.get_current_memory_usage() - total_bytes as u64,
+					);
 				},
 				Err(e) => {
 					error!("Failed to ingest file for collector_id:{} and file extension: {} with error: {}", collector_id, message.ext, e);

@@ -12,6 +12,10 @@ pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
 		// xplainable insights: GraphRag algorithm to interact with data graph and generate insights
 		xplainable_openai::XAI::new().info().await,
+		// xplainable insights: GraphRag algorithm to interact with data graph and generate insights
+		xplainable_claude::XAIClaude::new().info().await,
+		// xplainable insights: GraphRag algorithm to interact with data graph and generate insights
+		xplainable_ollama::XAIOllama::new().info().await,
 	]
 }
 
@@ -38,6 +42,14 @@ pub async fn get_insight_runner_by_id(insight_id: &str) -> Option<Arc<dyn Insigh
 	match insight_id {
 		"querent.insights.x_ai.openai" => {
 			let insight = xplainable_openai::XAI::new();
+			Some(Arc::new(insight))
+		},
+		"querent.insights.x_ai.claude" => {
+			let insight = xplainable_claude::XAIClaude::new();
+			Some(Arc::new(insight))
+		},
+		"querent.insights.x_ai.ollama" => {
+			let insight = xplainable_ollama::XAIOllama::new();
 			Some(Arc::new(insight))
 		},
 		_ => None,
