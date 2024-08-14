@@ -71,7 +71,7 @@ impl XAIClaude {
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),
-				icon: include_bytes!("../icons/xai_claude_32x32.png").to_vec(),
+				iconify_icon: "game-icons:laser-burst".to_string(),
 				additional_options,
 				conversational: true,
 				premium: false,

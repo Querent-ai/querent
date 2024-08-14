@@ -416,8 +416,9 @@ author: string;
 license: string; 
 /**
  * Insight icon. // standard icon size for plugins is 32x32
+ * https://iconify.design/
  */
-icon: number[]; 
+iconifyIcon: string; 
 /**
  * Insight options
  */
