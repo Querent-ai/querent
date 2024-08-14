@@ -127,8 +127,9 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 				"Discovery agent embedding model is not initialized".to_string(),
 			)));
 		}
-		//reset offset if new query
-		if message.query != self.current_query || message.top_pairs != self.current_top_pairs {
+		let message_set: HashSet<_> = message.top_pairs.iter().collect();
+		let current_set: HashSet<_> = self.current_top_pairs.iter().collect();
+		if message.query != self.current_query || message_set != current_set {
 			self.current_offset = 0;
 			self.current_page_rank = 1;
 			self.current_query = message.query.clone();
