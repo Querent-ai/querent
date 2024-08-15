@@ -181,59 +181,6 @@ impl Storage for PGVector {
 			},
 		};
 
-		let bottom_pairs_query_result = semantic_knowledge::dsl::semantic_knowledge
-			.select((
-				semantic_knowledge::dsl::subject,
-				semantic_knowledge::dsl::subject_type,
-				semantic_knowledge::dsl::object,
-				semantic_knowledge::dsl::object_type,
-				diesel::dsl::sql::<BigInt>("COUNT(*) as pair_frequency"),
-			))
-			.group_by((
-				semantic_knowledge::dsl::subject,
-				semantic_knowledge::dsl::subject_type,
-				semantic_knowledge::dsl::object,
-				semantic_knowledge::dsl::object_type,
-			))
-			.order_by(diesel::dsl::sql::<BigInt>("pair_frequency").asc())
-			.limit(5)
-			.load::<(String, String, String, String, i64)>(&mut conn)
-			.await;
-
-		let bottom_pairs = match bottom_pairs_query_result {
-			Ok(pairs) => pairs,
-			Err(e) => {
-				error!("Error fetching bottom pairs: {:?}", e);
-				return Err(StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(e)),
-				});
-			},
-		};
-
-		let most_mix_documents_query_result = semantic_knowledge::dsl::semantic_knowledge
-			.select((
-				semantic_knowledge::dsl::document_id,
-				diesel::dsl::sql::<BigInt>(
-					"COUNT(DISTINCT subject) + COUNT(DISTINCT object) as entity_mix",
-				),
-			))
-			.group_by(semantic_knowledge::dsl::document_id)
-			.order_by(diesel::dsl::sql::<BigInt>("entity_mix").desc())
-			.limit(5)
-			.load::<(String, i64)>(&mut conn)
-			.await;
-
-		let most_mix_documents = match most_mix_documents_query_result {
-			Ok(docs) => docs,
-			Err(e) => {
-				error!("Error fetching documents with most mix of entities: {:?}", e);
-				return Err(StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(e)),
-				});
-			},
-		};
 		let mut suggestions = Vec::new();
 
 		if !top_pairs.is_empty() {
@@ -263,48 +210,103 @@ impl Storage for PGVector {
 				top_pairs: pair_strings,
 			});
 		}
+		if max_suggestions > 1 {
+			let bottom_pairs_query_result = semantic_knowledge::dsl::semantic_knowledge
+				.select((
+					semantic_knowledge::dsl::subject,
+					semantic_knowledge::dsl::subject_type,
+					semantic_knowledge::dsl::object,
+					semantic_knowledge::dsl::object_type,
+					diesel::dsl::sql::<BigInt>("COUNT(*) as pair_frequency"),
+				))
+				.group_by((
+					semantic_knowledge::dsl::subject,
+					semantic_knowledge::dsl::subject_type,
+					semantic_knowledge::dsl::object,
+					semantic_knowledge::dsl::object_type,
+				))
+				.order_by(diesel::dsl::sql::<BigInt>("pair_frequency").asc())
+				.limit(5)
+				.load::<(String, String, String, String, i64)>(&mut conn)
+				.await;
 
-		if !bottom_pairs.is_empty() {
-			let mut pairs = Vec::new();
-			for (subject, subject_type, object, object_type, frequency) in
-				bottom_pairs.into_iter().take(5)
-			{
-				pairs.push((subject, subject_type, object, object_type, frequency));
+			let bottom_pairs = match bottom_pairs_query_result {
+				Ok(pairs) => pairs,
+				Err(e) => {
+					error!("Error fetching bottom pairs: {:?}", e);
+					return Err(StorageError {
+						kind: StorageErrorKind::Query,
+						source: Arc::new(anyhow::Error::from(e)),
+					});
+				},
+			};
+
+			let most_mix_documents_query_result = semantic_knowledge::dsl::semantic_knowledge
+				.select((
+					semantic_knowledge::dsl::document_id,
+					diesel::dsl::sql::<BigInt>(
+						"COUNT(DISTINCT subject) + COUNT(DISTINCT object) as entity_mix",
+					),
+				))
+				.group_by(semantic_knowledge::dsl::document_id)
+				.order_by(diesel::dsl::sql::<BigInt>("entity_mix").desc())
+				.limit(5)
+				.load::<(String, i64)>(&mut conn)
+				.await;
+
+			let most_mix_documents = match most_mix_documents_query_result {
+				Ok(docs) => docs,
+				Err(e) => {
+					error!("Error fetching documents with most mix of entities: {:?}", e);
+					return Err(StorageError {
+						kind: StorageErrorKind::Query,
+						source: Arc::new(anyhow::Error::from(e)),
+					});
+				},
+			};
+
+			if !bottom_pairs.is_empty() {
+				let mut pairs = Vec::new();
+				for (subject, subject_type, object, object_type, frequency) in
+					bottom_pairs.into_iter().take(5)
+				{
+					pairs.push((subject, subject_type, object, object_type, frequency));
+				}
+				let combined_query = format!(
+					"Explore rare and potentially significant connections within your semantic data fabric.  These connections unveil the underlying patterns and dynamics woven into your data landscape. Noteworthy interactions are found between '{}' and '{}', along with the link between '{}' and '{}'.",
+					pairs[0].0, pairs[0].2,
+					pairs[1].0, pairs[1].2);
+
+				suggestions.push(QuerySuggestion {
+					query: combined_query,
+					frequency: 1,
+					document_source: String::new(),
+					sentence: String::new(),
+					tags: vec!["Rare Semantic Data Fabric Interactions".to_string()],
+					top_pairs: vec!["Rare Semantic Data Fabric Interactions".to_string()],
+				});
 			}
-			let combined_query = format!(
-				"Explore rare and potentially significant connections within your semantic data fabric.  These connections unveil the underlying patterns and dynamics woven into your data landscape. Noteworthy interactions are found between '{}' and '{}', along with the link between '{}' and '{}'.",
-				pairs[0].0, pairs[0].2,
-				pairs[1].0, pairs[1].2);
 
-			suggestions.push(QuerySuggestion {
-				query: combined_query,
-				frequency: 1,
-				document_source: String::new(),
-				sentence: String::new(),
-				tags: vec!["Rare Semantic Data Fabric Interactions".to_string()],
-				top_pairs: vec!["Rare Semantic Data Fabric Interactions".to_string()],
-			});
-		}
+			if !most_mix_documents.is_empty() {
+				let mut documents = Vec::new();
+				for (document_id, entity_mix) in most_mix_documents.into_iter().take(5) {
+					documents.push((document_id, entity_mix));
+				}
+				let combined_query = format!(
+					"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
+					documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
+					documents[1].0.rsplit('/').next().unwrap_or(&documents[1].0),
+				);
 
-		if !most_mix_documents.is_empty() {
-			let mut documents = Vec::new();
-			for (document_id, entity_mix) in most_mix_documents.into_iter().take(5) {
-				documents.push((document_id, entity_mix));
+				suggestions.push(QuerySuggestion {
+					query: combined_query,
+					frequency: 1,
+					document_source: String::new(),
+					sentence: String::new(),
+					tags: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
+					top_pairs: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
+				});
 			}
-			let combined_query = format!(
-				"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
-				documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
-				documents[1].0.rsplit('/').next().unwrap_or(&documents[1].0),
-			);
-
-			suggestions.push(QuerySuggestion {
-				query: combined_query,
-				frequency: 1,
-				document_source: String::new(),
-				sentence: String::new(),
-				tags: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
-				top_pairs: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
-			});
 		}
 
 		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())

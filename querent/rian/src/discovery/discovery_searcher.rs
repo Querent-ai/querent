@@ -143,12 +143,15 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let mut insights = Vec::new();
 		let mut documents = Vec::new();
 		let mut unique_sentences: HashSet<String> = HashSet::new();
+		let mut top_pairs_incoming = message.top_pairs.clone();
 		let subjects_objects: Vec<String> = message
 			.top_pairs
 			.iter()
 			.flat_map(|pair| pair.split(" - ").map(String::from))
 			.collect();
 		let mut top_pair_embeddings: Vec<Vec<f32>> = Vec::new();
+		let query_weight = 2.0;
+		let entity_weight = 0.5;
 		for chunk in subjects_objects.chunks(2) {
 			if chunk.len() == 2 {
 				let subject_embedding = embedder.embed(vec![chunk[0].clone()], None)?;
@@ -157,7 +160,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					.iter()
 					.zip(subject_embedding[0].iter())
 					.zip(object_embedding[0].iter())
-					.map(|((q, s), o)| q + s + o)
+					.map(|((q, s), o)| query_weight * q + entity_weight * (s + o))
 					.collect();
 
 				top_pair_embeddings.push(combined_embedding);
@@ -188,6 +191,36 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					}
 					let mut fetched_results = Vec::new();
 					let mut total_fetched = 0;
+
+					if top_pairs_incoming.len() < 10 {
+						let auto_top_pairs_suggestions = match storage.autogenerate_queries(1).await
+						{
+							Ok(suggestions) => suggestions,
+							Err(e) => {
+								tracing::info!("Failed to generate top pairs suggestions: {:?}", e);
+								vec![]
+							},
+						};
+						let mut additional_pairs = Vec::new();
+						let mut seen_pairs = std::collections::HashSet::new();
+
+						for pair in &top_pairs_incoming {
+							seen_pairs.insert(pair.clone());
+						}
+
+						for suggestion in auto_top_pairs_suggestions {
+							for pair in suggestion.top_pairs {
+								if seen_pairs.insert(pair.clone()) {
+									additional_pairs.push(pair);
+								}
+							}
+						}
+						let needed_items = 10 - top_pairs_incoming.len();
+						for pair in additional_pairs.into_iter().take(needed_items) {
+							top_pairs_incoming.push(pair);
+						}
+					}
+
 					while documents.len() < 10 {
 						let search_results;
 						if message.query.is_empty() && !message.top_pairs.is_empty() {
@@ -281,7 +314,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 															.to_string(),
 														sentence: sentence.clone(),
 														tags: formatted_tags,
-														top_pairs: vec!["".to_string()],
+														top_pairs: top_pairs_incoming.to_vec(),
 													};
 
 												documents.push(formatted_document);
