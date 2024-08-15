@@ -516,7 +516,7 @@ impl Storage for SurrealDB {
 		FROM semantic_knowledge
 		GROUP BY subject, subject_type, object, object_type
 		ORDER BY pair_frequency DESC
-		LIMIT 5";
+		LIMIT 1000";
 
 		let mut top_pairs_result = self.db.query(top_pairs_query).await.map_err(|e| {
 			StorageError { kind: StorageErrorKind::Query, source: Arc::new(anyhow::Error::from(e)) }
@@ -528,252 +528,139 @@ impl Storage for SurrealDB {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		let bottom_pairs_query = "
-			SELECT subject, subject_type, object, object_type, COUNT() as pair_frequency
-			FROM semantic_knowledge
-			GROUP BY subject, subject_type, object, object_type
-			ORDER BY pair_frequency ASC
-			LIMIT 5";
-		let mut bottom_pairs_result = self.db.query(bottom_pairs_query).await.map_err(|e| {
-			StorageError { kind: StorageErrorKind::Query, source: Arc::new(anyhow::Error::from(e)) }
-		})?;
-
-		let bottom_pairs: Vec<AutoSuggestPairs> =
-			bottom_pairs_result.take::<Vec<AutoSuggestPairs>>(0).map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-
-		let most_mix_documents_query = "
-			SELECT document_id, COUNT() AS entity_mix
-			FROM
-			(
-				SELECT document_id, subject, object, COUNT() AS pair_count
-				FROM semantic_knowledge
-				GROUP BY document_id, subject, object
-			)
-			GROUP BY document_id
-			ORDER BY entity_mix DESC
-			LIMIT 5";
-		let mut most_mix_documents_result =
-			self.db.query(most_mix_documents_query).await.map_err(|e| StorageError {
-				kind: StorageErrorKind::Query,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-		let most_mix_documents: Vec<(String, i64)> = most_mix_documents_result
-			.take::<Vec<HashMap<String, Value>>>(0)
-			.map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?
-			.into_iter()
-			.map(|item| {
-				let document_id = item
-					.get("document_id")
-					.and_then(|v| v.as_str())
-					.unwrap_or_default()
-					.to_string();
-				let entity_mix =
-					item.get("entity_mix").and_then(|v| v.as_i64()).unwrap_or_default();
-				(document_id, entity_mix)
-			})
-			.collect();
-
-		let count_sentences_documents_query = "
-		SELECT document_id, count(sentence) AS sentence_count
-		FROM semantic_knowledge
-		GROUP BY document_id, sentence_count";
-		let mut count_sentences_documents_result =
-			self.db.query(count_sentences_documents_query).await.map_err(|e| StorageError {
-				kind: StorageErrorKind::Query,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-		let count_sentences_documents: Vec<(String, i64)> = count_sentences_documents_result
-			.take::<Vec<HashMap<String, Value>>>(0)
-			.map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?
-			.into_iter()
-			.map(|item| {
-				let document_id = item
-					.get("document_id")
-					.and_then(|v| v.as_str())
-					.unwrap_or_default()
-					.to_string();
-				let sentence_count =
-					item.get("sentence_count").and_then(|v| v.as_i64()).unwrap_or_default();
-				(document_id, sentence_count)
-			})
-			.collect();
-		let mut sentence_counts: HashMap<String, i64> = HashMap::new();
-		for (document_id, count) in count_sentences_documents {
-			*sentence_counts.entry(document_id).or_insert(0) += count;
-		}
-		let mut aggregated_counts: Vec<(String, i64)> = sentence_counts.into_iter().collect();
-		aggregated_counts.sort_by(|a, b| b.1.cmp(&a.1));
-		let most_unique_sentences_documents: Vec<(String, i64)> =
-			aggregated_counts.into_iter().take(5).collect();
-
-		let high_impact_sentences_query = "
-			SELECT sentence, COUNT() as sentence_frequency
-			FROM semantic_knowledge
-			GROUP BY sentence
-			ORDER BY sentence_frequency DESC
-			LIMIT 20";
-		let mut high_impact_sentences_result =
-			self.db.query(high_impact_sentences_query).await.map_err(|e| StorageError {
-				kind: StorageErrorKind::Query,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-
-		let high_impact_sentences: Vec<(String, i64)> = high_impact_sentences_result
-			.take::<Vec<HashMap<String, Value>>>(0)
-			.map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?
-			.into_iter()
-			.map(|mut row| {
-				let sentence = row
-					.remove("sentence")
-					.and_then(|v| v.as_str().map(String::from))
-					.unwrap_or_default();
-				let sentence_frequency =
-					row.remove("sentence_frequency").and_then(|v| v.as_i64()).unwrap_or(0);
-				(sentence, sentence_frequency)
-			})
-			.collect();
-
 		let mut suggestions = Vec::new();
 
 		if !top_pairs.is_empty() {
 			let mut pairs = Vec::new();
+			let mut pair_strings = Vec::new();
+			let mut seen_pairs = HashSet::new();
 			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in
-				top_pairs.into_iter().take(5)
+				top_pairs.into_iter()
 			{
-				pairs.push((subject, subject_type, object, object_type, pair_frequency));
-			}
-			let combined_query = format!(
-					"The semantic data fabric reveals key patterns through the most frequently occurring entity pairs. For example, '{}' ({}) and '{}' ({}) appear {} times, followed by '{}' ({}) and '{}' ({}) at {} times. Other significant pairs include '{}' ({}) and '{}' ({}) with {} occurrences, '{}' ({}) and '{}' ({}) with {} occurrences, and '{}' ({}) and '{}' ({}) appearing {} times. These relationships provide insights into prevalent trends in your data.",
-					pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3, pairs[0].4,
-					pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3, pairs[1].4,
-					pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3, pairs[2].4,
-					pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3, pairs[3].4,
-					pairs[4].0, pairs[4].1, pairs[4].2, pairs[4].3, pairs[4].4
-				);
-
-			suggestions.push(QuerySuggestion {
-				query: combined_query,
-				frequency: 1,
-				document_source: String::new(),
-				sentence: String::new(),
-				tags: vec!["Top Entity Pair Relationships".to_string()],
-				top_pairs: vec!["Top Entity Pair Relationships".to_string()],
-			});
-		}
-
-		if !bottom_pairs.is_empty() {
-			let mut pairs = Vec::new();
-			for AutoSuggestPairs { subject, subject_type, object, object_type, pair_frequency } in
-				bottom_pairs.into_iter().take(5)
-			{
-				pairs.push((subject, subject_type, object, object_type, pair_frequency));
-			}
-			let combined_query = format!(
-					"Discover rare and potentially significant relationships with unique entity pairs in the data. For instance, '{}' ({}) and '{}' ({}) are observed {} time(s), followed by '{}' ({}) and '{}' ({}) at {} time(s). Other unique pairs include '{}' ({}) and '{}' ({}) with {} time(s), '{}' ({}) and '{}' ({}) with {} time(s), and '{}' ({}) and '{}' ({}) appearing {} time(s). These pairs highlight unique interactions within your data.",
-					pairs[0].0, pairs[0].1, pairs[0].2, pairs[0].3, pairs[0].4,
-					pairs[1].0, pairs[1].1, pairs[1].2, pairs[1].3, pairs[1].4,
-					pairs[2].0, pairs[2].1, pairs[2].2, pairs[2].3, pairs[2].4,
-					pairs[3].0, pairs[3].1, pairs[3].2, pairs[3].3, pairs[3].4,
-					pairs[4].0, pairs[4].1, pairs[4].2, pairs[4].3, pairs[4].4
-				);
-
-			suggestions.push(QuerySuggestion {
-				query: combined_query,
-				frequency: 1,
-				document_source: String::new(),
-				sentence: String::new(),
-				tags: vec!["Rare Entity Pair Interactions".to_string()],
-				top_pairs: vec!["Rare Entity Pair Interactions".to_string()],
-			});
-		}
-
-		if !most_mix_documents.is_empty() {
-			let mut documents = Vec::new();
-			for (document_id, entity_mix) in most_mix_documents.into_iter().take(5) {
-				documents.push((document_id, entity_mix));
-			}
-			let combined_query = format!(
-					"Certain documents feature a rich diversity of entity pairs, indicating a wide range of topics and relationships. For example, the document '{}' contains {} unique subjects and objects, followed by '{}' with {} unique subjects and objects. Other diverse documents include '{}' with {}, '{}' with {}, and '{}' with {} unique subjects and objects. These documents are valuable for comprehensive analysis.",
-					documents[0].0, documents[0].1,
-					documents[1].0, documents[1].1,
-					documents[2].0, documents[2].1,
-					documents[3].0, documents[3].1,
-					documents[4].0, documents[4].1
-				);
-
-			suggestions.push(QuerySuggestion {
-				query: combined_query,
-				frequency: 1,
-				document_source: String::new(),
-				sentence: String::new(),
-				tags: vec!["Diverse Entity Pair Documents".to_string()],
-				top_pairs: vec!["Diverse Entity Pair Documents".to_string()],
-			});
-		}
-
-		if !most_unique_sentences_documents.is_empty() {
-			let mut documents = Vec::new();
-			for (document_id, unique_sentences) in
-				most_unique_sentences_documents.into_iter().take(5)
-			{
-				documents.push((document_id, unique_sentences));
-			}
-			let combined_query = format!(
-					"High-impact documents are characterized by their extensive unique content, essential for a deep understanding of the data. For instance, the document '{}' contains {} unique contexts, followed by '{}' with {} unique contexts. Other impactful documents include '{}' with {}, '{}' with {}, and '{}' with {} unique contexts. These documents provide a broad range of critical information.",
-					documents[0].0, documents[0].1,
-					documents[1].0, documents[1].1,
-					documents[2].0, documents[2].1,
-					documents[3].0, documents[3].1,
-					documents[4].0, documents[4].1
-				);
-
-			suggestions.push(QuerySuggestion {
-				query: combined_query,
-				frequency: 1,
-				document_source: String::new(),
-				sentence: String::new(),
-				tags: vec!["High-Impact Information Sources".to_string()],
-				top_pairs: vec!["High-Impact Information Sources".to_string()],
-			});
-		}
-
-		if !high_impact_sentences.is_empty() {
-			let mut contexts = Vec::new();
-			for (sentence, sentence_frequency) in high_impact_sentences.into_iter().take(5) {
-				let trimmed_sentence = sentence.split('.').next().unwrap_or("").trim().to_string();
-				if trimmed_sentence.split_whitespace().count() > 10 {
-					contexts.push((trimmed_sentence, sentence_frequency));
+				let pair = if subject < object {
+					(subject.clone(), object.clone())
+				} else {
+					(object.clone(), subject.clone())
+				};
+				if seen_pairs.insert(pair.clone()) {
+					pairs.push((subject, subject_type, object, object_type, pair_frequency));
+					pair_strings.push(format!("{} - {}", pair.0, pair.1));
+				}
+				if pair_strings.len() >= 10 {
+					break;
 				}
 			}
-			let combined_query = format!(
-					"Certain contexts within the data are frequently referenced, highlighting their importance. For example, the context '{}' appears {} times, followed by '{}' at {} times. Other significant contexts include '{}' with {} times, '{}' with {} times, and '{}' appearing {} times. These contexts are crucial for understanding key aspects of the data.",
-					contexts[0].0, contexts[0].1,
-					contexts[1].0, contexts[1].1,
-					contexts[2].0, contexts[2].1,
-					contexts[3].0, contexts[3].1,
-					contexts[4].0, contexts[4].1
-				);
-
 			suggestions.push(QuerySuggestion {
-				query: combined_query,
+				query: "Filters".to_string(),
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),
-				tags: vec!["Crucial Context Insights".to_string()],
-				top_pairs: vec!["Crucial Context Insights".to_string()],
+				tags: vec!["Filters".to_string()],
+				top_pairs: pair_strings,
 			});
+		}
+
+		if max_suggestions > 1 {
+			let bottom_pairs_query = "
+				SELECT subject, subject_type, object, object_type, COUNT() as pair_frequency
+				FROM semantic_knowledge
+				GROUP BY subject, subject_type, object, object_type
+				ORDER BY pair_frequency ASC
+				LIMIT 5";
+			let mut bottom_pairs_result =
+				self.db.query(bottom_pairs_query).await.map_err(|e| StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+
+			let bottom_pairs: Vec<AutoSuggestPairs> =
+				bottom_pairs_result.take::<Vec<AutoSuggestPairs>>(0).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			let most_mix_documents_query = "
+				SELECT document_id, COUNT() AS entity_mix
+				FROM
+				(
+					SELECT document_id, subject, object, COUNT() AS pair_count
+					FROM semantic_knowledge
+					GROUP BY document_id, subject, object
+				)
+				GROUP BY document_id
+				ORDER BY entity_mix DESC
+				LIMIT 5";
+			let mut most_mix_documents_result =
+				self.db.query(most_mix_documents_query).await.map_err(|e| StorageError {
+					kind: StorageErrorKind::Query,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			let most_mix_documents: Vec<(String, i64)> = most_mix_documents_result
+				.take::<Vec<HashMap<String, Value>>>(0)
+				.map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?
+				.into_iter()
+				.map(|item| {
+					let document_id = item
+						.get("document_id")
+						.and_then(|v| v.as_str())
+						.unwrap_or_default()
+						.to_string();
+					let entity_mix =
+						item.get("entity_mix").and_then(|v| v.as_i64()).unwrap_or_default();
+					(document_id, entity_mix)
+				})
+				.collect();
+
+			if !bottom_pairs.is_empty() {
+				let mut pairs = Vec::new();
+				for AutoSuggestPairs {
+					subject,
+					subject_type,
+					object,
+					object_type,
+					pair_frequency,
+				} in bottom_pairs.into_iter()
+				{
+					pairs.push((subject, subject_type, object, object_type, pair_frequency));
+				}
+				let combined_query = format!(
+						"Explore rare and potentially significant connections within your semantic data fabric. These connections unveil the underlying patterns and dynamics woven into your data landscape. Noteworthy interactions are found between '{}' and '{}', along with the link between '{}' and '{}'.",
+						pairs[0].0, pairs[0].2,
+						pairs[1].0, pairs[1].2
+					);
+
+				suggestions.push(QuerySuggestion {
+					query: combined_query,
+					frequency: 1,
+					document_source: String::new(),
+					sentence: String::new(),
+					tags: vec!["Rare Semantic Data Fabric Interactions".to_string()],
+					top_pairs: vec!["Rare Semantic Data Fabric Interactions".to_string()],
+				});
+			}
+
+			if !most_mix_documents.is_empty() {
+				let mut documents = Vec::new();
+				for (document_id, entity_mix) in most_mix_documents.into_iter() {
+					documents.push((document_id, entity_mix));
+				}
+				let combined_query = format!(
+						"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
+						documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
+						documents[1].0.rsplit('/').next().unwrap_or(&documents[1].0)
+					);
+
+				suggestions.push(QuerySuggestion {
+					query: combined_query,
+					frequency: 1,
+					document_source: String::new(),
+					sentence: String::new(),
+					tags: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
+					top_pairs: vec!["Diverse Semantic Data Fabric Interactions".to_string()],
+				});
+			}
 		}
 
 		Ok(suggestions.into_iter().take(max_suggestions as usize).collect())
