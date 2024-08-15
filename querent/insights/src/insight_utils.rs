@@ -60,7 +60,7 @@ pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(Stri
 	)
 }
 
-/// Functions to split a group of sentences into a set of 10 sentences
+/// Functions to split a group of sentences into sets of 10 sentences each
 pub fn split_sentences(sentences: Vec<String>) -> Vec<Vec<String>> {
 	let mut result = Vec::new();
 	let mut chunk = Vec::new();
