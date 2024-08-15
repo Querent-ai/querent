@@ -20,6 +20,8 @@ use surrealdb::{
 	sql::Thing,
 	Response, Surreal,
 };
+
+use super::utils::fetch_documents_for_embedding;
 const NAMESPACE: &str = "querent";
 const DATABASE: &str = "querent";
 
@@ -36,11 +38,11 @@ pub struct EmbeddedKnowledgeSurrealDb {
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
-struct QueryResultEmbedded {
-	embeddings: Option<Vec<f32>>,
-	score: f32,
-	event_id: String,
-	cosine_distance: f64,
+pub struct QueryResultEmbedded {
+	pub embeddings: Option<Vec<f32>>,
+	pub score: f32,
+	pub event_id: String,
+	pub cosine_distance: f64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -61,12 +63,12 @@ pub struct InsightKnowledgeSurrealDb {
 }
 #[derive(Serialize, Debug, Clone, Deserialize)]
 
-struct QueryResultSemantic {
-	document_id: String,
-	subject: String,
-	object: String,
-	document_source: String,
-	sentence: String,
+pub struct QueryResultSemantic {
+	pub document_id: String,
+	pub subject: String,
+	pub object: String,
+	pub document_source: String,
+	pub sentence: String,
 }
 
 #[derive(Serialize, Debug, Clone, Deserialize)]
@@ -240,74 +242,131 @@ impl Storage for SurrealDB {
 		&self,
 		session_id: String,
 		query: String,
-		_collection_id: String,
+		collection_id: String,
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
-		_top_pairs_embeddings: Vec<Vec<f32>>,
+		top_pairs_embeddings: Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		let query_string = format!(
-			"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance 
-			FROM embedded_knowledge 
-			WHERE vector::similarity::cosine(embeddings, $payload) > 0.5
-			ORDER BY cosine_distance DESC
-			LIMIT {} START {}",
-			max_results, offset
-		);
-		let mut response: Response =
-			self.db.query(query_string).bind(("payload", payload)).await.map_err(|e| {
-				StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(e)),
-				}
-			})?;
-
-		let query_results =
-			response.take::<Vec<QueryResultEmbedded>>(0).map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-
 		let mut results: Vec<DocumentPayload> = Vec::new();
-		for query_result in query_results {
-			let query_string_semantic = format!(
-				"SELECT document_id, subject, object, document_source, sentence 
-				FROM semantic_knowledge 
-				WHERE event_id = '{}' ",
-				query_result.event_id.clone()
+
+		if top_pairs_embeddings.is_empty() || top_pairs_embeddings.len() == 1 {
+			let embedding = if top_pairs_embeddings.is_empty() {
+				payload.clone()
+			} else {
+				top_pairs_embeddings[0].clone()
+			};
+			results.extend(
+				fetch_documents_for_embedding(
+					&self.db,
+					&embedding,
+					offset,
+					max_results as i64,
+					&session_id,
+					&query,
+					&collection_id,
+					&payload,
+				)
+				.await?,
 			);
+		} else {
+			let num_embeddings = top_pairs_embeddings.len();
+			let full_cycles = offset / num_embeddings as i64;
+			let remaining = offset % num_embeddings as i64;
 
-			let mut response_semantic: Response =
-				self.db.query(query_string_semantic).await.map_err(|e| StorageError {
-					kind: StorageErrorKind::Query,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
-
-			let query_results_semantic = response_semantic
-				.take::<Vec<QueryResultSemantic>>(0)
-				.map_err(|e| StorageError {
-					kind: StorageErrorKind::Internal,
-					source: Arc::new(anyhow::Error::from(e)),
-				})?;
-
-			for query_result_semantic in query_results_semantic {
-				let mut doc_payload = DocumentPayload::default();
-				doc_payload.doc_id = query_result_semantic.document_id.clone();
-				doc_payload.subject = query_result_semantic.subject.clone();
-				doc_payload.object = query_result_semantic.object.clone();
-				doc_payload.doc_source = query_result_semantic.document_source.clone();
-				doc_payload.cosine_distance = Some(1.0 - query_result.cosine_distance.clone());
-				doc_payload.score = query_result.score.clone();
-				doc_payload.sentence = query_result_semantic.sentence.clone();
-				doc_payload.session_id = Some(session_id.clone());
-				doc_payload.query_embedding = Some(payload.clone());
-				doc_payload.query = Some(query.clone());
-				results.push(doc_payload);
+			for (i, embedding) in top_pairs_embeddings.iter().enumerate() {
+				let adjusted_offset =
+					if i < remaining as usize { full_cycles + 1 } else { full_cycles };
+				results.extend(
+					fetch_documents_for_embedding(
+						&self.db,
+						embedding,
+						adjusted_offset,
+						1,
+						&session_id,
+						&query,
+						&collection_id,
+						&payload,
+					)
+					.await?,
+				);
 			}
 		}
 
 		Ok(results)
 	}
+	// async fn similarity_search_l2(
+	// 	&self,
+	// 	session_id: String,
+	// 	query: String,
+	// 	_collection_id: String,
+	// 	payload: &Vec<f32>,
+	// 	max_results: i32,
+	// 	offset: i64,
+	// 	_top_pairs_embeddings: Vec<Vec<f32>>,
+	// ) -> StorageResult<Vec<DocumentPayload>> {
+	// 	let mut results: Vec<DocumentPayload> = Vec::new();
+	// 	let query_string = format!(
+	// 		"SELECT embeddings, score, event_id, vector::similarity::cosine(embeddings, $payload) AS cosine_distance
+	// 		FROM embedded_knowledge
+	// 		WHERE vector::similarity::cosine(embeddings, $payload) > 0.5
+	// 		ORDER BY cosine_distance DESC
+	// 		LIMIT {} START {}",
+	// 		max_results, offset
+	// 	);
+	// 	let mut response: Response =
+	// 		self.db.query(query_string).bind(("payload", payload)).await.map_err(|e| {
+	// 			StorageError {
+	// 				kind: StorageErrorKind::Query,
+	// 				source: Arc::new(anyhow::Error::from(e)),
+	// 			}
+	// 		})?;
+
+	// 	let query_results =
+	// 		response.take::<Vec<QueryResultEmbedded>>(0).map_err(|e| StorageError {
+	// 			kind: StorageErrorKind::Internal,
+	// 			source: Arc::new(anyhow::Error::from(e)),
+	// 		})?;
+
+	// 	for query_result in query_results {
+	// 		let query_string_semantic = format!(
+	// 			"SELECT document_id, subject, object, document_source, sentence
+	// 			FROM semantic_knowledge
+	// 			WHERE event_id = '{}' ",
+	// 			query_result.event_id.clone()
+	// 		);
+
+	// 		let mut response_semantic: Response =
+	// 			self.db.query(query_string_semantic).await.map_err(|e| StorageError {
+	// 				kind: StorageErrorKind::Query,
+	// 				source: Arc::new(anyhow::Error::from(e)),
+	// 			})?;
+
+	// 		let query_results_semantic = response_semantic
+	// 			.take::<Vec<QueryResultSemantic>>(0)
+	// 			.map_err(|e| StorageError {
+	// 				kind: StorageErrorKind::Internal,
+	// 				source: Arc::new(anyhow::Error::from(e)),
+	// 			})?;
+
+	// 		for query_result_semantic in query_results_semantic {
+	// 			let mut doc_payload = DocumentPayload::default();
+	// 			doc_payload.doc_id = query_result_semantic.document_id.clone();
+	// 			doc_payload.subject = query_result_semantic.subject.clone();
+	// 			doc_payload.object = query_result_semantic.object.clone();
+	// 			doc_payload.doc_source = query_result_semantic.document_source.clone();
+	// 			doc_payload.cosine_distance = Some(1.0 - query_result.cosine_distance.clone());
+	// 			doc_payload.score = query_result.score.clone();
+	// 			doc_payload.sentence = query_result_semantic.sentence.clone();
+	// 			doc_payload.session_id = Some(session_id.clone());
+	// 			doc_payload.query_embedding = Some(payload.clone());
+	// 			doc_payload.query = Some(query.clone());
+	// 			results.push(doc_payload);
+	// 		}
+	// 	}
+
+	// 	Ok(results)
+	// }
 
 	async fn traverse_metadata_table(
 		&self,
