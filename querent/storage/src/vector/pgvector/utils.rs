@@ -189,7 +189,7 @@ pub fn extract_unique_pairs(
 	for (_id, _doc_id, subject, object, _doc_source, _sentence, _event_id, _score) in
 		traverser_results.iter()
 	{
-		unique_pairs.insert((subject.clone(), object.clone()));
+		unique_pairs.insert((subject.to_string(), object.to_string()));
 	}
 
 	unique_pairs.into_iter().collect()

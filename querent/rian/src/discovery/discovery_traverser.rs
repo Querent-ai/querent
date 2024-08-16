@@ -187,7 +187,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 
 							let filtered_results = get_top_k_pairs(results.clone(), 3);
 							let traverser_results_1 =
-								storage.traverse_metadata_table(filtered_results.clone()).await;
+								storage.traverse_metadata_table(&filtered_results).await;
 
 							if self.previous_query_results.is_empty() ||
 								message.session_id != self.previous_session_id
@@ -197,7 +197,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 										self.previous_query_results =
 											serde_json::to_string(traverser_results)
 												.unwrap_or_default();
-										self.previous_filtered_results = filtered_results.clone();
+										self.previous_filtered_results = filtered_results;
 										self.previous_session_id = message.session_id.clone();
 									},
 									Err(e) => {
@@ -261,14 +261,10 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 
 								let final_traverser_results = if results_intersection.is_empty() {
 									self.previous_filtered_results = formatted_output_1.clone();
-									storage
-										.traverse_metadata_table(formatted_output_1.clone())
-										.await
+									storage.traverse_metadata_table(&formatted_output_1).await
 								} else {
 									self.previous_filtered_results = results_intersection.clone();
-									storage
-										.traverse_metadata_table(results_intersection.clone())
-										.await
+									storage.traverse_metadata_table(&results_intersection).await
 								};
 								match final_traverser_results.clone() {
 									Ok(ref results) => {

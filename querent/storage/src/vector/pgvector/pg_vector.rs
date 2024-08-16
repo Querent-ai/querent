@@ -566,7 +566,7 @@ impl Storage for PGVector {
 
 	async fn traverse_metadata_table(
 		&self,
-		filtered_pairs: Vec<(String, String)>,
+		filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		let mut combined_results: Vec<(
 			String,
@@ -588,7 +588,7 @@ impl Storage for PGVector {
 			// Traverse depth 1
 			traverse_node(
 				&self.pool,
-				head.clone(),
+				head.to_string(),
 				&mut combined_results,
 				&mut visited_pairs,
 				conn,
@@ -599,7 +599,7 @@ impl Storage for PGVector {
 
 			traverse_node(
 				&self.pool,
-				tail.clone(),
+				tail.to_string(),
 				&mut combined_results,
 				&mut visited_pairs,
 				conn,

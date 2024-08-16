@@ -370,7 +370,7 @@ impl Storage for SurrealDB {
 
 	async fn traverse_metadata_table(
 		&self,
-		filtered_pairs: Vec<(String, String)>,
+		filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		let mut combined_results: Vec<(
 			String,

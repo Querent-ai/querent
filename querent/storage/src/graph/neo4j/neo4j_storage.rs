@@ -107,7 +107,7 @@ impl Storage for Neo4jStorage {
 
 	async fn traverse_metadata_table(
 		&self,
-		_filtered_pairs: Vec<(String, String)>,
+		_filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}

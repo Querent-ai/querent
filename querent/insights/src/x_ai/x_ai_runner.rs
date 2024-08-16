@@ -107,9 +107,9 @@ impl InsightRunner for XAIRunner {
 					}
 					let search_results = storage
 						.similarity_search_l2(
-							self.config.discovery_session_id.clone(),
+							self.config.discovery_session_id.to_string(),
 							query.to_string(),
-							self.config.semantic_pipeline_id.clone(),
+							self.config.semantic_pipeline_id.to_string(),
 							query_embedding,
 							10,
 							0,
@@ -120,8 +120,8 @@ impl InsightRunner for XAIRunner {
 					match search_results {
 						Ok(results) => {
 							let filtered_results = get_top_k_pairs(results, 2);
-							let traverser_results_1 =
-								storage.traverse_metadata_table(filtered_results.clone()).await;
+							let mut traverser_results_1 =
+								storage.traverse_metadata_table(&filtered_results).await;
 
 							if self
 								.previous_query_results
@@ -131,8 +131,8 @@ impl InsightRunner for XAIRunner {
 									.read()
 									.map_or(true, |id| *id != session_id)
 							{
-								match &traverser_results_1 {
-									Ok(ref traverser_results) => {
+								match &mut traverser_results_1 {
+									Ok(traverser_results) => {
 										if let Ok(mut prev_query_results) =
 											self.previous_query_results.write()
 										{
@@ -167,8 +167,7 @@ impl InsightRunner for XAIRunner {
 											error!("Failed to acquire write lock on previous_session_id");
 										}
 
-										all_discovered_data
-											.extend(traverser_results.iter().cloned());
+										all_discovered_data.extend(traverser_results.drain(..));
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
 										numbered_sentences = unique_sentences
@@ -206,10 +205,10 @@ impl InsightRunner for XAIRunner {
 									},
 								};
 								let current_results = match &traverser_results_1 {
-									Ok(ref traverser_results) => traverser_results.clone(),
+									Ok(traverser_results) => traverser_results,
 									Err(e) => {
 										error!("Failed to search for similar documents in traverser: {:?}", e);
-										vec![]
+										&vec![]
 									},
 								};
 
@@ -228,7 +227,8 @@ impl InsightRunner for XAIRunner {
 								let results_intersection =
 									find_intersection(&formatted_output_1, &formatted_output_2);
 
-								let final_traverser_results = if results_intersection.is_empty() {
+								let mut final_traverser_results = if results_intersection.is_empty()
+								{
 									if let Ok(mut prev_filtered_results) =
 										self.previous_filtered_results.write()
 									{
@@ -236,7 +236,7 @@ impl InsightRunner for XAIRunner {
 									} else {
 										error!("Failed to acquire write lock on previous_filtered_results when queries do not match");
 									}
-									storage.traverse_metadata_table(formatted_output_1).await
+									storage.traverse_metadata_table(&formatted_output_1).await
 								} else {
 									if let Ok(mut prev_filtered_results) =
 										self.previous_filtered_results.write()
@@ -245,11 +245,11 @@ impl InsightRunner for XAIRunner {
 									} else {
 										error!("Failed to acquire write lock on previous_filtered_resultswhen queries match");
 									}
-									storage.traverse_metadata_table(results_intersection).await
+									storage.traverse_metadata_table(&results_intersection).await
 								};
 
-								match &final_traverser_results {
-									Ok(ref results) => {
+								match &mut final_traverser_results {
+									Ok(results) => {
 										if let Ok(mut prev_query_results) =
 											self.previous_query_results.write()
 										{
@@ -258,7 +258,7 @@ impl InsightRunner for XAIRunner {
 										} else {
 											error!("Failed to acquire write lock on previous_query_results post data fabric traversal");
 										}
-										all_discovered_data.extend(results.clone());
+										all_discovered_data.extend(results.drain(..));
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
 
@@ -356,7 +356,7 @@ impl InsightRunner for XAIRunner {
 								.insert_insight_knowledge(
 									Some(query.to_string()),
 									Some(session_id.to_string()),
-									Some(generation_text.clone()),
+									Some(generation_text.to_string()),
 								)
 								.await
 								.map_err(|e| {
@@ -387,7 +387,7 @@ impl InsightRunner for XAIRunner {
 								.insert_insight_knowledge(
 									Some(query.to_string()),
 									Some(session_id.to_string()),
-									Some(generation_text_unfiltered.clone()),
+									Some(generation_text_unfiltered.to_string()),
 								)
 								.await
 								.map_err(|e| {
@@ -511,9 +511,9 @@ impl InsightRunner for XAIRunner {
 									continue;
 								}
 								let search_results = storage.similarity_search_l2(
-									config.discovery_session_id.clone(),
+									config.discovery_session_id.to_string(),
 									query.to_string(),
-									config.semantic_pipeline_id.clone(),
+									config.semantic_pipeline_id.to_string(),
 									query_embedding,
 									10,
 									0,
@@ -523,13 +523,13 @@ impl InsightRunner for XAIRunner {
 								match search_results {
 									Ok(results) => {
 										let filtered_results = get_top_k_pairs(results, 2);
-										let traverser_results_1 = storage.traverse_metadata_table(filtered_results.clone()).await;
+										let mut traverser_results_1 = storage.traverse_metadata_table(&filtered_results).await;
 
 										if self.previous_query_results.read().unwrap().is_empty()
 											|| *self.previous_session_id.read().unwrap() != session_id
 										{
-											match &traverser_results_1 {
-												Ok(ref traverser_results) => {
+											match &mut traverser_results_1 {
+												Ok(traverser_results) => {
 													if let Ok(mut prev_query_results) =
 											self.previous_query_results.write()
 										{
@@ -556,7 +556,7 @@ impl InsightRunner for XAIRunner {
 											error!("Failed to acquire write lock on previous_session_id");
 										}
 
-										all_discovered_data.extend(traverser_results.clone());
+										all_discovered_data.extend(traverser_results.drain(..));
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
 										numbered_sentences = unique_sentences
@@ -581,10 +581,10 @@ impl InsightRunner for XAIRunner {
 												f32,
 											)> = serde_json::from_str(&self.previous_query_results.read().unwrap()).unwrap_or_default();
 											let current_results = match &traverser_results_1 {
-												Ok(ref traverser_results) => traverser_results.clone(),
+												Ok(traverser_results) => traverser_results,
 												Err(e) => {
 													error!("Failed to search for similar documents in traverser: {:?}", e);
-													vec![]
+													&vec![]
 												}
 											};
 
@@ -593,7 +593,7 @@ impl InsightRunner for XAIRunner {
 
 											let results_intersection = find_intersection(&formatted_output_1, &formatted_output_2);
 
-											let final_traverser_results = if results_intersection.is_empty() {
+											let mut final_traverser_results = if results_intersection.is_empty() {
 												if let Ok(mut prev_filtered_results) =
 													self.previous_filtered_results.write()
 												{
@@ -602,7 +602,7 @@ impl InsightRunner for XAIRunner {
 													error!("Failed to acquire write lock on previous_filtered_results when queries do not match");
 												}
 												storage
-													.traverse_metadata_table(formatted_output_1)
+													.traverse_metadata_table(&formatted_output_1)
 													.await
 											} else {
 												if let Ok(mut prev_filtered_results) =
@@ -613,12 +613,12 @@ impl InsightRunner for XAIRunner {
 													error!("Failed to acquire write lock on previous_filtered_resultswhen queries match");
 												}
 												storage
-													.traverse_metadata_table(results_intersection)
+													.traverse_metadata_table(&results_intersection)
 													.await
 											};
 
-											match &final_traverser_results {
-												Ok(ref results) => {
+											match &mut final_traverser_results {
+												Ok(results) => {
 													if let Ok(mut prev_query_results) =
 													self.previous_query_results.write()
 												{
@@ -627,7 +627,7 @@ impl InsightRunner for XAIRunner {
 												} else {
 													error!("Failed to acquire write lock on previous_query_results post data fabric traversal");
 												}
-												all_discovered_data.extend(results.clone());
+												all_discovered_data.extend(results.drain(..));
 												let (unique_sentences, _count) =
 													unique_sentences(&all_discovered_data);
 
@@ -714,7 +714,7 @@ impl InsightRunner for XAIRunner {
 									match storage.insert_insight_knowledge(
 										Some(query.to_string()),
 										Some(session_id.to_string()),
-										Some(generation_text.clone())
+										Some(generation_text.to_string())
 									).await {
 										Ok(_) => {},
 										Err(e) => {
@@ -742,7 +742,7 @@ impl InsightRunner for XAIRunner {
 								.insert_insight_knowledge(
 									Some(query.to_string()),
 									Some(session_id.to_string()),
-									Some(generation_text_unfiltered.clone()),
+									Some(generation_text_unfiltered.to_string()),
 								)
 								.await
 								{
