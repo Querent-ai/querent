@@ -29,7 +29,7 @@ pub fn get_final_prompt(query: &str, context: &str) -> String {
         "You are a knowledgeable assistant responsible for generating a comprehensive summary of the data provided below. \
         Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence. \
         Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences. \
-        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary. \
+        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary (approximately 150 - 200 words). \
         Make sure it is written in third person, and make sure we have the full context.\n\n\
         #######\n\
         -Data-\n\
@@ -43,8 +43,7 @@ pub fn get_final_prompt(query: &str, context: &str) -> String {
 pub fn get_analysis_prompt(query: &str, combined_summaries: &str) -> String {
 	format!(
         "You are a knowledgeable assistant tasked with generating a one-page report based on the provided summaries. \
-        The report should consist of three key sections: a title, a keywords section, and a concise summary (approximately 100 words). \
-        The summaries are listed in descending order of relevance, with Summary 1 being the most relevant to the query. As the relevance decreases with higher numbers, these less relevant summaries may still reveal indirect or previously unknown relationships that are valuable to the analysis. \
+        The report should consist of three key sections: a title, a keywords section, and a concise summary (approximately  300 - 500 words). \
         Your goal is to synthesize these summaries into a coherent, third-person summary that effectively addresses the query.\n\n\
         #######\n\
         -Data-\n\
@@ -53,8 +52,8 @@ pub fn get_analysis_prompt(query: &str, combined_summaries: &str) -> String {
         #######\n\
         Output Format:\n\
         Title: [Generate an appropriate title for the report]\n\
-        Keywords: [List 3-5 key terms or phrases related to the report]\n\
-        Summary: [Compose a concise summary of around 100 words]\n\
+        Keywords: [List 5-10 key terms or phrases related to the report]\n\
+        Summary: [Compose a summary of around 300 - 500 words]\n\
         #######\n\
         Output:"
     )

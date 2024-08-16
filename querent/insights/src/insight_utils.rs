@@ -21,6 +21,17 @@ pub fn unique_sentences(
 	(unique_sentences, count)
 }
 
+/// Function to extract sentences from documents
+pub fn extract_sentences(documents: &Vec<String>) -> Vec<&str> {
+	documents
+		.iter()
+		.map(|doc| {
+			let parts: Vec<&str> = doc.split(", Sentence: ").collect();
+			parts[1]
+		})
+		.collect()
+}
+
 /// Function to rerank documents based on a query
 pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(String, f32)>> {
 	let model = match TextRerank::try_new(RerankInitOptions {
@@ -34,13 +45,7 @@ pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(Stri
 			return None;
 		},
 	};
-	let sentences: Vec<&str> = documents
-		.iter()
-		.map(|doc| {
-			let parts: Vec<&str> = doc.split(", Sentence: ").collect();
-			parts[1]
-		})
-		.collect();
+	let sentences = extract_sentences(&documents);
 
 	let results = match model.rerank(query, sentences.clone(), true, None) {
 		Ok(results) => results,
@@ -62,10 +67,7 @@ pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(Stri
 
 /// Functions to split a group of sentences into sets of 10 sentences each
 pub fn split_sentences(sentences: Vec<String>) -> Vec<Vec<String>> {
-    sentences
-        .chunks(10)
-        .map(|chunk| chunk.to_vec())
-        .collect()
+	sentences.chunks(10).map(|chunk| chunk.to_vec()).collect()
 }
 #[cfg(test)]
 mod tests {

@@ -1,6 +1,7 @@
 use crate::{
-	prompts::get_suggestions_prompt, rerank_documents, split_sentences, InsightConfig,
-	InsightError, InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
+	extract_sentences, prompts::get_suggestions_prompt, rerank_documents, split_sentences,
+	InsightConfig, InsightError, InsightErrorKind, InsightInput, InsightOutput, InsightResult,
+	InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -281,6 +282,16 @@ impl InsightRunner for XAIRunner {
 									.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
 									.collect();
 							}
+							let unfiltered_results =
+								extract_sentences(&numbered_sentences).join("\n");
+							let unfiltered_prompt = format!(
+								"Query: {}\n\n\
+								-Data-\n: {}\n\
+								#######\n\
+								Output:",
+								query, unfiltered_results
+							);
+
 							let reranked_sentences = split_sentences(numbered_sentences.clone());
 							let mut all_summaries = Vec::new();
 							for (i, sentence_group) in reranked_sentences.iter().enumerate() {
@@ -347,7 +358,39 @@ impl InsightRunner for XAIRunner {
 									)
 								})?;
 
-							return Ok(InsightOutput { data: Value::String(generation_text) });
+							let human_message_unfiltered =
+								vec![Message::new_human_message(&unfiltered_prompt)];
+							let summary_unfiltered =
+								self.llm.generate(&human_message_unfiltered).await.map_err(
+									|e| {
+										InsightError::new(
+									InsightErrorKind::Internal,
+									anyhow::anyhow!("Failed to generate summary for unfiltered prompt: {:?}", e).into(),
+								)
+									},
+								)?;
+							let generation_text_unfiltered =
+								summary_unfiltered.generation.replace("\\n", "\n");
+							storage
+								.insert_insight_knowledge(
+									Some(query.to_string()),
+									Some(session_id.to_string()),
+									Some(generation_text_unfiltered.clone()),
+								)
+								.await
+								.map_err(|e| {
+									InsightError::new(
+										InsightErrorKind::Internal,
+										anyhow::anyhow!("Failed to insert insight knowledge for unfiltered prompt: {:?}", e).into(),
+									)
+								})?;
+
+							let combined_summary = format!(
+								"Original Summary:\n{}\n\nUnfiltered Summary:\n{}",
+								generation_text, generation_text_unfiltered
+							);
+
+							return Ok(InsightOutput { data: Value::String(combined_summary) });
 						},
 						Err(e) => error!("Error retrieving discovered data: {:?}", e),
 					}
@@ -603,6 +646,15 @@ impl InsightRunner for XAIRunner {
 													.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
 													.collect();
 											}
+										let unfiltered_results =
+										extract_sentences(&numbered_sentences).join("\n");
+										let unfiltered_prompt = format!(
+											"Query: {}\n\n\
+											-Data-\n: {}\n\
+											#######\n\
+											Output:",
+											query, unfiltered_results
+										);
 										let reranked_sentences = split_sentences(numbered_sentences.clone());
 										let mut all_summaries = Vec::new();
 										for (i, sentence_group) in reranked_sentences.iter().enumerate() {
@@ -659,7 +711,43 @@ impl InsightRunner for XAIRunner {
 										}
 									};
 
-									yield Ok(InsightOutput { data: Value::String(generation_text) });
+							let human_message_unfiltered = vec![Message::new_human_message(&unfiltered_prompt)];
+							let summary_unfiltered =
+								self.llm.generate(&human_message_unfiltered).await.map_err(
+									|e| {
+										InsightError::new(
+									InsightErrorKind::Internal,
+									anyhow::anyhow!("Failed to generate summary for unfiltered prompt: {:?}", e).into(),
+								)
+									},
+								)?;
+							let generation_text_unfiltered =
+								summary_unfiltered.generation.replace("\\n", "\n");
+							match storage
+								.insert_insight_knowledge(
+									Some(query.to_string()),
+									Some(session_id.to_string()),
+									Some(generation_text_unfiltered.clone()),
+								)
+								.await
+								{
+									Ok(_) => {},
+									Err(e) => {
+										yield Err(InsightError::new(
+											InsightErrorKind::Internal,
+											anyhow::anyhow!("Failed to insert insight knowledge: {:?}", e).into(),
+										));
+										continue;
+									}
+								};
+
+
+							let combined_summary = format!(
+								"Original Summary:\n{}\n\nUnfiltered Summary:\n{}",
+								generation_text, generation_text_unfiltered
+							);
+
+							yield Ok(InsightOutput { data: Value::String(combined_summary) });
 								}
 								Err(e) => error!("Error retrieving discovered data: {:?}", e),
 							}
