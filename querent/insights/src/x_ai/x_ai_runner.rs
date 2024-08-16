@@ -236,9 +236,7 @@ impl InsightRunner for XAIRunner {
 									} else {
 										error!("Failed to acquire write lock on previous_filtered_results when queries do not match");
 									}
-									storage
-										.traverse_metadata_table(formatted_output_1.clone())
-										.await
+									storage.traverse_metadata_table(formatted_output_1).await
 								} else {
 									if let Ok(mut prev_filtered_results) =
 										self.previous_filtered_results.write()
@@ -247,9 +245,7 @@ impl InsightRunner for XAIRunner {
 									} else {
 										error!("Failed to acquire write lock on previous_filtered_resultswhen queries match");
 									}
-									storage
-										.traverse_metadata_table(results_intersection.clone())
-										.await
+									storage.traverse_metadata_table(results_intersection).await
 								};
 
 								match &final_traverser_results {
@@ -441,20 +437,20 @@ impl InsightRunner for XAIRunner {
 							continue;
 						}
 					};
-					let query = match input.data.get("query").and_then(Value::as_str) {
-						Some(q) => q.to_string(),
+					let query = input.data.get("query").and_then(Value::as_str);
+					let query = match query {
+						Some(q) => q,
 						None => {
 							tracing::info!("Query is missing. Generating auto-suggestions.");
-							"Auto_Suggest".to_string()
-						}
+							"Auto_Suggest"
+						},
 					};
 
-					let prompt = match self.prompt.as_str() {
-						"" => {
-							tracing::info!("User did not provide a prompt. Going to use default prompt.");
-							"".to_string()
-						},
-						_ => self.prompt.clone(),
+					let prompt: &str = if self.prompt.is_empty() {
+						tracing::info!("User did not provide a prompt. Going to use default prompt.");
+						""
+					} else {
+						&self.prompt
 					};
 
 					let embedding_model = match embedding_model.as_ref() {
@@ -467,7 +463,7 @@ impl InsightRunner for XAIRunner {
 							continue;
 						}
 					};
-					let embeddings = match embedding_model.embed(vec![query.clone()], None) {
+					let embeddings = match embedding_model.embed(vec![query], None) {
 						Ok(emb) => emb,
 						Err(e) => {
 							yield Err(InsightError::new(
@@ -516,7 +512,7 @@ impl InsightRunner for XAIRunner {
 								}
 								let search_results = storage.similarity_search_l2(
 									config.discovery_session_id.clone(),
-									query.clone(),
+									query.to_string(),
 									config.semantic_pipeline_id.clone(),
 									query_embedding,
 									10,
@@ -526,7 +522,7 @@ impl InsightRunner for XAIRunner {
 
 								match search_results {
 									Ok(results) => {
-										let filtered_results = get_top_k_pairs(results.clone(), 2);
+										let filtered_results = get_top_k_pairs(results, 2);
 										let traverser_results_1 = storage.traverse_metadata_table(filtered_results.clone()).await;
 
 										if self.previous_query_results.read().unwrap().is_empty()
@@ -547,7 +543,7 @@ impl InsightRunner for XAIRunner {
 										if let Ok(mut prev_filtered_results) =
 											self.previous_filtered_results.write()
 										{
-											*prev_filtered_results = filtered_results.clone();
+											*prev_filtered_results = filtered_results;
 										} else {
 											error!("Failed to acquire write lock on previous_filtered_results");
 										}
@@ -606,7 +602,7 @@ impl InsightRunner for XAIRunner {
 													error!("Failed to acquire write lock on previous_filtered_results when queries do not match");
 												}
 												storage
-													.traverse_metadata_table(formatted_output_1.clone())
+													.traverse_metadata_table(formatted_output_1)
 													.await
 											} else {
 												if let Ok(mut prev_filtered_results) =
@@ -617,7 +613,7 @@ impl InsightRunner for XAIRunner {
 													error!("Failed to acquire write lock on previous_filtered_resultswhen queries match");
 												}
 												storage
-													.traverse_metadata_table(results_intersection.clone())
+													.traverse_metadata_table(results_intersection)
 													.await
 											};
 
