@@ -47,7 +47,7 @@ pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(Stri
 	};
 	let sentences = extract_sentences(&documents);
 
-	let results = match model.rerank(query, sentences.clone(), true, None) {
+	let results = match model.rerank(query, sentences, true, None) {
 		Ok(results) => results,
 		Err(e) => {
 			error!("Failed to rerank documents: {:?}", e);
@@ -65,10 +65,11 @@ pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(Stri
 	)
 }
 
-/// Functions to split a group of sentences into sets of 10 sentences each
-pub fn split_sentences(sentences: Vec<String>) -> Vec<Vec<String>> {
+/// Function to split a group of sentences into sets of 10 sentences each
+pub fn split_sentences(sentences: &[String]) -> Vec<Vec<String>> {
 	sentences.chunks(10).map(|chunk| chunk.to_vec()).collect()
 }
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -135,7 +136,7 @@ mod tests {
 			"Sentence 11".to_string(),
 		];
 
-		let split = split_sentences(sentences.clone());
+		let split = split_sentences(&sentences);
 
 		assert_eq!(split.len(), 2);
 		assert_eq!(split[0].len(), 10);

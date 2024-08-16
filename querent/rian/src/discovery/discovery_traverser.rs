@@ -248,20 +248,16 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									},
 								};
 
-								let formatted_output_1 = extract_unique_pairs(
-									current_results.clone(),
-									filtered_results.clone(),
-								);
+								let formatted_output_1 =
+									extract_unique_pairs(&current_results, &filtered_results);
 								let formatted_output_2 = extract_unique_pairs(
-									previous_results.clone(),
-									self.previous_filtered_results.clone(),
+									&previous_results,
+									&self.previous_filtered_results,
 								);
 
 								// Run intersection function
-								let results_intersection = find_intersection(
-									formatted_output_1.clone(),
-									formatted_output_2.clone(),
-								);
+								let results_intersection =
+									find_intersection(&formatted_output_1, &formatted_output_2);
 
 								let final_traverser_results = if results_intersection.is_empty() {
 									self.previous_filtered_results = formatted_output_1.clone();

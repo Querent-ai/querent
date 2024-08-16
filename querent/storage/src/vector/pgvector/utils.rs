@@ -181,13 +181,13 @@ pub async fn traverse_node(
 }
 
 pub fn extract_unique_pairs(
-	traverser_results: Vec<(String, String, String, String, String, String, String, f32)>,
-	filtered_results: Vec<(String, String)>,
+	traverser_results: &[(String, String, String, String, String, String, String, f32)],
+	filtered_results: &[(String, String)],
 ) -> Vec<(String, String)> {
-	let mut unique_pairs: HashSet<(String, String)> = filtered_results.into_iter().collect();
+	let mut unique_pairs: HashSet<(String, String)> = filtered_results.iter().cloned().collect();
 
 	for (_id, _doc_id, subject, object, _doc_source, _sentence, _event_id, _score) in
-		traverser_results
+		traverser_results.iter()
 	{
 		unique_pairs.insert((subject.clone(), object.clone()));
 	}
@@ -196,11 +196,11 @@ pub fn extract_unique_pairs(
 }
 
 pub fn find_intersection(
-	pairs1: Vec<(String, String)>,
-	pairs2: Vec<(String, String)>,
+	pairs1: &[(String, String)],
+	pairs2: &[(String, String)],
 ) -> Vec<(String, String)> {
-	let set1: HashSet<(String, String)> = pairs1.into_iter().collect();
-	let set2: HashSet<(String, String)> = pairs2.into_iter().collect();
+	let set1: HashSet<_> = pairs1.iter().cloned().collect();
+	let set2: HashSet<_> = pairs2.iter().cloned().collect();
 	set1.intersection(&set2).cloned().collect()
 }
 

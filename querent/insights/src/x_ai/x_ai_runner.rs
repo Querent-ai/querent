@@ -50,12 +50,11 @@ impl InsightRunner for XAIRunner {
 			},
 		};
 
-		let prompt = match self.prompt.as_str() {
-			"" => {
-				tracing::info!("User did not provide a prompt. Going to use default prompt.");
-				"".to_string()
-			},
-			_ => self.prompt.clone(),
+		let prompt: &str = if self.prompt.is_empty() {
+			tracing::info!("User did not provide a prompt. Going to use default prompt.");
+			""
+		} else {
+			&self.prompt
 		};
 
 		let embedding_model = self.embedding_model.as_ref().ok_or_else(|| {
@@ -88,8 +87,8 @@ impl InsightRunner for XAIRunner {
 								anyhow::anyhow!("Failed to autogenerate queries: {:?}", e).into(),
 							)
 						})?;
-						let suggestion_texts: Vec<String> =
-							suggestions.iter().map(|s| s.query.clone()).collect();
+						let suggestion_texts: Vec<&str> =
+							suggestions.iter().map(|s| s.query.as_str()).collect();
 						let suggestions_prompt = get_suggestions_prompt(&suggestion_texts);
 						let human_message = vec![Message::new_human_message(&suggestions_prompt)];
 						let suggestions_response =
@@ -120,7 +119,7 @@ impl InsightRunner for XAIRunner {
 
 					match search_results {
 						Ok(results) => {
-							let filtered_results = get_top_k_pairs(results.clone(), 2);
+							let filtered_results = get_top_k_pairs(results, 2);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(filtered_results.clone()).await;
 
@@ -138,8 +137,16 @@ impl InsightRunner for XAIRunner {
 											self.previous_query_results.write()
 										{
 											*prev_query_results =
-												serde_json::to_string(traverser_results)
-													.unwrap_or_default();
+												match serde_json::to_string(traverser_results) {
+													Ok(s) => s,
+													Err(e) => {
+														error!("Failed to serialize traverser results: {:?}", e);
+														return Err(InsightError::new(
+															InsightErrorKind::Internal,
+															anyhow::anyhow!("{:?}", e).into(),
+														));
+													},
+												};
 										} else {
 											error!("Failed to acquire write lock on previous_query_results");
 										}
@@ -147,7 +154,7 @@ impl InsightRunner for XAIRunner {
 										if let Ok(mut prev_filtered_results) =
 											self.previous_filtered_results.write()
 										{
-											*prev_filtered_results = filtered_results.clone();
+											*prev_filtered_results = filtered_results;
 										} else {
 											error!("Failed to acquire write lock on previous_filtered_results");
 										}
@@ -160,7 +167,8 @@ impl InsightRunner for XAIRunner {
 											error!("Failed to acquire write lock on previous_session_id");
 										}
 
-										all_discovered_data.extend(traverser_results.clone());
+										all_discovered_data
+											.extend(traverser_results.iter().cloned());
 										let (unique_sentences, _count) =
 											unique_sentences(&all_discovered_data);
 										numbered_sentences = unique_sentences
@@ -184,8 +192,14 @@ impl InsightRunner for XAIRunner {
 									String,
 									f32,
 								)> = match self.previous_query_results.read() {
-									Ok(query_results) =>
-										serde_json::from_str(&query_results).unwrap_or_default(),
+									Ok(query_results) => match serde_json::from_str(&query_results)
+									{
+										Ok(results) => results,
+										Err(e) => {
+											error!("Failed to deserialize previous_query_results: {:?}", e);
+											vec![]
+										},
+									},
 									Err(e) => {
 										error!("Failed to acquire read lock on previous_query_results: {:?}", e);
 										vec![]
@@ -199,26 +213,20 @@ impl InsightRunner for XAIRunner {
 									},
 								};
 
-								let formatted_output_1 = extract_unique_pairs(
-									current_results.clone(),
-									filtered_results.clone(),
-								);
+								let formatted_output_1 =
+									extract_unique_pairs(&current_results, &filtered_results);
 								let formatted_output_2 = match self.previous_filtered_results.read()
 								{
-									Ok(filtered_results) => extract_unique_pairs(
-										previous_results.clone(),
-										filtered_results.clone(),
-									),
+									Ok(filtered_results) =>
+										extract_unique_pairs(&previous_results, &filtered_results),
 									Err(e) => {
 										error!("Failed to acquire read lock on previous_filtered_results: {:?}", e);
-										extract_unique_pairs(previous_results.clone(), vec![])
+										extract_unique_pairs(&previous_results, &vec![])
 									},
 								};
 
-								let results_intersection = find_intersection(
-									formatted_output_1.clone(),
-									formatted_output_2.clone(),
-								);
+								let results_intersection =
+									find_intersection(&formatted_output_1, &formatted_output_2);
 
 								let final_traverser_results = if results_intersection.is_empty() {
 									if let Ok(mut prev_filtered_results) =
@@ -244,7 +252,7 @@ impl InsightRunner for XAIRunner {
 										.await
 								};
 
-								match final_traverser_results.clone() {
+								match &final_traverser_results {
 									Ok(ref results) => {
 										if let Ok(mut prev_query_results) =
 											self.previous_query_results.write()
@@ -269,19 +277,7 @@ impl InsightRunner for XAIRunner {
 									},
 								}
 							}
-							if let Some(reranked_results) =
-								rerank_documents(query, numbered_sentences.clone())
-							{
-								let reranked_context = reranked_results
-									.into_iter()
-									.take(numbered_sentences.len())
-									.collect::<Vec<_>>();
-								numbered_sentences = reranked_context
-									.iter()
-									.enumerate()
-									.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
-									.collect();
-							}
+							let num_sentences = numbered_sentences.len();
 							let unfiltered_results =
 								extract_sentences(&numbered_sentences).join("\n");
 							let unfiltered_prompt = format!(
@@ -291,8 +287,28 @@ impl InsightRunner for XAIRunner {
 								Output:",
 								query, unfiltered_results
 							);
+							let reranked_results = rerank_documents(query, numbered_sentences)
+								.ok_or_else(|| {
+									InsightError::new(
+										InsightErrorKind::Internal,
+										anyhow::anyhow!(
+											"Unable to use reranker to categorize documents"
+										)
+										.into(),
+									)
+								})?;
+							let reranked_context = reranked_results
+								.into_iter()
+								.take(num_sentences)
+								.collect::<Vec<_>>();
 
-							let reranked_sentences = split_sentences(numbered_sentences.clone());
+							numbered_sentences = reranked_context
+								.iter()
+								.enumerate()
+								.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
+								.collect();
+
+							let reranked_sentences = split_sentences(&numbered_sentences);
 							let mut all_summaries = Vec::new();
 							for (i, sentence_group) in reranked_sentences.iter().enumerate() {
 								let context = sentence_group.join("\n");
@@ -479,12 +495,9 @@ impl InsightRunner for XAIRunner {
 											continue;
 										}
 									};
-
-									let suggestion_texts: Vec<String> = suggestions.iter().map(|s| s.query.clone()).collect();
+									let suggestion_texts: Vec<&str> = suggestions.iter().map(|s| s.query.as_str()).collect();
 									let suggestions_prompt = get_suggestions_prompt(&suggestion_texts);
-
 									let human_message = vec![Message::new_human_message(&suggestions_prompt)];
-
 									let suggestions_response = match llm.generate(&human_message).await {
 										Ok(response) => response,
 										Err(e) => {
@@ -579,10 +592,10 @@ impl InsightRunner for XAIRunner {
 												}
 											};
 
-											let formatted_output_1 = extract_unique_pairs(current_results.clone(), filtered_results.clone());
-											let formatted_output_2 = extract_unique_pairs(previous_results.clone(), self.previous_filtered_results.read().unwrap().clone());
+											let formatted_output_1 = extract_unique_pairs(&current_results, &filtered_results);
+											let formatted_output_2 = extract_unique_pairs(&previous_results, &self.previous_filtered_results.read().unwrap());
 
-											let results_intersection = find_intersection(formatted_output_1.clone(), formatted_output_2.clone());
+											let results_intersection = find_intersection(&formatted_output_1, &formatted_output_2);
 
 											let final_traverser_results = if results_intersection.is_empty() {
 												if let Ok(mut prev_filtered_results) =
@@ -608,7 +621,7 @@ impl InsightRunner for XAIRunner {
 													.await
 											};
 
-											match final_traverser_results.clone() {
+											match &final_traverser_results {
 												Ok(ref results) => {
 													if let Ok(mut prev_query_results) =
 													self.previous_query_results.write()
@@ -633,21 +646,9 @@ impl InsightRunner for XAIRunner {
 											},
 											}
 										}
-										if let Some(reranked_results) =
-											rerank_documents(&query, numbered_sentences.clone())
-											{
-												let reranked_context = reranked_results
-													.into_iter()
-													.take(numbered_sentences.len())
-													.collect::<Vec<_>>();
-												numbered_sentences = reranked_context
-													.iter()
-													.enumerate()
-													.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
-													.collect();
-											}
+										let num_sentences = numbered_sentences.len();
 										let unfiltered_results =
-										extract_sentences(&numbered_sentences).join("\n");
+											extract_sentences(&numbered_sentences).join("\n");
 										let unfiltered_prompt = format!(
 											"Query: {}\n\n\
 											-Data-\n: {}\n\
@@ -655,7 +656,25 @@ impl InsightRunner for XAIRunner {
 											Output:",
 											query, unfiltered_results
 										);
-										let reranked_sentences = split_sentences(numbered_sentences.clone());
+										let reranked_results = rerank_documents(&query, numbered_sentences)
+											.ok_or_else(|| {
+												InsightError::new(
+													InsightErrorKind::Internal,
+													anyhow::anyhow!("Unable to use reranker to categorize documents").into(),
+												)
+											})?;
+										let reranked_context = reranked_results
+											.into_iter()
+											.take(num_sentences)
+											.collect::<Vec<_>>();
+
+										numbered_sentences = reranked_context
+											.iter()
+											.enumerate()
+											.map(|(i, (s, _))| format!("{}. {}", i + 1, s))
+											.collect();
+
+										let reranked_sentences = split_sentences(&numbered_sentences);
 										let mut all_summaries = Vec::new();
 										for (i, sentence_group) in reranked_sentences.iter().enumerate() {
 											let context = sentence_group.join("\n");

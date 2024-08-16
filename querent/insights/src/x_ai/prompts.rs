@@ -1,4 +1,4 @@
-pub fn get_suggestions_prompt(suggestion_texts: &[String]) -> String {
+pub fn get_suggestions_prompt(suggestion_texts: &[&str]) -> String {
 	format!(
         "The following data is based on a user's private domain data stored as a semantic data fabric in a SQL-based storage. \
         The semantic data fabric organizes data in the form of semantic triples (Subject, Predicate, Object), making it easier to connect information in a graph data structure for conducting traversal and finding unique patterns and linkages. \
@@ -18,8 +18,8 @@ pub fn get_suggestions_prompt(suggestion_texts: &[String]) -> String {
         4. [Fourth question]\n\
         #######\n\
         Output:",
-        suggestion_texts.get(0).unwrap_or(&"Data not available".to_string()),
-        suggestion_texts.get(1).unwrap_or(&"Data not available".to_string()),
+        suggestion_texts.get(0).unwrap_or(&"Data not available"),
+        suggestion_texts.get(1).unwrap_or(&"Data not available"),
     )
 }
 
