@@ -202,7 +202,7 @@ impl Storage for PGVector {
 				}
 			}
 			suggestions.push(QuerySuggestion {
-				query: "Filters".to_string(),
+				query: pair_strings.join(", "),
 				frequency: 1,
 				document_source: String::new(),
 				sentence: String::new(),

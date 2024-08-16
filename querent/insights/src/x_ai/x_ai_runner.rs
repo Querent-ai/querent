@@ -81,7 +81,7 @@ impl InsightRunner for XAIRunner {
 			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
 					if query.is_empty() {
-						let suggestions = storage.autogenerate_queries(10).await.map_err(|e| {
+						let suggestions = storage.autogenerate_queries(3).await.map_err(|e| {
 							InsightError::new(
 								InsightErrorKind::Internal,
 								anyhow::anyhow!("Failed to autogenerate queries: {:?}", e).into(),
