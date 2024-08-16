@@ -246,7 +246,7 @@ impl Storage for SurrealDB {
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
-		top_pairs_embeddings: Vec<Vec<f32>>,
+		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut results: Vec<DocumentPayload> = Vec::new();
 

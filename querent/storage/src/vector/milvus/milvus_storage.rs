@@ -122,7 +122,7 @@ impl Storage for MilvusStorage {
 		payload: &Vec<f32>,
 		max_results: i32,
 		_offset: i64,
-		_top_pairs_embeddings: Vec<Vec<f32>>,
+		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let collection_name = format!("pipeline_{}", collection_id);
 		let collection = self.client.get_collection(collection_name.as_str()).await;

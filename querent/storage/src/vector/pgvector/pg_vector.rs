@@ -510,7 +510,7 @@ impl Storage for PGVector {
 		payload: &Vec<f32>,
 		max_results: i32,
 		offset: i64,
-		top_pairs_embeddings: Vec<Vec<f32>>,
+		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,

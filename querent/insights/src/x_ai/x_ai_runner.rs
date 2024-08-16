@@ -113,7 +113,7 @@ impl InsightRunner for XAIRunner {
 							query_embedding,
 							10,
 							0,
-							vec![],
+							&vec![],
 						)
 						.await;
 
@@ -517,7 +517,7 @@ impl InsightRunner for XAIRunner {
 									query_embedding,
 									10,
 									0,
-									vec![],
+									&vec![],
 								).await;
 
 								match search_results {

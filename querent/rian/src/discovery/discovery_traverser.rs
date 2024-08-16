@@ -178,7 +178,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							&current_query_embedding.clone(),
 							10,
 							self.current_offset,
-							vec![],
+							&vec![],
 						)
 						.await;
 					match search_results {

@@ -157,7 +157,7 @@ impl Storage for PostgresStorage {
 		_payload: &Vec<f32>,
 		_max_results: i32,
 		_offset: i64,
-		_top_pairs_embeddings: Vec<Vec<f32>>,
+		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}

@@ -243,7 +243,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 									current_query_embedding,
 									10,
 									self.current_offset + total_fetched,
-									top_pair_embeddings.clone(),
+									&top_pair_embeddings,
 								)
 								.await;
 						}
@@ -349,8 +349,8 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		}
 		let response = DiscoveryResponse {
 			session_id: message.session_id,
-			query: message.query.clone(),
-			insights: documents.clone(),
+			query: self.current_query.to_string(),
+			insights: documents,
 			page_ranking: self.current_page_rank,
 		};
 
