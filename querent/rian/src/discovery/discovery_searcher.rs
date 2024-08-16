@@ -122,11 +122,14 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		message: DiscoveryRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if self.embedding_model.is_none() {
-			return Ok(Err(DiscoveryError::Unavailable(
-				"Discovery agent embedding model is not initialized".to_string(),
-			)));
-		}
+		let embedder = match self.embedding_model.as_ref() {
+			Some(embedder) => embedder,
+			None => {
+				return Ok(Err(DiscoveryError::Unavailable(
+					"Discovery agent embedding model is not initialized".to_string(),
+				)));
+			},
+		};
 		let message_set: HashSet<_> = message.top_pairs.iter().collect();
 		let current_set: HashSet<_> = self.current_top_pairs.iter().collect();
 		if message.query != self.current_query || message_set != current_set {
@@ -137,9 +140,8 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		} else {
 			self.current_page_rank += 1;
 		}
-		let embedder = self.embedding_model.as_ref().unwrap();
-		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
-		let current_query_embedding = embeddings[0].clone();
+		let embeddings = embedder.embed(vec![&self.current_query], None)?;
+		let current_query_embedding = &embeddings[0];
 		let mut insights = Vec::new();
 		let mut documents = Vec::new();
 		let mut unique_sentences: HashSet<String> = HashSet::new();
@@ -154,8 +156,8 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		let entity_weight = 0.5;
 		for chunk in subjects_objects.chunks(2) {
 			if chunk.len() == 2 {
-				let subject_embedding = embedder.embed(vec![chunk[0].clone()], None)?;
-				let object_embedding = embedder.embed(vec![chunk[1].clone()], None)?;
+				let subject_embedding = embedder.embed(vec![&chunk[0]], None)?;
+				let object_embedding = embedder.embed(vec![&chunk[1]], None)?;
 				let combined_embedding: Vec<f32> = current_query_embedding
 					.iter()
 					.zip(subject_embedding[0].iter())
@@ -167,10 +169,10 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			}
 		}
 		for (event_type, storage) in self.event_storages.iter() {
-			if event_type.clone() == EventType::Vector {
+			if *event_type == EventType::Vector {
 				for storage in storage.iter() {
-					if message.query.is_empty() && message.top_pairs.is_empty() {
-						let auto_suggestions = match storage.autogenerate_queries(10).await {
+					if self.current_query.is_empty() && self.current_top_pairs.is_empty() {
+						let auto_suggestions = match storage.autogenerate_queries(3).await {
 							Ok(suggestions) => suggestions,
 							Err(e) => {
 								tracing::info!("Failed to auto-generate queries: {:?}", e);
@@ -238,7 +240,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 									message.session_id.clone(),
 									message.query.clone(),
 									self.discovery_agent_params.semantic_pipeline_id.clone(),
-									&current_query_embedding.clone(),
+									current_query_embedding,
 									10,
 									self.current_offset + total_fetched,
 									top_pair_embeddings.clone(),
@@ -255,7 +257,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 								let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
 									HashMap::new();
 								let mut ordered_sentences: Vec<String> = Vec::new();
-								for document in results.clone() {
+								for document in &results {
 									let tag = format!(
 										"{}-{}",
 										document.subject.replace('_', " "),
