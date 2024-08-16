@@ -1,5 +1,4 @@
 pub fn get_suggestions_prompt(suggestion_texts: &[String]) -> String {
-	println!("This is the suggestions ---------------{:?}", suggestion_texts);
 	format!(
         "The following data is based on a user's private domain data stored as a semantic data fabric in a SQL-based storage. \
         The semantic data fabric organizes data in the form of semantic triples (Subject, Predicate, Object), making it easier to connect information in a graph data structure for conducting traversal and finding unique patterns and linkages. \
