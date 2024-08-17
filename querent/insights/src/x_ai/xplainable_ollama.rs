@@ -46,17 +46,11 @@ impl XAIOllama {
 					hidden: Some(false),
 				}),
 				value: InsightCustomOptionValue::String {
-					value: "You are a helpful assistant responsible for generating a comprehensive summary of the data provided below. \
+					value:"You are a knowledgeable assistant responsible for generating a comprehensive summary of the data provided below. \
         Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence. \
         Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences. \
         If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary. \
-        Make sure it is written in third person, and make sure we have the full context.\n\n\
-        #######\n\
-        -Data-\n\
-        User Query: {query}\n\
-        Graph Traversal Results: {context}\n\
-        #######\n\
-        Output:".to_string(),
+        Make sure it is written in third person, and make sure we have the full context.".to_string(),
 					hidden: Some(false),
 				},
 				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using Ollama.".to_string()),

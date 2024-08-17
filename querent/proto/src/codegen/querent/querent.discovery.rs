@@ -36,6 +36,9 @@ pub struct DiscoveryRequest {
     /// The query or question posed by the user
     #[prost(string, tag = "2")]
     pub query: ::prost::alloc::string::String,
+    /// The subject - object pairs based on the user selected filter
+    #[prost(string, repeated, tag = "3")]
+    pub top_pairs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 /// Response message containing insights discovered from the data
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
@@ -51,6 +54,9 @@ pub struct DiscoveryResponse {
     /// The insights discovered based on the user's query
     #[prost(message, repeated, tag = "3")]
     pub insights: ::prost::alloc::vec::Vec<Insight>,
+    /// The search result page number
+    #[prost(int32, tag = "4")]
+    pub page_ranking: i32,
 }
 /// Request to stop the discovery session
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
@@ -90,6 +96,9 @@ pub struct Insight {
     /// The tags of the search result, comma separated subject, object , predicate
     #[prost(string, tag = "5")]
     pub tags: ::prost::alloc::string::String,
+    /// The top 10 subject_object_pairs, comma separated e.g. subject 1 - object 1, subject 2 - object 2 etc.
+    #[prost(string, repeated, tag = "6")]
+    pub top_pairs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]

@@ -71,6 +71,17 @@ impl Storage for MetaStore {
 		Ok(())
 	}
 
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_session_id: &String,
+		_top_pairs: &Vec<String>,
+		_max_results: i32,
+		_offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
+	}
+
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,
@@ -89,7 +100,7 @@ impl Storage for MetaStore {
 
 	async fn traverse_metadata_table(
 		&self,
-		_filtered_pairs: Vec<(String, String)>,
+		_filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}
@@ -121,6 +132,7 @@ impl Storage for MetaStore {
 		_payload: &Vec<f32>,
 		_max_results: i32,
 		_offset: i64,
+		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		// Implement Neo4j similarity search logic (if needed)
 		Ok(vec![])

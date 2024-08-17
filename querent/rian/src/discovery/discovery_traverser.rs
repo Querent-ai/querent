@@ -29,6 +29,7 @@ pub struct DiscoveryTraverse {
 	previous_query_results: String,
 	previous_filtered_results: Vec<(String, String)>,
 	previous_session_id: String,
+	current_page_rank: i32,
 }
 
 impl DiscoveryTraverse {
@@ -49,6 +50,7 @@ impl DiscoveryTraverse {
 			previous_query_results: "".to_string(),
 			previous_filtered_results: Vec::new(),
 			previous_session_id: "".to_string(),
+			current_page_rank: 0,
 		}
 	}
 
@@ -135,6 +137,9 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		if message.query != self.current_query {
 			self.current_offset = 0;
 			self.current_query = message.query.clone();
+			self.current_page_rank = 1;
+		} else {
+			self.current_page_rank += 1;
 		}
 		let embedder = self.embedding_model.as_ref().unwrap();
 		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
@@ -160,6 +165,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							session_id: message.session_id,
 							query: "Auto-generated suggestions".to_string(),
 							insights,
+							page_ranking: self.current_page_rank,
 						};
 
 						return Ok(Ok(response));
@@ -172,6 +178,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							&current_query_embedding.clone(),
 							10,
 							self.current_offset,
+							&vec![],
 						)
 						.await;
 					match search_results {
@@ -180,7 +187,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 
 							let filtered_results = get_top_k_pairs(results.clone(), 3);
 							let traverser_results_1 =
-								storage.traverse_metadata_table(filtered_results.clone()).await;
+								storage.traverse_metadata_table(&filtered_results).await;
 
 							if self.previous_query_results.is_empty() ||
 								message.session_id != self.previous_session_id
@@ -190,7 +197,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 										self.previous_query_results =
 											serde_json::to_string(traverser_results)
 												.unwrap_or_default();
-										self.previous_filtered_results = filtered_results.clone();
+										self.previous_filtered_results = filtered_results;
 										self.previous_session_id = message.session_id.clone();
 									},
 									Err(e) => {
@@ -241,31 +248,23 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									},
 								};
 
-								let formatted_output_1 = extract_unique_pairs(
-									current_results.clone(),
-									filtered_results.clone(),
-								);
+								let formatted_output_1 =
+									extract_unique_pairs(&current_results, &filtered_results);
 								let formatted_output_2 = extract_unique_pairs(
-									previous_results.clone(),
-									self.previous_filtered_results.clone(),
+									&previous_results,
+									&self.previous_filtered_results,
 								);
 
 								// Run intersection function
-								let results_intersection = find_intersection(
-									formatted_output_1.clone(),
-									formatted_output_2.clone(),
-								);
+								let results_intersection =
+									find_intersection(&formatted_output_1, &formatted_output_2);
 
 								let final_traverser_results = if results_intersection.is_empty() {
 									self.previous_filtered_results = formatted_output_1.clone();
-									storage
-										.traverse_metadata_table(formatted_output_1.clone())
-										.await
+									storage.traverse_metadata_table(&formatted_output_1).await
 								} else {
 									self.previous_filtered_results = results_intersection.clone();
-									storage
-										.traverse_metadata_table(results_intersection.clone())
-										.await
+									storage.traverse_metadata_table(&results_intersection).await
 								};
 								match final_traverser_results.clone() {
 									Ok(ref results) => {
@@ -314,6 +313,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 			session_id: message.session_id,
 			query: message.query.clone(),
 			insights,
+			page_ranking: self.current_page_rank,
 		};
 
 		Ok(Ok(response))
@@ -331,7 +331,7 @@ fn process_documents(
 ) {
 	for document in traverser_results {
 		let tags = format!(
-			"{}, {}",
+			"{}-{}",
 			document.2.replace('_', " "), // subject
 			document.3.replace('_', " "), // object
 		);
@@ -341,6 +341,7 @@ fn process_documents(
 			relationship_strength: document.7.to_string(),
 			sentence: document.5.clone(),
 			tags,
+			top_pairs: vec!["".to_string()],
 		};
 
 		insights.push(insight);
@@ -363,7 +364,7 @@ fn process_documents(
 		document_payloads.push(document_payload);
 	}
 }
-fn process_auto_generated_suggestions(
+pub fn process_auto_generated_suggestions(
 	suggestions: &Vec<QuerySuggestion>,
 	insights: &mut Vec<proto::Insight>,
 ) {
@@ -377,6 +378,7 @@ fn process_auto_generated_suggestions(
 			relationship_strength: suggestion.frequency.to_string(),
 			sentence: suggestion.query.clone(),
 			tags: tags.join(", "),
+			top_pairs: suggestion.top_pairs.clone(),
 		};
 
 		insights.push(insight);
