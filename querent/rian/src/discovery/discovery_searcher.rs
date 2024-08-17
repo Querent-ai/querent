@@ -314,7 +314,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 														source: source.doc_source.clone(),
 														relationship_strength: total_strength
 															.to_string(),
-														sentence: sentence.clone(),
+														sentence: sentence,
 														tags: formatted_tags,
 														top_pairs: top_pairs_incoming.to_vec(),
 													};
