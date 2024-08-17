@@ -74,11 +74,12 @@ async stopAgnFabric(pipelineId)  {
 },
 /**
  * @param { string } searchQuery
+ * @param { string[] } topPairs
  * @returns { Promise<Result<DiscoveryResponse, string>> }
  */
-async sendDiscoveryRetrieverRequest(searchQuery)  {
+async sendDiscoveryRetrieverRequest(searchQuery, topPairs)  {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery }) };
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery, topPairs }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  };
@@ -220,7 +221,7 @@ export const universalConstant = 42;
 
 /**
  * Response message containing insights discovered from the data
- * @typedef { { session_id: string; query: string; insights: Insight[] } } DiscoveryResponse
+ * @typedef { { session_id: string; query: string; insights: Insight[]; page_ranking: number } } DiscoveryResponse
  */
 
 /**
@@ -259,7 +260,7 @@ export const universalConstant = 42;
 
 /**
  * Represents an insight discovered from the data
- * @typedef { { document: string; source: string; relationship_strength: string; sentence: string; tags: string } } Insight
+ * @typedef { { document: string; source: string; relationship_strength: string; sentence: string; tags: string; top_pairs: string[] } } Insight
  */
 
 /**

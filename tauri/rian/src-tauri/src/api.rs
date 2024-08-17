@@ -178,6 +178,7 @@ pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
 #[specta::specta]
 pub async fn send_discovery_retriever_request(
     search_query: String,
+    top_pairs: Vec<String>,
 ) -> Result<proto::discovery::DiscoveryResponse, String> {
     let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
     if discovery_session_id.is_empty() {
@@ -207,6 +208,7 @@ pub async fn send_discovery_retriever_request(
     let discovery_request = proto::discovery::DiscoveryRequest {
         query: search_query.clone(),
         session_id: discovery_session_id,
+        top_pairs: top_pairs.clone(),
     };
     let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
     let result =

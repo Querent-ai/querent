@@ -42,9 +42,9 @@ async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
     else return { status: "error", error: e  as any };
 }
 },
-async sendDiscoveryRetrieverRequest(searchQuery: string) : Promise<Result<DiscoveryResponse, string>> {
+async sendDiscoveryRetrieverRequest(searchQuery: string, topPairs: string[]) : Promise<Result<DiscoveryResponse, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery }) };
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery, topPairs }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -190,7 +190,11 @@ query: string;
 /**
  * The insights discovered based on the user's query
  */
-insights: Insight[] }
+insights: Insight[]; 
+/**
+ * The search result page number
+ */
+page_ranking: number }
 /**
  * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
  */
@@ -335,7 +339,11 @@ sentence: string;
 /**
  * The tags of the search result, comma separated subject, object , predicate
  */
-tags: string }
+tags: string; 
+/**
+ * The top 10 subject_object_pairs, comma separated e.g. subject 1 - object 1, subject 2 - object 2 etc.
+ */
+top_pairs: string[] }
 export type InsightAnalystRequest = { 
 /**
  * Registered ID of the insight; call /insights endpoint for available insights
