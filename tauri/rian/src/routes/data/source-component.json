@@ -1,0 +1,10 @@
+[
+	{
+		"name": "Google Drive",
+		"formComponent": "DriveForm"
+	},
+	{
+		"name": "Local Storage",
+		"formComponent": "LocalStorageForm"
+	}
+]

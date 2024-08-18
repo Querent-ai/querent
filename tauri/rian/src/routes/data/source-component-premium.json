@@ -1,0 +1,38 @@
+[
+	{
+		"name": "AWS S3",
+		"formComponent": "AWSForm"
+	},
+	{
+		"name": "Azure",
+		"formComponent": "AzureForm"
+	},
+	{
+		"name": "Dropbox",
+		"formComponent": "DropboxForm"
+	},
+	{
+		"name": "Email",
+		"formComponent": "EmailForm"
+	},
+	{
+		"name": "GCS",
+		"formComponent": "GCSForm"
+	},
+	{
+		"name": "Github",
+		"formComponent": "GithubForm"
+	},
+	{
+		"name": "Jira",
+		"formComponent": "JiraForm"
+	},
+	{
+		"name": "News",
+		"formComponent": "NewsForm"
+	},
+	{
+		"name": "Slack",
+		"formComponent": "SlackForm"
+	}
+]
