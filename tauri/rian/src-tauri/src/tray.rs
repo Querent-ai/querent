@@ -18,6 +18,7 @@ pub struct PinnedFromWindowEvent {
 }
 
 impl PinnedFromWindowEvent {
+    #[allow(dead_code)]
     pub fn pinned(&self) -> &bool {
         &self.pinned
     }
