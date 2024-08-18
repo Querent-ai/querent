@@ -1,6 +1,6 @@
 {
 	"name": "rian",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"description": "Rian is realtime information aggregation network",
 	"license": "BSL-1.0",
 	"private": true,
