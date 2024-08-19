@@ -4,168 +4,170 @@
 /** user-defined commands **/
 
 export const commands = {
-        /**
- * @returns { Promise<[boolean, UpdateResult | null]> }
- */
-async getUpdateResult()  {
-    return await TAURI_INVOKE("get_update_result");
-},
-/**
- * @returns { Promise<boolean> }
- */
-async checkIfServiceIsRunning()  {
-    return await TAURI_INVOKE("check_if_service_is_running");
-},
-/**
- * @returns { Promise<boolean> }
- */
-async hasRianLicenseKey()  {
-    return await TAURI_INVOKE("has_rian_license_key");
-},
-/**
- * @param { string } key
- * @returns { Promise<boolean> }
- */
-async setRianLicenseKey(key)  {
-    return await TAURI_INVOKE("set_rian_license_key", { key });
-},
-/**
- * @param { CollectorConfig[] } collectors
- * @returns { Promise<boolean> }
- */
-async setCollectors(collectors)  {
-    return await TAURI_INVOKE("set_collectors", { collectors });
-},
-/**
- * @returns { Promise<ListCollectorConfig> }
- */
-async getCollectors()  {
-    return await TAURI_INVOKE("get_collectors");
-},
-/**
- * @param { SemanticPipelineRequest } request
- * @returns { Promise<Result<SemanticPipelineResponse, string>> }
- */
-async startAgnFabric(request)  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("start_agn_fabric", { request }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @returns { Promise<([string, SemanticPipelineRequest])[]> }
- */
-async getRunningAgns()  {
-    return await TAURI_INVOKE("get_running_agns");
-},
-/**
- * @param { string } pipelineId
- * @returns { Promise<Result<null, string>> }
- */
-async stopAgnFabric(pipelineId)  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("stop_agn_fabric", { pipelineId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @param { string } searchQuery
- * @param { string[] } topPairs
- * @returns { Promise<Result<DiscoveryResponse, string>> }
- */
-async sendDiscoveryRetrieverRequest(searchQuery, topPairs)  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery, topPairs }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @returns { Promise<Result<InsightInfo[], string>> }
- */
-async listAvailableInsights()  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_available_insights") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @returns { Promise<Result<InsightRequestInfoList, string>> }
- */
-async listPastInsights()  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_past_insights") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @param { InsightAnalystRequest } request
- * @returns { Promise<Result<InsightAnalystResponse, string>> }
- */
-async triggerInsightAnalyst(request)  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("trigger_insight_analyst", { request }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @returns { Promise<([string, InsightAnalystRequest])[]> }
- */
-async getRunningInsightAnalysts()  {
-    return await TAURI_INVOKE("get_running_insight_analysts");
-},
-/**
- * @param { string } sessionId
- * @returns { Promise<Result<null, string>> }
- */
-async stopInsightAnalyst(sessionId)  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("stop_insight_analyst", { sessionId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @param { InsightQuery } request
- * @returns { Promise<Result<InsightQueryResponse, string>> }
- */
-async promptInsightAnalyst(request)  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-},
-/**
- * @returns { Promise<Result<PipelineRequestInfoList, string>> }
- */
-async getPastAgns()  {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_past_agns") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  };
-}
-}
-    }
+	/**
+	 * @returns { Promise<[boolean, UpdateResult | null]> }
+	 */
+	async getUpdateResult() {
+		return await TAURI_INVOKE('get_update_result');
+	},
+	/**
+	 * @returns { Promise<boolean> }
+	 */
+	async checkIfServiceIsRunning() {
+		return await TAURI_INVOKE('check_if_service_is_running');
+	},
+	/**
+	 * @returns { Promise<boolean> }
+	 */
+	async hasRianLicenseKey() {
+		return await TAURI_INVOKE('has_rian_license_key');
+	},
+	/**
+	 * @param { string } key
+	 * @returns { Promise<boolean> }
+	 */
+	async setRianLicenseKey(key) {
+		return await TAURI_INVOKE('set_rian_license_key', { key });
+	},
+	/**
+	 * @param { CollectorConfig[] } collectors
+	 * @returns { Promise<boolean> }
+	 */
+	async setCollectors(collectors) {
+		return await TAURI_INVOKE('set_collectors', { collectors });
+	},
+	/**
+	 * @returns { Promise<ListCollectorConfig> }
+	 */
+	async getCollectors() {
+		return await TAURI_INVOKE('get_collectors');
+	},
+	/**
+	 * @param { SemanticPipelineRequest } request
+	 * @returns { Promise<Result<SemanticPipelineResponse, string>> }
+	 */
+	async startAgnFabric(request) {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('start_agn_fabric', { request }) };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @returns { Promise<([string, SemanticPipelineRequest])[]> }
+	 */
+	async getRunningAgns() {
+		return await TAURI_INVOKE('get_running_agns');
+	},
+	/**
+	 * @param { string } pipelineId
+	 * @returns { Promise<Result<null, string>> }
+	 */
+	async stopAgnFabric(pipelineId) {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('stop_agn_fabric', { pipelineId }) };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @param { string } searchQuery
+	 * @param { string[] } topPairs
+	 * @returns { Promise<Result<DiscoveryResponse, string>> }
+	 */
+	async sendDiscoveryRetrieverRequest(searchQuery, topPairs) {
+		try {
+			return {
+				status: 'ok',
+				data: await TAURI_INVOKE('send_discovery_retriever_request', { searchQuery, topPairs })
+			};
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @returns { Promise<Result<InsightInfo[], string>> }
+	 */
+	async listAvailableInsights() {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('list_available_insights') };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @returns { Promise<Result<InsightRequestInfoList, string>> }
+	 */
+	async listPastInsights() {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('list_past_insights') };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @param { InsightAnalystRequest } request
+	 * @returns { Promise<Result<InsightAnalystResponse, string>> }
+	 */
+	async triggerInsightAnalyst(request) {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('trigger_insight_analyst', { request }) };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @returns { Promise<([string, InsightAnalystRequest])[]> }
+	 */
+	async getRunningInsightAnalysts() {
+		return await TAURI_INVOKE('get_running_insight_analysts');
+	},
+	/**
+	 * @param { string } sessionId
+	 * @returns { Promise<Result<null, string>> }
+	 */
+	async stopInsightAnalyst(sessionId) {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('stop_insight_analyst', { sessionId }) };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @param { InsightQuery } request
+	 * @returns { Promise<Result<InsightQueryResponse, string>> }
+	 */
+	async promptInsightAnalyst(request) {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('prompt_insight_analyst', { request }) };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @returns { Promise<Result<PipelineRequestInfoList, string>> }
+	 */
+	async getPastAgns() {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('get_past_agns') };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	}
+};
 
 /** user-defined events **/
 
-
-    /**
+/**
  * @type {typeof __makeEvents__<{
  * checkUpdateEvent: CheckUpdateEvent
  * checkUpdateResultEvent: CheckUpdateResultEvent
@@ -173,13 +175,13 @@ async getPastAgns()  {
  * }>}
  */
 
-    const __typedMakeEvents__ = __makeEvents__;
+const __typedMakeEvents__ = __makeEvents__;
 
-    export const events = __typedMakeEvents__({
-    checkUpdateEvent: "check-update-event",
-checkUpdateResultEvent: "check-update-result-event",
-pinnedFromWindowEvent: "pinned-from-window-event"
-    })
+export const events = __typedMakeEvents__({
+	checkUpdateEvent: 'check-update-event',
+	checkUpdateResultEvent: 'check-update-result-event',
+	pinnedFromWindowEvent: 'pinned-from-window-event'
+});
 
 /** user-defined constants **/
 
@@ -353,14 +355,10 @@ export const universalConstant = 42;
  * @typedef { { version: string; currentVersion: string; body: string | null } } UpdateResult
  */
 
-
 /** tauri-specta globals **/
 
-import {
-	invoke as TAURI_INVOKE,
-	Channel as TAURI_CHANNEL,
-} from "@tauri-apps/api/core";
-import * as TAURI_API_EVENT from "@tauri-apps/api/event";
+import { invoke as TAURI_INVOKE, Channel as TAURI_CHANNEL } from '@tauri-apps/api/core';
+import * as TAURI_API_EVENT from '@tauri-apps/api/event';
 
 /** @typedef {typeof import("@tauri-apps/api/window").WebviewWindowHandle} __WebviewWindowHandle__ */
 
@@ -404,20 +402,20 @@ function __makeEvents__(mappings) {
 					apply: (_, __, [window]) => ({
 						listen: (arg) => window.listen(name, arg),
 						once: (arg) => window.once(name, arg),
-						emit: (arg) => window.emit(name, arg),
+						emit: (arg) => window.emit(name, arg)
 					}),
 					get: (_, command) => {
 						switch (command) {
-							case "listen":
+							case 'listen':
 								return (arg) => TAURI_API_EVENT.listen(name, arg);
-							case "once":
+							case 'once':
 								return (arg) => TAURI_API_EVENT.once(name, arg);
-							case "emit":
+							case 'emit':
 								return (arg) => TAURI_API_EVENT.emit(name, arg);
 						}
-					},
+					}
 				});
-			},
-		},
+			}
+		}
 	);
 }
