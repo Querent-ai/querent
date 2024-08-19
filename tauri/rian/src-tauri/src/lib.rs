@@ -67,6 +67,7 @@ fn query_accessibility_permissions() -> bool {
 #[derive(specta::Type)]
 pub struct Custom(pub String);
 
+#[allow(deprecated)]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(node_config: NodeConfig) {
     info!("Starting R!AN 🧠 with config: {:?}", node_config);
