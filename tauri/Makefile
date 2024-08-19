@@ -13,6 +13,10 @@ build-rian:
 	@echo "Running cargo build"
 	@cd rian/src-tauri && cargo build
 
+.PHONY:install-rian
+install-rian:
+	@cd rian/src-tauri && cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+
 .PHONY:run-rian
 run-rian:
 	@echo "Running tauri dev"

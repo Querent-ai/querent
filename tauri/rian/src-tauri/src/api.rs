@@ -7,6 +7,7 @@ use crate::{
     RUNNING_PIPELINE_ID, UPDATE_RESULT,
 };
 use node::ApiKeyPayload;
+use std::env;
 
 #[tauri::command]
 #[specta::specta]
@@ -178,6 +179,7 @@ pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
 #[specta::specta]
 pub async fn send_discovery_retriever_request(
     search_query: String,
+    top_pairs: Vec<String>,
 ) -> Result<proto::discovery::DiscoveryResponse, String> {
     let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
     if discovery_session_id.is_empty() {
@@ -207,6 +209,7 @@ pub async fn send_discovery_retriever_request(
     let discovery_request = proto::discovery::DiscoveryRequest {
         query: search_query.clone(),
         session_id: discovery_session_id,
+        top_pairs: top_pairs.clone(),
     };
     let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
     let result =
@@ -334,4 +337,15 @@ pub async fn prompt_insight_analyst(
             Err(e.to_string())
         }
     }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_drive_credentials() -> Result<(String, String), String> {
+    let drive_client_id = env::var("DRIVE_CLIENT_ID")
+        .map_err(|e| e.to_string())?;
+    let drive_client_secret = env::var("DRIVE_CLIENT_SECRET")
+        .map_err(|e| e.to_string())?;
+    
+    Ok((drive_client_id, drive_client_secret))
 }
