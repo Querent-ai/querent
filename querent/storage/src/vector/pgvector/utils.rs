@@ -5,6 +5,7 @@ use crate::{
 use common::DocumentPayload;
 use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use pgvector::{Vector, VectorExpressionMethods};
 use std::{
 	collections::{HashMap, HashSet},
 	sync::Arc,
@@ -180,26 +181,26 @@ pub async fn traverse_node(
 }
 
 pub fn extract_unique_pairs(
-	traverser_results: Vec<(String, String, String, String, String, String, String, f32)>,
-	filtered_results: Vec<(String, String)>,
+	traverser_results: &[(String, String, String, String, String, String, String, f32)],
+	filtered_results: &[(String, String)],
 ) -> Vec<(String, String)> {
-	let mut unique_pairs: HashSet<(String, String)> = filtered_results.into_iter().collect();
+	let mut unique_pairs: HashSet<(String, String)> = filtered_results.iter().cloned().collect();
 
 	for (_id, _doc_id, subject, object, _doc_source, _sentence, _event_id, _score) in
-		traverser_results
+		traverser_results.iter()
 	{
-		unique_pairs.insert((subject.clone(), object.clone()));
+		unique_pairs.insert((subject.to_string(), object.to_string()));
 	}
 
 	unique_pairs.into_iter().collect()
 }
 
 pub fn find_intersection(
-	pairs1: Vec<(String, String)>,
-	pairs2: Vec<(String, String)>,
+	pairs1: &[(String, String)],
+	pairs2: &[(String, String)],
 ) -> Vec<(String, String)> {
-	let set1: HashSet<(String, String)> = pairs1.into_iter().collect();
-	let set2: HashSet<(String, String)> = pairs2.into_iter().collect();
+	let set1: HashSet<_> = pairs1.iter().cloned().collect();
+	let set2: HashSet<_> = pairs2.iter().cloned().collect();
 	set1.intersection(&set2).cloned().collect()
 }
 
@@ -258,4 +259,86 @@ pub fn process_traverser_results(
 	}
 
 	formatted_output
+}
+
+pub async fn fetch_documents_for_embedding(
+	conn: &mut AsyncPgConnection,
+	embedding: &Vec<f32>,
+	adjusted_offset: i64,
+	limit: i64,
+	session_id: &String,
+	query: &String,
+	collection_id: &String,
+	payload: &Vec<f32>,
+) -> StorageResult<Vec<DocumentPayload>> {
+	let vector = Vector::from(embedding.clone());
+
+	let query_result = embedded_knowledge::dsl::embedded_knowledge
+		.select((
+			embedded_knowledge::dsl::embeddings,
+			embedded_knowledge::dsl::score,
+			embedded_knowledge::dsl::event_id,
+			embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()),
+		))
+		.filter(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()).le(0.5))
+		.order_by(embedded_knowledge::dsl::embeddings.cosine_distance(vector.clone()))
+		.limit(limit)
+		.offset(adjusted_offset)
+		.load::<(Option<Vector>, f32, String, Option<f64>)>(conn)
+		.await;
+
+	match query_result {
+		Ok(result) => {
+			let mut results = Vec::new();
+			for (_embeddings, score, event_id, other_cosine_distance) in result {
+				let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
+					.select((
+						semantic_knowledge::dsl::document_id,
+						semantic_knowledge::dsl::subject,
+						semantic_knowledge::dsl::object,
+						semantic_knowledge::dsl::document_source,
+						semantic_knowledge::dsl::sentence,
+					))
+					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
+					.offset(0)
+					.load::<(String, String, String, String, String)>(conn)
+					.await;
+
+				match query_result_semantic {
+					Ok(result_semantic) => {
+						for (doc_id, subject, object, document_store, sentence) in result_semantic {
+							let mut doc_payload = DocumentPayload::default();
+							doc_payload.doc_id = doc_id.clone();
+							doc_payload.subject = subject.clone();
+							doc_payload.object = object.clone();
+							doc_payload.doc_source = document_store.clone();
+							doc_payload.cosine_distance = other_cosine_distance;
+							doc_payload.score = score;
+							doc_payload.sentence = sentence.clone();
+							doc_payload.session_id = Some(session_id.clone());
+							doc_payload.query_embedding = Some(payload.clone());
+							doc_payload.query = Some(query.clone());
+							doc_payload.collection_id = collection_id.clone();
+							results.push(doc_payload);
+						}
+					},
+					Err(e) => {
+						error!("Error querying semantic data: {:?}", e);
+						return Err(StorageError {
+							kind: StorageErrorKind::Query,
+							source: Arc::new(anyhow::Error::from(e)),
+						});
+					},
+				}
+			}
+			Ok(results)
+		},
+		Err(err) => {
+			log::error!("Query failed: {:?}", err);
+			Err(StorageError {
+				kind: StorageErrorKind::Query,
+				source: Arc::new(anyhow::Error::from(err)),
+			})
+		},
+	}
 }

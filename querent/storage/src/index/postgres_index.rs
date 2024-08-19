@@ -52,6 +52,7 @@ pub struct QuerySuggestion {
 	pub document_source: String,
 	pub sentence: String,
 	pub tags: Vec<String>,
+	pub top_pairs: Vec<String>,
 }
 
 impl PostgresStorage {
@@ -156,13 +157,14 @@ impl Storage for PostgresStorage {
 		_payload: &Vec<f32>,
 		_max_results: i32,
 		_offset: i64,
+		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}
 
 	async fn traverse_metadata_table(
 		&self,
-		_filtered_pairs: Vec<(String, String)>,
+		_filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}
@@ -317,6 +319,17 @@ impl Storage for PostgresStorage {
 		_session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>> {
 		Ok(None)
+	}
+
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_session_id: &String,
+		_top_pairs: &Vec<String>,
+		_max_results: i32,
+		_offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
 	}
 }
 

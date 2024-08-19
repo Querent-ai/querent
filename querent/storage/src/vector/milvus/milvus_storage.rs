@@ -83,6 +83,17 @@ impl Storage for MilvusStorage {
 		Ok(vec![])
 	}
 
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_session_id: &String,
+		_top_pairs: &Vec<String>,
+		_max_results: i32,
+		_offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
+	}
+
 	/// Insert InsightKnowledge into storage
 	async fn insert_insight_knowledge(
 		&self,
@@ -111,6 +122,7 @@ impl Storage for MilvusStorage {
 		payload: &Vec<f32>,
 		max_results: i32,
 		_offset: i64,
+		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let collection_name = format!("pipeline_{}", collection_id);
 		let collection = self.client.get_collection(collection_name.as_str()).await;
@@ -246,7 +258,7 @@ impl Storage for MilvusStorage {
 
 	async fn traverse_metadata_table(
 		&self,
-		_filtered_pairs: Vec<(String, String)>,
+		_filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}

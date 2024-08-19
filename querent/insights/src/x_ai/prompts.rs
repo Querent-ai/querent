@@ -1,4 +1,4 @@
-pub fn get_suggestions_prompt(suggestion_texts: &[String]) -> String {
+pub fn get_suggestions_prompt(suggestion_texts: &[&str]) -> String {
 	format!(
         "The following data is based on a user's private domain data stored as a semantic data fabric in a SQL-based storage. \
         The semantic data fabric organizes data in the form of semantic triples (Subject, Predicate, Object), making it easier to connect information in a graph data structure for conducting traversal and finding unique patterns and linkages. \
@@ -9,23 +9,26 @@ pub fn get_suggestions_prompt(suggestion_texts: &[String]) -> String {
         2. **Most Unique Entity Pairs**:\n\
         These focus on the rare relationships in the data, showing entity pairs that appear infrequently, indicating unique interactions.\n\
         Data: {}\n\n\
-        3. **High-Impact Sentences**:\n\
-        These identify sentences that appear most frequently in the data, which can be crucial for understanding key themes and recurring ideas.\n\
-        Data: {}\n\n\
-        Based on your understanding of the data above, generate 10 possible natural language questions that a user might ask to gain deeper insights and effectively traverse the semantic data fabric. \
-        The questions should be focused on extracting meaningful insights and understanding patterns within the data, rather than simple count-based queries.",
-        suggestion_texts.get(0).unwrap_or(&"Data not available".to_string()),
-        suggestion_texts.get(1).unwrap_or(&"Data not available".to_string()),
-        suggestion_texts.get(4).unwrap_or(&"Data not available".to_string())
+        Based on your understanding of the data above, generate 4 possible natural language questions that a user might ask to gain deeper insights and effectively traverse the semantic data fabric. \
+        The questions should be focused on extracting meaningful insights and understanding patterns within the data, rather than simple count-based queries.
+        Output Format:\n\
+        1. [First question]\n\
+        2. [Second question]\n\
+        3. [Third question]\n\
+        4. [Fourth question]\n\
+        #######\n\
+        Output:",
+        suggestion_texts.get(0).unwrap_or(&"Data not available"),
+        suggestion_texts.get(1).unwrap_or(&"Data not available"),
     )
 }
 
 pub fn get_final_prompt(query: &str, context: &str) -> String {
 	format!(
-        "You are a helpful assistant responsible for generating a comprehensive summary of the data provided below. \
+        "You are a knowledgeable assistant responsible for generating a comprehensive summary of the data provided below. \
         Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence. \
         Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences. \
-        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary. \
+        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary (approximately 150 - 200 words). \
         Make sure it is written in third person, and make sure we have the full context.\n\n\
         #######\n\
         -Data-\n\
@@ -36,15 +39,20 @@ pub fn get_final_prompt(query: &str, context: &str) -> String {
     )
 }
 
-pub fn get_analysis_prompt(query: &str, answer: &str) -> String {
+pub fn get_analysis_prompt(query: &str, combined_summaries: &str) -> String {
 	format!(
-        "You are a helpful assistant responsible for analyzing the Question and Answer pair below for factual accuracy. \
-        If the provided Question and Answer pair are contradictory, please resolve the contradictions and provide a single, coherent summary that accurately answers the user query without introducing any new information. \
-        Make sure it is written in third person, and make sure we have the full context.\n\n\
+        "You are a knowledgeable assistant tasked with generating a one-page report based on the provided summaries. \
+        The report should consist of three key sections: a title, a keywords section, and a concise summary (approximately  300 - 500 words). \
+        Your goal is to synthesize these summaries into a coherent, third-person summary that effectively addresses the query.\n\n\
         #######\n\
         -Data-\n\
-        Question: {query}\n\
-        Answer: {answer}\n\
+        Query: {query}\n\
+        Summaries: {combined_summaries}\n\
+        #######\n\
+        Output Format:\n\
+        Title: [Generate an appropriate title for the report]\n\
+        Keywords: [List 5-10 key terms or phrases related to the report]\n\
+        Summary: [Compose a summary of around 300 - 500 words]\n\
         #######\n\
         Output:"
     )

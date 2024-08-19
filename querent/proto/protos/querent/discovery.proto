@@ -32,6 +32,8 @@ message DiscoveryRequest {
   string session_id = 1;
   // The query or question posed by the user
   string query = 2;
+  // The subject - object pairs based on the user selected filter
+  repeated string top_pairs = 3;
 }
 
 // Response message containing insights discovered from the data
@@ -42,6 +44,8 @@ message DiscoveryResponse {
   string query = 2;
   // The insights discovered based on the user's query
   repeated Insight insights = 3;
+  // The search result page number
+  int32 page_ranking = 4;
 }
 
 // Request to stop the discovery session
@@ -68,6 +72,8 @@ message Insight {
   string sentence = 4;
    // The tags of the search result, comma separated subject, object , predicate
   string tags = 5;
+  // The top 10 subject_object_pairs, comma separated e.g. subject 1 - object 1, subject 2 - object 2 etc.
+  repeated string top_pairs = 6;
 }
 
 message DiscoverySessionRequestInfo{
