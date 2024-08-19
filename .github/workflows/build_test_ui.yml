@@ -1,0 +1,43 @@
+name: Build and Lint R!AN Svelte Project
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout code
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: tauri/rian
+
+      - name: Install playwright
+        run: pnpm exec playwright install
+        working-directory: tauri/rian
+
+      - name: Install tauri cli
+        run: pnpm add @tauri-apps/api@2.0.0-rc.0 @tauri-apps/cli@2.0.0-rc.0 --save-exact
+
+      - name: Lint with ESLint
+        run: pnpm run lint
+        working-directory: tauri/rian
+
+      - name: Build project
+        run: pnpm run build
+        working-directory: tauri/rian
+

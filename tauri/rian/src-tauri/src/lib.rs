@@ -67,6 +67,7 @@ fn query_accessibility_permissions() -> bool {
 #[derive(specta::Type)]
 pub struct Custom(pub String);
 
+#[allow(deprecated)]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(node_config: NodeConfig) {
     info!("Starting R!AN 🧠 with config: {:?}", node_config);
@@ -111,7 +112,7 @@ pub fn run(node_config: NodeConfig) {
                 Typescript::default()
                     .formatter(specta_typescript::formatter::prettier)
                     .header("/* eslint-disable */"),
-                "../src/bindings.ts",
+                "../src/service/bindings.ts",
             )
             .expect("Failed to export TypeScript bindings");
 
@@ -120,7 +121,7 @@ pub fn run(node_config: NodeConfig) {
                 specta_jsdoc::JSDoc::default()
                     .formatter(specta_typescript::formatter::prettier)
                     .header("/* eslint-disable */"),
-                "../src/bindings-jsdoc.js",
+                "../src/service/bindings-jsdoc.js",
             )
             .expect("Failed to export JSDoc bindings");
     }

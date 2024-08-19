@@ -1,6 +1,6 @@
 [package]
 name = "rian-core"
-version = "0.7.0"
+version = "0.8.1"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"

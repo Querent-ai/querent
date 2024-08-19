@@ -127,7 +127,7 @@ reqwest = { version = "0.12", features = [
 rust-embed = "8.1.0"
 # ^1.0.184 due to serde-rs/serde#2538
 serde = { version = "1.0.184", features = ["derive", "rc"] }
-serde_json = "1.0"
+serde_json = "1.0.108"
 serde_qs = { version = "0.12", features = ["warp"] }
 serde_with = "3.4.0"
 serde_yaml = "0.9"
@@ -185,19 +185,19 @@ log = { version = "^0.4.17", features = [
   "max_level_debug",
   "release_max_level_debug"
 ] }
-actors = { version = "0.7.0", path = "./actors" }
-common = { version = "0.7.0", path = "./common" }
-rian-core = { version = "0.7.0", path = "./rian" }
-storage = { version = "0.7.0", path = "./storage" }
-cluster = { version = "0.7.0", path = "./cluster" }
-codegen = { version = "0.7.0", path = "./codegen" }
-proto = { version = "0.7.0", path = "./proto" }
-node = { version = "0.7.0", path = "./node" }
-sources = { version = "0.7.0", path = "./sources" }
-ingestors = { version = "0.7.0", path = "./ingestors" }
-engines = { version = "0.7.0", path = "./engines" }
-llms = { version = "0.7.0", path = "./llms" }
-insights = { version = "0.7.0", path = "./insights" }
+actors = { version = "0.8.1", path = "./actors" }
+common = { version = "0.8.1", path = "./common" }
+rian-core = { version = "0.8.1", path = "./rian" }
+storage = { version = "0.8.1", path = "./storage" }
+cluster = { version = "0.8.1", path = "./cluster" }
+codegen = { version = "0.8.1", path = "./codegen" }
+proto = { version = "0.8.1", path = "./proto" }
+node = { version = "0.8.1", path = "./node" }
+sources = { version = "0.8.1", path = "./sources" }
+ingestors = { version = "0.8.1", path = "./ingestors" }
+engines = { version = "0.8.1", path = "./engines" }
+llms = { version = "0.8.1", path = "./llms" }
+insights = { version = "0.8.1", path = "./insights" }
 milvus-sdk-rust = "0.1.0"
 neo4rs = "0.7.0"
 diesel-async = "0.4.1"
@@ -274,6 +274,7 @@ specta-jsdoc = "=0.0.7"
 # patch unicode-normalization to version 1.22.0
 [patch.crates-io]
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
+rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
 
 [profile.release]
 panic = "unwind"

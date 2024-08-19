@@ -1,0 +1,187 @@
+{
+	"query": "How do hydrocarbon accumulations vary across different geological periods within the Gulf of Mexico Basin?",
+	"session_id": "06a7a8196dcb4eadb6c8a036a19ff981",
+	"insights": [
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Assessment of undiscovered conventional oil and gas resources_ onshore Claiborne Group_ United States part of the northern Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Assessment of undiscovered conventional oil and gas resources_ onshore Claiborne Group_ United States part of the northern Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.08606286",
+			"sentence": "This work wasconducted as part of a 2007 assessment of Paleogene–Neogenestrata of the northern Gulf of Mexico Basin, including theUnited States onshore and state waters (Dubiel et al., 2007). The assessed area is within the Upper Jurassic–Cretaceous–Tertiary composite total petroleum system, which was definedfor the assessment.",
+			"tags": "Jurassic, Cretaceous",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.05596064",
+			"sentence": "A map showing the outline of the Upper Jurassic-Cretaceous-Tertiary Composite total petroleum system of the Gulf of Mexico Basin comprises the total geographic extent of source and reservoir rocks (fig. 3). The outline of the petroleum system is roughly coincident with the outline of the structural limits of the Gulf of Mexico Basin as defined by Salvador (1991a), with some exceptions.",
+			"tags": "Jurassic, Cretaceous",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Mesozoic Gulf of Mexico basin evolution from a planetary perspective and petroleum system implications.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Mesozoic Gulf of Mexico basin evolution from a planetary perspective and petroleum system implications.pdf",
+			"relationship_strength": "0.20372874",
+			"sentence": "Late Triassic–Jurassic paleogeography and origin of Gulfof Mexico Basin. American Association of Petroleum Geologists Bulletin, 71,419–451. Gulf of Mexico back-arc tectonics 125",
+			"tags": "Triassic, Jurassic",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Assessment of undiscovered conventional oil and gas resources_ onshore Claiborne Group_ United States part of the northern Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Assessment of undiscovered conventional oil and gas resources_ onshore Claiborne Group_ United States part of the northern Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.6762919",
+			"sentence": "Collec-tively, these workers have demonstrated that Gulfof Mexico Basin hydrocarbons are sourced fromseveral stratigraphic intervals, including the Ox-fordian Smackover and Kimmeridgian–TithonianBossier and Haynesville shales (Jurassic–Lower Cre-taceous?), possibly the Aptian Pearsall Formation(Lower Cretaceous), the Turonian Eagle Ford For-mation (Upper Cretaceous), and the Thanetian–Bartonian Wilcox Group and Sparta Sand (Ter-tiary) (Figure 3).",
+			"tags": "Jurassic, Cretaceous, Shale",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.12979653",
+			"sentence": "5 Figure 2. Generalized stratigraphic section of the northern Gulf of Mexico Coastal Plain showing potential hydrocarbon source rock intervals (from Hackley and Ewing (2010); modified after Warwick and others (2007), Salvador and Quezada Muñeton (1991), Nehring (1991), Palmer and Geissman (1999), and Humble Geochemical Services and others (2002)). L. = Lower, Mid. = Middle, Up. = Upper, Tria. = Triassic, Pal. = Paleocene, Plei. = Pleistocene, Holo. = Holocene, Quat.",
+			"tags": "Triassic, Pleistocene",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.20046777",
+			"sentence": "Collectively, these workers have demonstrated that Gulf of Mexico Basin hydrocarbons are sourced from a number of stratigraphic intervals, including the Oxfordian Smackover Formation and Kimmeridgian-Tithonian Bossier Shale and Haynesville Formation (Jurassic), possibly the Aptian Pearsall Formation (Lower Cretaceous), the Turonian Eagle Ford Formation (Upper Cretaceous), and the Thanetian-Ypresian Wilcox Group and Sparta Sand (Tertiary) (fig. 2).",
+			"tags": "Jurassic, Cretaceous",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Depositional evolution of the Gulf of Mexico sedimentary basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Depositional evolution of the Gulf of Mexico sedimentary basin.pdf",
+			"relationship_strength": "0.07928248",
+			"sentence": "Indescending volumetric rank, hydrocarbons occur in Miocene, Oligocene, Paleocene–Eocene, Plio-Pleistocene,Upper Cretaceous, Lower Cretaceous, and Jurassic strata. Total produced and known reserves of the U. S. part ofthe Gulf of Mexico basin exceed 150 BBOE (billion barrels of oil equivalent) (Nehring, 1991; Crawford et al.,2003). Of this total oil and condensate aggregate about 70 Bbl; natural gas volumes are about 500 Tcf.",
+			"tags": "Cretaceous, Jurassic",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.3777942",
+			"sentence": "25 Figure 19. Events chart summarizing the major elements of the Upper Jurassic-Cretaceous-Tertiary Composite total petroleum system of the Gulf Basin (modified from Condon and Dyman, 2006). The critical moment is defined as the point in time that best represents the generation, migration, and accumulation of most of the hydrocarbons in the Upper Jurassic-Cretaceous-Tertiary Composite total petroleum system.",
+			"tags": "Jurassic, Cretaceous",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/North Sea Basin/Regional extension as a geologic trigger for diapirism.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/North Sea Basin/Regional extension as a geologic trigger for diapirism.pdf",
+			"relationship_strength": "0.07639793",
+			"sentence": "R., eds., Extensional tectonics and stratigraphy of the North Atlantic margins: American Association of Petroleum Geologists Memoir 46, p. 341-361. Winker, C. D., and Buffler, R. T., 1988, Paleogeographic evolution of early deep-water Gulf of Mexico and margins, Jurassic to middle Cretaceous (Comanchean): American Association of Petroleum Geologists Bulletin, v. 72, p. 318-346. Withjack, M. O., Meisling, K. E., and Russell, L.",
+			"tags": "Jurassic, Cretaceous",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		},
+		{
+			"document": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"source": "/home/nishantg/querent-main/geology-case-study-data/Data/GOM Basin/Geologic assessment of undiscovered conventional oil and gas resources_Middle Eocene Claiborne Group_ United States part of the Gulf of Mexico Basin.pdf",
+			"relationship_strength": "0.11692491",
+			"sentence": "24 Figure 18. Hydrocarbon families of the U.S. Gulf Coast (from Hood and others, 2002). Claiborne Group outcrop is from Schruben and others (1994); Wilcox Group shelf margin is from Galloway and others (2000). This diagram shows families of reservoired oil and gas that originated from common source rocks, as compared to figure 3, which shows the boundary of the Upper Jurassic-Cretaceous-Tertiary Composite total petroleum system that was defined for this assessment. Miss. = Mississippi.",
+			"tags": "Jurassic, Cretaceous",
+			"top_pairs": [
+				"Sandstone - Shale",
+				"Cretaceous - Jurassic",
+				"Jurassic - Triassic",
+				"Limestone - Shale",
+				"Jurassic - Sandstone",
+				"Limestone - Sandstone",
+				"Fault - Jurassic",
+				"Cretaceous - Sandstone",
+				"Cretaceous - Shale"
+			]
+		}
+	],
+	"page_ranking": 1
+}
