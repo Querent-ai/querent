@@ -8,7 +8,10 @@ export default defineConfig({
 	},
 	build: {
 		rollupOptions: {
-			external: ['@tauri-apps/api']
+			external: ['@tauri-apps/api'],
+			output: {
+				dir: 'build'
+			}
 		}
 	}
 });
