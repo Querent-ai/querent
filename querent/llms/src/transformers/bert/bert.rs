@@ -93,24 +93,17 @@ impl BertLLM {
 			} else {
 				// Fetch from Hugging Face API
 				let repo = match &options.revision {
-					Some(revision) => Repo::with_revision(
-						options.model,
-						RepoType::Model,
-						revision.to_string(),
-					),
+					Some(revision) =>
+						Repo::with_revision(options.model, RepoType::Model, revision.to_string()),
 					None => Repo::model(options.model),
 				};
 				let cache_dir = get_querent_data_path();
-				let api =
-					ApiBuilder::new().with_cache_dir(cache_dir).build().map_err(|e| {
-						LLMError::new(
-							LLMErrorKind::Io,
-							Arc::new(anyhow::anyhow!(
-								"could not initialize Hugging Face API: {}",
-								e
-							)),
-						)
-					})?;
+				let api = ApiBuilder::new().with_cache_dir(cache_dir).build().map_err(|e| {
+					LLMError::new(
+						LLMErrorKind::Io,
+						Arc::new(anyhow::anyhow!("could not initialize Hugging Face API: {}", e)),
+					)
+				})?;
 				let api = api.repo(repo);
 				let config = api.get("config.json").map_err(|e| {
 					LLMError::new(
@@ -338,7 +331,7 @@ impl LLM for BertLLM {
 					Err(e) => {
 						log::error!("Failed to decode token {}: {:?}", token, e);
 						"[UNK]".to_string()
-					}
+					},
 				}
 			})
 			.collect::<Vec<String>>();
@@ -470,7 +463,7 @@ impl LLM for BertLLM {
 				let label = match id2label.get(&label_idx.to_string()) {
 					Some(label) => label,
 					None => &default_label,
-				};				
+				};
 				entity_predictions.push((token.clone(), label.clone()));
 			}
 

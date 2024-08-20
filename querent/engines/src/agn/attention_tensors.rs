@@ -251,7 +251,7 @@ impl Engine for AttentionTensorsEngine {
 								Ok(json) => json,
 								Err(e) => {
 									log::error!("Failed to serialize payload: {:?}", e);
-									String::new() 
+									String::new()
 								},
 							};
 							let event = EventState {
@@ -271,7 +271,7 @@ impl Engine for AttentionTensorsEngine {
 							log::error!("Unable to process Attention matrix in AGN while creating Vector Event Payload.");
 							return;
 						}
-					};					
+					};
 					let mut i = 0;
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
@@ -303,7 +303,7 @@ impl Engine for AttentionTensorsEngine {
 								Ok(json) => json,
 								Err(e) => {
 									log::error!("Failed to serialize payload: {:?}", e);
-									String::new() 
+									String::new()
 								},
 							};
 							let event = EventState {

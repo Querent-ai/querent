@@ -165,16 +165,11 @@ pub fn perform_search(
 		let attention_scores = &attention_matrix[current_path.current_token];
 
 		for (i, &score) in attention_scores.iter().enumerate() {
-            let mut next_path = current_path.visited_tokens.clone();
-            next_path.push(i);
+			let mut next_path = current_path.visited_tokens.clone();
+			next_path.push(i);
 
-            if is_valid_token(
-                i,
-                entity_pair,
-                &mut candidate_paths,
-                &mut current_path,
-                score,
-			) && !visited_paths.contains(&next_path) &&
+			if is_valid_token(i, entity_pair, &mut candidate_paths, &mut current_path, score) &&
+				!visited_paths.contains(&next_path) &&
 				current_path.current_token != i
 			{
 				let mut new_path = current_path.clone();

@@ -56,12 +56,12 @@ pub struct ClassifiedSentenceWithRelations {
 pub fn remove_newlines(text: &str) -> String {
 	let sanitized_text = sanitize_text(text);
 	match Regex::new(r"\n+") {
-        Ok(re) => re.replace_all(&sanitized_text, " ").to_string(),
-        Err(e) => {
-            log::error!("Failed to create regex: {:?}", e);
-            sanitized_text
-        }
-    }
+		Ok(re) => re.replace_all(&sanitized_text, " ").to_string(),
+		Err(e) => {
+			log::error!("Failed to create regex: {:?}", e);
+			sanitized_text
+		},
+	}
 }
 
 /// Removes null bytes and any other invalid UTF-8 sequences from the given text.
@@ -184,7 +184,12 @@ pub fn match_entities_with_tokens(
 			let token_indices = find_all_token_indices(sentence_tokens, entity);
 			for (token_start, token_end) in token_indices {
 				if seen_positions.insert((token_start, token_end)) {
-					matched_entities.push((entity.to_string(), label.to_string(), token_start, token_end));
+					matched_entities.push((
+						entity.to_string(),
+						label.to_string(),
+						token_start,
+						token_end,
+					));
 				}
 			}
 		}
@@ -257,7 +262,14 @@ pub fn create_binary_pairs(
 						continue;
 					}
 
-					pairs.push((entity1.to_string(), *start1, *end1, entity2.to_string(), *start2, *end2));
+					pairs.push((
+						entity1.to_string(),
+						*start1,
+						*end1,
+						entity2.to_string(),
+						*start2,
+						*end2,
+					));
 				}
 			}
 

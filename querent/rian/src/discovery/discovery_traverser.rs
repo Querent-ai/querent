@@ -196,16 +196,17 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							{
 								match &traverser_results_1 {
 									Ok(traverser_results) => {
-										self.previous_query_results = match serde_json::to_string(traverser_results) {
-											Ok(serialized_results) => serialized_results,
-											Err(e) => {
-												log::error!(
+										self.previous_query_results =
+											match serde_json::to_string(traverser_results) {
+												Ok(serialized_results) => serialized_results,
+												Err(e) => {
+													log::error!(
 													"Failed to search for similar documents in traverser: {}",
 													e
 												);
-												String::new()
-											}
-										};
+													String::new()
+												},
+											};
 										self.previous_filtered_results = filtered_results;
 										self.previous_session_id = message.session_id.clone();
 									},
@@ -248,9 +249,12 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 								)> = match serde_json::from_str(&self.previous_query_results) {
 									Ok(results) => results,
 									Err(e) => {
-										log::error!("Failed to deserialize previous query results: {}", e);
+										log::error!(
+											"Failed to deserialize previous query results: {}",
+											e
+										);
 										Vec::new()
-									}
+									},
 								};
 								let current_results = match &traverser_results_1 {
 									Ok(ref traverser_results) => traverser_results,
@@ -279,18 +283,22 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 								};
 								match &final_traverser_results {
 									Ok(results) => {
-										self.previous_query_results = match serde_json::to_string(results) {
-											Ok(serialized_results) => serialized_results,
-											Err(e) => {
-												log::error!("Failed to serialize traverser results: {}", e);
-												String::new()
-											}
-										};
+										self.previous_query_results =
+											match serde_json::to_string(results) {
+												Ok(serialized_results) => serialized_results,
+												Err(e) => {
+													log::error!(
+														"Failed to serialize traverser results: {}",
+														e
+													);
+													String::new()
+												},
+											};
 									},
 									Err(e) => {
 										log::error!("Failed to search for similar documents in traverser: {:?}", e);
 									},
-								}	
+								}
 								if let Ok(traverser_results) = final_traverser_results {
 									process_documents(
 										&traverser_results,
@@ -341,9 +349,9 @@ fn process_documents(
 	insights: &mut Vec<proto::Insight>,
 	document_payloads: &mut Vec<DocumentPayload>,
 	current_query_embedding: &[f32],
-    query: &str,
-    session_id: &str,
-    coll_id: &str,
+	query: &str,
+	session_id: &str,
+	coll_id: &str,
 ) {
 	for document in traverser_results {
 		let tags = format!(
