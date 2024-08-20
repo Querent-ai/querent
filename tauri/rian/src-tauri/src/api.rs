@@ -1,6 +1,6 @@
 use insights::InsightInfo;
 use log::info;
-use proto::{semantics::SemanticPipelineResponse, InsightAnalystResponse};
+use proto::{semantics::SemanticPipelineResponse, InsightAnalystResponse, semantics::IngestedTokens, semantics::IndexingStatistics};
 
 use crate::{
     UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
@@ -348,4 +348,50 @@ pub fn get_drive_credentials() -> Result<(String, String), String> {
         .map_err(|e| e.to_string())?;
     
     Ok((drive_client_id, drive_client_secret))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_collectors(id: proto::semantics::DeleteCollectorRequest) -> bool {
+    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let result = node::serve::semantic_api::delete_collectors(id, secret_store).await;
+    if result.is_ok() {
+        info!("Source delete successfully");
+        true
+    } else {
+        info!("Failed to delete Source");
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ingest_tokens(tokens: Vec<IngestedTokens>, pipeline_id: String) -> bool {
+    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+
+    let result = node::serve::semantic_api::ingest_tokens(pipeline_id, tokens, semantic_service_mailbox).await;
+    if result.is_ok() {
+        info!("Data ingested successfully");
+        true
+    } else {
+        info!("Failed to ingest data");
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_pipeline(pipeline_id: String) -> Result<IndexingStatistics, String> {
+
+    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let result = node::serve::semantic_api::describe_pipeline(pipeline_id, semantic_service_mailbox).await;
+
+    match result {
+        Ok(response) => {
+            Ok(response)
+        }
+        Err(e) => {
+            return Err(e.to_string());
+        }
+    }
 }

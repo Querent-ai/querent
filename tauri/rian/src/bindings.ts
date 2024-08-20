@@ -108,6 +108,20 @@ async getDriveCredentials() : Promise<Result<[string, string], string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async deleteCollectors(id: DeleteCollectorRequest) : Promise<boolean> {
+    return await TAURI_INVOKE("delete_collectors", { id });
+},
+async ingestTokens(tokens: IngestedTokens[], pipelineId: string) : Promise<boolean> {
+    return await TAURI_INVOKE("ingest_tokens", { tokens, pipelineId });
+},
+async describePipeline(pipelineId: string) : Promise<Result<IndexingStatistics, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("describe_pipeline", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -183,6 +197,7 @@ tooltip: string | null;
  * Value of the custom option.
  */
 value: InsightCustomOptionValue }
+export type DeleteCollectorRequest = { id: string[] }
 /**
  * Response message containing insights discovered from the data
  */
@@ -324,6 +339,8 @@ folder_to_crawl: string;
  * Id for the collector
  */
 id: string }
+export type IndexingStatistics = { total_docs: number; total_events: number; total_events_processed: number; total_events_received: number; total_events_sent: number; total_batches: number; total_sentences: number; total_subjects: number; total_predicates: number; total_objects: number; total_graph_events: number; total_vector_events: number; total_data_processed_size: number }
+export type IngestedTokens = { file: string; data: string[]; is_token_stream: boolean; doc_source: string; source_id: string }
 /**
  * Represents an insight discovered from the data
  */

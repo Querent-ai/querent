@@ -3,7 +3,7 @@ use api::{
     get_running_insight_analysts, get_update_result, has_rian_license_key, list_available_insights,
     list_past_insights, prompt_insight_analyst, send_discovery_retriever_request, set_collectors,
     set_rian_license_key, start_agn_fabric, stop_agn_fabric, stop_insight_analyst,
-    trigger_insight_analyst, get_drive_credentials
+    trigger_insight_analyst, get_drive_credentials, delete_collectors, ingest_tokens, describe_pipeline
 };
 use log::{error, info};
 use node::{
@@ -95,7 +95,10 @@ pub fn run(node_config: NodeConfig) {
             stop_insight_analyst,
             prompt_insight_analyst,
             get_past_agns,
-            get_drive_credentials
+            get_drive_credentials,
+            delete_collectors,
+            ingest_tokens,
+            describe_pipeline
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
