@@ -128,11 +128,14 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		message: DiscoveryRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if self.embedding_model.is_none() {
-			return Ok(Err(DiscoveryError::Unavailable(
-				"Discovery agent embedding model is not initialized".to_string(),
-			)));
-		}
+		let embedder = match self.embedding_model.as_ref() {
+			Some(embedder) => embedder,
+			None => {
+				return Ok(Err(DiscoveryError::Unavailable(
+					"Discovery agent embedding model is not initialized".to_string(),
+				)));
+			},
+		};
 
 		if message.query != self.current_query {
 			self.current_offset = 0;
@@ -141,17 +144,16 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		} else {
 			self.current_page_rank += 1;
 		}
-		let embedder = self.embedding_model.as_ref().unwrap();
-		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
-		let current_query_embedding = embeddings[0].clone();
+		let embeddings = embedder.embed(vec![&self.current_query], None)?;
+		let current_query_embedding = &embeddings[0];
 		let mut insights = Vec::new();
 		let mut document_payloads = Vec::new();
 
 		for (event_type, storages) in self.event_storages.iter() {
-			if event_type.clone() == EventType::Vector {
+			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
 					if message.query.is_empty() {
-						let auto_suggestions = match storage.autogenerate_queries(10).await {
+						let auto_suggestions = match storage.autogenerate_queries(3).await {
 							Ok(suggestions) => suggestions,
 							Err(e) => {
 								tracing::info!("Failed to auto-generate queries: {:?}", e);
@@ -175,7 +177,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							message.session_id.clone(),
 							message.query.clone(),
 							self.discovery_agent_params.semantic_pipeline_id.clone(),
-							&current_query_embedding.clone(),
+							current_query_embedding,
 							10,
 							self.current_offset,
 							&vec![],
@@ -185,7 +187,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 						Ok(results) => {
 							self.current_offset += results.len() as i64;
 
-							let filtered_results = get_top_k_pairs(results.clone(), 3);
+							let filtered_results = get_top_k_pairs(results, 3);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(&filtered_results).await;
 
