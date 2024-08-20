@@ -49,7 +49,7 @@ impl RobertaLLM {
 		};
 
 		let (config_filename, tokenizer_filename, weights_filename, weight_source) =
-			if let Some(local_dir) = options.local_dir.clone() {
+			if let Some(local_dir) = options.local_dir {
 				// Read from local directory
 				let config_filename = PathBuf::from(format!("{}/config.json", local_dir));
 				let tokenizer_filename = PathBuf::from(format!("{}/tokenizer.json", local_dir));
@@ -74,14 +74,14 @@ impl RobertaLLM {
 				(config_filename, tokenizer_filename, weights_filename, weight_source)
 			} else {
 				// Fetch from Hugging Face API
-				let repo = match options.revision.clone() {
+				let repo = match options.revision {
 					Some(revision) =>
-						Repo::with_revision(options.model.clone(), RepoType::Model, revision),
-					None => Repo::model(options.model.clone()),
+						Repo::with_revision(options.model, RepoType::Model, revision),
+					None => Repo::model(options.model),
 				};
 				let cache_dir = get_querent_data_path();
 				let api =
-					ApiBuilder::new().with_cache_dir(cache_dir.clone()).build().map_err(|e| {
+					ApiBuilder::new().with_cache_dir(cache_dir).build().map_err(|e| {
 						LLMError::new(
 							LLMErrorKind::Io,
 							Arc::new(anyhow::anyhow!(
@@ -171,7 +171,7 @@ impl RobertaLLM {
 		let token_classification_model = if config._num_labels.is_some() ||
 			config.id2label.is_some()
 		{
-			Some(RobertaForTokenClassification::load(vb.clone(), &config).map_err(|e| {
+			Some(RobertaForTokenClassification::load(vb, &config).map_err(|e| {
 				LLMError::new(
 					LLMErrorKind::PyTorch,
 					Arc::new(anyhow::anyhow!("could not load token classification model: {}", e)),
@@ -312,10 +312,14 @@ impl LLM for RobertaLLM {
 			.iter()
 			.map(|&token| {
 				let token_u32 = token as u32;
-				self.tokenizer
-					.decode(&[token_u32], false)
-					.unwrap_or_else(|_| "[UNK]".to_string())
-			})
+				match self.tokenizer.decode(&[token_u32], false) {
+					Ok(word) => word,
+					Err(e) => {
+						log::error!("Failed to decode token {}: {:?}", token, e);
+						"[UNK]".to_string()
+					}
+				}
+				})
 			.collect::<Vec<String>>();
 		words
 	}
@@ -443,7 +447,10 @@ impl LLM for RobertaLLM {
 						Arc::new(anyhow::anyhow!("max probability not found")),
 					)
 				})? as i64;
-				let label = id2label.get(&label_idx.to_string()).unwrap_or(&default_label);
+				let label = match id2label.get(&label_idx.to_string()) {
+					Some(label) => label,
+					None => &default_label,
+				};
 				entity_predictions.push((token.clone(), label.clone()));
 			}
 
