@@ -87,13 +87,14 @@ impl IndividualFilter {
 			for &token_id in &candidate.rel_tokens {
 				let word_id = token_id;
 				let word = &self.doc[token_id].text;
-				if self.forward_relations && last_index.is_some() {
-					let last_idx = last_index.unwrap();
-					if word_id <= last_idx || word_id - last_idx != 1 {
-						valid = false;
-						break;
-					}
-				}
+				if self.forward_relations {
+                    if let Some(last_idx) = last_index {
+                        if token_id <= last_idx || token_id - last_idx != 1 {
+                            valid = false;
+                            break;
+                        }
+                    }
+                }
 				last_index = Some(word_id);
 
 				if !rel_txt.is_empty() {
