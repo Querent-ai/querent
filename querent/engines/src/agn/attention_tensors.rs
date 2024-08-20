@@ -77,32 +77,30 @@ impl Engine for AttentionTensorsEngine {
 		&'life0 self,
 		token_stream: Receiver<IngestedTokens>,
 	) -> EngineResult<Pin<Box<dyn Stream<Item = EngineResult<EventState>> + Send + 'life0>>> {
-		if self.embedding_model.is_none() {
+		let embedder = if let Some(embedder) = self.embedding_model.as_ref() {
+			embedder
+		} else {
 			return Err(EngineError::new(
 				EngineErrorKind::ModelError,
-				anyhow::anyhow!("Embedding model not initialized").into(),
+				anyhow::anyhow!("AGN Embedding model not initialized").into(),
 			));
-		}
-
-		// Process the token stream to get chunks
+		};
+		let default_label = "unlabelled".to_string();
 		let stream = stream! {
-			// Await the maximum tokens value outside the stream! block
 			let max_tokens = self.llm.maximum_tokens().await;
-			// Make copies of necessary parts of `self`
 			let mut entities = self.entities.clone();
 			let mut sample_entities = self.sample_entities.clone();
-			let llm = self.llm.clone();
-			let embedder = self.embedding_model.as_ref().unwrap();
+			let llm = &self.llm;
 			let mut token_stream = token_stream;
 			while let Some(token) = token_stream.recv().await {
 				if token.data.is_empty() {
 					continue;
 				}
-				let doc_source = token.doc_source.clone();
-				let file = token.file.clone();
+				let doc_source = &token.doc_source;
+				let file = &token.file;
 				let cleaned_data: Vec<String> =
 					token.data.into_iter().map(|s| remove_newlines(&s)).collect();
-				let source_id = token.source_id.clone();
+				let source_id = &token.source_id;
 				let mut all_chunks = Vec::new();
 				for data in cleaned_data {
 					let split_chunks = split_into_chunks(max_tokens, &data);
@@ -130,7 +128,7 @@ impl Engine for AttentionTensorsEngine {
 							tokenized_chunks_ner.push(tokenized_chunk);
 						}
 						for tokens in &tokenized_chunks_ner {
-							let model_input = ner_llm.model_input(tokens.clone()).await.map_err(|e| EngineError::from(e))?;
+							let model_input = ner_llm.model_input(tokens.to_vec()).await.map_err(|e| EngineError::from(e))?;
 							model_inputs.push(model_input);
 						}
 						let mut classification_results = Vec::new();
@@ -141,7 +139,7 @@ impl Engine for AttentionTensorsEngine {
 						for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
 							let filtered_entities: Vec<(String, String)> = classification.iter().filter(|(_, label)| label != "O").cloned().collect();
 							classified_sentences.push(ClassifiedSentence {
-								sentence: chunk.clone(),
+								sentence: chunk.to_string(),
 								entities: filtered_entities
 											.into_iter()
 											.map(|(e, l)| (e.to_lowercase(), l, 0, 0))
@@ -160,25 +158,31 @@ impl Engine for AttentionTensorsEngine {
 				.await?;
 				let mut all_sentences_with_relations = Vec::new();
 				for (classified, tokenized_chunk) in extended_classified_sentences_with_attention.iter().zip(tokenized_chunks.iter()) {
-					let attention_matrix = classified.attention_matrix.as_ref().unwrap().clone();
+					let attention_matrix = match classified.attention_matrix.as_ref() {
+						Some(matrix) => matrix.clone(),
+						None => {
+							log::error!("Unable to process Attention matrix in AGN");
+							return;
+						},
+					};
 					let pairs = &classified.classified_sentence.pairs;
 					let token_words = llm.tokens_to_words(tokenized_chunk).await;
 					let tokens: Vec<Token> = token_words.iter().map(|word| {
 						Token {
-							text: word.clone(),
-							lemma: word.clone(),
+							text: word.to_string(),
+							lemma: word.to_string(),
 						}
 					}).collect();
 					let filter = IndividualFilter::new(tokens, true, 0.05);
 					let mut sentence_relations = Vec::new();
 					for (head_text, head_start, head_end, tail_text, tail_start, tail_end) in pairs {
 						let head = Entity {
-							name: head_text.clone(),
+							name: head_text.to_string(),
 							start_idx: *head_start,
 							end_idx: *head_end,
 						};
 						let tail = Entity {
-							name: tail_text.clone(),
+							name: tail_text.to_string(),
 							start_idx: *tail_start,
 							end_idx: *tail_end,
 						};
@@ -203,7 +207,6 @@ impl Engine for AttentionTensorsEngine {
 								score: sr.total_score,
 							}).collect();
 						let head_tail_relations = filter.filter(search_beams, &head, &tail);
-						// Use select_highest_score_relation function here
 						let highest_scored_relation = select_highest_score_relation(&head_tail_relations);
 						sentence_relations.push(highest_scored_relation);
 					}
@@ -223,24 +226,33 @@ impl Engine for AttentionTensorsEngine {
 						for (predicate, _score) in &head_tail_relation.relations {
 							let event_id = generate_custom_comb_uuid();
 							event_ids.push(event_id.clone());
-							// Find the index of the head and tail entities
 							let head_index = entities.iter().position(|e| e == &head_tail_relation.head.name);
 							let tail_index = entities.iter().position(|e| e == &head_tail_relation.tail.name);
-							// Assign the types based on the indices
-							let subject_type = head_index.and_then(|i| sample_entities.get(i)).unwrap_or(&"unlabelled".to_string()).clone();
-							let object_type = tail_index.and_then(|i| sample_entities.get(i)).unwrap_or(&"unlabelled".to_string()).clone();
+							let subject_type = head_index
+								.and_then(|i| sample_entities.get(i))
+								.unwrap_or(&default_label);
+							let object_type = tail_index
+								.and_then(|i| sample_entities.get(i))
+								.unwrap_or(&default_label);
 							let payload = SemanticKnowledgePayload {
-								subject: head_tail_relation.head.name.clone().to_string(),
+								subject: head_tail_relation.head.name.to_string(),
 								subject_type: subject_type.to_string(),
-								predicate: predicate.clone().to_string(),
+								predicate: predicate.to_string(),
 								predicate_type: "relation".to_string(),
-								object: head_tail_relation.tail.name.clone().to_string(),
+								object: head_tail_relation.tail.name.to_string(),
 								object_type: object_type.to_string(),
-								sentence: sentence_with_relations.classified_sentence.sentence.clone().to_string(),
+								sentence: sentence_with_relations.classified_sentence.sentence.to_string(),
 								image_id: None,
 								blob: Some("mock".to_string()),
-								source_id: source_id.clone(),
-								event_id: event_id.clone(),
+								source_id: source_id.to_string(),
+								event_id: event_id,
+							};
+							let serialized_payload = match serde_json::to_string(&payload) {
+								Ok(json) => json,
+								Err(e) => {
+									log::error!("Failed to serialize payload: {:?}", e);
+									String::new() 
+								},
 							};
 							let event = EventState {
 								event_type: EventType::Graph,
@@ -248,17 +260,22 @@ impl Engine for AttentionTensorsEngine {
 								doc_source: doc_source.to_string(),
 								image_id: None,
 								timestamp: 0.0,
-								payload: serde_json::to_string(&payload).unwrap_or_default(),
+								payload: serialized_payload,
 							};
 							yield Ok(event);
 						}
 					}
-					let attention_matrix = sentence_with_relations.attention_matrix.as_ref().unwrap();
+					let attention_matrix = match sentence_with_relations.attention_matrix.as_ref() {
+						Some(matrix) => matrix,
+						None => {
+							log::error!("Unable to process Attention matrix in AGN while creating Vector Event Payload.");
+							return;
+						}
+					};					
 					let mut i = 0;
 					for relation in &sentence_with_relations.relations {
 						let head_entity = &relation.head.name;
 						let tail_entity = &relation.tail.name;
-						// Assuming the indices are available in the Entity struct
 						let head_start_index = relation.head.start_idx;
 						let head_end_index = relation.head.end_idx;
 						let tail_start_index = relation.tail.start_idx;
@@ -278,9 +295,16 @@ impl Engine for AttentionTensorsEngine {
 								tail_end_index,
 							).await.map_err(|e| EngineError::new(EngineErrorKind::ModelError, Arc::new(e.into())))?;
 							let payload = VectorPayload {
-								event_id: event_ids[i].clone(),
-								embeddings: biased_embedding.clone(),
+								event_id: event_ids[i].to_string(),
+								embeddings: biased_embedding,
 								score: *score as f32,
+							};
+							let serialized_payload = match serde_json::to_string(&payload) {
+								Ok(json) => json,
+								Err(e) => {
+									log::error!("Failed to serialize payload: {:?}", e);
+									String::new() 
+								},
 							};
 							let event = EventState {
 								event_type: EventType::Vector,
@@ -288,7 +312,7 @@ impl Engine for AttentionTensorsEngine {
 								doc_source: doc_source.to_string(),
 								image_id: None,
 								timestamp: 0.0,
-								payload: serde_json::to_string(&payload).unwrap_or_default(),
+								payload: serialized_payload,
 							};
 							i += 1;
 							yield Ok(event);
