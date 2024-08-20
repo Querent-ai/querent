@@ -40,6 +40,328 @@
 		"permission_sets": {},
 		"global_scope_schema": null
 	},
+	"clipboard": {
+		"default_permission": null,
+		"permissions": {
+			"allow-available-types": {
+				"identifier": "allow-available-types",
+				"description": "Enables the available_types command without any pre-configured scope.",
+				"commands": { "allow": ["available_types"], "deny": [] }
+			},
+			"allow-clear": {
+				"identifier": "allow-clear",
+				"description": "Enables the clear command without any pre-configured scope.",
+				"commands": { "allow": ["clear"], "deny": [] }
+			},
+			"allow-execute": {
+				"identifier": "allow-execute",
+				"description": "Enables the execute command without any pre-configured scope.",
+				"commands": { "allow": ["execute"], "deny": [] }
+			},
+			"allow-has-files": {
+				"identifier": "allow-has-files",
+				"description": "Enables the has_files command without any pre-configured scope.",
+				"commands": { "allow": ["has_files"], "deny": [] }
+			},
+			"allow-has-html": {
+				"identifier": "allow-has-html",
+				"description": "Enables the has_html command without any pre-configured scope.",
+				"commands": { "allow": ["has_html"], "deny": [] }
+			},
+			"allow-has-image": {
+				"identifier": "allow-has-image",
+				"description": "Enables the has_image command without any pre-configured scope.",
+				"commands": { "allow": ["has_image"], "deny": [] }
+			},
+			"allow-has-rtf": {
+				"identifier": "allow-has-rtf",
+				"description": "Enables the has_rtf command without any pre-configured scope.",
+				"commands": { "allow": ["has_rtf"], "deny": [] }
+			},
+			"allow-has-text": {
+				"identifier": "allow-has-text",
+				"description": "Enables the has_text command without any pre-configured scope.",
+				"commands": { "allow": ["has_text"], "deny": [] }
+			},
+			"allow-is-monitor-running": {
+				"identifier": "allow-is-monitor-running",
+				"description": "Enables the is_monitor_running command without any pre-configured scope.",
+				"commands": { "allow": ["is_monitor_running"], "deny": [] }
+			},
+			"allow-ping": {
+				"identifier": "allow-ping",
+				"description": "Enables the ping command without any pre-configured scope.",
+				"commands": { "allow": ["ping"], "deny": [] }
+			},
+			"allow-read-files": {
+				"identifier": "allow-read-files",
+				"description": "Enables the read_files command without any pre-configured scope.",
+				"commands": { "allow": ["read_files"], "deny": [] }
+			},
+			"allow-read-files-uris": {
+				"identifier": "allow-read-files-uris",
+				"description": "Enables the read_files_uris command without any pre-configured scope.",
+				"commands": { "allow": ["read_files_uris"], "deny": [] }
+			},
+			"allow-read-html": {
+				"identifier": "allow-read-html",
+				"description": "Enables the read_html command without any pre-configured scope.",
+				"commands": { "allow": ["read_html"], "deny": [] }
+			},
+			"allow-read-image-base64": {
+				"identifier": "allow-read-image-base64",
+				"description": "Enables the read_image_base64 command without any pre-configured scope.",
+				"commands": { "allow": ["read_image_base64"], "deny": [] }
+			},
+			"allow-read-image-binary": {
+				"identifier": "allow-read-image-binary",
+				"description": "Enables the read_image_binary command without any pre-configured scope.",
+				"commands": { "allow": ["read_image_binary"], "deny": [] }
+			},
+			"allow-read-rtf": {
+				"identifier": "allow-read-rtf",
+				"description": "Enables the read_rtf command without any pre-configured scope.",
+				"commands": { "allow": ["read_rtf"], "deny": [] }
+			},
+			"allow-read-text": {
+				"identifier": "allow-read-text",
+				"description": "Enables the read_text command without any pre-configured scope.",
+				"commands": { "allow": ["read_text"], "deny": [] }
+			},
+			"allow-start-monitor": {
+				"identifier": "allow-start-monitor",
+				"description": "Enables the start_monitor command without any pre-configured scope.",
+				"commands": { "allow": ["start_monitor"], "deny": [] }
+			},
+			"allow-stop-monitor": {
+				"identifier": "allow-stop-monitor",
+				"description": "Enables the stop_monitor command without any pre-configured scope.",
+				"commands": { "allow": ["stop_monitor"], "deny": [] }
+			},
+			"allow-write-files": {
+				"identifier": "allow-write-files",
+				"description": "Enables the write_files command without any pre-configured scope.",
+				"commands": { "allow": ["write_files"], "deny": [] }
+			},
+			"allow-write-files-uris": {
+				"identifier": "allow-write-files-uris",
+				"description": "Enables the write_files_uris command without any pre-configured scope.",
+				"commands": { "allow": ["write_files_uris"], "deny": [] }
+			},
+			"allow-write-html": {
+				"identifier": "allow-write-html",
+				"description": "Enables the write_html command without any pre-configured scope.",
+				"commands": { "allow": ["write_html"], "deny": [] }
+			},
+			"allow-write-html-and-text": {
+				"identifier": "allow-write-html-and-text",
+				"description": "Enables the write_html_and_text command without any pre-configured scope.",
+				"commands": { "allow": ["write_html_and_text"], "deny": [] }
+			},
+			"allow-write-image-base64": {
+				"identifier": "allow-write-image-base64",
+				"description": "Enables the write_image_base64 command without any pre-configured scope.",
+				"commands": { "allow": ["write_image_base64"], "deny": [] }
+			},
+			"allow-write-image-binary": {
+				"identifier": "allow-write-image-binary",
+				"description": "Enables the write_image_binary command without any pre-configured scope.",
+				"commands": { "allow": ["write_image_binary"], "deny": [] }
+			},
+			"allow-write-rtf": {
+				"identifier": "allow-write-rtf",
+				"description": "Enables the write_rtf command without any pre-configured scope.",
+				"commands": { "allow": ["write_rtf"], "deny": [] }
+			},
+			"allow-write-text": {
+				"identifier": "allow-write-text",
+				"description": "Enables the write_text command without any pre-configured scope.",
+				"commands": { "allow": ["write_text"], "deny": [] }
+			},
+			"deny-available-types": {
+				"identifier": "deny-available-types",
+				"description": "Denies the available_types command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["available_types"] }
+			},
+			"deny-clear": {
+				"identifier": "deny-clear",
+				"description": "Denies the clear command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["clear"] }
+			},
+			"deny-execute": {
+				"identifier": "deny-execute",
+				"description": "Denies the execute command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["execute"] }
+			},
+			"deny-has-files": {
+				"identifier": "deny-has-files",
+				"description": "Denies the has_files command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["has_files"] }
+			},
+			"deny-has-html": {
+				"identifier": "deny-has-html",
+				"description": "Denies the has_html command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["has_html"] }
+			},
+			"deny-has-image": {
+				"identifier": "deny-has-image",
+				"description": "Denies the has_image command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["has_image"] }
+			},
+			"deny-has-rtf": {
+				"identifier": "deny-has-rtf",
+				"description": "Denies the has_rtf command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["has_rtf"] }
+			},
+			"deny-has-text": {
+				"identifier": "deny-has-text",
+				"description": "Denies the has_text command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["has_text"] }
+			},
+			"deny-is-monitor-running": {
+				"identifier": "deny-is-monitor-running",
+				"description": "Denies the is_monitor_running command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["is_monitor_running"] }
+			},
+			"deny-ping": {
+				"identifier": "deny-ping",
+				"description": "Denies the ping command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["ping"] }
+			},
+			"deny-read-files": {
+				"identifier": "deny-read-files",
+				"description": "Denies the read_files command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_files"] }
+			},
+			"deny-read-files-uris": {
+				"identifier": "deny-read-files-uris",
+				"description": "Denies the read_files_uris command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_files_uris"] }
+			},
+			"deny-read-html": {
+				"identifier": "deny-read-html",
+				"description": "Denies the read_html command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_html"] }
+			},
+			"deny-read-image-base64": {
+				"identifier": "deny-read-image-base64",
+				"description": "Denies the read_image_base64 command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_image_base64"] }
+			},
+			"deny-read-image-binary": {
+				"identifier": "deny-read-image-binary",
+				"description": "Denies the read_image_binary command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_image_binary"] }
+			},
+			"deny-read-rtf": {
+				"identifier": "deny-read-rtf",
+				"description": "Denies the read_rtf command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_rtf"] }
+			},
+			"deny-read-text": {
+				"identifier": "deny-read-text",
+				"description": "Denies the read_text command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["read_text"] }
+			},
+			"deny-start-monitor": {
+				"identifier": "deny-start-monitor",
+				"description": "Denies the start_monitor command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["start_monitor"] }
+			},
+			"deny-stop-monitor": {
+				"identifier": "deny-stop-monitor",
+				"description": "Denies the stop_monitor command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["stop_monitor"] }
+			},
+			"deny-write-files": {
+				"identifier": "deny-write-files",
+				"description": "Denies the write_files command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_files"] }
+			},
+			"deny-write-files-uris": {
+				"identifier": "deny-write-files-uris",
+				"description": "Denies the write_files_uris command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_files_uris"] }
+			},
+			"deny-write-html": {
+				"identifier": "deny-write-html",
+				"description": "Denies the write_html command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_html"] }
+			},
+			"deny-write-html-and-text": {
+				"identifier": "deny-write-html-and-text",
+				"description": "Denies the write_html_and_text command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_html_and_text"] }
+			},
+			"deny-write-image-base64": {
+				"identifier": "deny-write-image-base64",
+				"description": "Denies the write_image_base64 command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_image_base64"] }
+			},
+			"deny-write-image-binary": {
+				"identifier": "deny-write-image-binary",
+				"description": "Denies the write_image_binary command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_image_binary"] }
+			},
+			"deny-write-rtf": {
+				"identifier": "deny-write-rtf",
+				"description": "Denies the write_rtf command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_rtf"] }
+			},
+			"deny-write-text": {
+				"identifier": "deny-write-text",
+				"description": "Denies the write_text command without any pre-configured scope.",
+				"commands": { "allow": [], "deny": ["write_text"] }
+			},
+			"monitor-all": {
+				"identifier": "monitor-all",
+				"description": "This enables all monitor related commands",
+				"commands": { "allow": ["stop_monitor", "start_monitor", "is_monitor_running"], "deny": [] }
+			},
+			"read-all": {
+				"identifier": "read-all",
+				"description": "This enables all read related commands to clipboard",
+				"commands": {
+					"allow": [
+						"has_text",
+						"has_image",
+						"has_html",
+						"has_rtf",
+						"has_files",
+						"available_types",
+						"read_text",
+						"read_files",
+						"read_files_uris",
+						"read_html",
+						"read_image_base64",
+						"read_image_binary",
+						"read_rtf"
+					],
+					"deny": []
+				}
+			},
+			"write-all": {
+				"identifier": "write-all",
+				"description": "This enables all write related commands to clipboard",
+				"commands": {
+					"allow": [
+						"write_text",
+						"write_html",
+						"write_html_and_text",
+						"write_rtf",
+						"write_image_binary",
+						"write_image_base64",
+						"write_files_uris",
+						"write_files",
+						"clear"
+					],
+					"deny": []
+				}
+			}
+		},
+		"permission_sets": {},
+		"global_scope_schema": null
+	},
 	"core:app": {
 		"default_permission": {
 			"identifier": "default",

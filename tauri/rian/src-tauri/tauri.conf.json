@@ -75,7 +75,8 @@
 				"scope": {
 					"allow": ["$CACHE/**", "$CONFIG/**", "$APPCACHE/**"]
 				}
-			}
+			},
+			"capabilities": ["rian-main-capability"]
 		},
 		"trayIcon": {
 			"id": "tray",
