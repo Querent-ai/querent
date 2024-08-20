@@ -9,6 +9,8 @@ pub mod transfer_learning;
 pub use transfer_learning::*;
 pub mod insight_utils;
 pub use insight_utils::*;
+pub mod anomaly_detection;
+pub use anomaly_detection::*;
 
 pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
@@ -20,6 +22,8 @@ pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 		xplainable_ollama::XAIOllama::new().info().await,
 		// transfer learning insights: Transfer learning insights
 		tl_insight::TLV1::new().info().await,
+		// Anomaly detection insights: Anomaly detection insights
+		anomaly_insights::ADV1::new().info().await,
 	]
 }
 
