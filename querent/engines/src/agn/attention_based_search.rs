@@ -162,25 +162,24 @@ pub fn perform_search(
 			continue;
 		}
 		let mut new_paths = Vec::new();
-
-		// Get attention scores for the current token
 		let attention_scores = &attention_matrix[current_path.current_token];
 
-		for i in 0..attention_scores.len() {
-			let next_path: Vec<_> =
-				current_path.visited_tokens.iter().chain(std::iter::once(&i)).cloned().collect();
-			if is_valid_token(
-				i,
-				entity_pair,
-				&mut candidate_paths,
-				&mut current_path,
-				attention_scores[i],
+		for (i, &score) in attention_scores.iter().enumerate() {
+            let mut next_path = current_path.visited_tokens.clone();
+            next_path.push(i);
+
+            if is_valid_token(
+                i,
+                entity_pair,
+                &mut candidate_paths,
+                &mut current_path,
+                score,
 			) && !visited_paths.contains(&next_path) &&
 				current_path.current_token != i
 			{
 				let mut new_path = current_path.clone();
 				new_path.add_token(i, attention_scores[i]);
-				visited_paths.insert(next_path.clone());
+				visited_paths.insert(next_path);
 				new_paths.push(new_path);
 			}
 		}
