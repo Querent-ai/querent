@@ -21,8 +21,23 @@
 	let pipelines_list: SemanticPipelineRequest[] = [];
 	let pipelines_ids: string[] = [];
 
+	async function testingabc() {
+		const result = await commands.getRunningAgns();
+		console.log("Result ", result);
+
+		const r = await commands.getPastAgns();
+		console.log("Ger past   ", r);
+
+		if (result.length == 0) return;
+	}
+
 	onMount(async() => {
-		const [[firstAgn, firstRequest]] = await commands.getRunningAgns();
+		await testingabc();
+		const result = await commands.getRunningAgns();
+
+		if (result.length == 0) return;
+
+		const [[firstAgn, firstRequest]] = result;
 
 		pipelines_list = [...pipelines_list, firstRequest];
 		pipelines_ids = [...pipelines_ids, firstAgn];

@@ -115,11 +115,16 @@
 		console.log('table   ', entityTable);
 		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
 
+		console.log("ROws are ", nonEmptyRows.length);
+		console.log("Selected model  ", selectedModel);
+
 		if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
 			modalMessage = 'Please either choose model or enter some entities';
 			showModal = true;
 			return;
 		}
+
+		console.log("Reached here");
 
 		let request: SemanticPipelineRequest = {
 			collectors: sourceIds,
@@ -132,20 +137,25 @@
 			}
 		};
 
-		let result = await commands.startAgnFabric(request);
+		console.log("Reached here 1111111");
 
-		if (result.status == 'ok') {
-			updatePipeline('running', result.data.pipeline_id);
+		let result = commands.startAgnFabric(request);
 
-			let pipelineMetadata: PipelinesData = {
-				id: result.data.pipeline_id,
-				sources: sourceNames,
-				fixed_entities: request.fixed_entities?.entities,
-				sample_entities: request.sample_entities?.entities
-			}
+		// console.log("STatus is ", result.status);
 
-			addPipelinesToList(pipelineMetadata);
-		}
+		// if (result.status == 'ok') {
+		// 	console.log("Pipeline id is ", result.data.pipeline_id);
+		// 	updatePipeline('running', result.data.pipeline_id);
+
+		// 	let pipelineMetadata: PipelinesData = {
+		// 		id: result.data.pipeline_id,
+		// 		sources: sourceNames,
+		// 		fixed_entities: request.fixed_entities?.entities,
+		// 		sample_entities: request.sample_entities?.entities
+		// 	}
+
+		// 	addPipelinesToList(pipelineMetadata);
+		// }
 
 		selectedModel = null;
 
