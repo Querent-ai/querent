@@ -139,23 +139,23 @@
 
 		console.log("Reached here 1111111");
 
-		let result = commands.startAgnFabric(request);
+		let result = await commands.startAgnFabric(request);
 
-		// console.log("STatus is ", result.status);
+		console.log("STatus is ", result.status);
 
-		// if (result.status == 'ok') {
-		// 	console.log("Pipeline id is ", result.data.pipeline_id);
-		// 	updatePipeline('running', result.data.pipeline_id);
+		if (result.status == 'ok') {
+			console.log("Pipeline id is ", result.data.pipeline_id);
+			updatePipeline('running', result.data.pipeline_id);
 
-		// 	let pipelineMetadata: PipelinesData = {
-		// 		id: result.data.pipeline_id,
-		// 		sources: sourceNames,
-		// 		fixed_entities: request.fixed_entities?.entities,
-		// 		sample_entities: request.sample_entities?.entities
-		// 	}
+			let pipelineMetadata: PipelinesData = {
+				id: result.data.pipeline_id,
+				sources: sourceNames,
+				fixed_entities: request.fixed_entities?.entities,
+				sample_entities: request.sample_entities?.entities
+			}
 
-		// 	addPipelinesToList(pipelineMetadata);
-		// }
+			addPipelinesToList(pipelineMetadata);
+		}
 
 		selectedModel = null;
 
