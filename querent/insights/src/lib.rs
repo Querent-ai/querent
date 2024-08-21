@@ -26,6 +26,8 @@ pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 		tl_insight::TLV1::new().info().await,
 		// Anomaly detection insights: Anomaly detection insights
 		anomaly_insights::ADV1::new().info().await,
+		// Cross Document Summarization: Cross Document Summarization
+		cds_insight::CDSV1::new().info().await,
 	]
 }
 
