@@ -14,6 +14,7 @@
 		Toolbar
 	} from 'flowbite-svelte';
 	import { goto } from '$app/navigation';
+	import { commands } from '../../../../service/bindings';
 
 	let pipelines_list: any[] = [12];
 
@@ -26,11 +27,11 @@
 	<div class="p-4">
 		<Breadcrumb class="mb-5">
 			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-			<BreadcrumbItem>Sources</BreadcrumbItem>
+			<BreadcrumbItem href="/crud/semantic-web">Data Fabric</BreadcrumbItem>
+			<BreadcrumbItem>Engines</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			All sources
+			All Engines
 		</Heading>
 
 		<Toolbar embedded class="w-full py-4 text-gray-500 dark:text-gray-400">

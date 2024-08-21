@@ -5,16 +5,10 @@
 		type CollectorConfig,
 		type FileCollectorConfig
 	} from '../../../../service/bindings';
-	import {
-		dataSources,
-		addDataSource,
-		type CollectorMetadata,
-		areCollectorsModified
-	} from '../../../../stores/appState';
+
+	import { dataSources, addDataSource, type CollectorMetadata } from '../../../../stores/appState';
 	import { goto } from '$app/navigation';
 	import { isVisible } from '../../../../stores/appState';
-	// Import the Tauri fs plugin
-	import { open } from '@tauri-apps/plugin-dialog';
 
 	let file_collector_config: FileCollectorConfig = {
 		root_path: '',
@@ -30,7 +24,6 @@
 	function handleClose() {
 		$isVisible = false;
 	}
-
 	let collector_config: CollectorConfig = {
 		name: '',
 		backend: { files: file_collector_config }
@@ -38,21 +31,6 @@
 
 	let root_path = '';
 	let name = '';
-
-	async function selectDirectory() {
-		// Use Tauri fs plugin to open folder selection dialog
-		const selected = await open({
-			directory: true,
-			multiple: false,
-			title: 'Select Folder'
-		});
-
-		if (selected) {
-			root_path = selected as string;
-		} else {
-			console.log('No directory selected.');
-		}
-	}
 
 	function updateDirectoryPath() {
 		if (name && root_path) {
@@ -64,10 +42,9 @@
 			metadata.id = file_collector_config.id;
 			metadata.name = name;
 			metadata.type = 'files';
-			addDataSource(metadata);
+			addDataSource(collector_config);
 
 			commands.setCollectors([collector_config]);
-			areCollectorsModified.set(true);
 
 			goto('/crud/sources');
 		} else {
@@ -90,18 +67,14 @@
 			>
 
 			<Label class="mb-5 block w-full space-y-2">
-				<span>Directory Path:</span>
-				<div class="flex">
-					<Input
-						bind:value={root_path}
-						class="border font-normal outline-none"
-						placeholder="Select the directory"
-						required
-						style="min-width: 300px;"
-						readonly
-					/>
-					<Button on:click={selectDirectory} class="ml-2">Browse</Button>
-				</div>
+				<span>Enter Directory Path:</span>
+				<Input
+					bind:value={root_path}
+					class="border font-normal outline-none"
+					placeholder="Enter the directory path"
+					required
+					style="min-width: 300px;"
+				/>
 			</Label>
 
 			<Label class="mb-5 block w-full space-y-2">
@@ -116,9 +89,9 @@
 			</Label>
 
 			<div class="flex w-full pb-5">
-				<Button type="submit" class="w-full rounded bg-blue-600 px-4 py-2 text-base text-white">
-					Save Configuration
-				</Button>
+				<Button type="submit" class="w-full rounded bg-blue-600 px-4 py-2 text-base text-white"
+					>Save Configuration</Button
+				>
 			</div>
 		</form>
 	</div>

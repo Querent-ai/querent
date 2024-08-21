@@ -3,7 +3,7 @@
 	import { Button, Input, Label } from 'flowbite-svelte';
 	import { addDataSource, type CollectorMetadata } from '../../../../stores/appState';
 	import { goto } from '$app/navigation';
-	import { isVisible, areCollectorsModified } from '../../../../stores/appState';
+	import { isVisible } from '../../../../stores/appState';
 	import {
 		commands,
 		type CollectorConfig,
@@ -36,6 +36,8 @@
 
 	let folderPath = '';
 	let name = '';
+	let drive_client_id: string;
+	let drive_client_secret: string;
 
 	onMount(async () => {
 		const params = new URLSearchParams(window.location.search);
@@ -43,6 +45,11 @@
 		const code = params.get('code');
 		if (code) {
 			try {
+				const result = await commands.getDriveCredentials();
+				if (result.status == 'ok') {
+					drive_client_id = result.data[0];
+					drive_client_secret = result.data[1];
+				}
 				const response = await fetch('https://oauth2.googleapis.com/token', {
 					method: 'POST',
 					headers: {
@@ -50,8 +57,8 @@
 					},
 					body: new URLSearchParams({
 						code: code,
-						client_id: import.meta.env.VITE_DRIVE_CLIENT_ID,
-						client_secret: import.meta.env.VITE_DRIVE_CLIENT_SECRET,
+						client_id: drive_client_id,
+						client_secret: drive_client_secret,
 						redirect_uri: import.meta.env.VITE_DRIVE_REDIRECT_URL,
 						grant_type: 'authorization_code'
 					})
@@ -85,8 +92,7 @@
 			metadata.id = drive_config.id;
 			metadata.name = name;
 			metadata.type = 'drive';
-			addDataSource(metadata);
-			areCollectorsModified.set(true);
+			addDataSource(collector_config);
 			commands.setCollectors([collector_config]);
 
 			goto('/crud/sources');

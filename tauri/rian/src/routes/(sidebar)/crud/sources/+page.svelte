@@ -4,11 +4,7 @@
 	import { TableHeadCell, Toolbar } from 'flowbite-svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
 	import { goto } from '$app/navigation';
-	import {
-		dataSources,
-		deleteSourcefromList,
-		areCollectorsModified
-	} from '../../../../stores/appState';
+	import { dataSources } from '../../../../stores/appState';
 	import GoogleDriveIcon from './add/DriveComponent.svelte';
 	import LocalStorageIcon from './add/FolderComponent.svelte';
 	import DropboxIcon from './add/DropboxComponent.svelte';
@@ -22,11 +18,14 @@
 	import NewsIcon from './add/NewsComponent.svelte';
 	import GCSIcon from './add/GCSComponent.svelte';
 	import { Trash } from 'svelte-bootstrap-icons';
-	import { commands, type Backend, type ListCollectorConfig } from '../../../../service/bindings';
+	import {
+		commands,
+		type Backend,
+		type ListCollectorConfig,
+		type DeleteCollectorRequest,
+		type CollectorConfig
+	} from '../../../../service/bindings';
 	import { onMount } from 'svelte';
-
-	// import { clearDataSources } from '../../../../stores/appState';
-	// clearDataSources();
 
 	function navigateToAddNewSource() {
 		goto('/crud/sources/add');
@@ -38,14 +37,8 @@
 	const subtitle: string = 'Sources';
 
 	let sources_list: ListCollectorConfig = { config: [] };
-	$: if ($areCollectorsModified) {
-		updateSourcesList();
-	}
 
-	async function updateSourcesList() {
-		sources_list = await commands.getCollectors();
-		areCollectorsModified.set(false);
-	}
+	$: sources_list = { config: $dataSources };
 
 	function getImage(type: string): any {
 		if (type == 'files') return LocalStorageIcon;
@@ -80,13 +73,21 @@
 		return '';
 	}
 
-	function deleteSource(id: string) {
-		deleteSourcefromList(id);
+	async function deleteSource(id: string) {
+		let deleteRequest: DeleteCollectorRequest = {
+			id: [id]
+		};
+
+		if (await commands.deleteCollectors(deleteRequest)) {
+			let sources = await commands.getCollectors();
+			$dataSources = sources.config;
+		}
 	}
 
 	onMount(async () => {
 		if (sources_list.config.length === 0) {
-			await updateSourcesList();
+			let sources = await commands.getCollectors();
+			$dataSources = sources.config;
 		}
 	});
 </script>
@@ -98,7 +99,6 @@
 		<Breadcrumb class="mb-5">
 			<BreadcrumbItem home>Home</BreadcrumbItem>
 			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-			<BreadcrumbItem>Sources</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
 			All sources

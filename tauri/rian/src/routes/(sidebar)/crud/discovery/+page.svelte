@@ -310,7 +310,7 @@
 								<div class="svg-container">
 									<PdfIcon />
 								</div>
-								<p class="tagline font-semibold">{category.tags}</p>
+								<p class="tagline font-semibold">{category.document}</p>
 								<p class="main-paragraph">
 									{category.sentence}
 								</p>
@@ -325,8 +325,8 @@
 									</div>
 									<div class="documents">
 										<Icon icon="flat-color-icons:document" />
-										<span class="label-text">Document</span>
-										<span class="tooltip">{category.document}</span>
+										<span class="label-text">Tags</span>
+										<span class="tooltip">{category.tags}</span>
 									</div>
 								</div>
 							</div>
@@ -674,8 +674,8 @@
 		left: 50%;
 		transform: translateX(-50%);
 		font-size: 12px;
-		height: 80px;
-		width: 500px;
+		min-height: 20px;
+		min-width: 50px;
 		overflow-x: inherit;
 	}
 

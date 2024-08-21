@@ -111,7 +111,8 @@
 		'News',
 		'AWS S3',
 		'Slack',
-		'Google Cloud Storage'
+		'Google Cloud Storage',
+		'Google Drive'
 	];
 
 	let showModal = false;

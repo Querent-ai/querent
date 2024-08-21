@@ -4,11 +4,13 @@
 
 	import { Search } from 'flowbite-svelte';
 	import Huggingface from './Huggingface.svelte';
-	import { createEventDispatcher, onMount } from 'svelte';
-	import type {
-		FixedEntities,
-		SampleEntities,
-		SemanticPipelineRequest
+	import { createEventDispatcher, onMount, tick } from 'svelte';
+	import {
+		commands,
+		type Backend,
+		type FixedEntities,
+		type SampleEntities,
+		type SemanticPipelineRequest
 	} from '../../../../../service/bindings';
 	export let formOpen: boolean;
 
@@ -17,13 +19,30 @@
 	let selectedModel: number | null = null;
 	let isDropdownOpen = false;
 
+	// let collectors = await commands.getCollectors();
+	// let configs = collectors.config;
+
 	$: {
-		sourceIds = [];
 		if ($dataSources) {
-			$dataSources.forEach((metadata) => {
-				sourceIds.push(metadata.name);
-			});
+			$dataSources.forEach((metadata) => {});
 		}
+	}
+
+	function getId(backend: Backend | null): string {
+		if (!backend) return '';
+		if ('azure' in backend) return backend.azure.id;
+		if ('drive' in backend) return backend.drive.id;
+		if ('files' in backend) return backend.files.id;
+		if ('dropbox' in backend) return backend.dropbox.id;
+		if ('email' in backend) return backend.email.id;
+		if ('gcs' in backend) return backend.gcs.id;
+		if ('github' in backend) return backend.github.id;
+		if ('jira' in backend) return backend.jira.id;
+		if ('news' in backend) return backend.news.id;
+		if ('onedrive' in backend) return backend.onedrive.id;
+		if ('s3' in backend) return backend.s3.id;
+		if ('slack' in backend) return backend.slack.id;
+		return '';
 	}
 
 	let fixed_entities: FixedEntities = {
@@ -92,17 +111,17 @@
 		console.log('table   ', entityTable);
 		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
 
-		if (nonEmptyRows.length === 0) {
-			modalMessage = 'Please add at least one entity pair.';
+		if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
+			modalMessage = 'Please either choose model or enter some entities';
 			showModal = true;
 			return;
 		}
 
-		if (selectedModel == null || selectedModel == -1) {
-			modalMessage = 'Please choose the model';
-			showModal = true;
-			return;
-		}
+		// let request: SemanticPipelineRequest = {
+		// 	collectors:
+		// }
+
+		//let result = commands.startAgnFabric()
 
 		let id = crypto.randomUUID();
 		updatePipeline('running', crypto.randomUUID());
@@ -116,9 +135,7 @@
 			entities: nonEmptyRows.map((row) => row.entity)
 		};
 
-		console.log('form, ', request);
-		console.log('ID  ', $pipelineState.id);
-		selectedModel = -1;
+		selectedModel = null;
 	};
 
 	const handleRemoveSource = (id: string) => {
@@ -160,18 +177,29 @@
 
 	function addRow() {
 		entityTable = [...entityTable, { entity: '', entityType: '', editing: true }];
+		updateFocus(entityTable.length - 1);
 	}
 
 	function editRow(index: number) {
 		entityTable[index].editing = true;
-	}
-
-	function deleteRow(index: number) {
-		entityTable.splice(index, 1);
+		updateFocus(index);
 	}
 
 	function saveRow(index: number) {
 		entityTable[index].editing = false;
+	}
+
+	function deleteRow(index: number) {
+		entityTable.splice(index, 1);
+		entityTable = [...entityTable];
+	}
+
+	async function updateFocus(index: number) {
+		await tick();
+		const input = document.getElementById(`entity-input-${index}`);
+		if (input) {
+			input.focus();
+		}
 	}
 
 	function downloadCSV() {
@@ -192,6 +220,7 @@
 
 	function handleFileUpload(event: Event) {
 		event.preventDefault();
+		console.log('Handling file input');
 		const input = event.target as HTMLInputElement;
 		if (input.files && input.files.length > 0) {
 			const file = input.files[0];
@@ -215,20 +244,26 @@
 							console.log('Skipping invalid data:', data);
 						}
 					});
+					console.log('New entities are ', newEntities.length);
 
 					if (newEntities.length > 0) {
 						entityTable = [...entityTable, ...newEntities];
+						entityTable = [...entityTable];
 					}
+					input.value = '';
 				} else {
 					console.error('Failed to read file as string');
 				}
 			};
 			reader.readAsText(file);
+		} else {
+			input.value = '';
 		}
 	}
 
 	function openFileInput() {
 		if (fileInput) {
+			console.log('File input clicked ');
 			fileInput.click();
 		}
 	}
@@ -293,14 +328,24 @@
 								<tr>
 									<td>
 										{#if row.editing}
-											<input class="input-field" type="text" bind:value={row.entity} />
+											<input
+												id={`entity-input-${index}`}
+												class="input-field"
+												type="text"
+												bind:value={row.entity}
+											/>
 										{:else}
 											{row.entity}
 										{/if}
 									</td>
 									<td>
 										{#if row.editing}
-											<input class="input-field" type="text" bind:value={row.entityType} />
+											<input
+												id={`entity-input-${index}`}
+												class="input-field"
+												type="text"
+												bind:value={row.entityType}
+											/>
 										{:else}
 											{row.entityType}
 										{/if}
