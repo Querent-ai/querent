@@ -6,7 +6,7 @@
 
 	let selectedPipeline: string;
 
-	$: selectedPipeline = $pipelineState?.id || '123456';
+	$: selectedPipeline = $pipelineState?.id;
 
 	let products: IndexingStatistics;
 
@@ -29,6 +29,9 @@
 	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
 
 	async function fetchPipelineData(selectedPipeline: string) {
+		if (!selectedPipeline || selectedPipeline == ''){
+			return
+		}
 		const response = await commands.describePipeline(selectedPipeline);
 		if (response.status == 'ok') {
 			products = response.data;

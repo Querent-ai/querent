@@ -48,14 +48,20 @@
 						max: 100,
 						title: {
 							text: 'Time (seconds)',
-							display: true
+							display: true,
+							font: {size:16
+							},
+							color:'black'
 						}
 					},
 					y: {
 						beginAtZero: true,
 						title: {
 							text: 'Total events released',
-							display: true
+							display: true,
+							font: {size:16, color:'black'},
+							color:'black'
+							
 						}
 					}
 				},

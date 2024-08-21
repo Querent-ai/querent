@@ -74,7 +74,7 @@
 		// Add X axis label
 		svgElement
 			.append('text')
-			.attr('transform', `translate(${width / 2}, ${height + margin.bottom - 10})`)
+			.attr('transform', `translate(${width / 2}, ${height + margin.bottom - 35})`)
 			.style('text-anchor', 'middle')
 			.text('Data Sources');
 
