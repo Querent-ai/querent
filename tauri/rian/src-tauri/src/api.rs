@@ -107,8 +107,6 @@ pub async fn start_agn_fabric(
     let index_storages = QUERENT_SERVICES.get().unwrap().index_storages.clone();
     let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
 
-    println!("Starting an AGN Fabric  ");
-
     let result = node::serve::semantic_api::start_pipeline(
         request.clone(),
         semantic_service_mailbox,
@@ -118,8 +116,6 @@ pub async fn start_agn_fabric(
         metadata_store,
     )
     .await;
-
-    println!("Started thee AGN fabric    {:?}", result.clone());
 
     match result {
         Ok(response) => {

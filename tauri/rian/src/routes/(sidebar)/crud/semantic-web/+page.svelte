@@ -23,15 +23,15 @@
 
 	async function testingabc() {
 		const result = await commands.getRunningAgns();
-		console.log("Result ", result);
+		console.log('Result ', result);
 
 		const r = await commands.getPastAgns();
-		console.log("Ger past   ", r);
+		console.log('Get past  pipelines ', r);
 
 		if (result.length == 0) return;
 	}
 
-	onMount(async() => {
+	onMount(async () => {
 		await testingabc();
 		const result = await commands.getRunningAgns();
 
@@ -43,14 +43,12 @@
 		pipelines_ids = [...pipelines_ids, firstAgn];
 
 		let pastAgns = await commands.getPastAgns();
-		if (pastAgns.status == "ok") {
+		if (pastAgns.status == 'ok') {
 			pastPipelines = pastAgns.data;
 
 			//pipelines_list = [...pipelines_list, pastAgns.data.requests]
 		}
-
-		})
-
+	});
 
 	function navigateToStartPipeline() {
 		goto('/crud/semantic-web/add');
@@ -87,20 +85,24 @@
 			{#if Array.isArray(pipelines_list)}
 				{#each pipelines_list as source, index}
 					<TableBodyRow class="text-base">
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+							>{'AGN'}</TableBodyCell
+						>
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+							>{pipelines_ids[index]}</TableBodyCell
+						>
 
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						>{"AGN"}</TableBodyCell>
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						>{pipelines_ids[index]}</TableBodyCell>
+							>{source.fixed_entities}</TableBodyCell
+						>
 
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						>{source.fixed_entities}</TableBodyCell>
+							>{source.sample_entities}</TableBodyCell
+						>
 
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						>{source.sample_entities}</TableBodyCell>
-
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						>{source.collectors}</TableBodyCell>
+							>{source.collectors}</TableBodyCell
+						>
 					</TableBodyRow>
 				{/each}
 			{/if}

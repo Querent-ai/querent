@@ -1,6 +1,12 @@
 <script lang="ts">
 	import Modal from '../../sources/add/Modal.svelte';
-	import { addPipelinesToList, dataSources, pipelineState, updatePipeline, type PipelinesData } from '../../../../../stores/appState';
+	import {
+		addPipelinesToList,
+		dataSources,
+		pipelineState,
+		updatePipeline,
+		type PipelinesData
+	} from '../../../../../stores/appState';
 
 	import { Search } from 'flowbite-svelte';
 	import Huggingface from './Huggingface.svelte';
@@ -115,16 +121,14 @@
 		console.log('table   ', entityTable);
 		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
 
-		console.log("ROws are ", nonEmptyRows.length);
-		console.log("Selected model  ", selectedModel);
+		console.log('ROws are ', nonEmptyRows.length);
+		console.log('Selected model  ', selectedModel);
 
 		if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
 			modalMessage = 'Please either choose model or enter some entities';
 			showModal = true;
 			return;
 		}
-
-		console.log("Reached here");
 
 		let request: SemanticPipelineRequest = {
 			collectors: sourceIds,
@@ -137,14 +141,10 @@
 			}
 		};
 
-		console.log("Reached here 1111111");
-
 		let result = await commands.startAgnFabric(request);
 
-		console.log("STatus is ", result.status);
-
 		if (result.status == 'ok') {
-			console.log("Pipeline id is ", result.data.pipeline_id);
+			console.log('Pipeline id is ', result.data.pipeline_id);
 			updatePipeline('running', result.data.pipeline_id);
 
 			let pipelineMetadata: PipelinesData = {
@@ -152,7 +152,7 @@
 				sources: sourceNames,
 				fixed_entities: request.fixed_entities?.entities,
 				sample_entities: request.sample_entities?.entities
-			}
+			};
 
 			addPipelinesToList(pipelineMetadata);
 		}
