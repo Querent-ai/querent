@@ -64,7 +64,7 @@ export interface DiscoveryDataPageList {
 	data: Insight[];
 }
 
-export const dataSources = writable<CollectorConfig[]>();
+export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
 export const areCollectorsModified = writable(false);
