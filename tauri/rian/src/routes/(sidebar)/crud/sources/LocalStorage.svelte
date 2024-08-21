@@ -5,26 +5,14 @@
 		type CollectorConfig,
 		type FileCollectorConfig
 	} from '../../../../service/bindings';
-	import {
-		dataSources,
-		addDataSource,
-		type CollectorMetadata,
-		areCollectorsModified
-	} from '../../../../stores/appState';
 	import { goto } from '$app/navigation';
-	import { isVisible } from '../../../../stores/appState';
+	import { addDataSource, isVisible } from '../../../../stores/appState';
 	// Import the Tauri fs plugin
 	import { open } from '@tauri-apps/plugin-dialog';
 
 	let file_collector_config: FileCollectorConfig = {
 		root_path: '',
 		id: ''
-	};
-
-	let metadata: CollectorMetadata = {
-		id: '',
-		name: '',
-		type: ''
 	};
 
 	function handleClose() {
@@ -61,13 +49,9 @@
 			collector_config.backend = { files: file_collector_config };
 			collector_config.name = name;
 
-			metadata.id = file_collector_config.id;
-			metadata.name = name;
-			metadata.type = 'files';
-			addDataSource(metadata);
-
 			commands.setCollectors([collector_config]);
-			areCollectorsModified.set(true);
+
+			addDataSource(collector_config);
 
 			goto('/crud/sources');
 		} else {

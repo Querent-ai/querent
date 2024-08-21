@@ -2,6 +2,8 @@
 	import { Breadcrumb, BreadcrumbItem, Button, Card, Heading } from 'flowbite-svelte';
 	import { Input, Textarea, Toggle } from 'flowbite-svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
+	import { commands, type IngestedTokens } from '../../../../service/bindings';
+	import { pipelineState } from '../../../../stores/appState';
 
 	let hidden: boolean = true;
 
@@ -17,22 +19,24 @@
 		is_token_stream: false,
 		source_id: ''
 	};
-	let ingested_tokens = {
+	let ingested_tokens: IngestedTokens = {
 		file: '',
 		data: [''],
-		isTokenStream: false,
-		docSource: '',
-		sourceId: ''
+		doc_source: '',
+		source_id: '',
+		is_token_stream: true
 	};
 
-	function handleSubmit() {
+	async function handleSubmit() {
 		ingested_tokens.data = [formData.data];
-		ingested_tokens.docSource = formData.doc_source;
+		ingested_tokens.doc_source = formData.doc_source;
 		ingested_tokens.file = formData.file;
-		ingested_tokens.isTokenStream = true;
-		ingested_tokens.sourceId = formData.source_id;
+		ingested_tokens.is_token_stream = true;
+		ingested_tokens.source_id = formData.source_id;
 
-		console.log('Form submitted:', ingested_tokens);
+		if (await commands.ingestTokens([ingested_tokens], $pipelineState.id)) {
+			console.log('Data submitted:');
+		}
 	}
 </script>
 
@@ -49,43 +53,45 @@
 		</Heading>
 	</div>
 
-	<div class="flex justify-center">
-		<Card class="m-4">
-			<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
-			<form on:submit|preventDefault={handleSubmit} class="space-y-4">
-				<div>
-					<Input
-						type="text"
-						label="Data"
-						bind:value={formData.data}
-						placeholder="Enter data string"
-					/>
-				</div>
+	{#if $pipelineState.id}
+		<div class="flex justify-center">
+			<Card class="m-4">
+				<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
+				<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+					<div>
+						<Input type="text" label="Data" bind:value={formData.data} placeholder="Enter data" />
+					</div>
 
-				<div>
-					<Input
-						type="text"
-						label="Doc Source"
-						bind:value={formData.doc_source}
-						placeholder="Enter doc source"
-					/>
-				</div>
+					<div>
+						<Input
+							type="text"
+							label="Doc Source"
+							bind:value={formData.doc_source}
+							placeholder="Enter data source"
+						/>
+					</div>
 
-				<div>
-					<Input type="text" label="File" bind:value={formData.file} placeholder="Enter file" />
-				</div>
+					<div>
+						<Input
+							type="text"
+							label="File"
+							bind:value={formData.file}
+							placeholder="Enter file name"
+						/>
+					</div>
 
-				<div>
-					<Input
-						type="text"
-						label="Source ID"
-						bind:value={formData.source_id}
-						placeholder="Enter source ID"
-					/>
-				</div>
+					<div>
+						<Input
+							type="text"
+							label="Source ID"
+							bind:value={formData.source_id}
+							placeholder="Enter source name"
+						/>
+					</div>
 
-				<Button type="submit">Submit</Button>
-			</form>
-		</Card>
-	</div>
+					<Button type="submit">Submit</Button>
+				</form>
+			</Card>
+		</div>
+	{/if}
 </main>

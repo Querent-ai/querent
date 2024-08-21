@@ -14,8 +14,41 @@
 		Toolbar
 	} from 'flowbite-svelte';
 	import { goto } from '$app/navigation';
+	import { commands, type SemanticPipelineRequest } from '../../../../service/bindings';
+	import { onMount } from 'svelte';
 
-	let pipelines_list: any[] = [12];
+	let pastPipelines;
+	let pipelines_list: SemanticPipelineRequest[] = [];
+	let pipelines_ids: string[] = [];
+
+	async function testingabc() {
+		const result = await commands.getRunningAgns();
+		console.log('Result ', result);
+
+		const r = await commands.getPastAgns();
+		console.log('Get past  pipelines ', r);
+
+		if (result.length == 0) return;
+	}
+
+	onMount(async () => {
+		await testingabc();
+		const result = await commands.getRunningAgns();
+
+		if (result.length == 0) return;
+
+		const [[firstAgn, firstRequest]] = result;
+
+		pipelines_list = [...pipelines_list, firstRequest];
+		pipelines_ids = [...pipelines_ids, firstAgn];
+
+		let pastAgns = await commands.getPastAgns();
+		if (pastAgns.status == 'ok') {
+			pastPipelines = pastAgns.data;
+
+			//pipelines_list = [...pipelines_list, pastAgns.data.requests]
+		}
+	});
 
 	function navigateToStartPipeline() {
 		goto('/crud/semantic-web/add');
@@ -26,11 +59,11 @@
 	<div class="p-4">
 		<Breadcrumb class="mb-5">
 			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-			<BreadcrumbItem>Sources</BreadcrumbItem>
+			<BreadcrumbItem href="/crud/semantic-web">Data Fabric</BreadcrumbItem>
+			<BreadcrumbItem>Engines</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			All sources
+			All Engines
 		</Heading>
 
 		<Toolbar embedded class="w-full py-4 text-gray-500 dark:text-gray-400">
@@ -50,10 +83,26 @@
 		</TableHead>
 		<TableBody>
 			{#if Array.isArray(pipelines_list)}
-				{#each pipelines_list as source}
+				{#each pipelines_list as source, index}
 					<TableBodyRow class="text-base">
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						></TableBodyCell>
+							>{'AGN'}</TableBodyCell
+						>
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+							>{pipelines_ids[index]}</TableBodyCell
+						>
+
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+							>{source.fixed_entities}</TableBodyCell
+						>
+
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+							>{source.sample_entities}</TableBodyCell
+						>
+
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+							>{source.collectors}</TableBodyCell
+						>
 					</TableBodyRow>
 				{/each}
 			{/if}

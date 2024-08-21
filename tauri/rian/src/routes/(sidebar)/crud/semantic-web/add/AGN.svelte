@@ -1,29 +1,58 @@
 <script lang="ts">
 	import Modal from '../../sources/add/Modal.svelte';
-	import { dataSources, pipelineState, updatePipeline } from '../../../../../stores/appState';
+	import {
+		addPipelinesToList,
+		dataSources,
+		pipelineState,
+		updatePipeline,
+		type PipelinesData
+	} from '../../../../../stores/appState';
 
 	import { Search } from 'flowbite-svelte';
 	import Huggingface from './Huggingface.svelte';
-	import { createEventDispatcher, onMount } from 'svelte';
-	import type {
-		FixedEntities,
-		SampleEntities,
-		SemanticPipelineRequest
+	import { createEventDispatcher, onMount, tick } from 'svelte';
+	import {
+		commands,
+		type Backend,
+		type FixedEntities,
+		type SampleEntities,
+		type SemanticPipelineRequest
 	} from '../../../../../service/bindings';
+	import { goto } from '$app/navigation';
 	export let formOpen: boolean;
 
 	let sourceIds: string[] = [];
+	let sourceNames: string[] = [];
+
 	let selectedSourceIds: string[] = [];
 	let selectedModel: number | null = null;
 	let isDropdownOpen = false;
 
-	$: {
-		sourceIds = [];
+	onMount(async () => {
 		if ($dataSources) {
-			$dataSources.forEach((metadata) => {
-				sourceIds.push(metadata.name);
+			let sources = await commands.getCollectors();
+			sources.config.forEach((metadata) => {
+				sourceIds = [...sourceIds, getId(metadata.backend)];
+				sourceNames = [...sourceNames, metadata.name];
 			});
 		}
+	});
+
+	function getId(backend: Backend | null): string {
+		if (!backend) return '';
+		if ('azure' in backend) return backend.azure.id;
+		if ('drive' in backend) return backend.drive.id;
+		if ('files' in backend) return backend.files.id;
+		if ('dropbox' in backend) return backend.dropbox.id;
+		if ('email' in backend) return backend.email.id;
+		if ('gcs' in backend) return backend.gcs.id;
+		if ('github' in backend) return backend.github.id;
+		if ('jira' in backend) return backend.jira.id;
+		if ('news' in backend) return backend.news.id;
+		if ('onedrive' in backend) return backend.onedrive.id;
+		if ('s3' in backend) return backend.s3.id;
+		if ('slack' in backend) return backend.slack.id;
+		return '';
 	}
 
 	let fixed_entities: FixedEntities = {
@@ -87,38 +116,50 @@
 			? models.find((m) => m.id === selectedModel)?.name
 			: '-- Choose Model --';
 
-	const handleSubmit = (event: Event) => {
+	const handleSubmit = async (event: Event) => {
 		event.preventDefault();
 		console.log('table   ', entityTable);
 		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
 
-		if (nonEmptyRows.length === 0) {
-			modalMessage = 'Please add at least one entity pair.';
+		console.log('ROws are ', nonEmptyRows.length);
+		console.log('Selected model  ', selectedModel);
+
+		if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
+			modalMessage = 'Please either choose model or enter some entities';
 			showModal = true;
 			return;
 		}
 
-		if (selectedModel == null || selectedModel == -1) {
-			modalMessage = 'Please choose the model';
-			showModal = true;
-			return;
+		let request: SemanticPipelineRequest = {
+			collectors: sourceIds,
+			model: selectedModel,
+			fixed_entities: {
+				entities: nonEmptyRows.map((row) => row.entity)
+			},
+			sample_entities: {
+				entities: nonEmptyRows.map((row) => row.entityType)
+			}
+		};
+
+		let result = await commands.startAgnFabric(request);
+
+		if (result.status == 'ok') {
+			console.log('Pipeline id is ', result.data.pipeline_id);
+			updatePipeline('running', result.data.pipeline_id);
+
+			let pipelineMetadata: PipelinesData = {
+				id: result.data.pipeline_id,
+				sources: sourceNames,
+				fixed_entities: request.fixed_entities?.entities,
+				sample_entities: request.sample_entities?.entities
+			};
+
+			addPipelinesToList(pipelineMetadata);
 		}
 
-		let id = crypto.randomUUID();
-		updatePipeline('running', crypto.randomUUID());
-		request.collectors = selectedSourceIds;
-		request.model = selectedModel;
+		selectedModel = null;
 
-		request.fixed_entities = {
-			entities: nonEmptyRows.map((row) => row.entityType)
-		};
-		request.sample_entities = {
-			entities: nonEmptyRows.map((row) => row.entity)
-		};
-
-		console.log('form, ', request);
-		console.log('ID  ', $pipelineState.id);
-		selectedModel = -1;
+		goto('/crud/semantic-web');
 	};
 
 	const handleRemoveSource = (id: string) => {
@@ -160,18 +201,29 @@
 
 	function addRow() {
 		entityTable = [...entityTable, { entity: '', entityType: '', editing: true }];
+		updateFocus(entityTable.length - 1);
 	}
 
 	function editRow(index: number) {
 		entityTable[index].editing = true;
-	}
-
-	function deleteRow(index: number) {
-		entityTable.splice(index, 1);
+		updateFocus(index);
 	}
 
 	function saveRow(index: number) {
 		entityTable[index].editing = false;
+	}
+
+	function deleteRow(index: number) {
+		entityTable.splice(index, 1);
+		entityTable = [...entityTable];
+	}
+
+	async function updateFocus(index: number) {
+		await tick();
+		const input = document.getElementById(`entity-input-${index}`);
+		if (input) {
+			input.focus();
+		}
 	}
 
 	function downloadCSV() {
@@ -192,6 +244,7 @@
 
 	function handleFileUpload(event: Event) {
 		event.preventDefault();
+		console.log('Handling file input');
 		const input = event.target as HTMLInputElement;
 		if (input.files && input.files.length > 0) {
 			const file = input.files[0];
@@ -215,20 +268,26 @@
 							console.log('Skipping invalid data:', data);
 						}
 					});
+					console.log('New entities are ', newEntities.length);
 
 					if (newEntities.length > 0) {
 						entityTable = [...entityTable, ...newEntities];
+						entityTable = [...entityTable];
 					}
+					input.value = '';
 				} else {
 					console.error('Failed to read file as string');
 				}
 			};
 			reader.readAsText(file);
+		} else {
+			input.value = '';
 		}
 	}
 
 	function openFileInput() {
 		if (fileInput) {
+			console.log('File input clicked ');
 			fileInput.click();
 		}
 	}
@@ -249,8 +308,8 @@
 					>
 					<select id="sourceSelector" on:change={handleAddSource}>
 						<option value="">-- Choose Source --</option>
-						{#each sourceIds as id}
-							<option value={id}>{id}</option>
+						{#each sourceNames as names}
+							<option value={names}>{names}</option>
 						{/each}
 					</select>
 					<div class="tags">
@@ -268,7 +327,7 @@
 
 			<div class="section">
 				<label for="entity-pairs">
-					Entity Pairs <span class="tooltip"
+					Entity Search Space <span class="tooltip"
 						><span class="icon-info">i</span>
 						<span class="tooltiptext"
 							>Enter the entity and its types in the below table or upload your CSV</span
@@ -293,14 +352,24 @@
 								<tr>
 									<td>
 										{#if row.editing}
-											<input class="input-field" type="text" bind:value={row.entity} />
+											<input
+												id={`entity-input-${index}`}
+												class="input-field"
+												type="text"
+												bind:value={row.entity}
+											/>
 										{:else}
 											{row.entity}
 										{/if}
 									</td>
 									<td>
 										{#if row.editing}
-											<input class="input-field" type="text" bind:value={row.entityType} />
+											<input
+												id={`entity-input-${index}`}
+												class="input-field"
+												type="text"
+												bind:value={row.entityType}
+											/>
 										{:else}
 											{row.entityType}
 										{/if}

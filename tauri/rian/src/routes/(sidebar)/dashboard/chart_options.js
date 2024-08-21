@@ -18,16 +18,7 @@ export function getChartOptions(dark, type) {
 		};
 	}
 
-	if (type === 'graph') {
-		title = 'Total Graph Events';
-		subtitle = 'Events over Time';
-		seriesData = [
-			{
-				name: 'Graph Events',
-				data: [100, 164, 254, 368, 513, 652, 742]
-			}
-		];
-	} else if (type === 'vector') {
+	if (type === 'vector') {
 		title = 'Total Events';
 		subtitle = 'Events over Time';
 		seriesData = [
@@ -98,6 +89,14 @@ export function getChartOptions(dark, type) {
 					width: 1,
 					dashArray: 10
 				}
+			},
+			title: {
+				text: 'Time (seconds)',
+				style: {
+					fontSize: '14px',
+					fontWeight: 600,
+					color: mainChartColors.labelColor
+				}
 			}
 		},
 		yaxis: {
@@ -109,6 +108,14 @@ export function getChartOptions(dark, type) {
 				},
 				formatter: function (value) {
 					return value;
+				}
+			},
+			title: {
+				text: 'Number of Events',
+				style: {
+					fontSize: '14px',
+					fontWeight: 600,
+					color: mainChartColors.labelColor
 				}
 			}
 		},

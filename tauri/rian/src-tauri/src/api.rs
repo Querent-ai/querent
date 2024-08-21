@@ -1,12 +1,16 @@
 use insights::InsightInfo;
 use log::info;
-use proto::{semantics::SemanticPipelineResponse, InsightAnalystResponse};
+use proto::{
+    semantics::IndexingStatistics, semantics::IngestedTokens, semantics::SemanticPipelineResponse,
+    InsightAnalystResponse,
+};
 
 use crate::{
     UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
     RUNNING_PIPELINE_ID, UPDATE_RESULT,
 };
 use node::ApiKeyPayload;
+use std::env;
 
 #[tauri::command]
 #[specta::specta]
@@ -334,6 +338,61 @@ pub async fn prompt_insight_analyst(
         Err(e) => {
             info!("Failed to prompt insight: {:?}", e);
             Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_drive_credentials() -> Result<(String, String), String> {
+    let drive_client_id = env::var("DRIVE_CLIENT_ID").map_err(|e| e.to_string())?;
+    let drive_client_secret = env::var("DRIVE_CLIENT_SECRET").map_err(|e| e.to_string())?;
+
+    Ok((drive_client_id, drive_client_secret))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_collectors(id: proto::semantics::DeleteCollectorRequest) -> bool {
+    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let result = node::serve::semantic_api::delete_collectors(id, secret_store).await;
+    if result.is_ok() {
+        info!("Source delete successfully");
+        true
+    } else {
+        info!("Failed to delete Source");
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ingest_tokens(tokens: Vec<IngestedTokens>, pipeline_id: String) -> bool {
+    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+
+    let result =
+        node::serve::semantic_api::ingest_tokens(pipeline_id, tokens, semantic_service_mailbox)
+            .await;
+    if result.is_ok() {
+        info!("Data ingested successfully");
+        true
+    } else {
+        info!("Failed to ingest data");
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_pipeline(pipeline_id: String) -> Result<IndexingStatistics, String> {
+    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let result =
+        node::serve::semantic_api::describe_pipeline(pipeline_id, semantic_service_mailbox).await;
+
+    match result {
+        Ok(response) => Ok(response),
+        Err(e) => {
+            return Err(e.to_string());
         }
     }
 }

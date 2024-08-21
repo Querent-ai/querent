@@ -4,6 +4,7 @@
 	import AgnIcon from './AGNIcon.svelte';
 	import CodeFabricIcon from './CodeFabricIcon.svelte';
 	import Modal from '../../sources/add/Modal.svelte';
+	import TimeSeriesFabric from './TimeSeriesFabric.svelte';
 	export let formOpen = true;
 
 	let activeForm: string | number | null = null;
@@ -13,13 +14,19 @@
 			name: 'AGN',
 			form: AGNForm,
 			icon: AgnIcon,
-			description: 'Attention Graph Network'
+			description: 'Attention Graph Fabric'
 		},
 		{
-			name: 'CodeGraph',
+			name: 'CGF',
 			form: null,
 			icon: CodeFabricIcon,
-			description: 'Code Fabric Engine'
+			description: 'Code Graph Fabric'
+		},
+		{
+			name: 'TSF',
+			form: null,
+			icon: TimeSeriesFabric,
+			description: 'Time Series Fabric'
 		}
 	];
 

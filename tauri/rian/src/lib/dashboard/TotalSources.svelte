@@ -2,17 +2,33 @@
 	import { onMount } from 'svelte';
 	import * as d3 from 'd3';
 	import { dataSources } from '../../stores/appState';
-	import { countSourcesByType } from '../../stores/appState';
+	import { commands } from '../../service/bindings';
+
+	let drive_sources = [];
+	let file_sources = [];
+
+	onMount(async () => {
+		let total_sources = await commands.getCollectors();
+
+		let total_sources_config = total_sources.config;
+		drive_sources = total_sources_config.filter(
+			(source) => source.backend !== null && 'drive' in source.backend
+		);
+
+		file_sources = total_sources_config.filter(
+			(source) => source.backend !== null && 'files' in source.backend
+		);
+	});
 
 	const data = [
-		{ source: 'Google Drive', value: countSourcesByType('drive') },
-		{ source: 'Local Storage', value: countSourcesByType('files') }
+		{ source: 'Google Drive', value: drive_sources.length },
+		{ source: 'Local Storage', value: file_sources.length }
 	];
 
 	let svg;
 
 	onMount(() => {
-		const margin = { top: 40, right: 40, bottom: 80, left: 60 };
+		const margin = { top: 60, right: 40, bottom: 80, left: 60 };
 		const width = 500 - margin.left - margin.right;
 		const height = 400 - margin.top - margin.bottom;
 
@@ -47,10 +63,10 @@
 			.attr('transform', `translate(0,${height})`)
 			.call(d3.axisBottom(x))
 			.selectAll('text')
-			.attr('y', 10) // Move text down
-			.attr('x', 0) // Center text
+			.attr('y', 10)
+			.attr('x', 0)
 			.attr('dy', '.35em')
-			.attr('transform', 'rotate(0)') // No rotation
+			.attr('transform', 'rotate(0)')
 			.style('text-anchor', 'middle');
 
 		svgElement.append('g').call(d3.axisLeft(y).ticks(5));
@@ -58,7 +74,7 @@
 		// Add X axis label
 		svgElement
 			.append('text')
-			.attr('transform', `translate(${width / 2}, ${height + margin.bottom - 10})`)
+			.attr('transform', `translate(${width / 2}, ${height + margin.bottom - 35})`)
 			.style('text-anchor', 'middle')
 			.text('Data Sources');
 
@@ -71,6 +87,16 @@
 			.attr('dy', '1em')
 			.style('text-anchor', 'middle')
 			.text('Number of connections');
+
+		// Add title
+		svgElement
+			.append('text')
+			.attr('x', width / 2)
+			.attr('y', 0 - margin.top / 2)
+			.attr('text-anchor', 'middle')
+			.style('font-size', '24px')
+			.style('font-weight', 'bold')
+			.text('Total Data Sources');
 	});
 </script>
 

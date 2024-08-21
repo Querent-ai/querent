@@ -4,11 +4,7 @@
 	import { TableHeadCell, Toolbar } from 'flowbite-svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
 	import { goto } from '$app/navigation';
-	import {
-		dataSources,
-		deleteSourcefromList,
-		areCollectorsModified
-	} from '../../../../stores/appState';
+	import { dataSources } from '../../../../stores/appState';
 	import GoogleDriveIcon from './add/DriveComponent.svelte';
 	import LocalStorageIcon from './add/FolderComponent.svelte';
 	import DropboxIcon from './add/DropboxComponent.svelte';
@@ -22,11 +18,14 @@
 	import NewsIcon from './add/NewsComponent.svelte';
 	import GCSIcon from './add/GCSComponent.svelte';
 	import { Trash } from 'svelte-bootstrap-icons';
-	import { commands, type Backend, type ListCollectorConfig } from '../../../../service/bindings';
+	import {
+		commands,
+		type Backend,
+		type ListCollectorConfig,
+		type DeleteCollectorRequest,
+		type CollectorConfig
+	} from '../../../../service/bindings';
 	import { onMount } from 'svelte';
-
-	// import { clearDataSources } from '../../../../stores/appState';
-	// clearDataSources();
 
 	function navigateToAddNewSource() {
 		goto('/crud/sources/add');
@@ -38,28 +37,23 @@
 	const subtitle: string = 'Sources';
 
 	let sources_list: ListCollectorConfig = { config: [] };
-	$: if ($areCollectorsModified) {
-		updateSourcesList();
-	}
 
-	async function updateSourcesList() {
-		sources_list = await commands.getCollectors();
-		areCollectorsModified.set(false);
-	}
+	$: sources_list = { config: $dataSources };
 
-	function getImage(type: string): any {
-		if (type == 'files') return LocalStorageIcon;
-		if (type == 'drive') return GoogleDriveIcon;
-		if (type == 'azure') return AzureIcon;
-		if (type == 'dropbox') return DropboxIcon;
-		if (type == 'email') return EmailIcon;
-		if (type == 'gcs') return GCSIcon;
-		if (type == 'github') return GithubIcon;
-		if (type == 'jira') return JiraIcon;
-		if (type == 'news') return NewsIcon;
-		if (type == 'onedrive') return OnedriveIcon;
-		if (type == 's3') return AwsIcon;
-		if (type == 'slack') return SlackIcon;
+	function getImage(backend: Backend | null): any {
+		if (!backend) return '';
+		if ('files' in backend) return LocalStorageIcon;
+		if ('drive' in backend) return GoogleDriveIcon;
+		if ('azure' in backend) return AzureIcon;
+		if ('dropbox' in backend) return DropboxIcon;
+		if ('email' in backend) return EmailIcon;
+		if ('gcs' in backend) return GCSIcon;
+		if ('github' in backend) return GithubIcon;
+		if ('jira' in backend) return JiraIcon;
+		if ('news' in backend) return NewsIcon;
+		if ('onedrive' in backend) return OnedriveIcon;
+		if ('s3' in backend) return AwsIcon;
+		if ('slack' in backend) return SlackIcon;
 		return null;
 	}
 
@@ -80,13 +74,21 @@
 		return '';
 	}
 
-	function deleteSource(id: string) {
-		deleteSourcefromList(id);
+	async function deleteSource(id: string) {
+		let deleteRequest: DeleteCollectorRequest = {
+			id: [id]
+		};
+
+		if (await commands.deleteCollectors(deleteRequest)) {
+			let sources = await commands.getCollectors();
+			$dataSources = sources.config;
+		}
 	}
 
 	onMount(async () => {
 		if (sources_list.config.length === 0) {
-			await updateSourcesList();
+			let sources = await commands.getCollectors();
+			$dataSources = sources.config;
 		}
 	});
 </script>
@@ -98,7 +100,6 @@
 		<Breadcrumb class="mb-5">
 			<BreadcrumbItem home>Home</BreadcrumbItem>
 			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-			<BreadcrumbItem>Sources</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
 			All sources
@@ -122,7 +123,7 @@
 				{#each sources_list.config as source}
 					<TableBodyRow class="text-base">
 						<TableBodyCell class="p-4">
-							<svelte:component this={getImage(source.name)} />
+							<svelte:component this={getImage(source.backend)} />
 						</TableBodyCell>
 						<TableBodyCell
 							class="overflow-hidden truncate p-4 text-base font-normal text-gray-500 dark:text-gray-400"

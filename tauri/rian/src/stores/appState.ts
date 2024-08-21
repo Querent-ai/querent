@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { Insight } from '../service/bindings';
+import type { CollectorConfig, Insight } from '../service/bindings';
 export const isVisible = writable(false);
 
 function saveToLocalStorage(key: string, value: any) {
@@ -18,12 +18,6 @@ function getFromLocalStorage(key: string, defaultValue: any) {
 	}
 }
 
-export function clearDataSources(): void {
-	dataSources.set([]);
-	saveToLocalStorage('dataSources', []);
-}
-
-const initialStateDataSources: CollectorMetadata[] = getFromLocalStorage('dataSources', []);
 const initialStatePipeline: PipelineState = getFromLocalStorage('pipelineState', {
 	mode: 'idle',
 	id: null
@@ -45,8 +39,8 @@ interface PipelineState {
 export interface PipelinesData {
 	id: string;
 	sources: string[];
-	fixed_entities: string[];
-	sample_entities: string[];
+	fixed_entities: string[] | undefined;
+	sample_entities: string[] | undefined;
 }
 
 export interface DiscoveryData {
@@ -70,7 +64,7 @@ export interface DiscoveryDataPageList {
 	data: Insight[];
 }
 
-export const dataSources = writable<CollectorMetadata[]>(initialStateDataSources);
+export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
 export const areCollectorsModified = writable(false);
@@ -112,7 +106,7 @@ export function addPipelinesToList(pipeline: PipelinesData): void {
 	pipelines.update((currentPipelines) => [...currentPipelines, pipeline]);
 }
 
-export function addDataSource(source: CollectorMetadata): void {
+export function addDataSource(source: CollectorConfig): void {
 	dataSources.update((currentSources) => [...currentSources, source]);
 }
 
@@ -120,26 +114,6 @@ export function updatePipeline(mode: PipelineState['mode'], id: PipelineState['i
 	pipelineState.set({ id, mode });
 }
 
-export function getCurrentDataSources(): CollectorMetadata[] {
-	return get(dataSources);
-}
-
 export function getCurrentPipelineState(): PipelineState {
 	return get(pipelineState);
-}
-
-export function deleteSourcefromList(id: string): void {
-	dataSources.update((currentSources) => {
-		const updatedSources = currentSources.filter((source) => source.id !== id);
-		saveToLocalStorage('dataSources', updatedSources);
-		return updatedSources;
-	});
-}
-
-export function countSourcesByType(type: string): number {
-	const sources = get(dataSources);
-	if (sources && Array.isArray(sources)) {
-		return sources.filter((source) => source.type === type).length;
-	}
-	return 0;
 }
