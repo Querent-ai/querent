@@ -49,9 +49,8 @@
 						title: {
 							text: 'Time (seconds)',
 							display: true,
-							font: {size:16
-							},
-							color:'black'
+							font: { size: 16 },
+							color: 'black'
 						}
 					},
 					y: {
@@ -59,9 +58,8 @@
 						title: {
 							text: 'Total events released',
 							display: true,
-							font: {size:16, color:'black'},
-							color:'black'
-							
+							font: { size: 16, color: 'black' },
+							color: 'black'
 						}
 					}
 				},
