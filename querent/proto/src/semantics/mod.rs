@@ -107,11 +107,16 @@ impl IndexingStatistics {
 		self.total_events_processed = qflow_counters.processed.load(Ordering::Relaxed) as u32;
 		self.total_events_received =
 			event_streamer_counters.events_received.load(Ordering::Relaxed) as u32;
-		self.total_events_sent = event_streamer_counters.events_processed.load(Ordering::Relaxed) as u32;
-		self.total_batches = event_streamer_counters.batches_received.load(Ordering::Relaxed) as u32;
-		self.total_sentences = indexer_counters.total_sentences_indexed.load(Ordering::Relaxed) as u32;
-		self.total_subjects = indexer_counters.total_subjects_indexed.load(Ordering::Relaxed) as u32;
-		self.total_predicates = indexer_counters.total_predicates_indexed.load(Ordering::Relaxed) as u32;
+		self.total_events_sent =
+			event_streamer_counters.events_processed.load(Ordering::Relaxed) as u32;
+		self.total_batches =
+			event_streamer_counters.batches_received.load(Ordering::Relaxed) as u32;
+		self.total_sentences =
+			indexer_counters.total_sentences_indexed.load(Ordering::Relaxed) as u32;
+		self.total_subjects =
+			indexer_counters.total_subjects_indexed.load(Ordering::Relaxed) as u32;
+		self.total_predicates =
+			indexer_counters.total_predicates_indexed.load(Ordering::Relaxed) as u32;
 		self.total_objects = indexer_counters.total_objects_indexed.load(Ordering::Relaxed) as u32;
 		let total_event_map = &storage_mapper_counters.event_count_map;
 		for (event_type, counter) in total_event_map {
@@ -125,7 +130,8 @@ impl IndexingStatistics {
 				_ => {},
 			}
 		}
-		self.total_data_processed_size += ingestor_counters.total_megabytes.load(Ordering::Relaxed) as u32;
+		self.total_data_processed_size +=
+			ingestor_counters.total_megabytes.load(Ordering::Relaxed) as u32;
 		self
 	}
 }
