@@ -168,7 +168,10 @@ pub async fn describe_pipeline(
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<IndexingStatistics, PipelineErrors> {
 	let counters = semantic_service_mailbox.ask(ObservePipeline { pipeline_id }).await;
-	counters.unwrap()
+	match counters {
+		Ok(counters) => counters,
+		Err(_e) => Ok(IndexingStatistics::default()),
+	}
 }
 
 pub fn pipelines_get_all_handler(
