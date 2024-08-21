@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Modal from '../../sources/add/Modal.svelte';
-	import { dataSources, pipelineState, updatePipeline } from '../../../../../stores/appState';
+	import { addPipelinesToList, dataSources, pipelineState, updatePipeline, type PipelinesData } from '../../../../../stores/appState';
 
 	import { Search } from 'flowbite-svelte';
 	import Huggingface from './Huggingface.svelte';
@@ -12,21 +12,25 @@
 		type SampleEntities,
 		type SemanticPipelineRequest
 	} from '../../../../../service/bindings';
+	import { goto } from '$app/navigation';
 	export let formOpen: boolean;
 
 	let sourceIds: string[] = [];
+	let sourceNames: string[] = [];
 
 	let selectedSourceIds: string[] = [];
 	let selectedModel: number | null = null;
 	let isDropdownOpen = false;
 
-	$: {
+	onMount(async () => {
 		if ($dataSources) {
-			$dataSources.forEach((metadata) => {
-				sourceIds.concat(metadata.name);
+			let sources = await commands.getCollectors();
+			sources.config.forEach((metadata) => {
+				sourceIds = [...sourceIds, getId(metadata.backend)];
+				sourceNames = [...sourceNames, metadata.name];
 			});
 		}
-	}
+	});
 
 	function getId(backend: Backend | null): string {
 		if (!backend) return '';
@@ -106,7 +110,7 @@
 			? models.find((m) => m.id === selectedModel)?.name
 			: '-- Choose Model --';
 
-	const handleSubmit = (event: Event) => {
+	const handleSubmit = async (event: Event) => {
 		event.preventDefault();
 		console.log('table   ', entityTable);
 		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
@@ -117,25 +121,35 @@
 			return;
 		}
 
-		// let request: SemanticPipelineRequest = {
-		// 	collectors:
-		// }
-
-		//let result = commands.startAgnFabric()
-
-		let id = crypto.randomUUID();
-		updatePipeline('running', crypto.randomUUID());
-		request.collectors = selectedSourceIds;
-		request.model = selectedModel;
-
-		request.fixed_entities = {
-			entities: nonEmptyRows.map((row) => row.entityType)
+		let request: SemanticPipelineRequest = {
+			collectors: sourceIds,
+			model: selectedModel,
+			fixed_entities: {
+				entities: nonEmptyRows.map((row) => row.entity)
+			},
+			sample_entities: {
+				entities: nonEmptyRows.map((row) => row.entityType)
+			}
 		};
-		request.sample_entities = {
-			entities: nonEmptyRows.map((row) => row.entity)
-		};
+
+		let result = await commands.startAgnFabric(request);
+
+		if (result.status == 'ok') {
+			updatePipeline('running', result.data.pipeline_id);
+
+			let pipelineMetadata: PipelinesData = {
+				id: result.data.pipeline_id,
+				sources: sourceNames,
+				fixed_entities: request.fixed_entities?.entities,
+				sample_entities: request.sample_entities?.entities
+			}
+
+			addPipelinesToList(pipelineMetadata);
+		}
 
 		selectedModel = null;
+
+		goto('/crud/semantic-web');
 	};
 
 	const handleRemoveSource = (id: string) => {
@@ -284,8 +298,8 @@
 					>
 					<select id="sourceSelector" on:change={handleAddSource}>
 						<option value="">-- Choose Source --</option>
-						{#each sourceIds as id}
-							<option value={id}>{id}</option>
+						{#each sourceNames as names}
+							<option value={names}>{names}</option>
 						{/each}
 					</select>
 					<div class="tags">

@@ -39,8 +39,8 @@ interface PipelineState {
 export interface PipelinesData {
 	id: string;
 	sources: string[];
-	fixed_entities: string[];
-	sample_entities: string[];
+	fixed_entities: string[] | undefined;
+	sample_entities: string[] | undefined;
 }
 
 export interface DiscoveryData {

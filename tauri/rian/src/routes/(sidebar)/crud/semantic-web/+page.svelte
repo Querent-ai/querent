@@ -15,6 +15,23 @@
 	} from 'flowbite-svelte';
 	import { goto } from '$app/navigation';
 	import { commands } from '../../../../service/bindings';
+	import { onMount } from 'svelte';
+
+	let pastPipelines;
+
+	onMount(async() => {
+		let pastAgns = await commands.getPastAgns();
+		if (pastAgns.status == "ok") {
+			pastPipelines = pastAgns.data;
+		}
+
+		let currentAgs = await commands.getRunningAgns();
+		if (currentAgs.length == 0) {
+			return
+		}
+		let currentPipelineID = currentAgs[0];
+		let currentPipelineData = currentAgs[1];
+		})
 
 	let pipelines_list: any[] = [12];
 
