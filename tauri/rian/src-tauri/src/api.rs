@@ -109,7 +109,11 @@ pub async fn start_agn_fabric(
     let event_storages = QUERENT_SERVICES.get().unwrap().event_storages.clone();
     let index_storages = QUERENT_SERVICES.get().unwrap().index_storages.clone();
     let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
-
+    println!("Pipeline request sent11-----------------{:?}", secret_store);
+    println!("Pipeline request sent22-----------------{:?}", semantic_service_mailbox);
+    println!("Pipeline request sent33-----------------{:?}", event_storages);
+    println!("Pipeline request sent44-----------------{:?}", index_storages);
+    println!("Pipeline request sent55-----------------{:?}", metadata_store);
     let result = node::serve::semantic_api::start_pipeline(
         request.clone(),
         semantic_service_mailbox,
@@ -119,15 +123,18 @@ pub async fn start_agn_fabric(
         metadata_store,
     )
     .await;
-
+    println!("Pipeline request sent-----------------");
     match result {
         Ok(response) => {
             info!("Pipeline started successfully");
             let pipeline_id = response.pipeline_id.clone();
+            println!("this is the pipeline id -------{:?}", pipeline_id.clone());
             RUNNING_PIPELINE_ID.lock().push((pipeline_id, request));
+            println!("Going to return response----------{:?}", response.clone());
             Ok(response)
         }
         Err(e) => {
+            println!("This sis the error----------------{:?}", e);
             info!("Failed to start pipeline: {:?}", e);
             Err(e.to_string())
         }

@@ -145,7 +145,7 @@
 				entities: nonEmptyRows.map((row) => row.entityType)
 			}
 		};
-
+		console.log("This is the semantic pipeline request ::::", request);
 		let result = await commands.startAgnFabric(request);
 
 		if (result.status == 'ok') {

@@ -64,7 +64,7 @@
 			<BreadcrumbItem>Start New Pipeline</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			Available Data Fabric
+			Available Data Fabrics
 		</Heading>
 
 		<div class="mt-6 flex flex-wrap justify-start gap-8">

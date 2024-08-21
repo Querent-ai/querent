@@ -334,6 +334,7 @@ pub async fn start_pipeline(
 	let pipeline_rest = semantic_service_mailbox
 		.ask(SpawnPipeline { settings: pipeline_settings, pipeline_id: new_uuid.clone() })
 		.await;
+	println!("This is the pipeline rest --------------{:?}", pipeline_rest);
 	let pipeline_id = pipeline_rest.unwrap_or(Ok("".to_string()));
 	if pipeline_id.is_err() {
 		return Err(PipelineErrors::UnknownError(pipeline_id.unwrap_err().to_string()).into());

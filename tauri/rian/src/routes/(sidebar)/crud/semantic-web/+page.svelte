@@ -49,9 +49,11 @@
 			//pipelines_list = [...pipelines_list, pastAgns.data.requests]
 		}
 	});
-
+	console.log("I am here-------------");
 	function navigateToStartPipeline() {
-		goto('/crud/semantic-web/add');
+		console.log("I am here-------------11111");
+		goto('/crud/semantic-web/add/');
+		console.log("I am here-------------2222222");
 	}
 </script>
 
