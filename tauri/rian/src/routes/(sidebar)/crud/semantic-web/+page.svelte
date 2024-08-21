@@ -14,26 +14,28 @@
 		Toolbar
 	} from 'flowbite-svelte';
 	import { goto } from '$app/navigation';
-	import { commands } from '../../../../service/bindings';
+	import { commands, type SemanticPipelineRequest } from '../../../../service/bindings';
 	import { onMount } from 'svelte';
 
 	let pastPipelines;
+	let pipelines_list: SemanticPipelineRequest[] = [];
+	let pipelines_ids: string[] = [];
 
 	onMount(async() => {
+		const [[firstAgn, firstRequest]] = await commands.getRunningAgns();
+
+		pipelines_list = [...pipelines_list, firstRequest];
+		pipelines_ids = [...pipelines_ids, firstAgn];
+
 		let pastAgns = await commands.getPastAgns();
 		if (pastAgns.status == "ok") {
 			pastPipelines = pastAgns.data;
+
+			//pipelines_list = [...pipelines_list, pastAgns.data.requests]
 		}
 
-		let currentAgs = await commands.getRunningAgns();
-		if (currentAgs.length == 0) {
-			return
-		}
-		let currentPipelineID = currentAgs[0];
-		let currentPipelineData = currentAgs[1];
 		})
 
-	let pipelines_list: any[] = [12];
 
 	function navigateToStartPipeline() {
 		goto('/crud/semantic-web/add');
@@ -68,10 +70,22 @@
 		</TableHead>
 		<TableBody>
 			{#if Array.isArray(pipelines_list)}
-				{#each pipelines_list as source}
+				{#each pipelines_list as source, index}
 					<TableBodyRow class="text-base">
+
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-						></TableBodyCell>
+						>{"AGN"}</TableBodyCell>
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+						>{pipelines_ids[index]}</TableBodyCell>
+
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+						>{source.fixed_entities}</TableBodyCell>
+
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+						>{source.sample_entities}</TableBodyCell>
+
+						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
+						>{source.collectors}</TableBodyCell>
 					</TableBodyRow>
 				{/each}
 			{/if}
