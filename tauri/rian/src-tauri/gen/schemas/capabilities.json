@@ -9,7 +9,8 @@
 			"dialog:allow-save",
 			"dialog:allow-open",
 			"dialog:allow-message",
-			"dialog:allow-confirm"
+			"dialog:allow-confirm",
+			"shell:allow-open"
 		]
 	}
 }
