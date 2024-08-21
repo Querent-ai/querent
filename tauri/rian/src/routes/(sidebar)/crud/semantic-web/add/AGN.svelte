@@ -130,8 +130,13 @@
 			return;
 		}
 
+
+		let selectedSources: string[] = sourceIds.filter((_, index) => {
+			return selectedSourceIds.includes(sourceNames[index]);
+		});
+
 		let request: SemanticPipelineRequest = {
-			collectors: sourceIds,
+			collectors: selectedSources,
 			model: selectedModel,
 			fixed_entities: {
 				entities: nonEmptyRows.map((row) => row.entity)

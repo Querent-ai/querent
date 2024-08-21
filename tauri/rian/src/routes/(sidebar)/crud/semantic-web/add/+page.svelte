@@ -11,19 +11,19 @@
 
 	const formsList = [
 		{
-			name: 'AGN',
+			name: 'Attention',
 			form: AGNForm,
 			icon: AgnIcon,
 			description: 'Attention Graph Fabric'
 		},
 		{
-			name: 'CGF',
+			name: 'Code',
 			form: null,
 			icon: CodeFabricIcon,
 			description: 'Code Graph Fabric'
 		},
 		{
-			name: 'TSF',
+			name: 'TimeSeries',
 			form: null,
 			icon: TimeSeriesFabric,
 			description: 'Time Series Fabric'
@@ -64,7 +64,7 @@
 			<BreadcrumbItem>Start New Pipeline</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			List of Engines
+			Available Data Fabric
 		</Heading>
 
 		<div class="mt-6 flex flex-wrap justify-start gap-8">
