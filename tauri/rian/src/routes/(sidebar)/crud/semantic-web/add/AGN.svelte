@@ -15,16 +15,16 @@
 	export let formOpen: boolean;
 
 	let sourceIds: string[] = [];
+
 	let selectedSourceIds: string[] = [];
 	let selectedModel: number | null = null;
 	let isDropdownOpen = false;
 
-	// let collectors = await commands.getCollectors();
-	// let configs = collectors.config;
-
 	$: {
 		if ($dataSources) {
-			$dataSources.forEach((metadata) => {});
+			$dataSources.forEach((metadata) => {
+				sourceIds.concat(metadata.name);
+			});
 		}
 	}
 

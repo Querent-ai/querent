@@ -53,43 +53,45 @@
 		</Heading>
 	</div>
 
-	<div class="flex justify-center">
-		<Card class="m-4">
-			<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
-			<form on:submit|preventDefault={handleSubmit} class="space-y-4">
-				<div>
-					<Input type="text" label="Data" bind:value={formData.data} placeholder="Enter data" />
-				</div>
+	{#if $pipelineState.id}
+		<div class="flex justify-center">
+			<Card class="m-4">
+				<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
+				<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+					<div>
+						<Input type="text" label="Data" bind:value={formData.data} placeholder="Enter data" />
+					</div>
 
-				<div>
-					<Input
-						type="text"
-						label="Doc Source"
-						bind:value={formData.doc_source}
-						placeholder="Enter data source"
-					/>
-				</div>
+					<div>
+						<Input
+							type="text"
+							label="Doc Source"
+							bind:value={formData.doc_source}
+							placeholder="Enter data source"
+						/>
+					</div>
 
-				<div>
-					<Input
-						type="text"
-						label="File"
-						bind:value={formData.file}
-						placeholder="Enter file name"
-					/>
-				</div>
+					<div>
+						<Input
+							type="text"
+							label="File"
+							bind:value={formData.file}
+							placeholder="Enter file name"
+						/>
+					</div>
 
-				<div>
-					<Input
-						type="text"
-						label="Source ID"
-						bind:value={formData.source_id}
-						placeholder="Enter source name"
-					/>
-				</div>
+					<div>
+						<Input
+							type="text"
+							label="Source ID"
+							bind:value={formData.source_id}
+							placeholder="Enter source name"
+						/>
+					</div>
 
-				<Button type="submit">Submit</Button>
-			</form>
-		</Card>
-	</div>
+					<Button type="submit">Submit</Button>
+				</form>
+			</Card>
+		</div>
+	{/if}
 </main>
