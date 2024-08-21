@@ -17,13 +17,13 @@
 			description: 'Attention Graph Fabric'
 		},
 		{
-			name: 'CodeFabric',
+			name: 'CGF',
 			form: null,
 			icon: CodeFabricIcon,
-			description: 'Code Fabric Engine'
+			description: 'Code Graph Fabric'
 		},
 		{
-			name: 'TimeSeriesFabric',
+			name: 'TSF',
 			form: null,
 			icon: TimeSeriesFabric,
 			description: 'Time Series Fabric'

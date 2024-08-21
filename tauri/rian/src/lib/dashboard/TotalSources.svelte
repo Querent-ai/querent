@@ -96,7 +96,7 @@
 			.attr('text-anchor', 'middle')
 			.style('font-size', '24px')
 			.style('font-weight', 'bold')
-			.text('Total Connections');
+			.text('Total Data Sources');
 	});
 </script>
 

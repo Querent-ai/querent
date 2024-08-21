@@ -303,7 +303,7 @@
 
 			<div class="section">
 				<label for="entity-pairs">
-					Entity Pairs <span class="tooltip"
+					Entity Search Space <span class="tooltip"
 						><span class="icon-info">i</span>
 						<span class="tooltiptext"
 							>Enter the entity and its types in the below table or upload your CSV</span
