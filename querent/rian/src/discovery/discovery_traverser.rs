@@ -128,11 +128,14 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		message: DiscoveryRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if self.embedding_model.is_none() {
-			return Ok(Err(DiscoveryError::Unavailable(
-				"Discovery agent embedding model is not initialized".to_string(),
-			)));
-		}
+		let embedder = match self.embedding_model.as_ref() {
+			Some(embedder) => embedder,
+			None => {
+				return Ok(Err(DiscoveryError::Unavailable(
+					"Discovery agent embedding model is not initialized".to_string(),
+				)));
+			},
+		};
 
 		if message.query != self.current_query {
 			self.current_offset = 0;
@@ -141,17 +144,16 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 		} else {
 			self.current_page_rank += 1;
 		}
-		let embedder = self.embedding_model.as_ref().unwrap();
-		let embeddings = embedder.embed(vec![message.query.clone()], None)?;
-		let current_query_embedding = embeddings[0].clone();
+		let embeddings = embedder.embed(vec![&self.current_query], None)?;
+		let current_query_embedding = &embeddings[0];
 		let mut insights = Vec::new();
 		let mut document_payloads = Vec::new();
 
 		for (event_type, storages) in self.event_storages.iter() {
-			if event_type.clone() == EventType::Vector {
+			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
 					if message.query.is_empty() {
-						let auto_suggestions = match storage.autogenerate_queries(10).await {
+						let auto_suggestions = match storage.autogenerate_queries(3).await {
 							Ok(suggestions) => suggestions,
 							Err(e) => {
 								tracing::info!("Failed to auto-generate queries: {:?}", e);
@@ -172,10 +174,10 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 					}
 					let search_results = storage
 						.similarity_search_l2(
-							message.session_id.clone(),
-							message.query.clone(),
-							self.discovery_agent_params.semantic_pipeline_id.clone(),
-							&current_query_embedding.clone(),
+							message.session_id.to_string(),
+							message.query.to_string(),
+							self.discovery_agent_params.semantic_pipeline_id.to_string(),
+							current_query_embedding,
 							10,
 							self.current_offset,
 							&vec![],
@@ -185,7 +187,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 						Ok(results) => {
 							self.current_offset += results.len() as i64;
 
-							let filtered_results = get_top_k_pairs(results.clone(), 3);
+							let filtered_results = get_top_k_pairs(results, 3);
 							let traverser_results_1 =
 								storage.traverse_metadata_table(&filtered_results).await;
 
@@ -193,10 +195,18 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 								message.session_id != self.previous_session_id
 							{
 								match &traverser_results_1 {
-									Ok(ref traverser_results) => {
+									Ok(traverser_results) => {
 										self.previous_query_results =
-											serde_json::to_string(traverser_results)
-												.unwrap_or_default();
+											match serde_json::to_string(traverser_results) {
+												Ok(serialized_results) => serialized_results,
+												Err(e) => {
+													log::error!(
+													"Failed to search for similar documents in traverser: {}",
+													e
+												);
+													String::new()
+												},
+											};
 										self.previous_filtered_results = filtered_results;
 										self.previous_session_id = message.session_id.clone();
 									},
@@ -205,16 +215,15 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									},
 								}
 
-								// Format documents and insert discovered knowledge
-								if let Ok(ref traverser_results) = traverser_results_1 {
+								if let Ok(traverser_results) = traverser_results_1 {
 									process_documents(
-										traverser_results,
+										&traverser_results,
 										&mut insights,
 										&mut document_payloads,
-										current_query_embedding.clone(),
-										message.query.clone(),
-										message.session_id.clone(),
-										self.discovery_agent_params.semantic_pipeline_id.clone(),
+										&current_query_embedding,
+										&message.query,
+										&message.session_id,
+										&self.discovery_agent_params.semantic_pipeline_id,
 									);
 
 									tokio::spawn(insert_discovered_knowledge_async(
@@ -228,7 +237,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									);
 								}
 							} else {
-								// If previous_query_results is not empty, parse and combine with current results
 								let previous_results: Vec<(
 									String,
 									String,
@@ -238,13 +246,21 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									String,
 									String,
 									f32,
-								)> = serde_json::from_str(&self.previous_query_results)
-									.unwrap_or_default();
+								)> = match serde_json::from_str(&self.previous_query_results) {
+									Ok(results) => results,
+									Err(e) => {
+										log::error!(
+											"Failed to deserialize previous query results: {}",
+											e
+										);
+										Vec::new()
+									},
+								};
 								let current_results = match &traverser_results_1 {
-									Ok(ref traverser_results) => traverser_results.clone(),
+									Ok(ref traverser_results) => traverser_results,
 									Err(e) => {
 										log::error!("Failed to search for similar documents in traverser: {}", e);
-										vec![]
+										&vec![]
 									},
 								};
 
@@ -255,7 +271,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									&self.previous_filtered_results,
 								);
 
-								// Run intersection function
 								let results_intersection =
 									find_intersection(&formatted_output_1, &formatted_output_2);
 
@@ -266,24 +281,33 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 									self.previous_filtered_results = results_intersection.clone();
 									storage.traverse_metadata_table(&results_intersection).await
 								};
-								match final_traverser_results.clone() {
-									Ok(ref results) => {
+								match &final_traverser_results {
+									Ok(results) => {
 										self.previous_query_results =
-											serde_json::to_string(results).unwrap_or_default();
+											match serde_json::to_string(results) {
+												Ok(serialized_results) => serialized_results,
+												Err(e) => {
+													log::error!(
+														"Failed to serialize traverser results: {}",
+														e
+													);
+													String::new()
+												},
+											};
 									},
 									Err(e) => {
 										log::error!("Failed to search for similar documents in traverser: {:?}", e);
 									},
 								}
-								if let Ok(ref traverser_results) = final_traverser_results {
+								if let Ok(traverser_results) = final_traverser_results {
 									process_documents(
-										traverser_results,
+										&traverser_results,
 										&mut insights,
 										&mut document_payloads,
-										current_query_embedding.clone(),
-										message.query.clone(),
-										message.session_id.clone(),
-										self.discovery_agent_params.semantic_pipeline_id.clone(),
+										&current_query_embedding,
+										&message.query,
+										&message.session_id,
+										&self.discovery_agent_params.semantic_pipeline_id,
 									);
 
 									tokio::spawn(insert_discovered_knowledge_async(
@@ -311,7 +335,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 
 		let response = DiscoveryResponse {
 			session_id: message.session_id,
-			query: message.query.clone(),
+			query: message.query,
 			insights,
 			page_ranking: self.current_page_rank,
 		};
@@ -324,10 +348,10 @@ fn process_documents(
 	traverser_results: &Vec<(String, String, String, String, String, String, String, f32)>,
 	insights: &mut Vec<proto::Insight>,
 	document_payloads: &mut Vec<DocumentPayload>,
-	current_query_embedding: Vec<f32>,
-	query: String,
-	session_id: String,
-	coll_id: String,
+	current_query_embedding: &[f32],
+	query: &str,
+	session_id: &str,
+	coll_id: &str,
 ) {
 	for document in traverser_results {
 		let tags = format!(
@@ -337,9 +361,9 @@ fn process_documents(
 		);
 		let insight = proto::Insight {
 			document: document.1.to_string(),
-			source: document.4.clone(),
+			source: document.4.to_string(),
 			relationship_strength: document.7.to_string(),
-			sentence: document.5.clone(),
+			sentence: document.5.to_string(),
 			tags,
 			top_pairs: vec!["".to_string()],
 		};
@@ -348,17 +372,17 @@ fn process_documents(
 
 		let document_payload = DocumentPayload {
 			doc_id: document.1.to_string(),
-			doc_source: document.4.clone(),
-			sentence: document.5.clone(),
+			doc_source: document.4.to_string(),
+			sentence: document.5.to_string(),
 			knowledge: document.7.to_string(),
-			subject: document.2.clone(),
-			object: document.3.clone(),
+			subject: document.2.to_string(),
+			object: document.3.to_string(),
 			cosine_distance: None,
-			query_embedding: Some(current_query_embedding.clone()),
-			query: Some(query.clone()),
-			session_id: Some(session_id.clone()),
+			query_embedding: Some(current_query_embedding.to_vec()),
+			query: Some(query.to_string()),
+			session_id: Some(session_id.to_string()),
 			score: document.7,
-			collection_id: coll_id.clone(),
+			collection_id: coll_id.to_string(),
 		};
 
 		document_payloads.push(document_payload);
@@ -373,10 +397,10 @@ pub fn process_auto_generated_suggestions(
 		let tags: Vec<String> = unique_tags.into_iter().collect();
 
 		let insight = proto::Insight {
-			document: suggestion.document_source.clone(),
-			source: suggestion.document_source.clone(),
+			document: suggestion.document_source.to_string(),
+			source: suggestion.document_source.to_string(),
 			relationship_strength: suggestion.frequency.to_string(),
-			sentence: suggestion.query.clone(),
+			sentence: suggestion.query.to_string(),
 			tags: tags.join(", "),
 			top_pairs: suggestion.top_pairs.clone(),
 		};

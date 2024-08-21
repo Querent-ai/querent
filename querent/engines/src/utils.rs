@@ -55,8 +55,13 @@ pub struct ClassifiedSentenceWithRelations {
 /// Removes newline characters from the given text.
 pub fn remove_newlines(text: &str) -> String {
 	let sanitized_text = sanitize_text(text);
-	let re = Regex::new(r"\n+").unwrap();
-	re.replace_all(&sanitized_text, " ").to_string()
+	match Regex::new(r"\n+") {
+		Ok(re) => re.replace_all(&sanitized_text, " ").to_string(),
+		Err(e) => {
+			log::error!("Failed to create regex: {:?}", e);
+			sanitized_text
+		},
+	}
 }
 
 /// Removes null bytes and any other invalid UTF-8 sequences from the given text.
@@ -99,7 +104,7 @@ pub fn split_into_chunks(max_tokens: usize, tokens: &str) -> Vec<String> {
 					start = end;
 				}
 			} else {
-				current_chunk = sentence.clone();
+				current_chunk = sentence;
 				current_length = sentence_length;
 			}
 		} else {
@@ -148,7 +153,7 @@ fn find_entity_indices(sentence: &str, entity: &str) -> Vec<(usize, usize)> {
 		let start = start_pos + pos;
 		let end = start + entity.len();
 		positions.push((start, end));
-		start_pos = end; // Move past this occurrence
+		start_pos = end;
 	}
 	positions
 }
@@ -179,7 +184,12 @@ pub fn match_entities_with_tokens(
 			let token_indices = find_all_token_indices(sentence_tokens, entity);
 			for (token_start, token_end) in token_indices {
 				if seen_positions.insert((token_start, token_end)) {
-					matched_entities.push((entity.clone(), label.clone(), token_start, token_end));
+					matched_entities.push((
+						entity.to_string(),
+						label.to_string(),
+						token_start,
+						token_end,
+					));
 				}
 			}
 		}
@@ -252,18 +262,25 @@ pub fn create_binary_pairs(
 						continue;
 					}
 
-					pairs.push((entity1.clone(), *start1, *end1, entity2.clone(), *start2, *end2));
+					pairs.push((
+						entity1.to_string(),
+						*start1,
+						*end1,
+						entity2.to_string(),
+						*start2,
+						*end2,
+					));
 				}
 			}
 
 			results.push(ClassifiedSentenceWithPairs {
-				sentence: sentence.clone(),
+				sentence: sentence.to_string(),
 				entities,
 				pairs,
 			});
 		} else {
 			results.push(ClassifiedSentenceWithPairs {
-				sentence: sentence.clone(),
+				sentence: sentence.to_string(),
 				entities,
 				pairs: Vec::new(),
 			});
@@ -430,18 +447,12 @@ pub async fn calculate_biased_sentence_embedding(
 		})
 		.sum::<f32>() /
 		attention_matrix.len() as f32;
-
-	// Initialize the biased sentence embedding
-	let mut biased_sentence_embedding = sentence_embedding.clone();
-
-	// Adjust the sentence embedding with entity embeddings
+	let mut biased_sentence_embedding = sentence_embedding;
 	for i in 0..biased_sentence_embedding.len() {
 		biased_sentence_embedding[i] += head_attention_score * head_embedding[i] +
 			tail_attention_score * tail_embedding[i] +
 			score * predicate_embedding[i];
 	}
-
-	// Normalize the resulting vector (optional)
 	let norm: f32 = biased_sentence_embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
 	let normalized_biased_sentence_embedding: Vec<f32> =
 		biased_sentence_embedding.iter().map(|&x| x / norm).collect();
@@ -454,15 +465,9 @@ pub fn generate_custom_comb_uuid() -> String {
 	let custom_epoch = Utc.with_ymd_and_hms(2020, 1, 1, 0, 0, 0).unwrap();
 	let now = Utc::now();
 	let millis_since_epoch = now.signed_duration_since(custom_epoch).num_milliseconds();
-
-	// Ensure the timestamp fits into 52 bits
 	let timestamp_part = (millis_since_epoch as u64) & 0x000F_FFFF_FFFF_FFFF;
-
-	// Generate a 12-bit random number
 	let mut rng = thread_rng();
 	let random_part: u16 = rng.gen_range(0..4096);
-
-	// Combine both parts: Shift timestamp by 12 bits and add the random part
 	let uuid_int = (timestamp_part << 12) | (random_part as u64);
 
 	uuid_int.to_string()

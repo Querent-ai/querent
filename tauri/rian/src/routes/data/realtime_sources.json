@@ -1,0 +1,7 @@
+[
+	{
+		"name": "News",
+		"technology": "News API",
+		"description": "News API is a simple HTTP REST API for searching and retrieving live articles from all over the web. It can help you answer questions like what's happening right now, what happened on a specific date, or what's the most popular news in a certain category."
+	}
+]

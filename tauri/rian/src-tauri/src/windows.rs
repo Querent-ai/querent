@@ -1,5 +1,5 @@
 use serde_json::json;
-use tauri::{Emitter, Listener, Manager};
+use tauri::{Emitter, Manager};
 use tauri_plugin_updater::UpdaterExt;
 use tauri_specta::Event;
 
@@ -8,6 +8,7 @@ use cocoa::appkit::NSWindow;
 
 use crate::{UpdateResult, APP_HANDLE};
 
+#[allow(dead_code)]
 pub const UPDATER_WIN_NAME: &str = "rian_updater";
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, specta::Type, tauri_specta::Event)]
@@ -28,13 +29,13 @@ impl PinnedFromWindowEvent {
 }
 
 pub fn show_updater_window() {
-    let window = get_updater_window();
-    window.center().unwrap();
-    window.show().unwrap();
+    // let window = get_updater_window();
+    // window.center().unwrap();
+    // window.show().unwrap();
 
     let handle = APP_HANDLE.get().unwrap();
-    CheckUpdateEvent::listen(handle, move |event| {
-        let window_clone = window.clone();
+    CheckUpdateEvent::listen(handle, move |_event| {
+        // let window_clone = window.clone();
         tauri::async_runtime::spawn(async move {
             let builder = handle.updater_builder();
             let updater = builder.build().unwrap();
@@ -61,11 +62,12 @@ pub fn show_updater_window() {
                 }
                 Err(_) => {}
             }
-            window_clone.unlisten(event.id)
+            // window_clone.unlisten(event.id)
         });
     });
 }
 
+#[allow(dead_code)]
 pub fn get_updater_window() -> tauri::WebviewWindow {
     let handle = APP_HANDLE.get().unwrap();
     let window = match handle.get_webview_window(UPDATER_WIN_NAME) {
@@ -78,7 +80,7 @@ pub fn get_updater_window() -> tauri::WebviewWindow {
             let builder = tauri::WebviewWindowBuilder::new(
                 handle,
                 UPDATER_WIN_NAME,
-                tauri::WebviewUrl::App("src/tauri/index.html".into()),
+                tauri::WebviewUrl::App("updates".into()),
             )
             .title("Querent R!AN Updater")
             .fullscreen(false)

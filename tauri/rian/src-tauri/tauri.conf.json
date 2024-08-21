@@ -1,98 +1,96 @@
 {
-  "productName": "rian",
-  "version": "0.7.0",
-  "identifier": "xyz.querent.rian",
-  "build": {
-    "frontendDist": "../build",
-    "devUrl": "http://localhost:5173",
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build"
-  },
-  "plugins": {
-    "shell": {
-      "open": true
-    },
-    "updater": {
-      "endpoints": [
-        "https://github.com/querent-ai/distribution/releases/latest/download/update.json"
-      ],
-      "active": true,
-      "windows": {
-        "installMode": "passive"
-      },
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcxMzM1MDAzMzcxMjVDNTgKUldSWVhCSTNBMUF6Y2FlSjYrc05YdEh4a0xUYjlOQ1UwOWxHSWt3TmRRWFZPZEhlUFlwc3o2OXQK"
-    }
-  },
-  "bundle": {
-    "active": true,
-    "linux": {
-      "deb": {
-        "depends": [
-          "xdotool"
-        ]
-      },
-      "appimage": {
-        "bundleMediaFramework": true
-      }
-    },
-    "category": "DeveloperTool",
-    "copyright": "",
-    "externalBin": [],
-    "createUpdaterArtifacts": true,
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
-    ],
-    "longDescription": "R!AN: Realtime Information Aggregator Network",
-    "macOS": {
-      "entitlements": null,
-      "exceptionDomain": "",
-      "frameworks": [],
-      "providerShortName": null,
-      "signingIdentity": null
-    },
-    "resources": [
-    ],
-    "shortDescription": "R!AN: Realtime Information Aggregator Network",
-    "targets": "all",
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": "",
-      "webviewInstallMode": {
-        "type": "embedBootstrapper"
-      }
-    }
-  },
-  "app": {
-    "withGlobalTauri": true,
-    "macOSPrivateApi": true,
-    "security": {
-      "csp": null,
-      "assetProtocol": {
-        "enable": true,
-        "scope": {
-          "allow": ["$CACHE/**", "$CONFIG/**", "$APPCACHE/**" ]
-        }
-      }
-    },
-    "trayIcon": {
-      "id": "tray",
-      "iconAsTemplate": true,
-      "iconPath": "icons/icon.ico"
-    },
-    "windows": [
-      {
-        "title": "R!AN: Realtime Information Aggregator Network",
-        "width": 800,
-        "height": 600,
-        "resizable": true,
-        "fullscreen": false
-      }
-    ]
-  }
+	"productName": "rian",
+	"version": "0.7.0",
+	"identifier": "xyz.querent.rian",
+	"build": {
+		"frontendDist": "../build",
+		"devUrl": "http://localhost:5173",
+		"beforeDevCommand": "pnpm run dev",
+		"beforeBuildCommand": "pnpm run build"
+	},
+	"plugins": {
+		"shell": {
+			"open": true
+		},
+		"updater": {
+			"endpoints": [
+				"https://github.com/querent-ai/distribution/releases/latest/download/update.json"
+			],
+			"active": true,
+			"windows": {
+				"installMode": "passive"
+			},
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDcxMzM1MDAzMzcxMjVDNTgKUldSWVhCSTNBMUF6Y2FlSjYrc05YdEh4a0xUYjlOQ1UwOWxHSWt3TmRRWFZPZEhlUFlwc3o2OXQK"
+		}
+	},
+	"bundle": {
+		"active": true,
+		"linux": {
+			"deb": {
+				"depends": ["xdotool"]
+			},
+			"appimage": {
+				"bundleMediaFramework": true
+			}
+		},
+		"category": "DeveloperTool",
+		"copyright": "",
+		"externalBin": [],
+		"createUpdaterArtifacts": true,
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
+		"longDescription": "R!AN: Realtime Information Aggregator Network",
+		"macOS": {
+			"entitlements": null,
+			"exceptionDomain": "",
+			"frameworks": [],
+			"providerShortName": null,
+			"signingIdentity": null
+		},
+		"resources": [],
+		"shortDescription": "R!AN: Realtime Information Aggregator Network",
+		"targets": "all",
+		"windows": {
+			"certificateThumbprint": null,
+			"digestAlgorithm": "sha256",
+			"timestampUrl": "",
+			"webviewInstallMode": {
+				"type": "embedBootstrapper"
+			}
+		}
+	},
+	"app": {
+		"withGlobalTauri": true,
+		"macOSPrivateApi": true,
+		"security": {
+			"csp": null,
+			"assetProtocol": {
+				"enable": true,
+				"scope": {
+					"allow": ["$CACHE/**", "$CONFIG/**", "$APPCACHE/**"]
+				}
+			},
+			"capabilities": ["rian-main-capability"]
+		},
+		"trayIcon": {
+			"id": "tray",
+			"iconAsTemplate": true,
+			"iconPath": "icons/icon.ico"
+		},
+		"windows": [
+			{
+				"title": "R!AN: Realtime Information Aggregator Network",
+				"width": 800,
+				"height": 600,
+				"resizable": true,
+				"fullscreen": false
+			}
+		]
+	}
 }
