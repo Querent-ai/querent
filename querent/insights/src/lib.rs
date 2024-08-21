@@ -11,6 +11,8 @@ pub mod insight_utils;
 pub use insight_utils::*;
 pub mod anomaly_detection;
 pub use anomaly_detection::*;
+pub mod cross_document_summarization;
+pub use cross_document_summarization::*;
 
 pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
