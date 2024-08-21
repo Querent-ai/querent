@@ -1,37 +1,109 @@
 <script lang="ts">
-	import ChartWidget from '$lib/widgets/ChartWidget.svelte';
 	import { Card } from 'flowbite-svelte';
-	// import type { PageData } from '../../routes/(sidebar)/$types';
 	import Stats from './Stats.svelte';
+	import { onMount } from 'svelte';
+	import Chart from 'chart.js/auto';
+	import { commands } from '../../service/bindings';
 
-	import { getChartOptions } from '../../routes/(sidebar)/dashboard/chart_options';
+	// import { getChartOptions } from '../../routes/(sidebar)/dashboard/chart_options';
 	import TotalSources from './TotalSources.svelte';
-	// import TotalEvents from './TotalEvents.svelte';
 
-	// export let data: PageData;
+	// let vectorOptions = getChartOptions(false, 'vector');
 
-	let vectorOptions = getChartOptions(false, 'vector');
+	let chartInstance: Chart<'line', any[], unknown>;
+	let dataPoints: any[] = [];
+
+	onMount(() => {
+		const canvas = document.getElementById('myChart') as HTMLCanvasElement;
+
+		if (!canvas) {
+			console.error('Canvas element not found!');
+			return;
+		}
+
+		const ctx = canvas.getContext('2d');
+
+		if (!ctx) {
+			console.error('Context element not found!');
+			return;
+		}
+		chartInstance = new Chart(ctx, {
+			type: 'line',
+			data: {
+				datasets: [
+					{
+						label: 'Total Events',
+						backgroundColor: 'rgb(255, 99, 132)',
+						borderColor: 'rgb(255, 99, 132)',
+						fill: false,
+						data: dataPoints
+					}
+				]
+			},
+			options: {
+				scales: {
+					x: {
+						type: 'linear',
+						min: 0,
+						max: 100,
+						title: {
+							text: 'Time (seconds)',
+							display: true
+						}
+					},
+					y: {
+						beginAtZero: true,
+						title: {
+							text: 'Total events released',
+							display: true
+						}
+					}
+				},
+				animation: {
+					duration: 0
+				},
+				plugins: {
+					title: {
+						display: true,
+						text: 'Total Events',
+						position: 'top',
+						align: 'center',
+						color: 'black',
+						font: {
+							size: 24
+						}
+					}
+				}
+			}
+		});
+
+		const intervalId = setInterval(() => fetchPipelineData('pipeline-id'), 10000);
+		return () => clearInterval(intervalId);
+	});
+
+	async function fetchPipelineData(selectedPipeline: string) {
+		const response = await commands.describePipeline(selectedPipeline);
+		if (response.status == 'ok') {
+			const totalEvents = response.data.total_events;
+			const currentTime = performance.now() / 1000;
+			dataPoints.push({ x: currentTime % 100, y: totalEvents });
+			dataPoints = dataPoints.filter((dp) => currentTime - dp.x <= 100);
+			chartInstance.data.datasets[0].data = dataPoints;
+			chartInstance.update();
+		}
+	}
 </script>
 
 <!-- <main class="relative h-full w-full overflow-y-auto bg-blue-500 bg-image"> -->
 <div class="mt-px space-y-4">
 	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
 		<div class="lg:col-span-2">
-			<Card class="min-h-[550px] min-w-[900px] rounded-lg shadow-lg">
+			<Card class="min-h-[500px] min-w-[900px] rounded-lg shadow-lg">
 				<div class="space-y-4">
-					<ChartWidget
-						chartOptions={vectorOptions}
-						title="Total Events"
-						subtitle="Events over Time"
-					/>
-					<!-- <ChartWidget
-						chartOptions={graphOptions}
-						title="Total Graph Events"
-						subtitle="Events over Time"
-					/> -->
+					<canvas id="myChart"></canvas>
 				</div>
 			</Card>
-			<Card class="min-h-[550px] min-w-[900px] rounded-lg shadow-lg">
+			<Card class="min-h-[500px] min-w-[900px] rounded-lg shadow-lg">
 				<TotalSources />
 			</Card>
 		</div>
@@ -42,13 +114,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	.bg-image {
-		background-image: url('/images/querent-background.png');
-		background-size: cover;
-		background-position: calc(50% - 20px) center;
-		background-repeat: no-repeat;
-		background-color: #3b82f6;
-	}
-</style>

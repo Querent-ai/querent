@@ -1,73 +1,60 @@
 <script lang="ts">
 	import { Card, Heading, TabItem, Tabs } from 'flowbite-svelte';
 	import { pipelineState } from '../../stores/appState';
-	// import Change from '$lib/dashboard/Change.svelte';
-	// import Customers from '../../routes/data/users.json';
-	// import { imagesPath } from '$lib/variables';
-	// import LastRange from '$lib/widgets/LastRange.svelte';
-	// import More from '$lib/widgets/More.svelte';
-	// import { QuestionCircleSolid } from 'flowbite-svelte-icons';
+	import { commands, type IndexingStatistics } from '../../service/bindings';
+	import { onDestroy, onMount } from 'svelte';
 
 	let selectedPipeline: string;
 
 	$: selectedPipeline = $pipelineState?.id || '123456';
 
-	const products = [
-		{
-			label: 'Total Documents',
-			number: 208
-		},
-		{
-			label: 'Total Events',
-			number: 1482
-		},
-		{
-			label: 'Total Events Processed',
-			number: 1482
-		},
-		{
-			label: 'Total Events Received',
-			number: 784
-		},
-		{
-			label: 'Total Events Sent',
-			number: 784
-		},
-		{
-			label: 'Total Batches',
-			number: 425
-		},
-		{
-			label: 'Total Sentences',
-			number: 742
-		},
-		{
-			label: 'Total Subjects',
-			number: 742
-		},
-		{
-			label: 'Total Predicates',
-			number: 742
-		},
-		{
-			label: 'Total Objects',
-			number: 742
-		},
-		{
-			label: 'Total Graph Events',
-			number: 742
-		},
-		{
-			label: 'Total Vector Events',
-			number: 742
-		},
-		{
-			label: 'Total Data Processed Size',
-			number: 1026
-		}
-	];
+	let products: IndexingStatistics;
 
-	// const customers = Customers.slice(0, 5);
+	const indexingStatisticsTemplate: IndexingStatistics = {
+		total_docs: 0,
+		total_events: 0,
+		total_events_processed: 0,
+		total_events_received: 0,
+		total_events_sent: 0,
+		total_batches: 0,
+		total_sentences: 0,
+		total_subjects: 0,
+		total_predicates: 0,
+		total_objects: 0,
+		total_graph_events: 0,
+		total_vector_events: 0,
+		total_data_processed_size: 0
+	};
+
+	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
+
+	async function fetchPipelineData(selectedPipeline: string) {
+		const response = await commands.describePipeline(selectedPipeline);
+		if (response.status == 'ok') {
+			products = response.data;
+			productsArray = convertStatsToArray(products);
+		}
+	}
+
+	let intervalId: ReturnType<typeof setInterval>;
+
+	onMount(() => {
+		fetchPipelineData(selectedPipeline);
+		intervalId = setInterval(() => {
+			fetchPipelineData(selectedPipeline);
+		}, 10000);
+	});
+
+	onDestroy(() => {
+		clearInterval(intervalId);
+	});
+
+	function convertStatsToArray(products: IndexingStatistics) {
+		return Object.entries(products).map(([key, value]) => ({
+			label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()), // Convert snake_case to Title Case
+			number: value
+		}));
+	}
 </script>
 
 <Card size="xl">
@@ -88,7 +75,7 @@
 				<option value={selectedPipeline} selected>{selectedPipeline}</option>
 			</select>
 			<ul class="-m-3 divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800">
-				{#each products as { label, number }}
+				{#each productsArray as { label, number }}
 					<li class="py-3 sm:py-4">
 						<div class="flex items-center justify-between">
 							<div class="flex min-w-0 items-center">
@@ -112,8 +99,5 @@
 
 	<div
 		class="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700 sm:pt-6"
-	>
-		<!-- <LastRange />
-		<More title="Full Report" href="#top" /> -->
-	</div>
+	></div>
 </Card>
