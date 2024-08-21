@@ -22,7 +22,7 @@ impl CDSV1 {
 				version: "0.0.1-dev".to_string(),
 				author: "Querent AI".to_string(),
 				license: "BSL-1.0".to_string(),
-				iconify_icon: "fluent:document-bullet-list-cube-16-regular".to_string(),
+				iconify_icon: "fluent:document-bullet-list-cube-24-regular".to_string(),
 				additional_options,
 				conversational: false,
 				premium: true,
