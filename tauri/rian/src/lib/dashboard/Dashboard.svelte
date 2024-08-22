@@ -8,6 +8,7 @@
 	// import { getChartOptions } from '../../routes/(sidebar)/dashboard/chart_options';
 	import TotalSources from './TotalSources.svelte';
 
+	import TopPairs from './TopPairs.svelte';
 	// let vectorOptions = getChartOptions(false, 'vector');
 
 	let chartInstance: Chart<'line', any[], unknown>;
@@ -108,7 +109,7 @@
 				</div>
 			</Card>
 			<Card class="min-h-[500px] min-w-[900px] rounded-lg shadow-lg">
-				<TotalSources />
+				<TopPairs />
 			</Card>
 		</div>
 		<div class="lg:col-span-1">

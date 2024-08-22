@@ -42,18 +42,29 @@
 
 <MetaTag {path} {description} {title} {subtitle} />
 
-<main class="relative h-full w-full overflow-y-auto bg-white dark:bg-gray-800">
-	<div class="p-4">
-		<Breadcrumb class="mb-5">
-			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-		</Breadcrumb>
-		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			Realtime Sources
-		</Heading>
+<main class="main-container">
+	<div class="breadcrumb-container">
+		<div class="p-4">
+			<Breadcrumb class="mb-5">
+				<BreadcrumbItem home>Home</BreadcrumbItem>
+				<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
+			</Breadcrumb>
+			<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
+				Realtime Sources
+			</Heading>
+		</div>
 	</div>
 
-	{#if $pipelineState.id}
+	<div class="card-container">
+		<Card
+			style="max-width: 400px; width: 100%; border: 1px solid black; transition: border-color 0.3s ease; color: black;"
+			aria-label="Premium feature information"
+		>
+			This feature is only available in the premium
+		</Card>
+	</div>
+
+	<!-- {#if $pipelineState.id}
 		<div class="flex justify-center">
 			<Card class="m-4">
 				<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
@@ -93,5 +104,30 @@
 				</form>
 			</Card>
 		</div>
-	{/if}
+	{/if} -->
 </main>
+
+<style>
+	.main-container {
+		position: relative;
+		height: 100%;
+		width: 100%;
+		overflow-y: auto;
+		background-color: white;
+	}
+
+	:global(.dark) .main-container {
+		background-color: #1f2937;
+	}
+
+	.breadcrumb-container {
+		padding: 1rem;
+	}
+
+	.card-container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: calc(100% - 150px);
+	}
+</style>

@@ -49,11 +49,8 @@
 			//pipelines_list = [...pipelines_list, pastAgns.data.requests]
 		}
 	});
-	console.log("I am here-------------");
 	function navigateToStartPipeline() {
-		console.log("I am here-------------11111");
 		goto('/crud/semantic-web/add/');
-		console.log("I am here-------------2222222");
 	}
 </script>
 
@@ -61,11 +58,10 @@
 	<div class="p-4">
 		<Breadcrumb class="mb-5">
 			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/semantic-web">Data Fabric</BreadcrumbItem>
-			<BreadcrumbItem>Engines</BreadcrumbItem>
+			<BreadcrumbItem>Data Fabric</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			All Engines
+			All Data Fabrics
 		</Heading>
 
 		<Toolbar embedded class="w-full py-4 text-gray-500 dark:text-gray-400">
@@ -90,18 +86,23 @@
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
 							>{'AGN'}</TableBodyCell
 						>
+					</TableBodyRow>
+					<TableBodyRow class="text-base">
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
 							>{pipelines_ids[index]}</TableBodyCell
 						>
-
+					</TableBodyRow>
+					<TableBodyRow class="text-base">
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
 							>{source.fixed_entities}</TableBodyCell
 						>
-
+					</TableBodyRow>
+					<TableBodyRow class="text-base">
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
 							>{source.sample_entities}</TableBodyCell
 						>
-
+					</TableBodyRow>
+					<TableBodyRow class="text-base">
 						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
 							>{source.collectors}</TableBodyCell
 						>

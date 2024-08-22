@@ -130,7 +130,6 @@
 			return;
 		}
 
-
 		let selectedSources: string[] = sourceIds.filter((_, index) => {
 			return selectedSourceIds.includes(sourceNames[index]);
 		});
@@ -145,7 +144,7 @@
 				entities: nonEmptyRows.map((row) => row.entityType)
 			}
 		};
-		console.log("This is the semantic pipeline request ::::", request);
+		console.log('This is the semantic pipeline request ::::', request);
 		let result = await commands.startAgnFabric(request);
 
 		if (result.status == 'ok') {

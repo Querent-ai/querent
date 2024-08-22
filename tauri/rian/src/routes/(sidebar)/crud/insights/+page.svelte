@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { Breadcrumb, BreadcrumbItem, Heading } from 'flowbite-svelte';
-	import { onMount } from 'svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
 	import type { InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
@@ -78,8 +77,8 @@
 	<div class="p-4">
 		<Breadcrumb class="mb-5">
 			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/sources">insights</BreadcrumbItem>
-			<BreadcrumbItem>Start new Insight</BreadcrumbItem>
+			<BreadcrumbItem href="/crud/sources">Insights</BreadcrumbItem>
+			<BreadcrumbItem>Start New Insight</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
 			List of Insights
