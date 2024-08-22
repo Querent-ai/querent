@@ -71,6 +71,7 @@
 		"@tauri-apps/api": "2.0.0-rc.0",
 		"@tauri-apps/cli": "2.0.0-rc.0",
 		"@tauri-apps/plugin-dialog": "2.0.0-rc.0",
+		"@tauri-apps/plugin-fs": "2.0.0-rc.1",
 		"chart.js": "^4.4.3",
 		"d3": "^7.9.0",
 		"dotenv": "^16.4.5",
@@ -84,7 +85,8 @@
 		"protobufjs": "^7.3.2",
 		"svelte-bootstrap-icons": "^3.1.1",
 		"svelte-select": "^5.8.3",
-		"tailwind-merge": "^2.2.1"
+		"tailwind-merge": "^2.2.1",
+		"wordcloud": "^1.2.2"
 	},
 	"keywords": [
 		"svelte",

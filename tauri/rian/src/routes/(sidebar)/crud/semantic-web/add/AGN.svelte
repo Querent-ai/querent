@@ -20,6 +20,8 @@
 	} from '../../../../../service/bindings';
 	import { goto } from '$app/navigation';
 	export let formOpen: boolean;
+	import { open, save } from '@tauri-apps/plugin-dialog';
+	import { writeTextFile } from '@tauri-apps/plugin-fs';
 
 	let sourceIds: string[] = [];
 	let sourceNames: string[] = [];
@@ -230,20 +232,26 @@
 		}
 	}
 
-	function downloadCSV() {
-		let exampleCSV = [['Entity', 'Entity type']];
+	async function downloadCSV() {
+		let exampleCSV = 'Entity, Entity type';
 
-		let csvContent = 'data:text/csv;charset=utf-8,' + exampleCSV.map((e) => e.join(',')).join('\n');
+		try {
+			const filePath = await save({
+				defaultPath: 'example.csv',
+				filters: [
+					{
+						name: 'csv',
+						extensions: ['csv']
+					}
+				]
+			});
 
-		let encodedUri = encodeURI(csvContent);
-
-		let link = document.createElement('a');
-		link.setAttribute('href', encodedUri);
-		link.setAttribute('download', 'example.csv');
-		document.body.appendChild(link); // Required for Firefox
-
-		link.click();
-		document.body.removeChild(link);
+			if (filePath) {
+				await writeTextFile(filePath, exampleCSV);
+			}
+		} catch (error) {
+			console.error('Error saving file:', error);
+		}
 	}
 
 	function handleFileUpload(event: Event) {
