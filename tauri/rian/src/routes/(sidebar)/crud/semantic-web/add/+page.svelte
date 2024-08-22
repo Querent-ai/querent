@@ -50,7 +50,7 @@
 			return selectedForm.form;
 		} else {
 			showModal = true;
-			modalMessage = 'This engine is available only in premium';
+			modalMessage = 'This feature is available only in premium';
 			activeForm = null;
 		}
 		return;

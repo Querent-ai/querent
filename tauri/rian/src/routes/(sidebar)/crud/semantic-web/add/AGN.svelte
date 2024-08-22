@@ -183,7 +183,7 @@
 
 	const handleAddModel = (model: Model) => {
 		if (model.value === 'geobert') {
-			modalMessage = 'This feature is only available in the premium version.';
+			modalMessage = 'This feature is available only in premium';
 			showModal = true;
 			selectedModel = null;
 		} else if (model.value === 'english') {

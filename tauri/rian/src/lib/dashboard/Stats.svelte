@@ -6,7 +6,7 @@
 
 	let selectedPipeline: string;
 
-	$: selectedPipeline = $pipelineState?.id;
+	$: selectedPipeline = $pipelineState?.id || 'No_pipeline_found';
 
 	let products: IndexingStatistics;
 
@@ -29,7 +29,7 @@
 	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
 
 	async function fetchPipelineData(selectedPipeline: string) {
-		if (!selectedPipeline || selectedPipeline == '') {
+		if (!selectedPipeline || selectedPipeline == "No_pipeline_found") {
 			return;
 		}
 		const response = await commands.describePipeline(selectedPipeline);

@@ -123,7 +123,7 @@
 			$isVisible = true;
 			login();
 		} else if (premiumSources.includes(sourceName)) {
-			modalMessage = 'This feature is only available in the premium version.';
+			modalMessage = 'This feature is available only in premium';
 			showModal = true;
 		} else {
 			$isVisible = true;

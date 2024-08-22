@@ -6,10 +6,12 @@
 	import { commands } from '../../service/bindings';
 
 	// import { getChartOptions } from '../../routes/(sidebar)/dashboard/chart_options';
-	import TotalSources from './TotalSources.svelte';
 
 	import TopPairs from './TopPairs.svelte';
+	import { pipelineState } from '../../stores/appState';
 	// let vectorOptions = getChartOptions(false, 'vector');
+
+	$: selectedPipeline = $pipelineState?.id || 'No_pipeline_found';
 
 	let chartInstance: Chart<'line', any[], unknown>;
 	let dataPoints: any[] = [];
@@ -82,11 +84,14 @@
 			}
 		});
 
-		const intervalId = setInterval(() => fetchPipelineData('pipeline-id'), 10000);
+		const intervalId = setInterval(() => fetchPipelineData(selectedPipeline), 10000);
 		return () => clearInterval(intervalId);
 	});
 
 	async function fetchPipelineData(selectedPipeline: string) {
+		if (!selectedPipeline || selectedPipeline == '"No_pipeline_found"') {
+			return;
+		}
 		const response = await commands.describePipeline(selectedPipeline);
 		if (response.status == 'ok') {
 			const totalEvents = response.data.total_events;

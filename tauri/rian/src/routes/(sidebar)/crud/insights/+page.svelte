@@ -55,7 +55,7 @@
 
 	function selectInsight(insight: InsightInfo) {
 		if (insight.premium) {
-			modalMessage = 'This feature is only available in the premium version.';
+			modalMessage = 'This feature is available only in premium';
 			showModal = true;
 		} else {
 			showChatModal = true;
