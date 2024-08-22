@@ -25,9 +25,12 @@
 		top_pairs: string[];
 	}[];
 
-	const api_response: DiscoveryResponse = FakeData;
-	// $: categories = $discoveryApiResponseStore ? $discoveryApiResponseStore : [];
-	$: categories = api_response.insights;
+	// const api_response: DiscoveryResponse = FakeData;
+	$: categories =
+		$discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : FakeData.insights;
+	// $: categories = api_response.insights;
+
+	//only file name, top pairs
 
 	$: {
 		currentCategory = categories.filter((cat) => cat.tags !== 'Filters');
@@ -36,6 +39,13 @@
 			categoriesDropdown = top_pairs;
 		} else {
 			categoriesDropdown = [];
+		}
+
+		let dropdown = categories.filter((cat) => cat.tags === 'Filters');
+		if (dropdown.length > 0) {
+			categoriesDropdown = dropdown[0].top_pairs;
+			categoriesDropdown = [...categoriesDropdown, categories[0].top_pairs[0]];
+			categoriesDropdown = [...categoriesDropdown, categories[1].top_pairs[0]];
 		}
 	}
 
@@ -212,6 +222,11 @@
 			console.log('Toggle is turned off');
 		}
 	}
+
+	function extractFileNameWithExtension(filePath: string): string {
+		const parts = filePath.split('/');
+		return parts[parts.length - 1];
+	}
 </script>
 
 <main>
@@ -310,7 +325,9 @@
 								<div class="svg-container">
 									<PdfIcon />
 								</div>
-								<p class="tagline font-semibold">{category.document}</p>
+								<p class="tagline font-semibold">
+									{extractFileNameWithExtension(category.document)}
+								</p>
 								<p class="main-paragraph">
 									{category.sentence}
 								</p>
