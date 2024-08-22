@@ -29,7 +29,7 @@
 	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
 
 	async function fetchPipelineData(selectedPipeline: string) {
-		if (!selectedPipeline || selectedPipeline == "No_pipeline_found") {
+		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found') {
 			return;
 		}
 		const response = await commands.describePipeline(selectedPipeline);
