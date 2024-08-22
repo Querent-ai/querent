@@ -9,7 +9,8 @@ use crate::{
 };
 use actors::{ActorExitStatus, MessageBus, Querent};
 use cluster::{start_cluster_service, Cluster};
-use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig};
+use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig, TerimateSignal};
+use once_cell::sync::OnceCell;
 use proto::config::NodeConfig;
 use rian_core::{start_semantic_service, SemanticService, ShutdownPipeline};
 use storage::{create_metadata_store, create_secret_store, create_storages, Storage};
@@ -17,7 +18,7 @@ use tokio::sync::oneshot;
 use tracing::{debug, error, info};
 
 use super::node_readiness;
-
+pub static QUERENT_SERVICES_ONCE: OnceCell<Arc<QuerentServices>> = OnceCell::new();
 const _READINESS_REPORTING_INTERVAL: Duration = if cfg!(any(test, feature = "testsuite")) {
 	Duration::from_millis(25)
 } else {
@@ -204,7 +205,8 @@ pub async fn serve_quester(
 /// The caller is also responsible for shutting down the Querent node by calling `quit` on the returned handle.
 pub async fn serve_quester_without_servers(
 	node_config: NodeConfig,
-) -> anyhow::Result<Arc<QuerentServices>> {
+	terminate_sig: TerimateSignal,
+) -> anyhow::Result<()> {
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
 	let quester_cloud = Querent::new();
@@ -242,7 +244,7 @@ pub async fn serve_quester_without_servers(
 	)
 	.await?;
 
-	log::info!("Starting Insight Service 🧠");
+	info!("Starting Insight Service 🧠");
 	let insight_service = start_insight_service(
 		&node_config,
 		&quester_cloud,
@@ -254,7 +256,7 @@ pub async fn serve_quester_without_servers(
 	)
 	.await?;
 
-	Ok(Arc::new(QuerentServices {
+	let services = Arc::new(QuerentServices {
 		pipeline_id: None,
 		node_config,
 		cluster,
@@ -266,7 +268,20 @@ pub async fn serve_quester_without_servers(
 		index_storages,
 		secret_store,
 		metadata_store,
-	}))
+	});
+	// set the QuerentServices in the global static variable
+	let set_res = QUERENT_SERVICES_ONCE.set(services.clone());
+	if set_res.is_err() {
+		error!("Failed to set QuerentServices in global static variable");
+		return Err(anyhow::anyhow!("Failed to set QuerentServices in global static variable"));
+	}
+	// start the terminate signal listener
+	// Keep the task running as long as the termination signal is not received.
+	while !terminate_sig.is_dead() {
+		// Sleep for a small duration to prevent high CPU usage
+		tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
+	}
+	Ok(())
 }
 
 pub async fn shutdown_querent(services: &Arc<QuerentServices>) -> anyhow::Result<()> {
