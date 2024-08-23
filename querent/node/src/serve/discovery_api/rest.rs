@@ -65,6 +65,7 @@ pub async fn start_discovery_session_handler(
 	if discovery_service.is_none() {
 		return Err(DiscoveryError::Unavailable("Discovery service is not available".to_string()));
 	}
+	println!("Reaching here in node src serve");
 	let response = discovery_service.unwrap().start_discovery_session(request).await?;
 	Ok(response)
 }

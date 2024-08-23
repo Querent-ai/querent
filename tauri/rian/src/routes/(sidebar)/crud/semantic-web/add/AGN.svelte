@@ -120,11 +120,7 @@
 
 	const handleSubmit = async (event: Event) => {
 		event.preventDefault();
-		console.log('table   ', entityTable);
 		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
-
-		console.log('ROws are ', nonEmptyRows.length);
-		console.log('Selected model  ', selectedModel);
 
 		if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
 			modalMessage = 'Please either choose model or enter some entities';
@@ -132,13 +128,9 @@
 			return;
 		}
 
-		console.log('Here are we');
-
 		let selectedSources: string[] = sourceIds.filter((_, index) => {
 			return selectedSourceIds.includes(sourceNames[index]);
 		});
-
-		console.log('Here are we 11111111111');
 
 		let request: SemanticPipelineRequest = {
 			collectors: selectedSources,
@@ -151,13 +143,9 @@
 			}
 		};
 
-		console.log('Here are we 222222222222');
 		let result = await commands.startAgnFabric(request);
 
-		console.log('Here are we 33333333333');
-
 		if (result.status == 'ok') {
-			console.log('Pipeline id is ', result.data.pipeline_id);
 			updatePipeline('running', result.data.pipeline_id);
 
 			let pipelineMetadata: PipelinesData = {
@@ -197,7 +185,6 @@
 			showModal = true;
 			selectedModel = null;
 		} else if (model.value === 'english') {
-			console.log('English is selected');
 			selectedModel = modelsList[model.value];
 		}
 		isDropdownOpen = false;
@@ -266,7 +253,6 @@
 
 	function handleFileUpload(event: Event) {
 		event.preventDefault();
-		console.log('Handling file input');
 		const input = event.target as HTMLInputElement;
 		if (input.files && input.files.length > 0) {
 			const file = input.files[0];
@@ -290,7 +276,6 @@
 							console.log('Skipping invalid data:', data);
 						}
 					});
-					console.log('New entities are ', newEntities.length);
 
 					if (newEntities.length > 0) {
 						entityTable = [...entityTable, ...newEntities];
@@ -309,7 +294,6 @@
 
 	function openFileInput() {
 		if (fileInput) {
-			console.log('File input clicked ');
 			fileInput.click();
 		}
 	}

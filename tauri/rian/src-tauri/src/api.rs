@@ -208,7 +208,8 @@ pub async fn send_discovery_retriever_request(
             discover_service,
         )
         .await;
-    println!("Started discovery session");
+        println!(" result   {:?}", result.clone());
+
         match result {
             Ok(response) => {
                 info!("Discovery session started successfully");
@@ -220,12 +221,15 @@ pub async fn send_discovery_retriever_request(
             }
         }
     }
+    let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
 
     let discovery_request = proto::discovery::DiscoveryRequest {
         query: search_query.clone(),
         session_id: discovery_session_id,
         top_pairs: top_pairs.clone(),
     };
+
+    println!("Request to the discovery is     {:?}", discovery_request.clone());
     let discover_service = QUERENT_SERVICES_ONCE
         .get()
         .unwrap()

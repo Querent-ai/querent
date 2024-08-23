@@ -201,11 +201,10 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 				Err(e) => return Ok(Err(e)),
 			}
 		}
-		println!("Here have we reached 4444444");
 
 		let search_handle = self.searcher_pipelines.get(&request.session_id);
-		println!("Here have we reached 4555555");
 		if let Some(search_handle) = search_handle {
+			println!("Here ");
 			let response = search_handle
 				.mailbox
 				.ask(request)
