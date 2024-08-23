@@ -97,50 +97,81 @@
 			</div>
 		</Toolbar>
 	</div>
-	<div class="overflow-x-auto">
-		<Table class="w-full">
-			<TableHead class="border-y border-gray-200 bg-gray-100 dark:border-gray-700">
-				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Type'}</TableHeadCell>
-				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'ID'}</TableHeadCell>
-				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Fixed entities'}</TableHeadCell>
-				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Sample entities'}</TableHeadCell>
-				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Source'}</TableHeadCell>
-				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Status'}</TableHeadCell>
-			</TableHead>
-			<TableBody>
-				{#if Array.isArray($pipelines_list)}
-					{#each $pipelines_list as pipeline}
-						<TableBodyRow class="text-base">
-							<TableBodyCell class="px-4 py-2">
-								<div class="break-words">{'AGN'}</div>
-							</TableBodyCell>
-							<TableBodyCell class="px-4 py-2">
-								<div class="break-words">{pipeline.id}</div>
-							</TableBodyCell>
-							<TableBodyCell class="px-4 py-2">
-								<div class="break-words">
-									{#if pipeline.fixed_entities}
-										{pipeline.fixed_entities.join(', ')}
-									{/if}
-								</div>
-							</TableBodyCell>
-							<TableBodyCell class="px-4 py-2">
-								<div class="break-words">
-									{#if pipeline.sample_entities}
-										{pipeline.sample_entities.join(', ')}
-									{/if}
-								</div>
-							</TableBodyCell>
-							<TableBodyCell class="px-4 py-2">
-								<div class="break-words">{pipeline.collectors}</div>
-							</TableBodyCell>
-							<TableBodyCell class="px-4 py-2">
-								<div class="break-words">{pipeline.status}</div>
-							</TableBodyCell>
-						</TableBodyRow>
-					{/each}
-				{/if}
-			</TableBody>
-		</Table>
-	</div>
+	<Table class="w-full">
+		<TableHead class="border-y border-gray-200 bg-gray-100 dark:border-gray-700">
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Type'}</TableHeadCell>
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'ID'}</TableHeadCell>
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Fixed entities'}</TableHeadCell>
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Sample entities'}</TableHeadCell>
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Source'}</TableHeadCell>
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Status'}</TableHeadCell>
+		</TableHead>
+		<TableBody>
+			{#if Array.isArray($pipelines_list)}
+				{#each $pipelines_list as pipeline}
+					<TableBodyRow class="text-base">
+						<TableBodyCell class="px-4 py-2">
+							<div class="break-words">{'AGN'}</div>
+						</TableBodyCell>
+						<TableBodyCell class="px-4 py-2">
+							<div class="break-words">{pipeline.id}</div>
+						</TableBodyCell>
+						<TableBodyCell class="px-4 py-2">
+							<div class="break-words">
+								{#if pipeline.fixed_entities}
+									<details class="dropdown">
+										<summary class="cursor-pointer text-blue-500">Show Fixed Entities</summary>
+										<div class="bubble-container">
+											{#each pipeline.fixed_entities as entity}
+												<span class="bubble">{entity}</span>
+											{/each}
+										</div>
+									</details>
+								{/if}
+							</div>
+						</TableBodyCell>
+						<TableBodyCell class="px-4 py-2">
+							<div class="break-words">
+								{#if pipeline.sample_entities}
+									<details class="dropdown">
+										<summary class="cursor-pointer text-blue-500">Show Sample Entities</summary>
+										<div class="bubble-container">
+											{#each pipeline.sample_entities as entity}
+												<span class="bubble">{entity}</span>
+											{/each}
+										</div>
+									</details>
+								{/if}
+							</div>
+						</TableBodyCell>
+						<TableBodyCell class="px-4 py-2">
+							<div class="break-words">{pipeline.collectors}</div>
+						</TableBodyCell>
+						<TableBodyCell class="px-4 py-2">
+							<div class="break-words">{pipeline.status}</div>
+						</TableBodyCell>
+					</TableBodyRow>
+				{/each}
+			{/if}
+		</TableBody>
+	</Table>
 </main>
+
+<style>
+	.bubble-container {
+		margin-top: 0.5rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.bubble {
+		background-color: #e2e8f0;
+		padding: 0.25rem 0.75rem;
+		border-radius: 9999px;
+		display: inline-block;
+		font-size: 0.875rem;
+	}
+	.dropdown summary {
+		outline: none;
+	}
+</style>
