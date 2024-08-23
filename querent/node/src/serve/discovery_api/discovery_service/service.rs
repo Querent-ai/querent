@@ -66,8 +66,6 @@ impl DiscoveryService for DiscoveryImpl {
 		&self,
 		request: DiscoveryRequest,
 	) -> super::Result<DiscoveryResponse> {
-
-		println!("We have Here reached ");
 		let response = self
 			.discovery_agent_service_message_bus
 			.ask(request.clone())
@@ -76,9 +74,7 @@ impl DiscoveryService for DiscoveryImpl {
 				log::error!("Failed to discover insights: {}", e);
 				DiscoveryError::Internal("Failed to discover insights".to_string())
 			})?;
-
-		println!("We have Here reached 1111111");
-
+		println!("Here is the response from bus {:?}", response);
 		match response {
 			Ok(response) => Ok(response),
 			_ => Err(DiscoveryError::Internal("Failed to discover insights".to_string()).into()),
@@ -89,7 +85,6 @@ impl DiscoveryService for DiscoveryImpl {
 		&self,
 		request: DiscoverySessionRequest,
 	) -> super::Result<DiscoverySessionResponse> {
-		println!("In the function start_discovery_session");
 		let response = self
 			.discovery_agent_service_message_bus
 			.ask(request.clone())
@@ -101,7 +96,6 @@ impl DiscoveryService for DiscoveryImpl {
 
 		match response {
 			Ok(response) => {
-				println!("Here is the response from bus {:?}", response.clone());
 				self.metadata_store
 					.set_discovery_session(&response.session_id, request.clone())
 					.await
@@ -109,7 +103,6 @@ impl DiscoveryService for DiscoveryImpl {
 						log::error!("Failed to set insight session: {}", e);
 						DiscoveryError::Internal("Failed to set insight session".to_string())
 					})?;
-				println!("Everything done in start discovery session");
 				Ok(response)
 			},
 			_ =>

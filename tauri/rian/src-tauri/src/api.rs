@@ -197,7 +197,6 @@ pub async fn send_discovery_retriever_request(
             semantic_pipeline_id: "".to_string(),
             session_type: Some(proto::discovery::DiscoveryAgentType::Retriever),
         };
-        println!("About to start discovery session: ");
         let discover_service = QUERENT_SERVICES_ONCE
             .get()
             .unwrap()
@@ -208,8 +207,6 @@ pub async fn send_discovery_retriever_request(
             discover_service,
         )
         .await;
-        println!(" result   {:?}", result.clone());
-
         match result {
             Ok(response) => {
                 info!("Discovery session started successfully");
@@ -222,14 +219,14 @@ pub async fn send_discovery_retriever_request(
         }
     }
     let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
-
+    if discovery_session_id.is_empty() {
+        return Err("Failed to start discovery session".to_string());
+    }
     let discovery_request = proto::discovery::DiscoveryRequest {
         query: search_query.clone(),
         session_id: discovery_session_id,
         top_pairs: top_pairs.clone(),
     };
-
-    println!("Request to the discovery is     {:?}", discovery_request.clone());
     let discover_service = QUERENT_SERVICES_ONCE
         .get()
         .unwrap()

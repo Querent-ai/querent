@@ -319,8 +319,6 @@ impl Storage for MetaStore {
 		session_id: &String,
 		session: DiscoverySessionRequest,
 	) -> StorageResult<()> {
-
-		println!("Setting discovery session");
 		let encoded_data = bincode::serialize(&session).map_err(|e| StorageError {
 			kind: StorageErrorKind::Serialization,
 			source: Arc::new(anyhow::Error::from(e)),
