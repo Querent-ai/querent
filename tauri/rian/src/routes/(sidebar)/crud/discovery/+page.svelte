@@ -25,12 +25,8 @@
 		top_pairs: string[];
 	}[];
 
-	// const api_response: DiscoveryResponse = FakeData;
 	$: categories =
 		$discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : FakeData.insights;
-	// $: categories = api_response.insights;
-
-	//only file name, top pairs
 
 	$: {
 		currentCategory = categories.filter((cat) => cat.tags !== 'Filters');
@@ -74,34 +70,11 @@
 					categories = insights;
 				}
 			} else {
-				// Unable to start discovery session "internal error: `Failed to discover insights`"
-
-				/*
-				
-				ng discovery session 222222222222
-Everything done in start discovery session
- result   Ok(DiscoverySessionResponse { session_id: "27137ce009be4417950dc68b6527c065" })
-Request to the discovery is     DiscoveryRequest { session_id: "27137ce009be4417950dc68b6527c065", query: "", top_pairs: [] }
-We have Here reached 
-Here have we reached
-Here have we reached1111
-thread 'non-blocking-1' panicked at /home/ansh/querent/quester/querent/storage/src/surrealdb/surrealdb.rs:711:34:
-index out of bounds: the len is 1 but the index is 1
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-Failed to discover insights: error while the message was being processed
- definitely not Here have we reached 6666666
-We have Here reached 1111111
-^Cmake: *** [Makefile:19: run-rian] Interrupt
-
-Documets are [("/home/ansh/pyg-trail/test-pdf/Asphaltene Precipitation and Deposition during Nitrogen Gas Cyclic Miscible and Immiscible Injection in Eagle Ford Shale and Its Impact on Oil Recovery.pdf", 1473)]
-
-				*/
 				console.log('Unable to start discovery session ', res.error);
 			}
 		} else {
 			console.log('We are coming here again');
 			console.log('Data   ', discovery_data);
-			console.log('Abcd   ', get(firstDiscovery));
 			const currentList = get(discoverylist);
 
 			const matchingPage = currentList.find(
@@ -174,8 +147,11 @@ Documets are [("/home/ansh/pyg-trail/test-pdf/Asphaltene Precipitation and Depos
 			const insights = res.data.insights;
 
 			if (insights) {
+				categories = insights;
 				discoveryApiResponseStore.set(insights);
 			}
+		} else {
+			console.log('Error while sending the request');
 		}
 	}
 
@@ -191,6 +167,7 @@ Documets are [("/home/ansh/pyg-trail/test-pdf/Asphaltene Precipitation and Depos
 		const insights = previousPageData?.data;
 
 		if (insights) {
+			categories = insights;
 			discoveryApiResponseStore.set(insights);
 		}
 	}
