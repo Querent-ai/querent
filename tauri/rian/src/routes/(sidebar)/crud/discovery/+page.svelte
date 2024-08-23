@@ -8,10 +8,11 @@
 		firstDiscovery,
 		type DiscoveryDataPageList
 	} from '../../../../stores/appState';
-	import { get } from 'svelte/store';
+	import { get, writable } from 'svelte/store';
 	import { onMount, tick } from 'svelte';
 	import { commands, type DiscoveryResponse } from '../../../../service/bindings';
 	import Modal from '../sources/add/Modal.svelte';
+	import LoadingModal from './LoadingModal.svelte';
 
 	import FakeData from './fake_data.json';
 
@@ -24,6 +25,7 @@
 		tags: string;
 		top_pairs: string[];
 	}[];
+	const isLoading = writable(false);
 
 	$: categories =
 		$discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : FakeData.insights;
@@ -51,6 +53,7 @@
 		if ((!discovery_data || discovery_data.length < 1) && get(firstDiscovery)) {
 			console.log('Starting discovery session');
 
+			isLoading.set(true);
 			const res = await commands.sendDiscoveryRetrieverRequest('', []);
 
 			if (res.status == 'ok') {
@@ -72,6 +75,7 @@
 			} else {
 				console.log('Unable to start discovery session ', res.error);
 			}
+			isLoading.set(false);
 		} else {
 			console.log('We are coming here again');
 			console.log('Data   ', discovery_data);
@@ -128,30 +132,38 @@
 		query = inputValue;
 		inputValue = '';
 
-		const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		isLoading.set(true);
 
-		if (res.status == 'ok') {
-			if (res.data.insights.length == 0) {
-				console.log('Length is zero');
-				return;
+		try {
+			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+
+			if (res.status == 'ok') {
+				if (res.data.insights.length == 0) {
+					console.log('Length is zero');
+					return;
+				}
+				let discoveryData: DiscoveryDataPageList = {
+					page_number: res.data.page_ranking,
+					data: res.data.insights
+				};
+
+				discoverylist.update((currentList) => {
+					return [...currentList, discoveryData];
+				});
+
+				const insights = res.data.insights;
+
+				if (insights) {
+					categories = insights;
+					discoveryApiResponseStore.set(insights);
+				}
+			} else {
+				console.log('Error while sending the request ', res.error);
 			}
-			let discoveryData: DiscoveryDataPageList = {
-				page_number: res.data.page_ranking,
-				data: res.data.insights
-			};
-
-			discoverylist.update((currentList) => {
-				return [...currentList, discoveryData];
-			});
-
-			const insights = res.data.insights;
-
-			if (insights) {
-				categories = insights;
-				discoveryApiResponseStore.set(insights);
-			}
-		} else {
-			console.log('Error while sending the request');
+		} catch (error) {
+			console.log('Got error while sending request ', error);
+		} finally {
+			isLoading.set(false);
 		}
 	}
 
@@ -356,6 +368,9 @@
 	</div>
 
 	<Modal bind:show={showModal} message={modalMessage} />
+	{#if $isLoading}
+		<LoadingModal message="Please wait while we get your response" />
+	{/if}
 </main>
 
 <style>
