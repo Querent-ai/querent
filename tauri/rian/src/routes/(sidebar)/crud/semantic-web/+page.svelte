@@ -148,7 +148,7 @@
 							<div class="break-words">
 								{#if pipeline.collectors}
 									<details class="dropdown">
-										<summary class="cursor-pointer text-blue-500">Show Sample Entities</summary>
+										<summary class="cursor-pointer text-blue-500">Show Sources</summary>
 										<div class="bubble-container">
 											{#each pipeline.collectors as entity}
 												<span class="bubble">{entity}</span>
