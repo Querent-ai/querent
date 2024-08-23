@@ -145,7 +145,18 @@
 							</div>
 						</TableBodyCell>
 						<TableBodyCell class="px-4 py-2">
-							<div class="break-words">{pipeline.collectors}</div>
+							<div class="break-words">
+								{#if pipeline.collectors}
+									<details class="dropdown">
+										<summary class="cursor-pointer text-blue-500">Show Sample Entities</summary>
+										<div class="bubble-container">
+											{#each pipeline.collectors as entity}
+												<span class="bubble">{entity}</span>
+											{/each}
+										</div>
+									</details>
+								{/if}
+							</div>
 						</TableBodyCell>
 						<TableBodyCell class="px-4 py-2">
 							<div class="break-words">{pipeline.status}</div>
