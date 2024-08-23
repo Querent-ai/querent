@@ -11,7 +11,7 @@
 	import { pipelineState } from '../../stores/appState';
 	// let vectorOptions = getChartOptions(false, 'vector');
 
-	$: selectedPipeline = $pipelineState?.id || 'No_pipeline_found';
+	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'No_pipeline_found';
 
 	let chartInstance: Chart<'line', any[], unknown>;
 	let dataPoints: any[] = [];
@@ -84,14 +84,15 @@
 			}
 		});
 
-		const intervalId = setInterval(() => fetchPipelineData(selectedPipeline), 10000);
+		const intervalId = setInterval(() => fetchPipelineData(), 10000);
 		return () => clearInterval(intervalId);
 	});
 
-	async function fetchPipelineData(selectedPipeline: string) {
+	async function fetchPipelineData() {
 		if (!selectedPipeline || selectedPipeline == '"No_pipeline_found"') {
 			return;
 		}
+		console.log('Calling the API with pipeline ID as ', selectedPipeline);
 		const response = await commands.describePipeline(selectedPipeline);
 		if (response.status == 'ok') {
 			const totalEvents = response.data.total_events;

@@ -180,7 +180,10 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 		request: DiscoveryRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Result<DiscoveryResponse, DiscoveryError>, ActorExitStatus> {
+		println!("Here have we reached");
 		let agent_handle = self.traverse_pipelines.get(&request.session_id);
+
+		println!("Here have we reached1111");
 		if let Some(agent_handle) = agent_handle {
 			let response = agent_handle
 				.mailbox
@@ -191,25 +194,28 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 					Err(DiscoveryError::Internal("Failed to discover insights".to_string()))
 				})
 				.unwrap_or_else(|e| e);
+			println!("Here have we reached 3333333");
 
 			match response {
 				Ok(response) => return Ok(Ok(response)),
 				Err(e) => return Ok(Err(e)),
 			}
 		}
+		println!("Here have we reached 4444444");
 
 		let search_handle = self.searcher_pipelines.get(&request.session_id);
+		println!("Here have we reached 4555555");
 		if let Some(search_handle) = search_handle {
 			let response = search_handle
 				.mailbox
 				.ask(request)
 				.await
 				.map_err(|e| {
-					log::error!("Failed to discover insights: {}", e);
+					println!("Failed to discover insights: {}", e);
 					Err(DiscoveryError::Internal("Failed to discover insights".to_string()))
 				})
 				.unwrap_or_else(|e| e);
-
+				println!(" definitely not Here have we reached 6666666");
 			match response {
 				Ok(response) => return Ok(Ok(response)),
 				Err(e) => return Ok(Err(e)),

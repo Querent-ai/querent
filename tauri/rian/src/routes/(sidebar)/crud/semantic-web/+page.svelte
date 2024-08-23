@@ -16,38 +16,63 @@
 	import { goto } from '$app/navigation';
 	import { commands, type SemanticPipelineRequest } from '../../../../service/bindings';
 	import { onMount } from 'svelte';
+	import { writable } from 'svelte/store';
 
-	let pastPipelines;
-	let pipelines_list: SemanticPipelineRequest[] = [];
-	let pipelines_ids: string[] = [];
-
-	async function testingabc() {
-		const result = await commands.getRunningAgns();
-		console.log('Result ', result);
-
-		const r = await commands.getPastAgns();
-		console.log('Get past  pipelines ', r);
-
-		if (result.length == 0) return;
+	interface SemanticPipelineData {
+		collectors: string[];
+		fixed_entities: string[] | undefined;
+		sample_entities: string[] | undefined;
+		model: number | null;
+		status: string;
+		id: string;
 	}
 
+	let pastPipelines;
+	let pipelines_list = writable<SemanticPipelineData[]>([]);
+
 	onMount(async () => {
-		await testingabc();
 		const result = await commands.getRunningAgns();
 
-		if (result.length == 0) return;
+		result.forEach((runningAgns) => {
+			const pipelineId = runningAgns[0];
+			const pipelineInfo = runningAgns[1];
+			let pipelineData: SemanticPipelineData = {
+				collectors: pipelineInfo.collectors,
+				fixed_entities: pipelineInfo.fixed_entities?.entities,
+				sample_entities: pipelineInfo.sample_entities?.entities,
+				model: pipelineInfo.model,
+				status: 'active',
+				id: pipelineId
+			};
 
-		const [[firstAgn, firstRequest]] = result;
-
-		pipelines_list = [...pipelines_list, firstRequest];
-		pipelines_ids = [...pipelines_ids, firstAgn];
+			pipelines_list.update((list) => [...list, pipelineData]);
+		});
 
 		let pastAgns = await commands.getPastAgns();
 		if (pastAgns.status == 'ok') {
-			pastPipelines = pastAgns.data;
+			pastPipelines = pastAgns.data.requests;
 
-			//pipelines_list = [...pipelines_list, pastAgns.data.requests]
+			pastPipelines.forEach((pastAgns) => {
+				const pipelineId = pastAgns.pipeline_id;
+				const pipelineInfo = pastAgns.request;
+				if (!pipelineInfo) {
+					return;
+				}
+
+				let pipelineData: SemanticPipelineData = {
+					collectors: pipelineInfo.collectors,
+					fixed_entities: pipelineInfo.fixed_entities?.entities,
+					sample_entities: pipelineInfo.sample_entities?.entities,
+					model: pipelineInfo.model,
+					status: 'stopped',
+					id: pipelineId
+				};
+
+				pipelines_list.update((list) => [...list, pipelineData]);
+			});
 		}
+
+		console.log('Data all is ', $pipelines_list);
 	});
 	function navigateToStartPipeline() {
 		goto('/crud/semantic-web/add/');
@@ -72,43 +97,50 @@
 			</div>
 		</Toolbar>
 	</div>
-	<Table>
-		<TableHead class="border-y border-gray-200 bg-gray-100 dark:border-gray-700">
-			{#each ['Type', 'ID', 'Fixed Entities', 'Sample Entities', 'Sources'] as title}
-				<TableHeadCell class="ps-4 font-normal">{title}</TableHeadCell>
-			{/each}
-			<TableHeadCell class="pe-100 ps-4 text-right font-normal">Status</TableHeadCell>
-		</TableHead>
-		<TableBody>
-			{#if Array.isArray(pipelines_list)}
-				{#each pipelines_list as source, index}
-					<TableBodyRow class="text-base">
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-							>{'AGN'}</TableBodyCell
-						>
-					</TableBodyRow>
-					<TableBodyRow class="text-base">
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-							>{pipelines_ids[index]}</TableBodyCell
-						>
-					</TableBodyRow>
-					<TableBodyRow class="text-base">
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-							>{source.fixed_entities}</TableBodyCell
-						>
-					</TableBodyRow>
-					<TableBodyRow class="text-base">
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-							>{source.sample_entities}</TableBodyCell
-						>
-					</TableBodyRow>
-					<TableBodyRow class="text-base">
-						<TableBodyCell class="flex items-center space-x-2 whitespace-nowrap p-4"
-							>{source.collectors}</TableBodyCell
-						>
-					</TableBodyRow>
-				{/each}
-			{/if}
-		</TableBody>
-	</Table>
+	<div class="overflow-x-auto">
+		<Table class="w-full">
+			<TableHead class="border-y border-gray-200 bg-gray-100 dark:border-gray-700">
+				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Type'}</TableHeadCell>
+				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'ID'}</TableHeadCell>
+				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Fixed entities'}</TableHeadCell>
+				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Sample entities'}</TableHeadCell>
+				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Source'}</TableHeadCell>
+				<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Status'}</TableHeadCell>
+			</TableHead>
+			<TableBody>
+				{#if Array.isArray($pipelines_list)}
+					{#each $pipelines_list as pipeline}
+						<TableBodyRow class="text-base">
+							<TableBodyCell class="px-4 py-2">
+								<div class="break-words">{'AGN'}</div>
+							</TableBodyCell>
+							<TableBodyCell class="px-4 py-2">
+								<div class="break-words">{pipeline.id}</div>
+							</TableBodyCell>
+							<TableBodyCell class="px-4 py-2">
+								<div class="break-words">
+									{#if pipeline.fixed_entities}
+										{pipeline.fixed_entities.join(', ')}
+									{/if}
+								</div>
+							</TableBodyCell>
+							<TableBodyCell class="px-4 py-2">
+								<div class="break-words">
+									{#if pipeline.sample_entities}
+										{pipeline.sample_entities.join(', ')}
+									{/if}
+								</div>
+							</TableBodyCell>
+							<TableBodyCell class="px-4 py-2">
+								<div class="break-words">{pipeline.collectors}</div>
+							</TableBodyCell>
+							<TableBodyCell class="px-4 py-2">
+								<div class="break-words">{pipeline.status}</div>
+							</TableBodyCell>
+						</TableBodyRow>
+					{/each}
+				{/if}
+			</TableBody>
+		</Table>
+	</div>
 </main>

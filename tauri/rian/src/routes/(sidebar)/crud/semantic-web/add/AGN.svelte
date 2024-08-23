@@ -132,9 +132,13 @@
 			return;
 		}
 
+		console.log('Here are we');
+
 		let selectedSources: string[] = sourceIds.filter((_, index) => {
 			return selectedSourceIds.includes(sourceNames[index]);
 		});
+
+		console.log('Here are we 11111111111');
 
 		let request: SemanticPipelineRequest = {
 			collectors: selectedSources,
@@ -146,8 +150,11 @@
 				entities: nonEmptyRows.map((row) => row.entityType)
 			}
 		};
-		console.log('This is the semantic pipeline request ::::', request);
+
+		console.log('Here are we 222222222222');
 		let result = await commands.startAgnFabric(request);
+
+		console.log('Here are we 33333333333');
 
 		if (result.status == 'ok') {
 			console.log('Pipeline id is ', result.data.pipeline_id);
@@ -157,10 +164,13 @@
 				id: result.data.pipeline_id,
 				sources: sourceNames,
 				fixed_entities: request.fixed_entities?.entities,
-				sample_entities: request.sample_entities?.entities
+				sample_entities: request.sample_entities?.entities,
+				mode: 'active'
 			};
 
 			addPipelinesToList(pipelineMetadata);
+		} else {
+			console.log('Failed to start the pipeline ', result.error);
 		}
 
 		selectedModel = null;

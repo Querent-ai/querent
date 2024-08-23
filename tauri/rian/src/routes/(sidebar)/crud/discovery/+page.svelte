@@ -73,6 +73,9 @@
 				if (insights) {
 					categories = insights;
 				}
+			} else {
+				// Unable to start discovery session "internal error: `Failed to discover insights`"
+				console.log('Unable to start discovery session ', res.error);
 			}
 		} else {
 			console.log('We are coming here again');

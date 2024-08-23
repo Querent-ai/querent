@@ -41,6 +41,7 @@ export interface PipelinesData {
 	sources: string[];
 	fixed_entities: string[] | undefined;
 	sample_entities: string[] | undefined;
+	mode: string;
 }
 
 export interface DiscoveryData {
@@ -103,7 +104,15 @@ pipelineState.subscribe(($discoveryApiResponseStore) => {
 });
 
 export function addPipelinesToList(pipeline: PipelinesData): void {
-	pipelines.update((currentPipelines) => [...currentPipelines, pipeline]);
+	console.log('Pipelines are     ', pipelines);
+	console.log('New pipeline data  ', pipeline);
+	pipelines.update((currentPipelines) => {
+		if (Array.isArray(currentPipelines)) {
+			return [...currentPipelines, pipeline];
+		} else {
+			return [pipeline];
+		}
+	});
 }
 
 export function addDataSource(source: CollectorConfig): void {

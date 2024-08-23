@@ -197,6 +197,7 @@ pub async fn send_discovery_retriever_request(
             semantic_pipeline_id: "".to_string(),
             session_type: Some(proto::discovery::DiscoveryAgentType::Retriever),
         };
+        println!("About to start discovery session: ");
         let discover_service = QUERENT_SERVICES_ONCE
             .get()
             .unwrap()
@@ -207,6 +208,7 @@ pub async fn send_discovery_retriever_request(
             discover_service,
         )
         .await;
+    println!("Started discovery session");
         match result {
             Ok(response) => {
                 info!("Discovery session started successfully");

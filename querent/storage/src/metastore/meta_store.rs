@@ -319,10 +319,14 @@ impl Storage for MetaStore {
 		session_id: &String,
 		session: DiscoverySessionRequest,
 	) -> StorageResult<()> {
+
+		println!("Setting discovery session");
 		let encoded_data = bincode::serialize(&session).map_err(|e| StorageError {
 			kind: StorageErrorKind::Serialization,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+
+		println!("Setting discovery session 11111111111");
 		let write_txn = self.db.begin_write().map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -340,6 +344,7 @@ impl Storage for MetaStore {
 				}
 			})?;
 		}
+		println!("Setting discovery session 222222222222");
 		write_txn.commit().map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
