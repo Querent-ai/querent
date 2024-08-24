@@ -705,7 +705,6 @@ impl Storage for SurrealDB {
 				for (document_id, entity_mix) in most_mix_documents.into_iter() {
 					documents.push((document_id, entity_mix));
 				}
-				println!("Documets are {:?}", documents.clone());
 				let combined_query = format!(
 						"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
 						documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),

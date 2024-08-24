@@ -101,21 +101,30 @@
 	let selectedCategories: any[] = [];
 
 	async function toggleCategory(category: string) {
-		const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		isLoading.set(true);
+		try {
+			selectedCategories.push(category);
+			console.log('Selected categories are ', selectedCategories);
+			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
 
-		if (res.status == 'ok') {
-			let discoveryData: DiscoveryDataPageList = {
-				page_number: res.data.page_ranking,
-				data: res.data.insights
-			};
-			discoverylist.update((currentList) => {
-				return [...currentList, discoveryData];
-			});
-			const insights = res.data.insights;
+			if (res.status == 'ok') {
+				let discoveryData: DiscoveryDataPageList = {
+					page_number: res.data.page_ranking,
+					data: res.data.insights
+				};
+				discoverylist.update((currentList) => {
+					return [...currentList, discoveryData];
+				});
+				const insights = res.data.insights;
 
-			if (insights) {
-				discoveryApiResponseStore.set(insights);
+				if (insights) {
+					discoveryApiResponseStore.set(insights);
+				}
 			}
+		} catch (error) {
+			console.log('Got error while sending API request ', error);
+		} finally {
+			isLoading.set(false);
 		}
 	}
 
@@ -147,9 +156,9 @@
 					data: res.data.insights
 				};
 
-				discoverylist.update((currentList) => {
-					return [...currentList, discoveryData];
-				});
+				console.log('Setting data for page number as ', res.data.page_ranking);
+
+				discoverylist.set([discoveryData]);
 
 				const insights = res.data.insights;
 
@@ -168,9 +177,10 @@
 	}
 
 	async function handlePrevious() {
+		console.log('User tried to get previous page results');
 		const discoveryData = get(discoverylist);
 		const pageNumber = get(discoveryPageNumber);
-		if (pageNumber < 1) {
+		if (pageNumber <= 1) {
 			console.log('Already on first page');
 			return;
 		}
@@ -181,31 +191,45 @@
 		if (insights) {
 			categories = insights;
 			discoveryApiResponseStore.set(insights);
+		} else {
+			console.log('No data available page number ', pageNumber);
 		}
 	}
 
 	async function handleNext() {
-		const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		isLoading.set(true);
+		console.log('User entered query as ', query, '. For geting data from next page');
 
-		if (res.status == 'ok') {
-			if (res.data.insights.length == 0) {
-				console.log('Length is zero');
-				return;
+		try {
+			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+
+			if (res.status == 'ok') {
+				if (res.data.insights.length == 0) {
+					console.log('Length is zero');
+					return;
+				}
+				let discoveryData: DiscoveryDataPageList = {
+					page_number: res.data.page_ranking,
+					data: res.data.insights
+				};
+
+				console.log('Got the response for page number ', res.data.page_ranking);
+				discoveryPageNumber.set(res.data.page_ranking);
+
+				discoverylist.update((currentList) => {
+					return [...currentList, discoveryData];
+				});
+
+				const insights = res.data.insights;
+
+				if (insights) {
+					discoveryApiResponseStore.set(insights);
+				}
 			}
-			let discoveryData: DiscoveryDataPageList = {
-				page_number: res.data.page_ranking,
-				data: res.data.insights
-			};
-
-			discoverylist.update((currentList) => {
-				return [...currentList, discoveryData];
-			});
-
-			const insights = res.data.insights;
-
-			if (insights) {
-				discoveryApiResponseStore.set(insights);
-			}
+		} catch (error) {
+			console.log('Got error as ', error);
+		} finally {
+			isLoading.set(false);
 		}
 	}
 
@@ -369,7 +393,7 @@
 
 	<Modal bind:show={showModal} message={modalMessage} />
 	{#if $isLoading}
-		<LoadingModal message="Please wait while we get your response" />
+		<LoadingModal message="Please wait while we get your data...." />
 	{/if}
 </main>
 
