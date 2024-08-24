@@ -89,7 +89,7 @@
 	});
 
 	async function fetchPipelineData() {
-		if (!selectedPipeline || selectedPipeline == '"No_pipeline_found"') {
+		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found') {
 			return;
 		}
 		console.log('Calling the API with pipeline ID as ', selectedPipeline);

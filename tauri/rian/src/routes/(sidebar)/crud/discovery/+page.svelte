@@ -5,6 +5,7 @@
 		discoveryApiResponseStore,
 		discoverylist,
 		discoveryPageNumber,
+		discoverySessionId,
 		firstDiscovery,
 		type DiscoveryDataPageList
 	} from '../../../../stores/appState';
@@ -27,8 +28,7 @@
 	}[];
 	const isLoading = writable(false);
 
-	$: categories =
-		$discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : FakeData.insights;
+	$: categories = $discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : [];
 
 	$: {
 		currentCategory = categories.filter((cat) => cat.tags !== 'Filters');
@@ -57,6 +57,7 @@
 			const res = await commands.sendDiscoveryRetrieverRequest('', []);
 
 			if (res.status == 'ok') {
+				discoverySessionId.set(res.data.session_id);
 				let discoveryData: DiscoveryDataPageList = {
 					page_number: res.data.page_ranking,
 					data: res.data.insights

@@ -60,8 +60,6 @@
 		} else {
 			showChatModal = true;
 			selectedInsightForChat = insight;
-
-			console.log('desc is this fucking thing  ', insight.iconifyIcon);
 		}
 	}
 

@@ -74,6 +74,11 @@ export const dropdownDiscovery = writable<DiscoveryData>();
 export const firstDiscovery = writable(true);
 export const discoveryPageNumber = writable<number>(1);
 export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
+export const discoverySessionId = writable<string>();
+
+discoverySessionId.subscribe(($sessionId) => {
+	saveToLocalStorage('discoverySessionId', $sessionId);
+});
 
 pipelines.subscribe(($pipelines) => {
 	saveToLocalStorage('pipelinesList', $pipelines);
@@ -87,19 +92,19 @@ pipelineState.subscribe(($pipelineState) => {
 	saveToLocalStorage('PipelinesData', $pipelineState);
 });
 
-pipelineState.subscribe(($discoveryList) => {
+discoverylist.subscribe(($discoveryList) => {
 	saveToLocalStorage('discoveryList', $discoveryList);
 });
 
-pipelineState.subscribe(($dropdownDiscovery) => {
+dropdownDiscovery.subscribe(($dropdownDiscovery) => {
 	saveToLocalStorage('dropdownDiscovery', $dropdownDiscovery);
 });
 
-pipelineState.subscribe(($discoveryPageNumber) => {
+discoveryPageNumber.subscribe(($discoveryPageNumber) => {
 	saveToLocalStorage('discoveryPageNumber', $discoveryPageNumber);
 });
 
-pipelineState.subscribe(($discoveryApiResponseStore) => {
+discoveryApiResponseStore.subscribe(($discoveryApiResponseStore) => {
 	saveToLocalStorage('discoveryApiResponseStore', $discoveryApiResponseStore);
 });
 

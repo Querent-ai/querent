@@ -1,10 +1,16 @@
 <script lang="ts">
 	import { Modal, Button } from 'flowbite-svelte';
-	import type { InsightInfo } from '../../../../service/bindings';
+	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
+	import { commands, type InsightQuery } from '../../../../service/bindings-jsdoc';
+	import { onMount } from 'svelte';
+	import { discoverySessionId, pipelines, pipelineState } from '../../../../stores/appState';
+	import { error } from 'console';
+	import { get } from 'svelte/store';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
+	let sessionId: string;
 
 	let messages: { text: string; isUser: boolean }[] = [];
 	let inputMessage = '';
@@ -17,22 +23,62 @@
 		description = insight?.description || '';
 	}
 
+	onMount(async () => {
+		try {
+			let pipelineStateVar = get(pipelineState);
+			if (!pipelineStateVar) {
+				console.log('No running pipeline to run insights on');
+				return;
+			}
+			let pipelineId = pipelineStateVar.id;
+			console.log('Pipeline ID is ', pipelineId);
+
+			let discoverySessionIdVar = get(discoverySessionId);
+			if (!discoverySessionIdVar) {
+				console.log('No discovery session found');
+			}
+			let id: string | undefined = insight?.id;
+			let request: InsightAnalystRequest = {
+				id: id!,
+				discovery_session_id: discoverySessionIdVar,
+				semantic_pipeline_id: pipelineId,
+				additional_options: {}
+			};
+			let res = await commands.triggerInsightAnalyst(request);
+			if (res.status == 'ok') {
+				sessionId = res.data.session_id;
+			} else {
+				console.log('Got error while starting insights ', res.error);
+			}
+		} catch (error) {
+			console.log('Got error while starting insights ', error);
+		}
+	});
+
 	function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
 			inputMessage = '';
-			setTimeout(() => {
-				messages = [...messages, { text: 'Hello from querent', isUser: false }];
+			setTimeout(async () => {
+				let request: InsightQuery = {
+					session_id: sessionId,
+					query: inputMessage
+				};
+				let res = await commands.promptInsightAnalyst(request);
+				if (res.status == 'ok') {
+					messages = [...messages, { text: res.data.response, isUser: false }];
+				} else {
+					console.log('Error while calling insights ', res.error);
+				}
 			}, 1000);
 		}
 	}
 
-	function closeModal() {
+	async function closeModal() {
+		let res = await commands.stopInsightAnalyst('');
 		show = false;
 		messages = [];
 	}
-
-	console.log('description   ', insight?.description);
 </script>
 
 <Modal bind:open={show} size="xl" class="w-full" autoclose={false} on:close={closeModal}>
@@ -43,9 +89,11 @@
 	</div>
 	<div class="mb-4 h-96 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
 		{#if messages.length === 0}
-			<div class="flex h-full flex-col items-center justify-center">
-				<Icon {icon} style="width: 48px; height: 48px;" />
-				<p class="text-center">{description}</p>
+			<div class="flex h-full items-center justify-center">
+				<div class="flex items-center">
+					<Icon {icon} style="width: 48px; height: 48px;" />
+					<p class="ml-4">{description}</p>
+				</div>
 			</div>
 		{:else}
 			{#each messages as message}
@@ -97,5 +145,16 @@
 		outline: none;
 		box-shadow: none;
 		overflow-y: auto;
+	}
+	.flex.h-full.items-center.justify-center {
+		height: 100%;
+	}
+
+	.flex.h-full.items-center.justify-center .flex.items-center {
+		max-width: 80%;
+	}
+
+	.flex.h-full.items-center.justify-center p {
+		margin-left: 1rem;
 	}
 </style>
