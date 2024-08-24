@@ -1,15 +1,18 @@
 <script lang="ts">
 	import { Modal, Button } from 'flowbite-svelte';
-	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
+	import type {
+		CustomInsightOption,
+		InsightAnalystRequest,
+		InsightInfo
+	} from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import { commands, type InsightQuery } from '../../../../service/bindings-jsdoc';
-	import { onMount } from 'svelte';
 	import { discoverySessionId, pipelines, pipelineState } from '../../../../stores/appState';
-	import { error } from 'console';
 	import { get } from 'svelte/store';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
+	export let insightsId: string | null = null;
 	let sessionId: string;
 
 	let messages: { text: string; isUser: boolean }[] = [];
@@ -21,31 +24,42 @@
 	$: if (show) {
 		icon = insight?.iconifyIcon || '';
 		description = insight?.description || '';
+		initializeChat();
 	}
 
-	onMount(async () => {
+	async function initializeChat() {
 		try {
-			let pipelineStateVar = get(pipelineState);
-			if (!pipelineStateVar) {
-				console.log('No running pipeline to run insights on');
-				return;
-			}
-			let pipelineId = pipelineStateVar.id;
-			console.log('Pipeline ID is ', pipelineId);
-
-			let discoverySessionIdVar = get(discoverySessionId);
-			if (!discoverySessionIdVar) {
-				console.log('No discovery session found');
+			if (insightsId) {
+				let runningInsight = commands.getRunningInsightAnalysts();
 			}
 			let id: string | undefined = insight?.id;
+			if (!id) {
+				console.log('No id found');
+				return;
+			}
+			let additional_options: { [x: string]: string } = {};
+
+			if (insight?.additionalOptions) {
+				for (const key in insight.additionalOptions) {
+					if (insight.additionalOptions.hasOwnProperty(key)) {
+						if (insight.additionalOptions[key].value.type == 'string') {
+							additional_options[key] = insight.additionalOptions[key].value
+								.value as unknown as string;
+						}
+					}
+				}
+			}
 			let request: InsightAnalystRequest = {
 				id: id!,
-				discovery_session_id: discoverySessionIdVar,
-				semantic_pipeline_id: pipelineId,
-				additional_options: {}
+				discovery_session_id: '',
+				semantic_pipeline_id: '',
+				additional_options: additional_options
 			};
+			console.log('Making the request ', request);
+
 			let res = await commands.triggerInsightAnalyst(request);
 			if (res.status == 'ok') {
+				console.log('setting session id ', res.data.session_id);
 				sessionId = res.data.session_id;
 			} else {
 				console.log('Got error while starting insights ', res.error);
@@ -53,12 +67,13 @@
 		} catch (error) {
 			console.log('Got error while starting insights ', error);
 		}
-	});
+	}
 
 	function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
 			inputMessage = '';
+			console.log('Session id is ', sessionId);
 			setTimeout(async () => {
 				let request: InsightQuery = {
 					session_id: sessionId,
@@ -66,6 +81,7 @@
 				};
 				let res = await commands.promptInsightAnalyst(request);
 				if (res.status == 'ok') {
+					console.log('Got response as ', res.data.response);
 					messages = [...messages, { text: res.data.response, isUser: false }];
 				} else {
 					console.log('Error while calling insights ', res.error);
@@ -75,9 +91,8 @@
 	}
 
 	async function closeModal() {
-		let res = await commands.stopInsightAnalyst('');
+		console.log('Closing the modal...');
 		show = false;
-		messages = [];
 	}
 </script>
 

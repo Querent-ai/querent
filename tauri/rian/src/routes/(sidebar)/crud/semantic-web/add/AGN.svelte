@@ -22,6 +22,9 @@
 	export let formOpen: boolean;
 	import { open, save } from '@tauri-apps/plugin-dialog';
 	import { writeTextFile } from '@tauri-apps/plugin-fs';
+	import { writable } from 'svelte/store';
+	import LoadingModal from '../../discovery/LoadingModal.svelte';
+	const isLoading = writable(false);
 
 	let sourceIds: string[] = [];
 	let sourceNames: string[] = [];
@@ -120,50 +123,57 @@
 
 	const handleSubmit = async (event: Event) => {
 		event.preventDefault();
-		const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
+		try {
+			const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
 
-		if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
-			modalMessage = 'Please either choose model or enter some entities';
-			showModal = true;
-			return;
-		}
-
-		let selectedSources: string[] = sourceIds.filter((_, index) => {
-			return selectedSourceIds.includes(sourceNames[index]);
-		});
-
-		let request: SemanticPipelineRequest = {
-			collectors: selectedSources,
-			model: selectedModel,
-			fixed_entities: {
-				entities: nonEmptyRows.map((row) => row.entity)
-			},
-			sample_entities: {
-				entities: nonEmptyRows.map((row) => row.entityType)
+			if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
+				modalMessage = 'Please either choose model or enter some entities';
+				showModal = true;
+				return;
 			}
-		};
 
-		let result = await commands.startAgnFabric(request);
+			let selectedSources: string[] = sourceIds.filter((_, index) => {
+				return selectedSourceIds.includes(sourceNames[index]);
+			});
 
-		if (result.status == 'ok') {
-			updatePipeline('running', result.data.pipeline_id);
-
-			let pipelineMetadata: PipelinesData = {
-				id: result.data.pipeline_id,
-				sources: sourceNames,
-				fixed_entities: request.fixed_entities?.entities,
-				sample_entities: request.sample_entities?.entities,
-				mode: 'active'
+			let request: SemanticPipelineRequest = {
+				collectors: selectedSources,
+				model: selectedModel,
+				fixed_entities: {
+					entities: nonEmptyRows.map((row) => row.entity)
+				},
+				sample_entities: {
+					entities: nonEmptyRows.map((row) => row.entityType)
+				}
 			};
 
-			addPipelinesToList(pipelineMetadata);
-		} else {
-			console.log('Failed to start the pipeline ', result.error);
+			isLoading.set(true);
+			let result = await commands.startAgnFabric(request);
+
+			if (result.status == 'ok') {
+				updatePipeline('running', result.data.pipeline_id);
+
+				let pipelineMetadata: PipelinesData = {
+					id: result.data.pipeline_id,
+					sources: sourceNames,
+					fixed_entities: request.fixed_entities?.entities,
+					sample_entities: request.sample_entities?.entities,
+					mode: 'active'
+				};
+
+				addPipelinesToList(pipelineMetadata);
+			} else {
+				console.log('Failed to start the pipeline ', result.error);
+			}
+
+			selectedModel = null;
+
+			goto('/crud/semantic-web');
+		} catch (error) {
+			console.log('Got error while starting the pipeline ', error);
+		} finally {
+			isLoading.set(false);
 		}
-
-		selectedModel = null;
-
-		goto('/crud/semantic-web');
 	};
 
 	const handleRemoveSource = (id: string) => {
@@ -468,6 +478,10 @@
 		</form>
 
 		<Modal bind:show={showModal} message={modalMessage} />
+
+		{#if $isLoading}
+			<LoadingModal message="Please wait while we get your data...." />
+		{/if}
 	</div>
 {/if}
 

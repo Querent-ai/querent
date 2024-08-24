@@ -15,8 +15,6 @@
 	import Modal from '../sources/add/Modal.svelte';
 	import LoadingModal from './LoadingModal.svelte';
 
-	import FakeData from './fake_data.json';
-
 	let categoriesDropdown: string[] | null;
 	let currentCategory: {
 		sentence: string;

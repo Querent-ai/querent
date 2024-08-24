@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { dataSources, updatePipeline, pipelineState } from '../../../../stores/appState';
 	import {
 		Breadcrumb,
 		BreadcrumbItem,
