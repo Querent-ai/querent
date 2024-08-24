@@ -1,19 +1,15 @@
 <script lang="ts">
 	import { Modal, Button } from 'flowbite-svelte';
-	import type {
-		CustomInsightOption,
-		InsightAnalystRequest,
-		InsightInfo
-	} from '../../../../service/bindings';
+	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
-	import { commands, type InsightQuery } from '../../../../service/bindings-jsdoc';
-	import { discoverySessionId, pipelines, pipelineState } from '../../../../stores/appState';
-	import { get } from 'svelte/store';
+	import { commands, type InsightQuery } from '../../../../service/bindings';
+	import { runningInsight } from '../../../../stores/appState';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
 	export let insightsId: string | null = null;
 	let sessionId: string;
+	let isLoading = false;
 
 	let messages: { text: string; isUser: boolean }[] = [];
 	let inputMessage = '';
@@ -29,43 +25,48 @@
 
 	async function initializeChat() {
 		try {
-			if (insightsId) {
-				let runningInsight = commands.getRunningInsightAnalysts();
-			}
-			let id: string | undefined = insight?.id;
-			if (!id) {
-				console.log('No id found');
+			if (insightsId && insightsId !== '') {
+				//We already have a running insight, so we wont call trigger again and we will keep messages as they are
 				return;
-			}
-			let additional_options: { [x: string]: string } = {};
+			} else {
+				messages = [];
+				let id: string | undefined = insight?.id;
+				if (!id) {
+					console.log('No id found');
+					return;
+				}
+				let additional_options: { [x: string]: string } = {};
 
-			if (insight?.additionalOptions) {
-				for (const key in insight.additionalOptions) {
-					if (insight.additionalOptions.hasOwnProperty(key)) {
-						if (insight.additionalOptions[key].value.type == 'string') {
-							additional_options[key] = insight.additionalOptions[key].value
-								.value as unknown as string;
+				if (insight?.additionalOptions) {
+					for (const key in insight.additionalOptions) {
+						if (insight.additionalOptions.hasOwnProperty(key)) {
+							if (insight.additionalOptions[key].value.type == 'string') {
+								additional_options[key] = insight.additionalOptions[key].value
+									.value as unknown as string;
+							}
 						}
 					}
 				}
-			}
-			let request: InsightAnalystRequest = {
-				id: id!,
-				discovery_session_id: '',
-				semantic_pipeline_id: '',
-				additional_options: additional_options
-			};
-			console.log('Making the request ', request);
+				let request: InsightAnalystRequest = {
+					id: id!,
+					discovery_session_id: '',
+					semantic_pipeline_id: '',
+					additional_options: additional_options
+				};
+				isLoading = true;
 
-			let res = await commands.triggerInsightAnalyst(request);
-			if (res.status == 'ok') {
-				console.log('setting session id ', res.data.session_id);
-				sessionId = res.data.session_id;
-			} else {
-				console.log('Got error while starting insights ', res.error);
+				let res = await commands.triggerInsightAnalyst(request);
+				if (res.status == 'ok') {
+					runningInsight.set(res.data.session_id);
+					sessionId = res.data.session_id;
+				} else {
+					console.log('Got error while starting insights ', res.error);
+				}
 			}
 		} catch (error) {
 			console.log('Got error while starting insights ', error);
+		} finally {
+			isLoading = false;
 		}
 	}
 
@@ -73,25 +74,29 @@
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
 			inputMessage = '';
-			console.log('Session id is ', sessionId);
-			setTimeout(async () => {
-				let request: InsightQuery = {
-					session_id: sessionId,
-					query: inputMessage
-				};
-				let res = await commands.promptInsightAnalyst(request);
-				if (res.status == 'ok') {
-					console.log('Got response as ', res.data.response);
-					messages = [...messages, { text: res.data.response, isUser: false }];
-				} else {
-					console.log('Error while calling insights ', res.error);
-				}
-			}, 1000);
+			isLoading = true;
+			try {
+				setTimeout(async () => {
+					let request: InsightQuery = {
+						session_id: sessionId,
+						query: inputMessage
+					};
+					let res = await commands.promptInsightAnalyst(request);
+					if (res.status == 'ok') {
+						messages = [...messages, { text: res.data.response, isUser: false }];
+					} else {
+						console.log('Error while calling insights ', res.error);
+					}
+				}, 100);
+			} catch (error) {
+				console.log('Got error while calling insights ', error);
+			} finally {
+				isLoading = false;
+			}
 		}
 	}
 
 	async function closeModal() {
-		console.log('Closing the modal...');
 		show = false;
 	}
 </script>
@@ -129,6 +134,9 @@
 			id="searchInput"
 			bind:value={inputMessage}
 		/>
+		{#if isLoading}
+			<div class="loader mr-2"></div>
+		{/if}
 		<Button type="submit">Send</Button>
 	</form>
 </Modal>
@@ -171,5 +179,22 @@
 
 	.flex.h-full.items-center.justify-center p {
 		margin-left: 1rem;
+	}
+	.loader {
+		border: 2px solid #f3f3f3;
+		border-top: 2px solid #3498db;
+		border-radius: 50%;
+		width: 20px;
+		height: 20px;
+		animation: spin 1s linear infinite;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
 	}
 </style>

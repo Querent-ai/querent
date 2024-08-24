@@ -75,6 +75,11 @@ export const firstDiscovery = writable(true);
 export const discoveryPageNumber = writable<number>(1);
 export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
 export const discoverySessionId = writable<string>();
+export const runningInsight = writable<string>('');
+
+runningInsight.subscribe(($runningInsight) => {
+	saveToLocalStorage('runningInsight', $runningInsight);
+});
 
 discoverySessionId.subscribe(($sessionId) => {
 	saveToLocalStorage('discoverySessionId', $sessionId);
