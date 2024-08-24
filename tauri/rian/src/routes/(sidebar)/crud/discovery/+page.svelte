@@ -125,6 +125,7 @@
 			console.log('Got error while sending API request ', error);
 		} finally {
 			isLoading.set(false);
+			selectedCategories = [];
 		}
 	}
 
