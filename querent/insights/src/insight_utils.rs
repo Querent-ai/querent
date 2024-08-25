@@ -25,7 +25,6 @@ pub fn extract_sentences(documents: &Vec<DocumentPayload>) -> Vec<&str> {
 	documents.iter().map(|doc| doc.sentence.as_str()).collect()
 }
 
-
 /// Function to split a group of sentences into sets of 10 sentences each
 pub fn split_sentences(sentences: &[String]) -> Vec<Vec<String>> {
 	sentences.chunks(10).map(|chunk| chunk.to_vec()).collect()

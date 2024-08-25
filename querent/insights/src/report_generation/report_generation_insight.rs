@@ -7,22 +7,22 @@ use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 
 /// XAI Insight struct.
-pub struct CDSV1 {
+pub struct RGV1 {
 	info: InsightInfo,
 }
 
-impl CDSV1 {
+impl RGV1 {
 	pub fn new() -> Self {
 		let additional_options = HashMap::new();
 		Self {
 			info: InsightInfo {
-				id: "querent.insights.cds.cdsv1".to_string(),
-				name: "Querent Cross Document Summarization".to_string(),
-				description: "Cross Document Summarization involves processing information from multiple documents to create a cohesive summary, capturing key insights and themes across diverse sources.".to_string(),
+				id: "querent.insights.rg.rgv1".to_string(),
+				name: "Querent Report Generation".to_string(),
+				description: "Report generation processes information from the semantic data fabric to produce comprehensive reports that highlight key insights, trends, and patterns across the data landscape.".to_string(),
 				version: "0.0.1-dev".to_string(),
 				author: "Querent AI".to_string(),
 				license: "BSL-1.0".to_string(),
-				iconify_icon: "fluent:document-bullet-list-cube-24-regular".to_string(),
+				iconify_icon: "carbon:report".to_string(),
 				additional_options,
 				conversational: false,
 				premium: true,
@@ -32,7 +32,7 @@ impl CDSV1 {
 }
 
 #[async_trait]
-impl Insight for CDSV1 {
+impl Insight for RGV1 {
 	async fn info(&self) -> InsightInfo {
 		self.info.clone()
 	}

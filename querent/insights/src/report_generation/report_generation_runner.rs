@@ -5,10 +5,10 @@ use async_trait::async_trait;
 use futures::Stream;
 use std::pin::Pin;
 
-pub struct CrossDocumentSummarizationRunner {}
+pub struct ReportGenerationRunner {}
 
 #[async_trait]
-impl InsightRunner for CrossDocumentSummarizationRunner {
+impl InsightRunner for ReportGenerationRunner {
 	async fn run(&self, _input: InsightInput) -> InsightResult<InsightOutput> {
 		Err(InsightError::new(
 			InsightErrorKind::NotFound,
