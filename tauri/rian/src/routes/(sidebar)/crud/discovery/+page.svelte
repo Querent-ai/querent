@@ -248,6 +248,24 @@
 		const parts = filePath.split('/');
 		return parts[parts.length - 1];
 	}
+
+	function getIconForDocument(documentName: string): string {
+		const extension = documentName.split('.').pop()?.toLowerCase() || '';
+		const iconMap: { [key: string]: string } = {
+			pdf: 'vscode-icons:file-type-pdf2',
+			doc: 'icon-park-outline:file-doc',
+			docx: 'bi:filetype-docx',
+			xls: 'ph:file-xls',
+			xlsx: 'bi:filetype-xlsx',
+			ppt: 'ph:file-ppt',
+			pptx: 'bi:filetype-pptx',
+			txt: 'ph:file-txt-light',
+			jpg: 'ph:file-jpg-light',
+			jpeg: 'ph:file-jpeg-light'
+		};
+
+		return iconMap[extension] || 'vscode-icons:default-file';
+	}
 </script>
 
 <main>
@@ -344,7 +362,10 @@
 						<div class={index % 3 === 0 ? 'full-width-card' : 'small-card'}>
 							<div class="card-content">
 								<div class="svg-container">
-									<PdfIcon />
+									<Icon
+										icon={getIconForDocument(extractFileNameWithExtension(category.document))}
+										style="width: 32px; height: 32px;"
+									/>
 								</div>
 								<p class="tagline font-semibold">
 									{extractFileNameWithExtension(category.document)}
