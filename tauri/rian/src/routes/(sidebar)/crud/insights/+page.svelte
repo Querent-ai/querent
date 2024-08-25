@@ -80,7 +80,7 @@
 	<div class="main-content p-4">
 		{#if runningInsightId}
 			<div class="button-container">
-				<button on:click={continueRunningInsight} class="continue-button">Continue Insights</button>
+				<button on:click={continueRunningInsight} class="continue-button">Running Insight</button>
 				<button on:click={stopInsight} class="stop-button">Stop Insight</button>
 			</div>
 		{/if}
@@ -170,7 +170,7 @@
 	}
 
 	.insight-button:hover {
-		background-color: black;
+		background-color: rgb(235, 225, 225);
 	}
 	.insight-icon {
 		margin-right: 1rem;

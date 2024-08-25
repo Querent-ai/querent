@@ -26,9 +26,9 @@ pub fn get_suggestions_prompt(suggestion_texts: &[&str]) -> String {
 pub fn get_final_prompt(query: &str, context: &str) -> String {
 	format!(
         "You are a knowledgeable assistant responsible for generating a comprehensive summary of the data provided below. \
-        Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence. \
+        Given below is a user query and its cosine based similarity results, which have sentences from various documents. \
         Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences. \
-        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary (approximately 150 - 200 words). \
+        If the results are contradictory, please resolve the contradictions and provide a single, coherent summary (approximately 300 - 500 words). \
         Make sure it is written in third person, and make sure we have the full context.\n\n\
         #######\n\
         -Data-\n\

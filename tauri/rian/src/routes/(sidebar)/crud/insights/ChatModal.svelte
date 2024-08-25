@@ -4,12 +4,13 @@
 	import Icon from '@iconify/svelte';
 	import { commands, type InsightQuery } from '../../../../service/bindings';
 	import { runningInsight } from '../../../../stores/appState';
+	import { writable } from 'svelte/store';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
 	export let insightsId: string | null = null;
 	let sessionId: string;
-	let isLoading = false;
+	let isLoading = writable<boolean>(false);
 
 	let messages: { text: string; isUser: boolean }[] = [];
 	let inputMessage = '';
@@ -26,7 +27,7 @@
 	async function initializeChat() {
 		try {
 			if (insightsId && insightsId !== '') {
-				//We already have a running insight, so we wont call trigger again and we will keep messages as they are
+				// We already have a running insight, so we won't call trigger again and we will keep messages as they are
 				return;
 			} else {
 				messages = [];
@@ -53,7 +54,7 @@
 					semantic_pipeline_id: '',
 					additional_options: additional_options
 				};
-				isLoading = true;
+				isLoading.set(true);
 
 				let res = await commands.triggerInsightAnalyst(request);
 				if (res.status == 'ok') {
@@ -66,14 +67,14 @@
 		} catch (error) {
 			console.log('Got error while starting insights ', error);
 		} finally {
-			isLoading = false;
+			isLoading.set(false);
 		}
 	}
 
 	function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
-			isLoading = true;
+			isLoading.set(true);
 			let query = inputMessage;
 			try {
 				setTimeout(async () => {
@@ -82,8 +83,10 @@
 						query: query
 					};
 					let res = await commands.promptInsightAnalyst(request);
+					
 					if (res.status == 'ok') {
-						messages = [...messages, { text: res.data.response, isUser: false }];
+						console.log("This is the response ----------------", res.data.response);
+						messages = [...messages, { text: res.data.response.replace(/\n/g, " "), isUser: false }];
 					} else {
 						console.log('Error while calling insights ', res.error);
 					}
@@ -92,13 +95,18 @@
 			} catch (error) {
 				console.log('Got error while calling insights ', error);
 			} finally {
-				isLoading = false;
+				isLoading.set(false);
 			}
 		}
 	}
 
 	async function closeModal() {
 		show = false;
+	}
+
+	// Helper function to format message text by replacing \n with <br>
+	function formatMessageText(text: string) {
+		return text.replace(/\n/g, '<br>');
 	}
 </script>
 
@@ -122,7 +130,7 @@
 					<span
 						class={`inline-block rounded-lg p-2 ${message.isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-white'}`}
 					>
-						{message.text}
+						{@html formatMessageText(message.text)}
 					</span>
 				</div>
 			{/each}
@@ -135,7 +143,7 @@
 			id="searchInput"
 			bind:value={inputMessage}
 		/>
-		{#if isLoading}
+		{#if $isLoading}
 			<div class="loader mr-2"></div>
 		{/if}
 		<Button type="submit">Send</Button>
