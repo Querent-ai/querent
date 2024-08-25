@@ -114,8 +114,6 @@ discoveryApiResponseStore.subscribe(($discoveryApiResponseStore) => {
 });
 
 export function addPipelinesToList(pipeline: PipelinesData): void {
-	console.log('Pipelines are     ', pipelines);
-	console.log('New pipeline data  ', pipeline);
 	pipelines.update((currentPipelines) => {
 		if (Array.isArray(currentPipelines)) {
 			return [...currentPipelines, pipeline];

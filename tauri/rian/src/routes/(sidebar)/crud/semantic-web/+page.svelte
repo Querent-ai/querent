@@ -70,8 +70,6 @@
 				pipelines_list.update((list) => [...list, pipelineData]);
 			});
 		}
-
-		console.log('Data all is ', $pipelines_list);
 	});
 	function navigateToStartPipeline() {
 		goto('/crud/semantic-web/add/');

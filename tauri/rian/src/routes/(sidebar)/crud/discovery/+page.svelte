@@ -49,8 +49,6 @@
 		let discovery_data = get(discoverylist);
 
 		if ((!discovery_data || discovery_data.length < 1) && get(firstDiscovery)) {
-			console.log('Starting discovery session');
-
 			isLoading.set(true);
 			const res = await commands.sendDiscoveryRetrieverRequest('', []);
 
@@ -76,8 +74,6 @@
 			}
 			isLoading.set(false);
 		} else {
-			console.log('We are coming here again');
-			console.log('Data   ', discovery_data);
 			const currentList = get(discoverylist);
 
 			const matchingPage = currentList.find(
@@ -103,7 +99,6 @@
 		isLoading.set(true);
 		try {
 			selectedCategories.push(category);
-			console.log('Selected categories are ', selectedCategories);
 			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
 
 			if (res.status == 'ok') {
@@ -136,8 +131,6 @@
 			return;
 		}
 
-		console.log('Selected categories  ', selectedCategories);
-		console.log('User entered:', inputValue);
 		query = inputValue;
 		inputValue = '';
 
@@ -155,8 +148,6 @@
 					page_number: res.data.page_ranking,
 					data: res.data.insights
 				};
-
-				console.log('Setting data for page number as ', res.data.page_ranking);
 
 				discoverylist.set([discoveryData]);
 
@@ -177,11 +168,9 @@
 	}
 
 	async function handlePrevious() {
-		console.log('User tried to get previous page results');
 		const discoveryData = get(discoverylist);
 		const pageNumber = get(discoveryPageNumber);
 		if (pageNumber <= 1) {
-			console.log('Already on first page');
 			return;
 		}
 		const previousPageData = discoveryData.find((item) => item.page_number === pageNumber - 1);
@@ -198,14 +187,12 @@
 
 	async function handleNext() {
 		isLoading.set(true);
-		console.log('User entered query as ', query, '. For geting data from next page');
 
 		try {
 			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
 
 			if (res.status == 'ok') {
 				if (res.data.insights.length == 0) {
-					console.log('Length is zero');
 					return;
 				}
 				let discoveryData: DiscoveryDataPageList = {
@@ -213,7 +200,6 @@
 					data: res.data.insights
 				};
 
-				console.log('Got the response for page number ', res.data.page_ranking);
 				discoveryPageNumber.set(res.data.page_ranking);
 
 				discoverylist.update((currentList) => {
@@ -240,8 +226,6 @@
 	const toggleButton = document.getElementById('toggleButton') as HTMLInputElement;
 
 	async function handleToggleOn(): Promise<void> {
-		console.log('Handle function');
-
 		await tick();
 		setTimeout(() => {
 			isToggleOn = false;
