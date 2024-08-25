@@ -39,7 +39,6 @@
 		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found' || selectedPipeline == '') {
 			return;
 		}
-		console.log('Calling the API for pipeline ' + selectedPipeline);
 		const response = await commands.describePipeline(selectedPipeline);
 		if (response.status == 'ok') {
 			products = response.data;
