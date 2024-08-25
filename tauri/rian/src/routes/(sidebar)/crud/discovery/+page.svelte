@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import PdfIcon from './PDFIcon.svelte';
 	import {
 		discoveryApiResponseStore,
 		discoverylist,
@@ -26,6 +25,8 @@
 	}[];
 	const isLoading = writable(false);
 
+	$: firstDiscoveryRequest = get(firstDiscovery);
+
 	$: categories = $discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : [];
 
 	$: {
@@ -49,6 +50,7 @@
 		let discovery_data = get(discoverylist);
 
 		if ((!discovery_data || discovery_data.length < 1) && get(firstDiscovery)) {
+			console.log('Starting discovery session');
 			isLoading.set(true);
 			const res = await commands.sendDiscoveryRetrieverRequest('', []);
 
@@ -68,6 +70,7 @@
 
 				if (insights) {
 					categories = insights;
+					discoveryApiResponseStore.set(insights);
 				}
 			} else {
 				console.log('Unable to start discovery session ', res.error);
@@ -84,6 +87,7 @@
 
 			if (insights) {
 				categories = insights;
+				discoveryApiResponseStore.set(insights);
 			}
 		}
 	});
@@ -368,7 +372,11 @@
 									/>
 								</div>
 								<p class="tagline font-semibold">
-									{extractFileNameWithExtension(category.document)}
+									{#if firstDiscoveryRequest}
+										{category.tags}
+									{:else}
+										{extractFileNameWithExtension(category.document)}
+									{/if}
 								</p>
 								<p class="main-paragraph">
 									{category.sentence}

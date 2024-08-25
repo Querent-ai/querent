@@ -58,19 +58,37 @@
 					return;
 				}
 
-				let pipelineData: SemanticPipelineData = {
-					collectors: pipelineInfo.collectors,
-					fixed_entities: pipelineInfo.fixed_entities?.entities,
-					sample_entities: pipelineInfo.sample_entities?.entities,
-					model: pipelineInfo.model,
-					status: 'stopped',
-					id: pipelineId
-				};
+				const isAlreadyAdded = result.some((runningAgn) => pipelineId == runningAgn[0]);
 
-				pipelines_list.update((list) => [...list, pipelineData]);
+				if (!isAlreadyAdded) {
+					let pipelineData: SemanticPipelineData = {
+						collectors: pipelineInfo.collectors,
+						fixed_entities: pipelineInfo.fixed_entities?.entities,
+						sample_entities: pipelineInfo.sample_entities?.entities,
+						model: pipelineInfo.model,
+						status: 'stopped',
+						id: pipelineId
+					};
+
+					pipelines_list.update((list) => [...list, pipelineData]);
+				}
 			});
 		}
 	});
+
+	async function handleStopAgn(pipelineId: string) {
+		let res = await commands.stopAgnFabric(pipelineId);
+		if (res.status == 'error') {
+			console.log('Error while stopping the pipeline ', res.error);
+			return;
+		}
+		pipelines_list.update((list) =>
+			list.map((pipeline) =>
+				pipeline.id === pipelineId ? { ...pipeline, status: 'stopped' } : pipeline
+			)
+		);
+	}
+
 	function navigateToStartPipeline() {
 		goto('/crud/semantic-web/add/');
 	}
@@ -102,6 +120,7 @@
 			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Sample entities'}</TableHeadCell>
 			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Source'}</TableHeadCell>
 			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Status'}</TableHeadCell>
+			<TableHeadCell class="w-1/6 px-4 py-2 font-normal">{'Action'}</TableHeadCell>
 		</TableHead>
 		<TableBody>
 			{#if Array.isArray($pipelines_list)}
@@ -157,6 +176,16 @@
 						</TableBodyCell>
 						<TableBodyCell class="px-4 py-2">
 							<div class="break-words">{pipeline.status}</div>
+						</TableBodyCell>
+						<TableBodyCell class="px-4 py-2">
+							{#if pipeline.status == 'active'}
+								<button
+									class="rounded bg-blue-500 px-4 py-2 font-bold text-white hover:bg-blue-700"
+									on:click={() => handleStopAgn(pipeline.id)}
+								>
+									Stop
+								</button>
+							{/if}
 						</TableBodyCell>
 					</TableBodyRow>
 				{/each}

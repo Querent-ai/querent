@@ -1,12 +1,19 @@
 <script lang="ts">
 	import { Card, Heading, TabItem, Tabs } from 'flowbite-svelte';
-	import { pipelineState } from '../../stores/appState';
 	import { commands, type IndexingStatistics } from '../../service/bindings';
 	import { onDestroy, onMount } from 'svelte';
 
 	let selectedPipeline: string;
+	let runningPipelines: string[] = [];
 
-	$: selectedPipeline = $pipelineState?.id || 'No_pipeline_found';
+	$: selectedPipeline = runningPipelines.length > 0 ? runningPipelines[0] : 'No_pipeline_found';
+
+	onMount(async () => {
+		let res = await commands.getRunningAgns();
+		res.forEach(([pipelineId, _]) => {
+			runningPipelines = [...runningPipelines, pipelineId];
+		});
+	});
 
 	let products: IndexingStatistics;
 
@@ -29,7 +36,7 @@
 	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
 
 	async function fetchPipelineData(selectedPipeline: string) {
-		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found') {
+		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found' || selectedPipeline == '') {
 			return;
 		}
 		console.log('Calling the API for pipeline ' + selectedPipeline);
@@ -55,7 +62,7 @@
 
 	function convertStatsToArray(products: IndexingStatistics) {
 		return Object.entries(products).map(([key, value]) => ({
-			label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()), // Convert snake_case to Title Case
+			label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
 			number: value
 		}));
 	}

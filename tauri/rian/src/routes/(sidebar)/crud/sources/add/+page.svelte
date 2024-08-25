@@ -119,10 +119,7 @@
 	let modalMessage = '';
 
 	function selectSource(sourceName: string) {
-		if (sourceName === 'Google Drive') {
-			$isVisible = true;
-			login();
-		} else if (premiumSources.includes(sourceName)) {
+		if (premiumSources.includes(sourceName)) {
 			modalMessage = 'This feature is available only in premium';
 			showModal = true;
 		} else {

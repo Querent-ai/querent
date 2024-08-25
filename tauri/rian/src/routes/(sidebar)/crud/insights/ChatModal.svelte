@@ -73,13 +73,13 @@
 	function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
-			inputMessage = '';
 			isLoading = true;
+			let query = inputMessage;
 			try {
 				setTimeout(async () => {
 					let request: InsightQuery = {
 						session_id: sessionId,
-						query: inputMessage
+						query: query
 					};
 					let res = await commands.promptInsightAnalyst(request);
 					if (res.status == 'ok') {
@@ -88,6 +88,7 @@
 						console.log('Error while calling insights ', res.error);
 					}
 				}, 100);
+				inputMessage = '';
 			} catch (error) {
 				console.log('Got error while calling insights ', error);
 			} finally {
