@@ -116,6 +116,13 @@
 	function formatMessageText(text: string) {
 		return text.replace(/\n/g, '<br>');
 	}
+
+	function handleKeyDown(event: { key: string; shiftKey: any; preventDefault: () => void }) {
+		if (event.key === 'Enter' && !event.shiftKey) {
+			event.preventDefault();
+			sendMessage();
+		}
+	}
 </script>
 
 <Modal bind:open={show} size="xl" class="w-full" autoclose={false} on:close={closeModal}>
@@ -150,6 +157,7 @@
 			class="search-input"
 			id="searchInput"
 			bind:value={inputMessage}
+			on:keydown={handleKeyDown}
 		/>
 		{#if loadingStatus}
 			<div class="loader mr-2"></div>
