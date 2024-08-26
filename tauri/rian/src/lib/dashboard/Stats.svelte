@@ -6,7 +6,7 @@
 	let selectedPipeline: string;
 	let runningPipelines: string[] = [];
 
-	$: selectedPipeline = runningPipelines.length > 0 ? runningPipelines[0] : 'No_pipeline_found';
+	$: selectedPipeline = runningPipelines.length > 0 ? runningPipelines[0] : 'no_active_pipeline';
 
 	onMount(async () => {
 		let res = await commands.getRunningAgns();
@@ -36,7 +36,7 @@
 	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
 
 	async function fetchPipelineData(selectedPipeline: string) {
-		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found' || selectedPipeline == '') {
+		if (!selectedPipeline || selectedPipeline == 'no_active_pipeline' || selectedPipeline == '') {
 			return;
 		}
 		const response = await commands.describePipeline(selectedPipeline);

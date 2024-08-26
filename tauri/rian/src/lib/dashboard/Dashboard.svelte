@@ -11,7 +11,7 @@
 	import { pipelineState } from '../../stores/appState';
 	// let vectorOptions = getChartOptions(false, 'vector');
 
-	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'No_pipeline_found';
+	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'no_active_pipeline';
 
 	let chartInstance: Chart<'line', any[], unknown>;
 	let dataPoints: any[] = [];
@@ -89,7 +89,7 @@
 	});
 
 	async function fetchPipelineData() {
-		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found') {
+		if (!selectedPipeline || selectedPipeline == 'no_active_pipeline') {
 			return;
 		}
 		console.log('Calling the API with pipeline ID as ', selectedPipeline);
