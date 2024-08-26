@@ -74,7 +74,6 @@ impl DiscoveryService for DiscoveryImpl {
 				log::error!("Failed to discover insights: {}", e);
 				DiscoveryError::Internal("Failed to discover insights".to_string())
 			})?;
-
 		match response {
 			Ok(response) => Ok(response),
 			_ => Err(DiscoveryError::Internal("Failed to discover insights".to_string()).into()),

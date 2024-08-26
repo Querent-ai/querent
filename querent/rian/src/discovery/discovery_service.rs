@@ -181,6 +181,7 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 		_ctx: &ActorContext<Self>,
 	) -> Result<Result<DiscoveryResponse, DiscoveryError>, ActorExitStatus> {
 		let agent_handle = self.traverse_pipelines.get(&request.session_id);
+
 		if let Some(agent_handle) = agent_handle {
 			let response = agent_handle
 				.mailbox
@@ -209,7 +210,6 @@ impl Handler<DiscoveryRequest> for DiscoveryAgentService {
 					Err(DiscoveryError::Internal("Failed to discover insights".to_string()))
 				})
 				.unwrap_or_else(|e| e);
-
 			match response {
 				Ok(response) => return Ok(Ok(response)),
 				Err(e) => return Ok(Err(e)),

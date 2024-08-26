@@ -173,32 +173,32 @@ pub struct SendIngestedTokens {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct IndexingStatistics {
-    #[prost(uint64, tag = "1")]
-    pub total_docs: u64,
-    #[prost(uint64, tag = "2")]
-    pub total_events: u64,
-    #[prost(uint64, tag = "3")]
-    pub total_events_processed: u64,
-    #[prost(uint64, tag = "4")]
-    pub total_events_received: u64,
-    #[prost(uint64, tag = "5")]
-    pub total_events_sent: u64,
-    #[prost(uint64, tag = "6")]
-    pub total_batches: u64,
-    #[prost(uint64, tag = "7")]
-    pub total_sentences: u64,
-    #[prost(uint64, tag = "8")]
-    pub total_subjects: u64,
-    #[prost(uint64, tag = "9")]
-    pub total_predicates: u64,
-    #[prost(uint64, tag = "10")]
-    pub total_objects: u64,
-    #[prost(uint64, tag = "11")]
-    pub total_graph_events: u64,
-    #[prost(uint64, tag = "12")]
-    pub total_vector_events: u64,
-    #[prost(uint64, tag = "13")]
-    pub total_data_processed_size: u64,
+    #[prost(uint32, tag = "1")]
+    pub total_docs: u32,
+    #[prost(uint32, tag = "2")]
+    pub total_events: u32,
+    #[prost(uint32, tag = "3")]
+    pub total_events_processed: u32,
+    #[prost(uint32, tag = "4")]
+    pub total_events_received: u32,
+    #[prost(uint32, tag = "5")]
+    pub total_events_sent: u32,
+    #[prost(uint32, tag = "6")]
+    pub total_batches: u32,
+    #[prost(uint32, tag = "7")]
+    pub total_sentences: u32,
+    #[prost(uint32, tag = "8")]
+    pub total_subjects: u32,
+    #[prost(uint32, tag = "9")]
+    pub total_predicates: u32,
+    #[prost(uint32, tag = "10")]
+    pub total_objects: u32,
+    #[prost(uint32, tag = "11")]
+    pub total_graph_events: u32,
+    #[prost(uint32, tag = "12")]
+    pub total_vector_events: u32,
+    #[prost(uint32, tag = "13")]
+    pub total_data_processed_size: u32,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

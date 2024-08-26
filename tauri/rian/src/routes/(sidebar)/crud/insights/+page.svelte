@@ -1,110 +1,244 @@
 <script lang="ts">
 	import { Breadcrumb, BreadcrumbItem, Heading } from 'flowbite-svelte';
-	import { onMount } from 'svelte';
-	import { isVisible } from '../../../../stores/appState';
 	import MetaTag from '../../../utils/MetaTag.svelte';
-	import Modal from '../sources/add/Modal.svelte';
-	import type { InsightInfo } from '../../../../service/bindings';
+	import type { CustomInsightOption, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
+	import ChatModal from './ChatModal.svelte';
+	import { commands } from '../../../../service/bindings';
+	import { onMount } from 'svelte';
+	import Modal from '../sources/add/Modal.svelte';
+	import AdditionalOptionalModal from './AdditionalOptionalModal.svelte';
+	import { runningInsight } from '../../../../stores/appState';
 
-	const insightList: InsightInfo[] = [
-		{
-			id: 'insight1',
-			name: 'Insight 1',
-			description: 'Description for Insight 1',
-			version: '1.0.0',
-			conversational: true,
-			author: 'John Doe',
-			license: 'MIT',
-			iconifyIcon: 'simple-icons:ollama',
-			additionalOptions: {},
-			premium: false
-		},
-		{
-			id: 'insight2',
-			name: 'Insight 2',
-			description: 'Description for Insight 2',
-			version: '1.1.0',
-			conversational: false,
-			author: 'Jane Smith',
-			license: 'Apache-2.0',
-			iconifyIcon: 'game-icons:laser-burst',
-			additionalOptions: {},
-			premium: true
+	let runningInsightId: string;
+
+	let insightList: InsightInfo[];
+	onMount(async () => {
+		let res = await commands.listAvailableInsights();
+		if (res.status == 'ok') {
+			insightList = res.data;
+		} else {
+			console.log('Error as ', res.error);
 		}
-	];
+	});
 
-	let selectedSource: string | null = null;
+	$: runningInsightId = $runningInsight;
 
-	let premiumSources = [
-		'Azure',
-		'Dropbox',
-		'Email',
-		'Github',
-		'Jira',
-		'News',
-		'AWS S3',
-		'Slack',
-		'Google Cloud Storage'
-	];
+	async function stopInsight() {
+		let res = await commands.stopInsightAnalyst(runningInsightId);
+		if (res.status == 'error') {
+			console.log('Error while stopping the Insight');
+		}
+
+		runningInsight.set('');
+	}
+
+	async function continueRunningInsight() {
+		showChatModal = true;
+	}
+
+	let showAdditionalOptionModal = false;
 
 	let showModal = false;
 	let modalMessage = '';
 
-	function selectSource(sourceName: string) {
-		if (premiumSources.includes(sourceName)) {
-			modalMessage = 'This feature is only available in the premium version.';
-			showModal = true;
-		} else {
-			$isVisible = true;
-			selectedSource = sourceName;
-		}
-	}
-	let selectedInsight: InsightInfo | null = null;
+	let showChatModal = false;
+	let selectedInsightForChat: InsightInfo;
 
 	function selectInsight(insight: InsightInfo) {
 		if (insight.premium) {
-			modalMessage = 'This feature is only available in the premium version.';
+			modalMessage = 'This feature is available only in premium';
 			showModal = true;
 		} else {
-			$isVisible = true;
-			selectedInsight = insight;
+			if (runningInsightId && runningInsightId !== '') {
+				modalMessage = 'You already have a running insight';
+				showModal = true;
+				return;
+			}
+			selectedInsightForChat = insight;
+			showAdditionalOptionModal = true;
 		}
 	}
 
-	const path: string = '/crud/sources/add';
-	const description: string = 'Add new source - Querent Admin Dashboard';
-	const title: string = 'Querent Admin Dashboard - Add New Source';
-	const subtitle: string = 'Add New Source';
+	function handleSubmitOtions(event: CustomEvent<{ [key: string]: CustomInsightOption }>) {
+		selectedInsightForChat.additionalOptions = event.detail;
+		showChatModal = true;
+	}
+	function handleCloseAdditionalOptions() {
+		showAdditionalOptionModal = false;
+	}
+
+	const path: string = '/crud/insights/';
+	const description: string = 'Start Insights - Querent Admin Dashboard';
+	const title: string = 'Querent Admin Dashboard - Start Insights';
+	const subtitle: string = 'Add Insights';
 </script>
 
 <MetaTag {path} {description} {title} {subtitle} />
 
 <main class="relative h-full w-full overflow-y-auto bg-white dark:bg-gray-800">
-	<div class="p-4">
-		<Breadcrumb class="mb-5">
-			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-			<BreadcrumbItem>Add New Source</BreadcrumbItem>
-		</Breadcrumb>
-		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			List of Insights
-		</Heading>
-		<div class="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
-			{#each insightList as insight}
-				<button
-					type="button"
-					class="flex cursor-pointer flex-col items-center space-y-2"
-					on:click={() => selectInsight(insight)}
-					on:keydown={(event) => event.key === 'Enter' && selectInsight(insight)}
-					aria-label={`Select ${insight.name}`}
-				>
-					<Icon icon={insight.iconifyIcon} width="32" height="32" />
-					<span class="text-center text-gray-700 dark:text-gray-200">{insight.name}</span>
-				</button>
-			{/each}
-		</div>
+	<div class="main-content p-4">
+		{#if runningInsightId}
+			<div class="button-container">
+				<button on:click={continueRunningInsight} class="continue-button">Running Insight</button>
+				<button on:click={stopInsight} class="stop-button">Stop Insight</button>
+			</div>
+		{/if}
 
-		<Modal bind:show={showModal} message={modalMessage} />
+		<div class="p-4">
+			<Breadcrumb class="mb-5">
+				<BreadcrumbItem home>Home</BreadcrumbItem>
+				<BreadcrumbItem href="/crud/sources">Insights</BreadcrumbItem>
+				<BreadcrumbItem>Start New Insight</BreadcrumbItem>
+			</Breadcrumb>
+			<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
+				List of Insights
+			</Heading>
+			<div class="insight-grid">
+				{#if Array.isArray(insightList)}
+					{#each insightList as insight}
+						<button
+							type="button"
+							class="insight-button"
+							on:click={() => selectInsight(insight)}
+							on:keydown={(event) => event.key === 'Enter' && selectInsight(insight)}
+							aria-label={`Select ${insight.name}`}
+						>
+							<div class="insight-icon">
+								<Icon icon={insight.iconifyIcon} style="width: 32px; height: 32px;" />
+							</div>
+							<div class="insight-content">
+								<span class="insight-name">{insight.name}</span>
+								{#if insight.description}
+									<span class="insight-description">{insight.description}</span>
+								{/if}
+							</div>
+						</button>
+					{/each}
+				{:else}
+					{'Insight list is not an Array'}
+				{/if}
+			</div>
+
+			<ChatModal
+				bind:show={showChatModal}
+				insight={selectedInsightForChat}
+				insightsId={runningInsightId}
+			/>
+			<Modal bind:show={showModal} message={modalMessage} />
+
+			{#if selectedInsightForChat}
+				<AdditionalOptionalModal
+					bind:show={showAdditionalOptionModal}
+					insightInfo={selectedInsightForChat}
+					on:submit={handleSubmitOtions}
+					on:close={handleCloseAdditionalOptions}
+				/>
+			{/if}
+		</div>
 	</div>
 </main>
+
+<style>
+	.insight-grid {
+		margin-top: 1.5rem;
+		display: flex;
+		flex-wrap: wrap;
+		gap: 2rem;
+	}
+
+	@media (min-width: 640px) {
+		.insight-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.insight-grid {
+			grid-template-columns: repeat(4, 1fr);
+		}
+	}
+
+	.insight-button {
+		display: flex;
+		align-items: flex-start;
+		cursor: pointer;
+		padding: 1rem;
+		border-radius: 0.5rem;
+		transition: background-color 0.3s;
+		width: calc(50% - 1rem);
+	}
+
+	.insight-button:hover {
+		background-color: rgb(235, 225, 225);
+	}
+	.insight-icon {
+		margin-right: 1rem;
+	}
+	.insight-content {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		text-align: left;
+	}
+
+	.insight-name {
+		color: #374151;
+		font-size: 1.125rem;
+		margin-bottom: 0.25rem;
+	}
+
+	.insight-description {
+		color: black;
+		font-size: 0.875rem;
+	}
+
+	@media (min-width: 640px) {
+		.insight-button {
+			width: calc(33.333% - 1.333rem);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.insight-button {
+			width: calc(25% - 1.5rem);
+		}
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.insight-button:hover {
+			background-color: rgb(241, 241, 241);
+		}
+
+		.insight-name {
+			color: black;
+		}
+
+		.insight-description {
+			color: black;
+		}
+	}
+
+	.main-content {
+		padding-top: 10px;
+	}
+
+	.button-container {
+		position: absolute;
+		top: 20px;
+		right: 30px;
+		display: flex;
+		gap: 10px;
+	}
+
+	.stop-button,
+	.continue-button {
+		padding: 10px 20px;
+		background-color: blue;
+		color: white;
+		border: none;
+		border-radius: 5px;
+		font-size: 16px;
+		cursor: pointer;
+	}
+</style>

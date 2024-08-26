@@ -100,31 +100,38 @@ impl IndexingStatistics {
 			serde_json::from_value(qflow_counters.clone()).unwrap_or_default();
 		for counter in collection_counters {
 			let counter: CollectionCounter = serde_json::from_value(counter).unwrap_or_default();
-			self.total_docs += counter.total_docs.load(Ordering::Relaxed) as u64;
+			let total_docs_u64 = counter.total_docs.load(Ordering::Relaxed);
+			self.total_docs += total_docs_u64 as u32;
 		}
-		self.total_events = qflow_counters.total.load(Ordering::Relaxed) as u64;
-		self.total_events_processed = qflow_counters.processed.load(Ordering::Relaxed) as u64;
+		self.total_events = qflow_counters.total.load(Ordering::Relaxed) as u32;
+		self.total_events_processed = qflow_counters.processed.load(Ordering::Relaxed) as u32;
 		self.total_events_received =
-			event_streamer_counters.events_received.load(Ordering::Relaxed) as u64;
-		self.total_events_sent = event_streamer_counters.events_processed.load(Ordering::Relaxed);
-		self.total_batches = event_streamer_counters.batches_received.load(Ordering::Relaxed);
-		self.total_sentences = indexer_counters.total_sentences_indexed.load(Ordering::Relaxed);
-		self.total_subjects = indexer_counters.total_subjects_indexed.load(Ordering::Relaxed);
-		self.total_predicates = indexer_counters.total_predicates_indexed.load(Ordering::Relaxed);
-		self.total_objects = indexer_counters.total_objects_indexed.load(Ordering::Relaxed);
+			event_streamer_counters.events_received.load(Ordering::Relaxed) as u32;
+		self.total_events_sent =
+			event_streamer_counters.events_processed.load(Ordering::Relaxed) as u32;
+		self.total_batches =
+			event_streamer_counters.batches_received.load(Ordering::Relaxed) as u32;
+		self.total_sentences =
+			indexer_counters.total_sentences_indexed.load(Ordering::Relaxed) as u32;
+		self.total_subjects =
+			indexer_counters.total_subjects_indexed.load(Ordering::Relaxed) as u32;
+		self.total_predicates =
+			indexer_counters.total_predicates_indexed.load(Ordering::Relaxed) as u32;
+		self.total_objects = indexer_counters.total_objects_indexed.load(Ordering::Relaxed) as u32;
 		let total_event_map = &storage_mapper_counters.event_count_map;
 		for (event_type, counter) in total_event_map {
 			match event_type {
 				EventType::Graph => {
-					self.total_graph_events = counter.load(Ordering::Relaxed);
+					self.total_graph_events = counter.load(Ordering::Relaxed) as u32;
 				},
 				EventType::Vector => {
-					self.total_vector_events = counter.load(Ordering::Relaxed);
+					self.total_vector_events = counter.load(Ordering::Relaxed) as u32;
 				},
 				_ => {},
 			}
 		}
-		self.total_data_processed_size += ingestor_counters.total_megabytes.load(Ordering::Relaxed);
+		self.total_data_processed_size +=
+			ingestor_counters.total_megabytes.load(Ordering::Relaxed) as u32;
 		self
 	}
 }

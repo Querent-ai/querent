@@ -47,13 +47,13 @@ impl XAIClaude {
 				}),
 				value: InsightCustomOptionValue::String {
 					value: "You are a knowledgeable assistant responsible for generating a comprehensive summary of the data provided below. \
-        Given below is a user query and its graph traversal results, which have sentences from various documents along with the entities identified in the sentence. \
+        Given below is a user query and its cosine based similarity results, which have sentences from various documents. \
         Please concatenate all of these into a single, comprehensive description that answers the user's query making sure to use information collected from all the sentences. \
-        If the provided traversal results are contradictory, please resolve the contradictions and provide a single, coherent summary. \
+        If the results are contradictory, please resolve the contradictions and provide a single, coherent summary (approximately 300 - 500 words). \
         Make sure it is written in third person, and make sure we have the full context.".to_string(),
 					hidden: Some(false),
 				},
-				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using Calude AI.".to_string()),
+				tooltip: Some("Custom prompt for generating insights. If provided, this prompt will be used instead of the default prompt to generate a summary of results using Calude AI. This free tool does not parse the actual documents but materializes responses using data fabric as a guardrails for llm.".to_string()),
 
 			},
 		);

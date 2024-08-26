@@ -61,7 +61,7 @@ impl XAI {
 			info: InsightInfo {
 				id: "querent.insights.x_ai.openai".to_string(),
 				name: "Querent xAI with GPT35 Turbo".to_string(),
-				description: "xAI utilizes generative models to perform a directed traversal in R!AN's attention data fabric.".to_string(),
+				description: "xAI utilizes generative models to perform a directed traversal in R!AN's attention data fabric. This free tool does not parse the actual documents but materializes responses using data fabric as a guardrails for llm. ".to_string(),
 				version: "1.0.0".to_string(),
 				author: "Querent AI".to_string(),
 				license: "Apache-2.0".to_string(),

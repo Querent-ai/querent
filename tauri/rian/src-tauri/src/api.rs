@@ -1,12 +1,16 @@
 use insights::InsightInfo;
 use log::info;
-use proto::{semantics::SemanticPipelineResponse, InsightAnalystResponse};
+use proto::{
+    semantics::IndexingStatistics, semantics::IngestedTokens, semantics::SemanticPipelineResponse,
+    InsightAnalystResponse,
+};
 
 use crate::{
-    UpdateResult, QUERENT_SERVICES, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
+    UpdateResult, QUERENT_SERVICES_ONCE, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
     RUNNING_PIPELINE_ID, UPDATE_RESULT,
 };
 use node::ApiKeyPayload;
+use std::env;
 
 #[tauri::command]
 #[specta::specta]
@@ -22,13 +26,13 @@ pub fn get_update_result() -> (bool, Option<UpdateResult>) {
 #[tauri::command]
 #[specta::specta]
 pub fn check_if_service_is_running() -> bool {
-    QUERENT_SERVICES.get().is_some()
+    QUERENT_SERVICES_ONCE.get().is_some()
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn has_rian_license_key() -> bool {
-    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let secret_store = QUERENT_SERVICES_ONCE.get().unwrap().secret_store.clone();
     let result = node::serve::health_check_api::get_api_key(secret_store).await;
     if result.is_ok() {
         match result {
@@ -55,7 +59,7 @@ pub async fn has_rian_license_key() -> bool {
 #[tauri::command]
 #[specta::specta]
 pub async fn set_rian_license_key(key: String) -> bool {
-    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let secret_store = QUERENT_SERVICES_ONCE.get().unwrap().secret_store.clone();
     let payload = ApiKeyPayload { key };
     let result = node::serve::health_check_api::set_api_key(payload, secret_store).await;
     if result.is_ok() {
@@ -70,7 +74,7 @@ pub async fn set_rian_license_key(key: String) -> bool {
 #[tauri::command]
 #[specta::specta]
 pub async fn set_collectors(collectors: Vec<proto::semantics::CollectorConfig>) -> bool {
-    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let secret_store = QUERENT_SERVICES_ONCE.get().unwrap().secret_store.clone();
     let result = node::serve::semantic_api::set_collectors_all(collectors, secret_store).await;
     if result.is_ok() {
         info!("Collectors set successfully");
@@ -84,7 +88,7 @@ pub async fn set_collectors(collectors: Vec<proto::semantics::CollectorConfig>) 
 #[tauri::command]
 #[specta::specta]
 pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
-    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
+    let secret_store = QUERENT_SERVICES_ONCE.get().unwrap().secret_store.clone();
     let result = node::serve::semantic_api::list_collectors(secret_store).await;
     if result.is_ok() {
         info!("Collectors retrieved successfully");
@@ -100,12 +104,15 @@ pub async fn get_collectors() -> proto::semantics::ListCollectorConfig {
 pub async fn start_agn_fabric(
     request: proto::semantics::SemanticPipelineRequest,
 ) -> Result<SemanticPipelineResponse, String> {
-    let secret_store = QUERENT_SERVICES.get().unwrap().secret_store.clone();
-    let semantic_service_mailbox = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
-    let event_storages = QUERENT_SERVICES.get().unwrap().event_storages.clone();
-    let index_storages = QUERENT_SERVICES.get().unwrap().index_storages.clone();
-    let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
-
+    let secret_store = QUERENT_SERVICES_ONCE.get().unwrap().secret_store.clone();
+    let semantic_service_mailbox = QUERENT_SERVICES_ONCE
+        .get()
+        .unwrap()
+        .semantic_service_bus
+        .clone();
+    let event_storages = QUERENT_SERVICES_ONCE.get().unwrap().event_storages.clone();
+    let index_storages = QUERENT_SERVICES_ONCE.get().unwrap().index_storages.clone();
+    let metadata_store = QUERENT_SERVICES_ONCE.get().unwrap().metadata_store.clone();
     let result = node::serve::semantic_api::start_pipeline(
         request.clone(),
         semantic_service_mailbox,
@@ -115,7 +122,6 @@ pub async fn start_agn_fabric(
         metadata_store,
     )
     .await;
-
     match result {
         Ok(response) => {
             info!("Pipeline started successfully");
@@ -140,7 +146,7 @@ pub async fn get_running_agns() -> Vec<(String, proto::semantics::SemanticPipeli
 #[tauri::command]
 #[specta::specta]
 pub async fn get_past_agns() -> Result<proto::semantics::PipelineRequestInfoList, String> {
-    let metadata_store = QUERENT_SERVICES.get().unwrap().metadata_store.clone();
+    let metadata_store = QUERENT_SERVICES_ONCE.get().unwrap().metadata_store.clone();
     let result = node::serve::semantic_api::rest::get_pipelines_history(metadata_store).await;
     match result {
         Ok(response) => {
@@ -157,7 +163,11 @@ pub async fn get_past_agns() -> Result<proto::semantics::PipelineRequestInfoList
 #[tauri::command]
 #[specta::specta]
 pub async fn stop_agn_fabric(pipeline_id: String) -> Result<(), String> {
-    let message_bus = QUERENT_SERVICES.get().unwrap().semantic_service_bus.clone();
+    let message_bus = QUERENT_SERVICES_ONCE
+        .get()
+        .unwrap()
+        .semantic_service_bus
+        .clone();
     let result = node::serve::semantic_api::stop_pipeline(pipeline_id.clone(), message_bus).await;
     match result {
         Ok(_) => {
@@ -187,7 +197,11 @@ pub async fn send_discovery_retriever_request(
             semantic_pipeline_id: "".to_string(),
             session_type: Some(proto::discovery::DiscoveryAgentType::Retriever),
         };
-        let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
+        let discover_service = QUERENT_SERVICES_ONCE
+            .get()
+            .unwrap()
+            .discovery_service
+            .clone();
         let result = node::serve::discovery_api::start_discovery_session_handler(
             discovery_session_request.clone(),
             discover_service,
@@ -204,13 +218,20 @@ pub async fn send_discovery_retriever_request(
             }
         }
     }
-
+    let discovery_session_id = RUNNING_DISCOVERY_SESSION_ID.lock().clone();
+    if discovery_session_id.is_empty() {
+        return Err("Failed to start discovery session".to_string());
+    }
     let discovery_request = proto::discovery::DiscoveryRequest {
         query: search_query.clone(),
         session_id: discovery_session_id,
         top_pairs: top_pairs.clone(),
     };
-    let discover_service = QUERENT_SERVICES.get().unwrap().discovery_service.clone();
+    let discover_service = QUERENT_SERVICES_ONCE
+        .get()
+        .unwrap()
+        .discovery_service
+        .clone();
     let result =
         node::serve::discovery_api::discovery_post_handler(discovery_request, discover_service)
             .await;
@@ -245,7 +266,7 @@ pub async fn list_available_insights() -> Result<Vec<InsightInfo>, String> {
 #[tauri::command]
 #[specta::specta]
 pub async fn list_past_insights() -> Result<proto::insights::InsightRequestInfoList, String> {
-    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let insight_service = QUERENT_SERVICES_ONCE.get().unwrap().insight_service.clone();
     let result = node::serve::insight_api::rest::get_pipelines_history(insight_service).await;
     match result {
         Ok(response) => {
@@ -264,7 +285,7 @@ pub async fn list_past_insights() -> Result<proto::insights::InsightRequestInfoL
 pub async fn trigger_insight_analyst(
     request: proto::insights::InsightAnalystRequest,
 ) -> Result<InsightAnalystResponse, String> {
-    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let insight_service = QUERENT_SERVICES_ONCE.get().unwrap().insight_service.clone();
     let result = node::serve::insight_api::rest::start_insight_session_handler(
         request.clone(),
         insight_service,
@@ -296,7 +317,7 @@ pub async fn get_running_insight_analysts() -> Vec<(String, proto::insights::Ins
 #[tauri::command]
 #[specta::specta]
 pub async fn stop_insight_analyst(session_id: String) -> Result<(), String> {
-    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let insight_service = QUERENT_SERVICES_ONCE.get().unwrap().insight_service.clone();
     let stop_req = proto::insights::StopInsightSessionRequest {
         session_id: session_id.clone(),
     };
@@ -323,7 +344,7 @@ pub async fn stop_insight_analyst(session_id: String) -> Result<(), String> {
 pub async fn prompt_insight_analyst(
     request: proto::insights::InsightQuery,
 ) -> Result<proto::insights::InsightQueryResponse, String> {
-    let insight_service = QUERENT_SERVICES.get().unwrap().insight_service.clone();
+    let insight_service = QUERENT_SERVICES_ONCE.get().unwrap().insight_service.clone();
     let result =
         node::serve::insight_api::rest::insights_prompt_handler(request, insight_service).await;
     match result {
@@ -334,6 +355,71 @@ pub async fn prompt_insight_analyst(
         Err(e) => {
             info!("Failed to prompt insight: {:?}", e);
             Err(e.to_string())
+        }
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_drive_credentials() -> Result<(String, String), String> {
+    let drive_client_id = env::var("DRIVE_CLIENT_ID").map_err(|e| e.to_string())?;
+    let drive_client_secret = env::var("DRIVE_CLIENT_SECRET").map_err(|e| e.to_string())?;
+
+    Ok((drive_client_id, drive_client_secret))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn delete_collectors(id: proto::semantics::DeleteCollectorRequest) -> bool {
+    let secret_store = QUERENT_SERVICES_ONCE.get().unwrap().secret_store.clone();
+    let result = node::serve::semantic_api::delete_collectors(id, secret_store).await;
+    if result.is_ok() {
+        info!("Source delete successfully");
+        true
+    } else {
+        info!("Failed to delete Source");
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn ingest_tokens(tokens: Vec<IngestedTokens>, pipeline_id: String) -> bool {
+    let semantic_service_mailbox = QUERENT_SERVICES_ONCE
+        .get()
+        .unwrap()
+        .semantic_service_bus
+        .clone();
+
+    let result =
+        node::serve::semantic_api::ingest_tokens(pipeline_id, tokens, semantic_service_mailbox)
+            .await;
+    if result.is_ok() {
+        info!("Data ingested successfully");
+        true
+    } else {
+        info!("Failed to ingest data");
+        false
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn describe_pipeline(pipeline_id: String) -> Result<IndexingStatistics, String> {
+    let semantic_service_mailbox = QUERENT_SERVICES_ONCE.get();
+    if semantic_service_mailbox.is_none() {
+        return Err("Semantic service not found".to_string());
+    }
+    let semantic_service_mailbox = semantic_service_mailbox
+        .unwrap()
+        .semantic_service_bus
+        .clone();
+    let result =
+        node::serve::semantic_api::describe_pipeline(pipeline_id, semantic_service_mailbox).await;
+    match result {
+        Ok(response) => Ok(response),
+        Err(e) => {
+            return Err(e.to_string());
         }
     }
 }

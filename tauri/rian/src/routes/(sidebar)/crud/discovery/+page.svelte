@@ -1,19 +1,18 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
-	import PdfIcon from './PDFIcon.svelte';
 	import {
 		discoveryApiResponseStore,
 		discoverylist,
 		discoveryPageNumber,
+		discoverySessionId,
 		firstDiscovery,
 		type DiscoveryDataPageList
 	} from '../../../../stores/appState';
-	import { get } from 'svelte/store';
+	import { get, writable } from 'svelte/store';
 	import { onMount, tick } from 'svelte';
 	import { commands, type DiscoveryResponse } from '../../../../service/bindings';
 	import Modal from '../sources/add/Modal.svelte';
-
-	import FakeData from './fake_data.json';
+	import LoadingModal from './LoadingModal.svelte';
 
 	let categoriesDropdown: string[] | null;
 	let currentCategory: {
@@ -24,10 +23,11 @@
 		tags: string;
 		top_pairs: string[];
 	}[];
+	const isLoading = writable(false);
 
-	const api_response: DiscoveryResponse = FakeData;
-	// $: categories = $discoveryApiResponseStore ? $discoveryApiResponseStore : [];
-	$: categories = api_response.insights;
+	$: firstDiscoveryRequest = get(firstDiscovery);
+
+	$: categories = $discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : [];
 
 	$: {
 		currentCategory = categories.filter((cat) => cat.tags !== 'Filters');
@@ -37,6 +37,13 @@
 		} else {
 			categoriesDropdown = [];
 		}
+
+		let dropdown = categories.filter((cat) => cat.tags === 'Filters');
+		if (dropdown.length > 0) {
+			categoriesDropdown = dropdown[0].top_pairs;
+			categoriesDropdown = [...categoriesDropdown, categories[0].top_pairs[0]];
+			categoriesDropdown = [...categoriesDropdown, categories[1].top_pairs[0]];
+		}
 	}
 
 	onMount(async () => {
@@ -44,10 +51,11 @@
 
 		if ((!discovery_data || discovery_data.length < 1) && get(firstDiscovery)) {
 			console.log('Starting discovery session');
-
+			isLoading.set(true);
 			const res = await commands.sendDiscoveryRetrieverRequest('', []);
 
 			if (res.status == 'ok') {
+				discoverySessionId.set(res.data.session_id);
 				let discoveryData: DiscoveryDataPageList = {
 					page_number: res.data.page_ranking,
 					data: res.data.insights
@@ -62,12 +70,13 @@
 
 				if (insights) {
 					categories = insights;
+					discoveryApiResponseStore.set(insights);
 				}
+			} else {
+				console.log('Unable to start discovery session ', res.error);
 			}
+			isLoading.set(false);
 		} else {
-			console.log('We are coming here again');
-			console.log('Data   ', discovery_data);
-			console.log('Abcd   ', get(firstDiscovery));
 			const currentList = get(discoverylist);
 
 			const matchingPage = currentList.find(
@@ -78,6 +87,7 @@
 
 			if (insights) {
 				categories = insights;
+				discoveryApiResponseStore.set(insights);
 			}
 		}
 	});
@@ -90,21 +100,30 @@
 	let selectedCategories: any[] = [];
 
 	async function toggleCategory(category: string) {
-		const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		isLoading.set(true);
+		try {
+			selectedCategories.push(category);
+			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
 
-		if (res.status == 'ok') {
-			let discoveryData: DiscoveryDataPageList = {
-				page_number: res.data.page_ranking,
-				data: res.data.insights
-			};
-			discoverylist.update((currentList) => {
-				return [...currentList, discoveryData];
-			});
-			const insights = res.data.insights;
+			if (res.status == 'ok') {
+				let discoveryData: DiscoveryDataPageList = {
+					page_number: res.data.page_ranking,
+					data: res.data.insights
+				};
+				discoverylist.update((currentList) => {
+					return [...currentList, discoveryData];
+				});
+				const insights = res.data.insights;
 
-			if (insights) {
-				discoveryApiResponseStore.set(insights);
+				if (insights) {
+					discoveryApiResponseStore.set(insights);
+				}
 			}
+		} catch (error) {
+			console.log('Got error while sending API request ', error);
+		} finally {
+			isLoading.set(false);
+			selectedCategories = [];
 		}
 	}
 
@@ -116,40 +135,46 @@
 			return;
 		}
 
-		console.log('Selected categories  ', selectedCategories);
-		console.log('User entered:', inputValue);
 		query = inputValue;
 		inputValue = '';
 
-		const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		isLoading.set(true);
 
-		if (res.status == 'ok') {
-			if (res.data.insights.length == 0) {
-				console.log('Length is zero');
-				return;
+		try {
+			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+
+			if (res.status == 'ok') {
+				if (res.data.insights.length == 0) {
+					console.log('Length is zero');
+					return;
+				}
+				let discoveryData: DiscoveryDataPageList = {
+					page_number: res.data.page_ranking,
+					data: res.data.insights
+				};
+
+				discoverylist.set([discoveryData]);
+
+				const insights = res.data.insights;
+
+				if (insights) {
+					categories = insights;
+					discoveryApiResponseStore.set(insights);
+				}
+			} else {
+				console.log('Error while sending the request ', res.error);
 			}
-			let discoveryData: DiscoveryDataPageList = {
-				page_number: res.data.page_ranking,
-				data: res.data.insights
-			};
-
-			discoverylist.update((currentList) => {
-				return [...currentList, discoveryData];
-			});
-
-			const insights = res.data.insights;
-
-			if (insights) {
-				discoveryApiResponseStore.set(insights);
-			}
+		} catch (error) {
+			console.log('Got error while sending request ', error);
+		} finally {
+			isLoading.set(false);
 		}
 	}
 
 	async function handlePrevious() {
 		const discoveryData = get(discoverylist);
 		const pageNumber = get(discoveryPageNumber);
-		if (pageNumber < 1) {
-			console.log('Already on first page');
+		if (pageNumber <= 1) {
 			return;
 		}
 		const previousPageData = discoveryData.find((item) => item.page_number === pageNumber - 1);
@@ -157,32 +182,44 @@
 		const insights = previousPageData?.data;
 
 		if (insights) {
+			categories = insights;
 			discoveryApiResponseStore.set(insights);
+		} else {
+			console.log('No data available page number ', pageNumber);
 		}
 	}
 
 	async function handleNext() {
-		const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		isLoading.set(true);
 
-		if (res.status == 'ok') {
-			if (res.data.insights.length == 0) {
-				console.log('Length is zero');
-				return;
+		try {
+			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+
+			if (res.status == 'ok') {
+				if (res.data.insights.length == 0) {
+					return;
+				}
+				let discoveryData: DiscoveryDataPageList = {
+					page_number: res.data.page_ranking,
+					data: res.data.insights
+				};
+
+				discoveryPageNumber.set(res.data.page_ranking);
+
+				discoverylist.update((currentList) => {
+					return [...currentList, discoveryData];
+				});
+
+				const insights = res.data.insights;
+
+				if (insights) {
+					discoveryApiResponseStore.set(insights);
+				}
 			}
-			let discoveryData: DiscoveryDataPageList = {
-				page_number: res.data.page_ranking,
-				data: res.data.insights
-			};
-
-			discoverylist.update((currentList) => {
-				return [...currentList, discoveryData];
-			});
-
-			const insights = res.data.insights;
-
-			if (insights) {
-				discoveryApiResponseStore.set(insights);
-			}
+		} catch (error) {
+			console.log('Got error as ', error);
+		} finally {
+			isLoading.set(false);
 		}
 	}
 
@@ -193,8 +230,6 @@
 	const toggleButton = document.getElementById('toggleButton') as HTMLInputElement;
 
 	async function handleToggleOn(): Promise<void> {
-		console.log('Handle function');
-
 		await tick();
 		setTimeout(() => {
 			isToggleOn = false;
@@ -211,6 +246,29 @@
 		} else {
 			console.log('Toggle is turned off');
 		}
+	}
+
+	function extractFileNameWithExtension(filePath: string): string {
+		const parts = filePath.split('/');
+		return parts[parts.length - 1];
+	}
+
+	function getIconForDocument(documentName: string): string {
+		const extension = documentName.split('.').pop()?.toLowerCase() || '';
+		const iconMap: { [key: string]: string } = {
+			pdf: 'vscode-icons:file-type-pdf2',
+			doc: 'icon-park-outline:file-doc',
+			docx: 'bi:filetype-docx',
+			xls: 'ph:file-xls',
+			xlsx: 'bi:filetype-xlsx',
+			ppt: 'ph:file-ppt',
+			pptx: 'bi:filetype-pptx',
+			txt: 'ph:file-txt-light',
+			jpg: 'ph:file-jpg-light',
+			jpeg: 'ph:file-jpeg-light'
+		};
+
+		return iconMap[extension] || 'vscode-icons:default-file';
 	}
 </script>
 
@@ -308,9 +366,18 @@
 						<div class={index % 3 === 0 ? 'full-width-card' : 'small-card'}>
 							<div class="card-content">
 								<div class="svg-container">
-									<PdfIcon />
+									<Icon
+										icon={getIconForDocument(extractFileNameWithExtension(category.document))}
+										style="width: 32px; height: 32px;"
+									/>
 								</div>
-								<p class="tagline font-semibold">{category.tags}</p>
+								<p class="tagline font-semibold">
+									{#if firstDiscoveryRequest}
+										{category.tags}
+									{:else}
+										{extractFileNameWithExtension(category.document)}
+									{/if}
+								</p>
 								<p class="main-paragraph">
 									{category.sentence}
 								</p>
@@ -325,8 +392,8 @@
 									</div>
 									<div class="documents">
 										<Icon icon="flat-color-icons:document" />
-										<span class="label-text">Document</span>
-										<span class="tooltip">{category.document}</span>
+										<span class="label-text">Tags</span>
+										<span class="tooltip">{category.tags}</span>
 									</div>
 								</div>
 							</div>
@@ -338,6 +405,9 @@
 	</div>
 
 	<Modal bind:show={showModal} message={modalMessage} />
+	{#if $isLoading}
+		<LoadingModal message="Please wait while we get your data...." />
+	{/if}
 </main>
 
 <style>
@@ -674,8 +744,8 @@
 		left: 50%;
 		transform: translateX(-50%);
 		font-size: 12px;
-		height: 80px;
-		width: 500px;
+		min-height: 20px;
+		min-width: 50px;
 		overflow-x: inherit;
 	}
 

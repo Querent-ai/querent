@@ -4,22 +4,35 @@
 	import AgnIcon from './AGNIcon.svelte';
 	import CodeFabricIcon from './CodeFabricIcon.svelte';
 	import Modal from '../../sources/add/Modal.svelte';
+	import TimeSeriesFabric from './TimeSeriesFabric.svelte';
 	export let formOpen = true;
 
 	let activeForm: string | number | null = null;
 
 	const formsList = [
 		{
-			name: 'AGN',
+			name: 'Attention',
 			form: AGNForm,
 			icon: AgnIcon,
-			description: 'Attention Graph Network'
+			description: 'Attention Graph Fabric',
+			tooltip:
+				'Attention Graph Fabric is a semantic engine that weaves concepts into dynamic knowledge networks using advanced language processing and graph theory.'
 		},
 		{
-			name: 'CodeGraph',
+			name: 'Code',
 			form: null,
 			icon: CodeFabricIcon,
-			description: 'Code Fabric Engine'
+			description: 'Code Graph Fabric',
+			tooltip:
+				'Code Graph Fabric is a software analysis engine that constructs interconnected representations of codebases, enabling deep insights and intelligent navigation across complex software systems.'
+		},
+		{
+			name: 'TimeSeries',
+			form: null,
+			icon: TimeSeriesFabric,
+			description: 'Time Series Fabric',
+			tooltip:
+				'Time Series Fabric is a data processing engine that weaves temporal patterns into a rich, interconnected network for advanced forecasting and trend analysis.'
 		}
 	];
 
@@ -37,7 +50,7 @@
 			return selectedForm.form;
 		} else {
 			showModal = true;
-			modalMessage = 'This engine is available only in premium';
+			modalMessage = 'This feature is available only in premium';
 			activeForm = null;
 		}
 		return;
@@ -57,7 +70,7 @@
 			<BreadcrumbItem>Start New Pipeline</BreadcrumbItem>
 		</Breadcrumb>
 		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			List of Engines
+			Available Data Fabrics
 		</Heading>
 
 		<div class="mt-6 flex flex-wrap justify-start gap-8">
@@ -67,6 +80,7 @@
 					class="flex cursor-pointer items-start space-x-4 rounded-lg p-4 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
 					on:click={() => setActiveForm(form.name)}
 					aria-label={`Select ${form.name}`}
+					title={form.tooltip}
 				>
 					<svelte:component this={form.icon} />
 					<div class="text-left">

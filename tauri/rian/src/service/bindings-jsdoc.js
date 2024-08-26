@@ -162,6 +162,44 @@ export const commands = {
 			if (e instanceof Error) throw e;
 			else return { status: 'error', error: e };
 		}
+	},
+	/**
+	 * @returns { Promise<Result<[string, string], string>> }
+	 */
+	async getDriveCredentials() {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('get_drive_credentials') };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
+	},
+	/**
+	 * @param { DeleteCollectorRequest } id
+	 * @returns { Promise<boolean> }
+	 */
+	async deleteCollectors(id) {
+		return await TAURI_INVOKE('delete_collectors', { id });
+	},
+	/**
+	 * @param { IngestedTokens[] } tokens
+	 * @param { string } pipelineId
+	 * @returns { Promise<boolean> }
+	 */
+	async ingestTokens(tokens, pipelineId) {
+		return await TAURI_INVOKE('ingest_tokens', { tokens, pipelineId });
+	},
+	/**
+	 * @param { string } pipelineId
+	 * @returns { Promise<Result<IndexingStatistics, string>> }
+	 */
+	async describePipeline(pipelineId) {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('describe_pipeline', { pipelineId }) };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e };
+		}
 	}
 };
 
@@ -222,6 +260,10 @@ export const universalConstant = 42;
  */
 
 /**
+ * @typedef { { id: string[] } } DeleteCollectorRequest
+ */
+
+/**
  * Response message containing insights discovered from the data
  * @typedef { { session_id: string; query: string; insights: Insight[]; page_ranking: number } } DiscoveryResponse
  */
@@ -258,6 +300,14 @@ export const universalConstant = 42;
 /**
  * GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
  * @typedef { { drive_client_id: string; drive_client_secret: string; drive_refresh_token: string; folder_to_crawl: string; id: string } } GoogleDriveCollectorConfig
+ */
+
+/**
+ * @typedef { { total_docs: number; total_events: number; total_events_processed: number; total_events_received: number; total_events_sent: number; total_batches: number; total_sentences: number; total_subjects: number; total_predicates: number; total_objects: number; total_graph_events: number; total_vector_events: number; total_data_processed_size: number } } IndexingStatistics
+ */
+
+/**
+ * @typedef { { file: string; data: string[]; is_token_stream: boolean; doc_source: string; source_id: string } } IngestedTokens
  */
 
 /**

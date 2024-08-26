@@ -1,6 +1,5 @@
-use fastembed::{RerankInitOptions, RerankerModel, TextRerank};
+use common::DocumentPayload;
 use std::collections::HashMap;
-use tracing::error;
 
 /// Function to get unique contexts
 pub fn unique_sentences(
@@ -22,47 +21,8 @@ pub fn unique_sentences(
 }
 
 /// Function to extract sentences from documents
-pub fn extract_sentences(documents: &Vec<String>) -> Vec<&str> {
-	documents
-		.iter()
-		.map(|doc| {
-			let parts: Vec<&str> = doc.split(", Sentence: ").collect();
-			parts[1]
-		})
-		.collect()
-}
-
-/// Function to rerank documents based on a query
-pub fn rerank_documents(query: &str, documents: Vec<String>) -> Option<Vec<(String, f32)>> {
-	let model = match TextRerank::try_new(RerankInitOptions {
-		model_name: RerankerModel::BGERerankerBase,
-		show_download_progress: true,
-		..Default::default()
-	}) {
-		Ok(model) => model,
-		Err(e) => {
-			error!("Failed to initialize the reranker model: {:?}", e);
-			return None;
-		},
-	};
-	let sentences = extract_sentences(&documents);
-
-	let results = match model.rerank(query, sentences, true, None) {
-		Ok(results) => results,
-		Err(e) => {
-			error!("Failed to rerank documents: {:?}", e);
-			return None;
-		},
-	};
-	Some(
-		results
-			.into_iter()
-			.map(|result| {
-				let doc = &documents[result.index];
-				(doc.clone(), result.score)
-			})
-			.collect(),
-	)
+pub fn extract_sentences(documents: &Vec<DocumentPayload>) -> Vec<&str> {
+	documents.iter().map(|doc| doc.sentence.as_str()).collect()
 }
 
 /// Function to split a group of sentences into sets of 10 sentences each

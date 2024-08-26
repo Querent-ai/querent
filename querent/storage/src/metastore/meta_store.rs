@@ -323,6 +323,7 @@ impl Storage for MetaStore {
 			kind: StorageErrorKind::Serialization,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+
 		let write_txn = self.db.begin_write().map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),

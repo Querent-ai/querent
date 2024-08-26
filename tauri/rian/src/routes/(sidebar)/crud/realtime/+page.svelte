@@ -2,6 +2,8 @@
 	import { Breadcrumb, BreadcrumbItem, Button, Card, Heading } from 'flowbite-svelte';
 	import { Input, Textarea, Toggle } from 'flowbite-svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
+	import { commands, type IngestedTokens } from '../../../../service/bindings';
+	import { pipelineState } from '../../../../stores/appState';
 
 	let hidden: boolean = true;
 
@@ -17,75 +19,115 @@
 		is_token_stream: false,
 		source_id: ''
 	};
-	let ingested_tokens = {
+	let ingested_tokens: IngestedTokens = {
 		file: '',
 		data: [''],
-		isTokenStream: false,
-		docSource: '',
-		sourceId: ''
+		doc_source: '',
+		source_id: '',
+		is_token_stream: true
 	};
 
-	function handleSubmit() {
+	async function handleSubmit() {
 		ingested_tokens.data = [formData.data];
-		ingested_tokens.docSource = formData.doc_source;
+		ingested_tokens.doc_source = formData.doc_source;
 		ingested_tokens.file = formData.file;
-		ingested_tokens.isTokenStream = true;
-		ingested_tokens.sourceId = formData.source_id;
+		ingested_tokens.is_token_stream = true;
+		ingested_tokens.source_id = formData.source_id;
 
-		console.log('Form submitted:', ingested_tokens);
+		if (await commands.ingestTokens([ingested_tokens], $pipelineState.id)) {
+			console.log('Data submitted:');
+		}
 	}
 </script>
 
 <MetaTag {path} {description} {title} {subtitle} />
 
-<main class="relative h-full w-full overflow-y-auto bg-white dark:bg-gray-800">
-	<div class="p-4">
-		<Breadcrumb class="mb-5">
-			<BreadcrumbItem home>Home</BreadcrumbItem>
-			<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
-		</Breadcrumb>
-		<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
-			Realtime Sources
-		</Heading>
+<main class="main-container">
+	<div class="breadcrumb-container">
+		<div class="p-4">
+			<Breadcrumb class="mb-5">
+				<BreadcrumbItem home>Home</BreadcrumbItem>
+				<BreadcrumbItem href="/crud/sources">Sources</BreadcrumbItem>
+			</Breadcrumb>
+			<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
+				Realtime Sources
+			</Heading>
+		</div>
 	</div>
 
-	<div class="flex justify-center">
-		<Card class="m-4">
-			<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
-			<form on:submit|preventDefault={handleSubmit} class="space-y-4">
-				<div>
-					<Input
-						type="text"
-						label="Data"
-						bind:value={formData.data}
-						placeholder="Enter data string"
-					/>
-				</div>
-
-				<div>
-					<Input
-						type="text"
-						label="Doc Source"
-						bind:value={formData.doc_source}
-						placeholder="Enter doc source"
-					/>
-				</div>
-
-				<div>
-					<Input type="text" label="File" bind:value={formData.file} placeholder="Enter file" />
-				</div>
-
-				<div>
-					<Input
-						type="text"
-						label="Source ID"
-						bind:value={formData.source_id}
-						placeholder="Enter source ID"
-					/>
-				</div>
-
-				<Button type="submit">Submit</Button>
-			</form>
+	<div class="card-container">
+		<Card
+			style="max-width: 400px; width: 100%; border: 1px solid black; transition: border-color 0.3s ease; color: black;"
+			aria-label="Premium feature information"
+		>
+			This feature is only available in the premium
 		</Card>
 	</div>
+
+	<!-- {#if $pipelineState.id}
+		<div class="flex justify-center">
+			<Card class="m-4">
+				<Heading tag="h2" class="mb-4 text-center text-lg font-semibold">Enter your data</Heading>
+				<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+					<div>
+						<Input type="text" label="Data" bind:value={formData.data} placeholder="Enter data" />
+					</div>
+
+					<div>
+						<Input
+							type="text"
+							label="Doc Source"
+							bind:value={formData.doc_source}
+							placeholder="Enter data source"
+						/>
+					</div>
+
+					<div>
+						<Input
+							type="text"
+							label="File"
+							bind:value={formData.file}
+							placeholder="Enter file name"
+						/>
+					</div>
+
+					<div>
+						<Input
+							type="text"
+							label="Source ID"
+							bind:value={formData.source_id}
+							placeholder="Enter source name"
+						/>
+					</div>
+
+					<Button type="submit">Submit</Button>
+				</form>
+			</Card>
+		</div>
+	{/if} -->
 </main>
+
+<style>
+	.main-container {
+		position: relative;
+		height: 100%;
+		width: 100%;
+		overflow-y: auto;
+		background-color: white;
+	}
+
+	:global(.dark) .main-container {
+		background-color: #1f2937;
+	}
+
+	.breadcrumb-container {
+		padding: 1rem;
+	}
+
+	.card-container {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		height: calc(100% - 150px);
+	}
+</style>

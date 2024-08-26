@@ -1,20 +1,21 @@
 use api::{
-    check_if_service_is_running, get_collectors, get_past_agns, get_running_agns,
-    get_running_insight_analysts, get_update_result, has_rian_license_key, list_available_insights,
+    check_if_service_is_running, delete_collectors, describe_pipeline, get_collectors,
+    get_drive_credentials, get_past_agns, get_running_agns, get_running_insight_analysts,
+    get_update_result, has_rian_license_key, ingest_tokens, list_available_insights,
     list_past_insights, prompt_insight_analyst, send_discovery_retriever_request, set_collectors,
     set_rian_license_key, start_agn_fabric, stop_agn_fabric, stop_insight_analyst,
     trigger_insight_analyst,
 };
+use common::TerimateSignal;
 use log::{error, info};
-use node::{
-    service::serve_quester_without_servers, shutdown_querent, tokio_runtime, QuerentServices,
-};
+use node::serve::service::QUERENT_SERVICES_ONCE;
+use node::{serve_quester_without_servers, shutdown_querent};
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
 use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
 #[cfg(debug_assertions)]
 use specta_typescript::Typescript;
-use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
+use std::sync::{atomic::AtomicBool, atomic::Ordering};
 use sysinfo::System;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -32,7 +33,6 @@ mod windows;
 pub static APP_HANDLE: OnceCell<AppHandle> = OnceCell::new();
 pub static ALWAYS_ON_TOP: AtomicBool = AtomicBool::new(false);
 pub static CPU_VENDOR: Mutex<String> = Mutex::new(String::new());
-pub static QUERENT_SERVICES: OnceCell<Arc<QuerentServices>> = OnceCell::new();
 pub static UPDATE_RESULT: Mutex<Option<Option<UpdateResult>>> = Mutex::new(None);
 pub static RUNNING_PIPELINE_ID: Mutex<Vec<(String, SemanticPipelineRequest)>> =
     Mutex::new(Vec::new());
@@ -68,10 +68,11 @@ fn query_accessibility_permissions() -> bool {
 pub struct Custom(pub String);
 
 #[allow(deprecated)]
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run(node_config: NodeConfig) {
     info!("Starting R!AN 🧠 with config: {:?}", node_config);
     let mut sys = System::new();
+    let terimante_sig = TerimateSignal::default();
+    let sig_clone = terimante_sig.clone();
     sys.refresh_cpu_all();
     if let Some(cpu) = sys.cpus().first() {
         *CPU_VENDOR.lock() = cpu.vendor_id().to_string();
@@ -95,7 +96,11 @@ pub fn run(node_config: NodeConfig) {
             get_running_insight_analysts,
             stop_insight_analyst,
             prompt_insight_analyst,
-            get_past_agns
+            get_past_agns,
+            get_drive_credentials,
+            delete_collectors,
+            ingest_tokens,
+            describe_pipeline
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,
@@ -156,14 +161,13 @@ pub fn run(node_config: NodeConfig) {
             tray::create_tray(&app_handle)?;
             app_handle.plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
             app_handle.plugin(tauri_plugin_updater::Builder::new().build())?;
-            let runtime = tokio_runtime().expect("Failed to initialize Tokio runtime");
-
-            start_querent_services(runtime, node_config.clone());
-
+            // start querent services
+            tauri::async_runtime::spawn(start_querent_services(node_config.clone(), sig_clone));
             if !query_accessibility_permissions() {
                 if let Some(window) = app.get_webview_window("rian") {
                     window.minimize().unwrap();
                 }
+
                 app.notification()
                     .builder()
                     .title("Accessibility permissions")
@@ -183,11 +187,11 @@ pub fn run(node_config: NodeConfig) {
 
     #[cfg(target_os = "macos")]
     app.set_activation_policy(tauri::ActivationPolicy::Regular);
-
-    app.run(move |app, event| match event {
+    app.run(move |app: &AppHandle, event: tauri::RunEvent| match event {
         tauri::RunEvent::Exit { .. } => {
-            if let Some(services) = QUERENT_SERVICES.get() {
+            if let Some(services) = QUERENT_SERVICES_ONCE.get() {
                 let services = services.clone();
+                terimante_sig.kill();
                 tauri::async_runtime::spawn(async move {
                     if let Err(err) = shutdown_querent(&services).await {
                         error!("Failed to shut down QuerentServices: {:?}", err);
@@ -230,21 +234,6 @@ pub fn run(node_config: NodeConfig) {
     });
 }
 
-fn start_querent_services(runtime: &tokio::runtime::Runtime, node_config: NodeConfig) {
-    runtime.spawn(async move {
-        match serve_quester_without_servers(node_config).await {
-            Ok(services) => {
-                if QUERENT_SERVICES.set(services).is_err() {
-                    error!("Failed to set QuerentServices");
-                }
-            }
-            Err(err) => {
-                error!("Failed to start QuerentServices: {:?}", err);
-            }
-        }
-    });
-}
-
 fn schedule_update_checks(app_handle: AppHandle) {
     tauri::async_runtime::spawn(async move {
         loop {
@@ -282,4 +271,17 @@ fn monitor_pinned_event(app_handle: AppHandle) {
         ALWAYS_ON_TOP.store(event.payload.pinned().clone(), Ordering::Release);
         tray::create_tray(&app_handle).unwrap();
     });
+}
+
+async fn start_querent_services(node_config: NodeConfig, terminate_sig: TerimateSignal) {
+    match serve_quester_without_servers(node_config, terminate_sig.clone()).await {
+        // if error occurs, we should terminate the app
+        Ok(_) => {
+            println!("QuerentServices started successfully");
+        }
+        Err(err) => {
+            error!("Failed to start QuerentServices: {:?}", err);
+            terminate_sig.kill();
+        }
+    }
 }

@@ -11,6 +11,10 @@ pub mod insight_utils;
 pub use insight_utils::*;
 pub mod anomaly_detection;
 pub use anomaly_detection::*;
+pub mod cross_document_summarization;
+pub use cross_document_summarization::*;
+pub mod report_generation;
+pub use report_generation::*;
 
 pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
@@ -24,6 +28,10 @@ pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 		tl_insight::TLV1::new().info().await,
 		// Anomaly detection insights: Anomaly detection insights
 		anomaly_insights::ADV1::new().info().await,
+		// Cross Document Summarization: Cross Document Summarization
+		cds_insight::CDSV1::new().info().await,
+		// Report Generation: Report Generation
+		report_generation_insight::RGV1::new().info().await,
 	]
 }
 

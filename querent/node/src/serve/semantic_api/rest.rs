@@ -167,10 +167,14 @@ pub async fn describe_pipeline(
 	pipeline_id: String,
 	semantic_service_mailbox: MessageBus<SemanticService>,
 ) -> Result<IndexingStatistics, PipelineErrors> {
-	let counters = semantic_service_mailbox.ask(ObservePipeline { pipeline_id }).await;
+	let counters: Result<Result<IndexingStatistics, PipelineErrors>, AskError<Infallible>> =
+		semantic_service_mailbox.ask(ObservePipeline { pipeline_id }).await;
 	match counters {
 		Ok(counters) => counters,
-		Err(_e) => Ok(IndexingStatistics::default()),
+		Err(_e) => {
+			println!("Error in describe pipeline: {:?}", _e);
+			return Ok(IndexingStatistics::default());
+		},
 	}
 }
 

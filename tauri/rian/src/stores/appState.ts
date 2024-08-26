@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { Insight } from '../service/bindings';
+import type { CollectorConfig, Insight } from '../service/bindings';
 export const isVisible = writable(false);
 
 function saveToLocalStorage(key: string, value: any) {
@@ -18,12 +18,6 @@ function getFromLocalStorage(key: string, defaultValue: any) {
 	}
 }
 
-export function clearDataSources(): void {
-	dataSources.set([]);
-	saveToLocalStorage('dataSources', []);
-}
-
-const initialStateDataSources: CollectorMetadata[] = getFromLocalStorage('dataSources', []);
 const initialStatePipeline: PipelineState = getFromLocalStorage('pipelineState', {
 	mode: 'idle',
 	id: null
@@ -45,8 +39,9 @@ interface PipelineState {
 export interface PipelinesData {
 	id: string;
 	sources: string[];
-	fixed_entities: string[];
-	sample_entities: string[];
+	fixed_entities: string[] | undefined;
+	sample_entities: string[] | undefined;
+	mode: string;
 }
 
 export interface DiscoveryData {
@@ -70,7 +65,7 @@ export interface DiscoveryDataPageList {
 	data: Insight[];
 }
 
-export const dataSources = writable<CollectorMetadata[]>(initialStateDataSources);
+export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
 export const areCollectorsModified = writable(false);
@@ -79,6 +74,16 @@ export const dropdownDiscovery = writable<DiscoveryData>();
 export const firstDiscovery = writable(true);
 export const discoveryPageNumber = writable<number>(1);
 export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
+export const discoverySessionId = writable<string>();
+export const runningInsight = writable<string>('');
+
+runningInsight.subscribe(($runningInsight) => {
+	saveToLocalStorage('runningInsight', $runningInsight);
+});
+
+discoverySessionId.subscribe(($sessionId) => {
+	saveToLocalStorage('discoverySessionId', $sessionId);
+});
 
 pipelines.subscribe(($pipelines) => {
 	saveToLocalStorage('pipelinesList', $pipelines);
@@ -92,27 +97,33 @@ pipelineState.subscribe(($pipelineState) => {
 	saveToLocalStorage('PipelinesData', $pipelineState);
 });
 
-pipelineState.subscribe(($discoveryList) => {
+discoverylist.subscribe(($discoveryList) => {
 	saveToLocalStorage('discoveryList', $discoveryList);
 });
 
-pipelineState.subscribe(($dropdownDiscovery) => {
+dropdownDiscovery.subscribe(($dropdownDiscovery) => {
 	saveToLocalStorage('dropdownDiscovery', $dropdownDiscovery);
 });
 
-pipelineState.subscribe(($discoveryPageNumber) => {
+discoveryPageNumber.subscribe(($discoveryPageNumber) => {
 	saveToLocalStorage('discoveryPageNumber', $discoveryPageNumber);
 });
 
-pipelineState.subscribe(($discoveryApiResponseStore) => {
+discoveryApiResponseStore.subscribe(($discoveryApiResponseStore) => {
 	saveToLocalStorage('discoveryApiResponseStore', $discoveryApiResponseStore);
 });
 
 export function addPipelinesToList(pipeline: PipelinesData): void {
-	pipelines.update((currentPipelines) => [...currentPipelines, pipeline]);
+	pipelines.update((currentPipelines) => {
+		if (Array.isArray(currentPipelines)) {
+			return [...currentPipelines, pipeline];
+		} else {
+			return [pipeline];
+		}
+	});
 }
 
-export function addDataSource(source: CollectorMetadata): void {
+export function addDataSource(source: CollectorConfig): void {
 	dataSources.update((currentSources) => [...currentSources, source]);
 }
 
@@ -120,26 +131,6 @@ export function updatePipeline(mode: PipelineState['mode'], id: PipelineState['i
 	pipelineState.set({ id, mode });
 }
 
-export function getCurrentDataSources(): CollectorMetadata[] {
-	return get(dataSources);
-}
-
 export function getCurrentPipelineState(): PipelineState {
 	return get(pipelineState);
-}
-
-export function deleteSourcefromList(id: string): void {
-	dataSources.update((currentSources) => {
-		const updatedSources = currentSources.filter((source) => source.id !== id);
-		saveToLocalStorage('dataSources', updatedSources);
-		return updatedSources;
-	});
-}
-
-export function countSourcesByType(type: string): number {
-	const sources = get(dataSources);
-	if (sources && Array.isArray(sources)) {
-		return sources.filter((source) => source.type === type).length;
-	}
-	return 0;
 }

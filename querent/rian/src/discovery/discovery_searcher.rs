@@ -224,6 +224,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					}
 
 					while documents.len() < 10 {
+						let documents_len = documents.len();
 						let search_results;
 						if message.query.is_empty() && !message.top_pairs.is_empty() {
 							search_results = storage
@@ -329,6 +330,8 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 												sentence
 											);
 										}
+									} else {
+										break;
 									}
 								}
 							},
@@ -336,6 +339,10 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 								log::error!("Failed to search for similar documents: {}", e);
 								break;
 							},
+						}
+						// If there is no value added to documents means there is not enough information to process
+						if documents_len == documents.len() {
+							break;
 						}
 					}
 
