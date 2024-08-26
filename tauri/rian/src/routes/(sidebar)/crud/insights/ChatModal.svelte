@@ -97,7 +97,10 @@
 					isLoadingInsight.set(false);
 
 					if (res.status == 'ok') {
-						let text = res.data.response.replace(/\\n|\n/g, " ").replace(/\s+/g, " ").trim();
+						let text = res.data.response
+							.replace(/\\n|\n/g, ' ')
+							.replace(/\s+/g, ' ')
+							.trim();
 						messages = [...messages, { text: text, isUser: false }];
 
 						messagesList.update((list) => [...list, { text: text, isUser: false }]);
@@ -220,7 +223,7 @@
 		width: 20px;
 		height: 20px;
 		animation: spin 1s linear infinite;
-		position:absolute;
+		position: absolute;
 		right: 100px;
 		bottom: 45px;
 	}

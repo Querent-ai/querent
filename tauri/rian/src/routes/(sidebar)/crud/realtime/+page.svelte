@@ -57,7 +57,7 @@
 
 	<div class="card-container">
 		<Card
-			style="max-width: 400px; width: 100%; border: 1px solid black; transition: border-color 0.3s ease; color: black;"
+			style="max-width: 600px; width: 100%; border: 0px transparent; transition: border-color 0.3s ease; color: black; padding-top: 150px; padding-bottom: 150px; font-size: 24px;"
 			aria-label="Premium feature information"
 		>
 			This feature is only available in the premium
