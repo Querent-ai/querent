@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import Modal from '../sources/add/Modal.svelte';
 	import AdditionalOptionalModal from './AdditionalOptionalModal.svelte';
-	import { messagesList, runningInsight } from '../../../../stores/appState';
+	import { messagesList, insightSessionId } from '../../../../stores/appState';
 
 	let runningInsightId: string;
 
@@ -22,7 +22,7 @@
 		}
 	});
 
-	$: runningInsightId = $runningInsight;
+	$: runningInsightId = $insightSessionId;
 
 	async function stopInsight() {
 		let res = await commands.stopInsightAnalyst(runningInsightId);
@@ -30,7 +30,7 @@
 			console.log('Error while stopping the Insight');
 		}
 
-		runningInsight.set('');
+		insightSessionId.set('');
 		messagesList.set([]);
 	}
 

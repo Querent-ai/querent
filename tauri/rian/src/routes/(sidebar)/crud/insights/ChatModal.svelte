@@ -3,7 +3,7 @@
 	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import { commands, type InsightQuery } from '../../../../service/bindings';
-	import { runningInsight, isLoadingInsight, messagesList } from '../../../../stores/appState';
+	import { insightSessionId, isLoadingInsight, messagesList } from '../../../../stores/appState';
 	import { get } from 'svelte/store';
 
 	export let show = false;
@@ -36,6 +36,7 @@
 				previousMessages.forEach((message) => {
 					messages = [...messages, { text: message.text, isUser: message.isUser }];
 				});
+				sessionId = $insightSessionId;
 			} else {
 				messages = [];
 				let id: string | undefined = insight?.id;
@@ -66,7 +67,7 @@
 				let res = await commands.triggerInsightAnalyst(request);
 				isLoadingInsight.set(false);
 				if (res.status == 'ok') {
-					runningInsight.set(res.data.session_id);
+					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
 				} else {
 					console.log('Got error while starting insights ', res.error);
@@ -96,7 +97,7 @@
 					isLoadingInsight.set(false);
 
 					if (res.status == 'ok') {
-						let text = res.data.response.replace(/\n/g, ' ');
+						let text = res.data.response.replace(/\\n|\n/g, " ").replace(/\s+/g, " ").trim();
 						messages = [...messages, { text: text, isUser: false }];
 
 						messagesList.update((list) => [...list, { text: text, isUser: false }]);
@@ -206,6 +207,7 @@
 
 	.flex.h-full.items-center.justify-center .flex.items-center {
 		max-width: 80%;
+		position: relative;
 	}
 
 	.flex.h-full.items-center.justify-center p {
@@ -218,6 +220,9 @@
 		width: 20px;
 		height: 20px;
 		animation: spin 1s linear infinite;
+		position:absolute;
+		right: 100px;
+		bottom: 45px;
 	}
 
 	@keyframes spin {
