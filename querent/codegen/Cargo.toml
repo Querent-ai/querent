@@ -1,6 +1,6 @@
 [package]
 name = "codegen"
-version = "0.8.1"
+version = "0.9.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
