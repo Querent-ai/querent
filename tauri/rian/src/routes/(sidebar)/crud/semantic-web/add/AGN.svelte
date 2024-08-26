@@ -354,19 +354,13 @@
 							{#each entityTable as row, index (row.entity + row.entityType)}
 								<tr>
 									<td>
-										
-											{row.entity}
-										
+										{row.entity}
 									</td>
 									<td>
-										
-											{row.entityType}
-										
+										{row.entityType}
 									</td>
 									<td class="button-cell">
-											<button class="delete-button" on:click={() => deleteRow(index)}>Delete</button
-											>
-										
+										<button class="delete-button" on:click={() => deleteRow(index)}>Delete</button>
 									</td>
 								</tr>
 							{/each}
