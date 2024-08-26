@@ -1,5 +1,6 @@
 import { writable, get } from 'svelte/store';
 import type { CollectorConfig, Insight } from '../service/bindings';
+import { save } from '@tauri-apps/plugin-dialog';
 export const isVisible = writable(false);
 
 function saveToLocalStorage(key: string, value: any) {
@@ -76,6 +77,11 @@ export const discoveryPageNumber = writable<number>(1);
 export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
 export const discoverySessionId = writable<string>();
 export const runningInsight = writable<string>('');
+export let isLoadingInsight = writable<boolean>(false);
+
+isLoadingInsight.subscribe(($isLoadingInsight) => {
+	saveToLocalStorage('isLoading', $isLoadingInsight);
+});
 
 runningInsight.subscribe(($runningInsight) => {
 	saveToLocalStorage('runningInsight', $runningInsight);

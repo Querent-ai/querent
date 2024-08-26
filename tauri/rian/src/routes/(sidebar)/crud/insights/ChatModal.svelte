@@ -3,14 +3,17 @@
 	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import { commands, type InsightQuery } from '../../../../service/bindings';
-	import { runningInsight } from '../../../../stores/appState';
-	import { writable } from 'svelte/store';
+	import { runningInsight, isLoadingInsight } from '../../../../stores/appState';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
 	export let insightsId: string | null = null;
 	let sessionId: string;
-	let isLoading = writable<boolean>(false);
+
+	let loadingStatus: boolean;
+	$: {
+		loadingStatus = $isLoadingInsight;
+	}
 
 	let messages: { text: string; isUser: boolean }[] = [];
 	let inputMessage = '';
@@ -54,9 +57,10 @@
 					semantic_pipeline_id: '',
 					additional_options: additional_options
 				};
-				isLoading.set(true);
+				isLoadingInsight.set(true);
 
 				let res = await commands.triggerInsightAnalyst(request);
+				isLoadingInsight.set(false);
 				if (res.status == 'ok') {
 					runningInsight.set(res.data.session_id);
 					sessionId = res.data.session_id;
@@ -67,14 +71,13 @@
 		} catch (error) {
 			console.log('Got error while starting insights ', error);
 		} finally {
-			isLoading.set(false);
+			isLoadingInsight.set(false);
 		}
 	}
 
 	function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
-			isLoading.set(true);
 			let query = inputMessage;
 			try {
 				setTimeout(async () => {
@@ -82,10 +85,11 @@
 						session_id: sessionId,
 						query: query
 					};
+					isLoadingInsight.set(true);
 					let res = await commands.promptInsightAnalyst(request);
+					isLoadingInsight.set(false);
 
 					if (res.status == 'ok') {
-						console.log('This is the response ----------------', res.data.response);
 						messages = [
 							...messages,
 							{ text: res.data.response.replace(/\n/g, ' '), isUser: false }
@@ -98,9 +102,10 @@
 			} catch (error) {
 				console.log('Got error while calling insights ', error);
 			} finally {
-				isLoading.set(false);
+				isLoadingInsight.set(false);
 			}
 		}
+		isLoadingInsight.set(false);
 	}
 
 	async function closeModal() {
@@ -146,7 +151,7 @@
 			id="searchInput"
 			bind:value={inputMessage}
 		/>
-		{#if $isLoading}
+		{#if loadingStatus}
 			<div class="loader mr-2"></div>
 		{/if}
 		<Button type="submit">Send</Button>
