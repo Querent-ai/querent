@@ -1,6 +1,5 @@
 import { writable, get } from 'svelte/store';
 import type { CollectorConfig, Insight } from '../service/bindings';
-import { save } from '@tauri-apps/plugin-dialog';
 export const isVisible = writable(false);
 
 function saveToLocalStorage(key: string, value: any) {
@@ -66,6 +65,13 @@ export interface DiscoveryDataPageList {
 	data: Insight[];
 }
 
+export interface MessageType {
+	text: string;
+	isUser: boolean;
+}
+
+const initialMessagesList: MessageType[] = getFromLocalStorage('messagesList', []);
+
 export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
@@ -78,6 +84,11 @@ export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
 export const discoverySessionId = writable<string>();
 export const runningInsight = writable<string>('');
 export let isLoadingInsight = writable<boolean>(false);
+export const messagesList = writable<MessageType[]>(initialMessagesList);
+
+messagesList.subscribe(($messagesList) => {
+	saveToLocalStorage('messagesList', $messagesList);
+});
 
 isLoadingInsight.subscribe(($isLoadingInsight) => {
 	saveToLocalStorage('isLoading', $isLoadingInsight);

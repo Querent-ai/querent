@@ -3,7 +3,8 @@
 	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import { commands, type InsightQuery } from '../../../../service/bindings';
-	import { runningInsight, isLoadingInsight } from '../../../../stores/appState';
+	import { runningInsight, isLoadingInsight, messagesList } from '../../../../stores/appState';
+	import { get } from 'svelte/store';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
@@ -30,8 +31,11 @@
 	async function initializeChat() {
 		try {
 			if (insightsId && insightsId !== '') {
-				// We already have a running insight, so we won't call trigger again and we will keep messages as they are
-				return;
+				messages = [];
+				let previousMessages = get(messagesList);
+				previousMessages.forEach((message) => {
+					messages = [...messages, { text: message.text, isUser: message.isUser }];
+				});
 			} else {
 				messages = [];
 				let id: string | undefined = insight?.id;
@@ -78,6 +82,8 @@
 	function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
+			messagesList.update((list) => [...list, { text: inputMessage, isUser: true }]);
+
 			let query = inputMessage;
 			try {
 				setTimeout(async () => {
@@ -90,10 +96,10 @@
 					isLoadingInsight.set(false);
 
 					if (res.status == 'ok') {
-						messages = [
-							...messages,
-							{ text: res.data.response.replace(/\n/g, ' '), isUser: false }
-						];
+						let text = res.data.response.replace(/\n/g, ' ');
+						messages = [...messages, { text: text, isUser: false }];
+
+						messagesList.update((list) => [...list, { text: text, isUser: false }]);
 					} else {
 						console.log('Error while calling insights ', res.error);
 					}

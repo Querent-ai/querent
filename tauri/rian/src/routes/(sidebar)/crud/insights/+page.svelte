@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import Modal from '../sources/add/Modal.svelte';
 	import AdditionalOptionalModal from './AdditionalOptionalModal.svelte';
-	import { runningInsight } from '../../../../stores/appState';
+	import { messagesList, runningInsight } from '../../../../stores/appState';
 
 	let runningInsightId: string;
 
@@ -31,6 +31,7 @@
 		}
 
 		runningInsight.set('');
+		messagesList.set([]);
 	}
 
 	async function continueRunningInsight() {
