@@ -83,10 +83,13 @@
 						query: query
 					};
 					let res = await commands.promptInsightAnalyst(request);
-					
+
 					if (res.status == 'ok') {
-						console.log("This is the response ----------------", res.data.response);
-						messages = [...messages, { text: res.data.response.replace(/\n/g, " "), isUser: false }];
+						console.log('This is the response ----------------', res.data.response);
+						messages = [
+							...messages,
+							{ text: res.data.response.replace(/\n/g, ' '), isUser: false }
+						];
 					} else {
 						console.log('Error while calling insights ', res.error);
 					}

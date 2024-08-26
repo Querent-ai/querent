@@ -99,7 +99,7 @@
 					d.type === 'top_pair' && typeof d.degree === 'number'
 			);
 
-			const maxDegree = d3.max(topPairNodes, (d: { degree: any; }) => d.degree) || 0;
+			const maxDegree = d3.max(topPairNodes, (d: { degree: any }) => d.degree) || 0;
 
 			const topPairColorScale = d3.scaleSequential(d3.interpolateBlues).domain([0, maxDegree]);
 			const sentencePairColor = '#ff7f0e';
@@ -199,7 +199,7 @@
 
 			simulation.on('tick', () => {
 				link
-					.attr('x1', (d: { source: { x: any; }; }) => d.source.x)
+					.attr('x1', (d: { source: { x: any } }) => d.source.x)
 					.attr('y1', (d: { source: { y: any } }) => d.source.y)
 					.attr('x2', (d: { target: { x: any } }) => d.target.x)
 					.attr('y2', (d: { target: { y: any } }) => d.target.y);
