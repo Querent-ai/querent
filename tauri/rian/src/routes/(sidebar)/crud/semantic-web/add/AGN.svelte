@@ -77,10 +77,7 @@
 
 	let showModal = false;
 	let modalMessage = '';
-	// let entitiesPairs: any[] = [];
-	// let showEntityModal = false;
 	let entityTable: {
-		editing: boolean;
 		entity: string;
 		entityType: string;
 	}[] = [];
@@ -213,17 +210,8 @@
 	};
 
 	function addRow() {
-		entityTable = [...entityTable, { entity: '', entityType: '', editing: true }];
+		entityTable = [...entityTable, { entity: '', entityType: '' }];
 		updateFocus(entityTable.length - 1);
-	}
-
-	function editRow(index: number) {
-		entityTable[index].editing = true;
-		updateFocus(index);
-	}
-
-	function saveRow(index: number) {
-		entityTable[index].editing = false;
 	}
 
 	function deleteRow(index: number) {
@@ -273,12 +261,11 @@
 					const lines = contents?.split('\n');
 					uploadedHeaders = lines[0].split(',');
 					uploadedData = lines.slice(1).map((line: string) => line.split(','));
-					let newEntities: { editing: boolean; entity: any; entityType: any }[] = [];
+					let newEntities: { entity: any; entityType: any }[] = [];
 
 					uploadedData.forEach((data) => {
 						if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
 							newEntities.push({
-								editing: false,
 								entity: data[0].trim(),
 								entityType: data[1].trim()
 							});
@@ -367,37 +354,19 @@
 							{#each entityTable as row, index (row.entity + row.entityType)}
 								<tr>
 									<td>
-										{#if row.editing}
-											<input
-												id={`entity-input-${index}`}
-												class="input-field"
-												type="text"
-												bind:value={row.entity}
-											/>
-										{:else}
+										
 											{row.entity}
-										{/if}
+										
 									</td>
 									<td>
-										{#if row.editing}
-											<input
-												id={`entity-input-${index}`}
-												class="input-field"
-												type="text"
-												bind:value={row.entityType}
-											/>
-										{:else}
+										
 											{row.entityType}
-										{/if}
+										
 									</td>
 									<td class="button-cell">
-										{#if row.editing}
-											<button class="save-button" on:click={() => saveRow(index)}>Save</button>
-										{:else}
-											<button class="edit-button" on:click={() => editRow(index)}>Edit</button>
 											<button class="delete-button" on:click={() => deleteRow(index)}>Delete</button
 											>
-										{/if}
+										
 									</td>
 								</tr>
 							{/each}
@@ -507,7 +476,6 @@
 		font-weight: bold;
 	}
 
-	.form-container input[type='text'],
 	.select-with-tags select,
 	.tags {
 		width: 100%;
@@ -715,10 +683,6 @@
 		text-align: center;
 	}
 
-	.section input[type='text'] {
-		margin-bottom: 10px;
-	}
-
 	.open-csv-btn {
 		display: inline-block;
 		margin: 0;
@@ -816,17 +780,6 @@
 		text-align: left;
 	}
 
-	td input {
-		width: 90%;
-		min-width: 200px;
-		box-sizing: border-box;
-		margin: 0;
-		padding: 10px;
-		border: 1px solid #ddd;
-		background: transparent;
-		font-size: 1em;
-	}
-
 	tr {
 		border-bottom: 1px solid #3a4453;
 		width: 100%;
@@ -839,18 +792,6 @@
 		min-width: 600px;
 	}
 
-	.save-button {
-		cursor: pointer;
-		margin-left: 5px;
-		background-color: #007bff;
-		color: white;
-		padding: 5px 10px;
-		font-size: 0.9em;
-		border: none;
-		border-radius: 10px;
-	}
-
-	.edit-button,
 	.delete-button {
 		cursor: pointer;
 		margin-left: 5px;
@@ -861,9 +802,6 @@
 		border: none;
 		border-radius: 10px;
 		display: inline-block;
-	}
-	.input-field {
-		width: 100%;
 	}
 
 	.search-container {
