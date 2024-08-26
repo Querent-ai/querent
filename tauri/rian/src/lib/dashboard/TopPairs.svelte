@@ -4,6 +4,7 @@
 	import { discoveryApiResponseStore } from '../../../src/stores/appState';
 
 	let svg: SVGSVGElement;
+	let simulation: d3.Simulation<any, any>; // Declare the simulation variable here
 	let top_pairs = [
 		'Sandstone - Shale',
 		'Cretaceous - Jurassic',
@@ -79,6 +80,23 @@
 		return { nodes: nodesArray, links };
 	}
 
+	function dragstarted(event: { active: any }, d: { fx: any; x: any; fy: any; y: any }) {
+		if (!event.active) simulation.alphaTarget(0.3).restart();
+		d.fx = d.x;
+		d.fy = d.y;
+	}
+
+	function dragged(event: { x: any; y: any }, d: { fx: any; fy: any }) {
+		d.fx = event.x;
+		d.fy = event.y;
+	}
+
+	function dragended(event: { active: any }, d: { fx: null; fy: null }) {
+		if (!event.active) simulation.alphaTarget(0);
+		d.fx = null;
+		d.fy = null;
+	}
+
 	onMount(() => {
 		const width = 800;
 		const height = 600;
@@ -104,8 +122,8 @@
 			const topPairColorScale = d3.scaleSequential(d3.interpolateBlues).domain([0, maxDegree]);
 			const sentencePairColor = '#ff7f0e';
 
-			const simulation = d3
-				.forceSimulation(connections.nodes)
+			simulation = d3
+				.forceSimulation(connections.nodes) // Assign the simulation here
 				.force(
 					'link',
 					d3
@@ -208,23 +226,6 @@
 
 				text.attr('x', (d: { x: any }) => d.x).attr('y', (d: { y: any }) => d.y);
 			});
-
-			function dragstarted(event: { active: any }, d: { fx: any; x: any; fy: any; y: any }) {
-				if (!event.active) simulation.alphaTarget(0.3).restart();
-				d.fx = d.x;
-				d.fy = d.y;
-			}
-
-			function dragged(event: { x: any; y: any }, d: { fx: any; fy: any }) {
-				d.fx = event.x;
-				d.fy = event.y;
-			}
-
-			function dragended(event: { active: any }, d: { fx: null; fy: null }) {
-				if (!event.active) simulation.alphaTarget(0);
-				d.fx = null;
-				d.fy = null;
-			}
 		}
 	});
 </script>

@@ -40,7 +40,7 @@
 
 				if (insight?.additionalOptions) {
 					for (const key in insight.additionalOptions) {
-						if (insight.additionalOptions.hasOwnProperty(key)) {
+						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
 							if (insight.additionalOptions[key].value.type == 'string') {
 								additional_options[key] = insight.additionalOptions[key].value
 									.value as unknown as string;
