@@ -131,8 +131,12 @@
 	let query: string = '';
 
 	async function handleSearch(event?: KeyboardEvent) {
-		if (event && event.key !== 'Enter') {
-			return;
+		if (event) {
+			if (event.key === 'Enter' && !event.shiftKey) {
+				event.preventDefault();
+			} else {
+				return;
+			}
 		}
 
 		query = inputValue;
