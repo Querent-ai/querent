@@ -1,6 +1,6 @@
 [package]
 name = "engines"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
