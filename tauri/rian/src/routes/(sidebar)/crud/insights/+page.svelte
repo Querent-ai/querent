@@ -40,6 +40,7 @@
 			messagesList.set([]);
 		} catch (error) {
 			console.error('Unexpected error stopping the Insight:', error);
+			messagesList.set([]);
 		}
 	}
 

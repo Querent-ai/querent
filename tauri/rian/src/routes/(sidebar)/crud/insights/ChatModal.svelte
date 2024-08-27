@@ -109,6 +109,7 @@
 				inputMessage = '';
 			} catch (error) {
 				console.error('Unexpected error while sending message:', error);
+				messagesList.set([]);
 			}
 		}
 	}
