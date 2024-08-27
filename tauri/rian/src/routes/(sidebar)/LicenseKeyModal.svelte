@@ -45,7 +45,13 @@
 
 		<div class="divider"></div>
 		<p class="info">OR</p>
-		<p class="info">Get your license key at <a href="https://querent.xyz/rian">querent.xyz</a></p>
+		<p class="info">
+			Get your license key at <a
+				href="https://querent.xyz/rian"
+				target="_blank"
+				rel="noopener noreferrer">querent.xyz</a
+			>
+		</p>
 	</div>
 </div>
 
