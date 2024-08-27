@@ -34,12 +34,18 @@
 	let isDropdownOpen = false;
 
 	onMount(async () => {
-		if ($dataSources) {
-			let sources = await commands.getCollectors();
-			sources.config.forEach((metadata) => {
-				sourceIds = [...sourceIds, getId(metadata.backend)];
-				sourceNames = [...sourceNames, metadata.name];
-			});
+		try {
+			if ($dataSources) {
+				let sources = await commands.getCollectors();
+				sources.config.forEach((metadata) => {
+					sourceIds = [...sourceIds, getId(metadata.backend)];
+					sourceNames = [...sourceNames, metadata.name];
+				});
+			}
+		} catch (error) {
+			console.error('Error during onMount:', error);
+			showModal = true;
+			modalMessage = 'Failed to load data sources. Please try again.';
 		}
 	});
 
@@ -77,8 +83,7 @@
 
 	let showModal = false;
 	let modalMessage = '';
-	// let entitiesPairs: any[] = [];
-	// let showEntityModal = false;
+
 	let entityTable: {
 		editing: boolean;
 		entity: string;
@@ -163,14 +168,18 @@
 
 				addPipelinesToList(pipelineMetadata);
 			} else {
-				console.log('Failed to start the pipeline ', result.error);
+				console.error('Failed to start the pipeline:', result.error);
+				showModal = true;
+				modalMessage = 'Failed to start the pipeline. Please try again.';
 			}
 
 			selectedModel = null;
 
 			goto('/crud/semantic-web');
 		} catch (error) {
-			console.log('Got error while starting the pipeline ', error);
+			console.error('Error while starting the pipeline:', error);
+			showModal = true;
+			modalMessage = 'An error occurred while starting the pipeline. Please try again.';
 		} finally {
 			isLoading.set(false);
 		}
@@ -258,47 +267,55 @@
 			}
 		} catch (error) {
 			console.error('Error saving file:', error);
+			showModal = true;
+			modalMessage = 'Failed to download CSV file. Please try again.';
 		}
 	}
 
 	function handleFileUpload(event: Event) {
-		event.preventDefault();
-		const input = event.target as HTMLInputElement;
-		if (input.files && input.files.length > 0) {
-			const file = input.files[0];
-			const reader = new FileReader();
-			reader.onload = function (e) {
-				const contents = e.target?.result;
-				if (typeof contents === 'string') {
-					const lines = contents?.split('\n');
-					uploadedHeaders = lines[0].split(',');
-					uploadedData = lines.slice(1).map((line: string) => line.split(','));
-					let newEntities: { editing: boolean; entity: any; entityType: any }[] = [];
+		try {
+			event.preventDefault();
+			const input = event.target as HTMLInputElement;
+			if (input.files && input.files.length > 0) {
+				const file = input.files[0];
+				const reader = new FileReader();
+				reader.onload = function (e) {
+					const contents = e.target?.result;
+					if (typeof contents === 'string') {
+						const lines = contents?.split('\n');
+						uploadedHeaders = lines[0].split(',');
+						uploadedData = lines.slice(1).map((line: string) => line.split(','));
+						let newEntities: { editing: boolean; entity: any; entityType: any }[] = [];
 
-					uploadedData.forEach((data) => {
-						if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
-							newEntities.push({
-								editing: false,
-								entity: data[0].trim(),
-								entityType: data[1].trim()
-							});
-						} else {
-							console.log('Skipping invalid data:', data);
+						uploadedData.forEach((data) => {
+							if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
+								newEntities.push({
+									editing: false,
+									entity: data[0].trim(),
+									entityType: data[1].trim()
+								});
+							} else {
+								console.log('Skipping invalid data:', data);
+							}
+						});
+
+						if (newEntities.length > 0) {
+							entityTable = [...entityTable, ...newEntities];
+							entityTable = [...entityTable];
 						}
-					});
-
-					if (newEntities.length > 0) {
-						entityTable = [...entityTable, ...newEntities];
-						entityTable = [...entityTable];
+						input.value = '';
+					} else {
+						throw new Error('Failed to read file as string');
 					}
-					input.value = '';
-				} else {
-					console.error('Failed to read file as string');
-				}
-			};
-			reader.readAsText(file);
-		} else {
-			input.value = '';
+				};
+				reader.readAsText(file);
+			} else {
+				input.value = '';
+			}
+		} catch (error) {
+			console.error('Error uploading file:', error);
+			showModal = true;
+			modalMessage = 'An error occurred during file upload. Please try again.';
 		}
 	}
 

@@ -75,20 +75,31 @@
 	}
 
 	async function deleteSource(id: string) {
-		let deleteRequest: DeleteCollectorRequest = {
-			id: [id]
-		};
+		try {
+			let deleteRequest: DeleteCollectorRequest = {
+				id: [id]
+			};
 
-		if (await commands.deleteCollectors(deleteRequest)) {
-			let sources = await commands.getCollectors();
-			$dataSources = sources.config;
+			const deleteResult = await commands.deleteCollectors(deleteRequest);
+			if (deleteResult) {
+				let sources = await commands.getCollectors();
+				$dataSources = sources.config;
+			}
+		} catch (error) {
+			console.error('Error deleting source:', error);
+			alert('Failed to delete source. Please try again.');
 		}
 	}
 
 	onMount(async () => {
-		if (sources_list.config.length === 0) {
-			let sources = await commands.getCollectors();
-			$dataSources = sources.config;
+		try {
+			if (sources_list.config.length === 0) {
+				let sources = await commands.getCollectors();
+				$dataSources = sources.config;
+			}
+		} catch (error) {
+			console.error('Error fetching sources:', error);
+			alert('Failed to load sources. Please try again.');
 		}
 	});
 </script>

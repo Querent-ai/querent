@@ -65,6 +65,14 @@ export interface DiscoveryDataPageList {
 	data: Insight[];
 }
 
+export interface MessageType {
+	text: string;
+	isUser: boolean;
+}
+
+const initialMessagesList: MessageType[] = getFromLocalStorage('messagesList', []);
+const initialInsightSessionId: string = getFromLocalStorage('insightSessionId', '');
+
 export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
@@ -75,10 +83,20 @@ export const firstDiscovery = writable(true);
 export const discoveryPageNumber = writable<number>(1);
 export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
 export const discoverySessionId = writable<string>();
-export const runningInsight = writable<string>('');
+export let isLoadingInsight = writable<boolean>(false);
+export const messagesList = writable<MessageType[]>(initialMessagesList);
+export const insightSessionId = writable<string>(initialInsightSessionId);
 
-runningInsight.subscribe(($runningInsight) => {
-	saveToLocalStorage('runningInsight', $runningInsight);
+insightSessionId.subscribe(($insightSessionId) => {
+	saveToLocalStorage('insightSessionId', $insightSessionId);
+});
+
+messagesList.subscribe(($messagesList) => {
+	saveToLocalStorage('messagesList', $messagesList);
+});
+
+isLoadingInsight.subscribe(($isLoadingInsight) => {
+	saveToLocalStorage('isLoading', $isLoadingInsight);
 });
 
 discoverySessionId.subscribe(($sessionId) => {

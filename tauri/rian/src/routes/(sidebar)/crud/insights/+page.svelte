@@ -8,29 +8,39 @@
 	import { onMount } from 'svelte';
 	import Modal from '../sources/add/Modal.svelte';
 	import AdditionalOptionalModal from './AdditionalOptionalModal.svelte';
-	import { runningInsight } from '../../../../stores/appState';
+	import { messagesList, insightSessionId } from '../../../../stores/appState';
 
 	let runningInsightId: string;
 
 	let insightList: InsightInfo[];
+
 	onMount(async () => {
-		let res = await commands.listAvailableInsights();
-		if (res.status == 'ok') {
-			insightList = res.data;
-		} else {
-			console.log('Error as ', res.error);
+		try {
+			let res = await commands.listAvailableInsights();
+			if (res.status == 'ok') {
+				insightList = res.data;
+			} else {
+				console.error('Error fetching insights:', res.error);
+			}
+		} catch (error) {
+			console.error('Unexpected error fetching insights:', error);
 		}
 	});
 
-	$: runningInsightId = $runningInsight;
+	$: runningInsightId = $insightSessionId;
 
 	async function stopInsight() {
-		let res = await commands.stopInsightAnalyst(runningInsightId);
-		if (res.status == 'error') {
-			console.log('Error while stopping the Insight');
-		}
+		try {
+			let res = await commands.stopInsightAnalyst(runningInsightId);
+			if (res.status == 'error') {
+				console.error('Error while stopping the Insight:', res.error);
+			}
 
-		runningInsight.set('');
+			insightSessionId.set('');
+			messagesList.set([]);
+		} catch (error) {
+			console.error('Unexpected error stopping the Insight:', error);
+		}
 	}
 
 	async function continueRunningInsight() {
@@ -64,6 +74,7 @@
 		selectedInsightForChat.additionalOptions = event.detail;
 		showChatModal = true;
 	}
+
 	function handleCloseAdditionalOptions() {
 		showAdditionalOptionModal = false;
 	}

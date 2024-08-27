@@ -52,30 +52,35 @@
 		if ((!discovery_data || discovery_data.length < 1) && get(firstDiscovery)) {
 			console.log('Starting discovery session');
 			isLoading.set(true);
-			const res = await commands.sendDiscoveryRetrieverRequest('', []);
+			try {
+				const res = await commands.sendDiscoveryRetrieverRequest('', []);
 
-			if (res.status == 'ok') {
-				discoverySessionId.set(res.data.session_id);
-				let discoveryData: DiscoveryDataPageList = {
-					page_number: res.data.page_ranking,
-					data: res.data.insights
-				};
-				discoverylist.update((currentList) => {
-					return [...currentList, discoveryData];
-				});
-				discoveryPageNumber.set(res.data.page_ranking);
-				firstDiscovery.set(false);
+				if (res.status == 'ok') {
+					discoverySessionId.set(res.data.session_id);
+					let discoveryData: DiscoveryDataPageList = {
+						page_number: res.data.page_ranking,
+						data: res.data.insights
+					};
+					discoverylist.update((currentList) => {
+						return [...currentList, discoveryData];
+					});
+					discoveryPageNumber.set(res.data.page_ranking);
+					firstDiscovery.set(false);
 
-				const insights = res.data.insights;
+					const insights = res.data.insights;
 
-				if (insights) {
-					categories = insights;
-					discoveryApiResponseStore.set(insights);
+					if (insights) {
+						categories = insights;
+						discoveryApiResponseStore.set(insights);
+					}
+				} else {
+					console.error('Unable to start discovery session', res.error);
 				}
-			} else {
-				console.log('Unable to start discovery session ', res.error);
+			} catch (error) {
+				console.error('Error starting discovery session:', error);
+			} finally {
+				isLoading.set(false);
 			}
-			isLoading.set(false);
 		} else {
 			const currentList = get(discoverylist);
 
@@ -118,9 +123,11 @@
 				if (insights) {
 					discoveryApiResponseStore.set(insights);
 				}
+			} else {
+				console.error('Error while sending API request', res.error);
 			}
 		} catch (error) {
-			console.log('Got error while sending API request ', error);
+			console.error('Error while toggling category:', error);
 		} finally {
 			isLoading.set(false);
 			selectedCategories = [];
@@ -131,8 +138,12 @@
 	let query: string = '';
 
 	async function handleSearch(event?: KeyboardEvent) {
-		if (event && event.key !== 'Enter') {
-			return;
+		if (event) {
+			if (event.key === 'Enter' && !event.shiftKey) {
+				event.preventDefault();
+			} else {
+				return;
+			}
 		}
 
 		query = inputValue;
@@ -144,8 +155,8 @@
 			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
 
 			if (res.status == 'ok') {
-				if (res.data.insights.length == 0) {
-					console.log('Length is zero');
+				if (res.data.insights.length === 0) {
+					console.log('No results found');
 					return;
 				}
 				let discoveryData: DiscoveryDataPageList = {
@@ -162,10 +173,10 @@
 					discoveryApiResponseStore.set(insights);
 				}
 			} else {
-				console.log('Error while sending the request ', res.error);
+				console.error('Error while sending the request', res.error);
 			}
 		} catch (error) {
-			console.log('Got error while sending request ', error);
+			console.error('Error while performing search:', error);
 		} finally {
 			isLoading.set(false);
 		}
@@ -185,7 +196,7 @@
 			categories = insights;
 			discoveryApiResponseStore.set(insights);
 		} else {
-			console.log('No data available page number ', pageNumber);
+			console.error('No data available for page number', pageNumber);
 		}
 	}
 
@@ -196,7 +207,7 @@
 			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
 
 			if (res.status == 'ok') {
-				if (res.data.insights.length == 0) {
+				if (res.data.insights.length === 0) {
 					return;
 				}
 				let discoveryData: DiscoveryDataPageList = {
@@ -215,9 +226,11 @@
 				if (insights) {
 					discoveryApiResponseStore.set(insights);
 				}
+			} else {
+				console.error('Error while sending the request', res.error);
 			}
 		} catch (error) {
-			console.log('Got error as ', error);
+			console.error('Error while fetching next page:', error);
 		} finally {
 			isLoading.set(false);
 		}

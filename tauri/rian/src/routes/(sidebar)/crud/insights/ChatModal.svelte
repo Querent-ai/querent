@@ -3,14 +3,18 @@
 	import type { InsightAnalystRequest, InsightInfo } from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import { commands, type InsightQuery } from '../../../../service/bindings';
-	import { runningInsight } from '../../../../stores/appState';
-	import { writable } from 'svelte/store';
+	import { insightSessionId, isLoadingInsight, messagesList } from '../../../../stores/appState';
+	import { get } from 'svelte/store';
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
 	export let insightsId: string | null = null;
 	let sessionId: string;
-	let isLoading = writable<boolean>(false);
+
+	let loadingStatus: boolean;
+	$: {
+		loadingStatus = $isLoadingInsight;
+	}
 
 	let messages: { text: string; isUser: boolean }[] = [];
 	let inputMessage = '';
@@ -27,8 +31,12 @@
 	async function initializeChat() {
 		try {
 			if (insightsId && insightsId !== '') {
-				// We already have a running insight, so we won't call trigger again and we will keep messages as they are
-				return;
+				messages = [];
+				let previousMessages = get(messagesList);
+				previousMessages.forEach((message) => {
+					messages = [...messages, { text: message.text, isUser: message.isUser }];
+				});
+				sessionId = $insightSessionId;
 			} else {
 				messages = [];
 				let id: string | undefined = insight?.id;
@@ -41,7 +49,7 @@
 				if (insight?.additionalOptions) {
 					for (const key in insight.additionalOptions) {
 						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
-							if (insight.additionalOptions[key].value.type == 'string') {
+							if (insight.additionalOptions[key].value.type === 'string') {
 								additional_options[key] = insight.additionalOptions[key].value
 									.value as unknown as string;
 							}
@@ -54,27 +62,28 @@
 					semantic_pipeline_id: '',
 					additional_options: additional_options
 				};
-				isLoading.set(true);
+				isLoadingInsight.set(true);
 
 				let res = await commands.triggerInsightAnalyst(request);
 				if (res.status == 'ok') {
-					runningInsight.set(res.data.session_id);
+					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
 				} else {
-					console.log('Got error while starting insights ', res.error);
+					console.log('Error while starting insights:', res.error);
 				}
 			}
 		} catch (error) {
-			console.log('Got error while starting insights ', error);
+			console.error('Unexpected error while initializing chat:', error);
 		} finally {
-			isLoading.set(false);
+			isLoadingInsight.set(false);
 		}
 	}
 
-	function sendMessage() {
+	async function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
-			isLoading.set(true);
+			messagesList.update((list) => [...list, { text: inputMessage, isUser: true }]);
+
 			let query = inputMessage;
 			try {
 				setTimeout(async () => {
@@ -82,34 +91,42 @@
 						session_id: sessionId,
 						query: query
 					};
+					isLoadingInsight.set(true);
 					let res = await commands.promptInsightAnalyst(request);
-
 					if (res.status == 'ok') {
-						console.log('This is the response ----------------', res.data.response);
-						messages = [
-							...messages,
-							{ text: res.data.response.replace(/\n/g, ' '), isUser: false }
-						];
+						let text = res.data.response
+							.replace(/\\n|\n/g, ' ')
+							.replace(/\s+/g, ' ')
+							.trim();
+						messages = [...messages, { text: text, isUser: false }];
+
+						messagesList.update((list) => [...list, { text: text, isUser: false }]);
 					} else {
-						console.log('Error while calling insights ', res.error);
+						console.log('Error while processing the insight query:', res.error);
 					}
 				}, 100);
 				inputMessage = '';
 			} catch (error) {
-				console.log('Got error while calling insights ', error);
+				console.error('Unexpected error while sending message:', error);
 			} finally {
-				isLoading.set(false);
+				isLoadingInsight.set(false);
 			}
 		}
 	}
 
-	async function closeModal() {
+	function closeModal() {
 		show = false;
 	}
 
-	// Helper function to format message text by replacing \n with <br>
 	function formatMessageText(text: string) {
 		return text.replace(/\n/g, '<br>');
+	}
+
+	function handleKeyDown(event: { key: string; shiftKey: boolean; preventDefault: () => void }) {
+		if (event.key === 'Enter' && !event.shiftKey) {
+			event.preventDefault();
+			sendMessage();
+		}
 	}
 </script>
 
@@ -145,8 +162,9 @@
 			class="search-input"
 			id="searchInput"
 			bind:value={inputMessage}
+			on:keydown={handleKeyDown}
 		/>
-		{#if $isLoading}
+		{#if loadingStatus}
 			<div class="loader mr-2"></div>
 		{/if}
 		<Button type="submit">Send</Button>
@@ -187,6 +205,7 @@
 
 	.flex.h-full.items-center.justify-center .flex.items-center {
 		max-width: 80%;
+		position: relative;
 	}
 
 	.flex.h-full.items-center.justify-center p {
@@ -199,6 +218,9 @@
 		width: 20px;
 		height: 20px;
 		animation: spin 1s linear infinite;
+		position: absolute;
+		right: 100px;
+		bottom: 45px;
 	}
 
 	@keyframes spin {

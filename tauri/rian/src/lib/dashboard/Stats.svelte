@@ -6,13 +6,18 @@
 	let selectedPipeline: string;
 	let runningPipelines: string[] = [];
 
-	$: selectedPipeline = runningPipelines.length > 0 ? runningPipelines[0] : 'No_pipeline_found';
+	$: selectedPipeline = runningPipelines.length > 0 ? runningPipelines[0] : 'no_active_pipeline';
 
 	onMount(async () => {
-		let res = await commands.getRunningAgns();
-		res.forEach(([pipelineId, _]) => {
-			runningPipelines = [...runningPipelines, pipelineId];
-		});
+		try {
+			let res = await commands.getRunningAgns();
+			res.forEach(([pipelineId, _]) => {
+				runningPipelines = [...runningPipelines, pipelineId];
+			});
+		} catch (error) {
+			console.error('Error fetching running pipelines:', error);
+			alert(`Failed to fetch running pipelines: ${error.message || error}`);
+		}
 	});
 
 	let products: IndexingStatistics;
@@ -36,13 +41,20 @@
 	let productsArray = convertStatsToArray(indexingStatisticsTemplate);
 
 	async function fetchPipelineData(selectedPipeline: string) {
-		if (!selectedPipeline || selectedPipeline == 'No_pipeline_found' || selectedPipeline == '') {
-			return;
-		}
-		const response = await commands.describePipeline(selectedPipeline);
-		if (response.status == 'ok') {
-			products = response.data;
-			productsArray = convertStatsToArray(products);
+		try {
+			if (!selectedPipeline || selectedPipeline == 'no_active_pipeline' || selectedPipeline == '') {
+				return;
+			}
+			const response = await commands.describePipeline(selectedPipeline);
+			if (response.status == 'ok') {
+				products = response.data;
+				productsArray = convertStatsToArray(products);
+			} else {
+				throw new Error(`Unexpected response status: ${response.status}`);
+			}
+		} catch (error) {
+			console.error('Error fetching pipeline data:', error);
+			alert(`Failed to fetch pipeline data: ${error.message || error}`);
 		}
 	}
 
