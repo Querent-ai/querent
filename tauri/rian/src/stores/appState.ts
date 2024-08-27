@@ -83,9 +83,10 @@ export const firstDiscovery = writable(true);
 export const discoveryPageNumber = writable<number>(1);
 export const discoveryApiResponseStore = writable<DiscoveryData[]>([]);
 export const discoverySessionId = writable<string>();
-export const isLoadingInsight = writable<boolean>(false);
+export let isLoadingInsight = writable<boolean>(false);
 export const messagesList = writable<MessageType[]>(initialMessagesList);
 export const insightSessionId = writable<string>(initialInsightSessionId);
+export const isLicenseVerified = writable(false);
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);
