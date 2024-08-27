@@ -30,63 +30,70 @@
 	let pipelines_list = writable<SemanticPipelineData[]>([]);
 
 	onMount(async () => {
-		const result = await commands.getRunningAgns();
+		try {
+			const result = await commands.getRunningAgns();
+			result.forEach((runningAgns) => {
+				const pipelineId = runningAgns[0];
+				const pipelineInfo = runningAgns[1];
+				let pipelineData: SemanticPipelineData = {
+					collectors: pipelineInfo.collectors,
+					fixed_entities: pipelineInfo.fixed_entities?.entities,
+					sample_entities: pipelineInfo.sample_entities?.entities,
+					model: pipelineInfo.model,
+					status: 'active',
+					id: pipelineId
+				};
 
-		result.forEach((runningAgns) => {
-			const pipelineId = runningAgns[0];
-			const pipelineInfo = runningAgns[1];
-			let pipelineData: SemanticPipelineData = {
-				collectors: pipelineInfo.collectors,
-				fixed_entities: pipelineInfo.fixed_entities?.entities,
-				sample_entities: pipelineInfo.sample_entities?.entities,
-				model: pipelineInfo.model,
-				status: 'active',
-				id: pipelineId
-			};
-
-			pipelines_list.update((list) => [...list, pipelineData]);
-		});
-
-		let pastAgns = await commands.getPastAgns();
-		if (pastAgns.status == 'ok') {
-			pastPipelines = pastAgns.data.requests;
-
-			pastPipelines.forEach((pastAgns) => {
-				const pipelineId = pastAgns.pipeline_id;
-				const pipelineInfo = pastAgns.request;
-				if (!pipelineInfo) {
-					return;
-				}
-
-				const isAlreadyAdded = result.some((runningAgn) => pipelineId == runningAgn[0]);
-
-				if (!isAlreadyAdded) {
-					let pipelineData: SemanticPipelineData = {
-						collectors: pipelineInfo.collectors,
-						fixed_entities: pipelineInfo.fixed_entities?.entities,
-						sample_entities: pipelineInfo.sample_entities?.entities,
-						model: pipelineInfo.model,
-						status: 'stopped',
-						id: pipelineId
-					};
-
-					pipelines_list.update((list) => [...list, pipelineData]);
-				}
+				pipelines_list.update((list) => [...list, pipelineData]);
 			});
+
+			let pastAgns = await commands.getPastAgns();
+			if (pastAgns.status == 'ok') {
+				pastPipelines = pastAgns.data.requests;
+
+				pastPipelines.forEach((pastAgns) => {
+					const pipelineId = pastAgns.pipeline_id;
+					const pipelineInfo = pastAgns.request;
+					if (!pipelineInfo) {
+						return;
+					}
+
+					const isAlreadyAdded = result.some((runningAgn) => pipelineId == runningAgn[0]);
+
+					if (!isAlreadyAdded) {
+						let pipelineData: SemanticPipelineData = {
+							collectors: pipelineInfo.collectors,
+							fixed_entities: pipelineInfo.fixed_entities?.entities,
+							sample_entities: pipelineInfo.sample_entities?.entities,
+							model: pipelineInfo.model,
+							status: 'stopped',
+							id: pipelineId
+						};
+
+						pipelines_list.update((list) => [...list, pipelineData]);
+					}
+				});
+			}
+		} catch (error) {
+			console.error('Error loading pipelines:', error);
 		}
 	});
 
 	async function handleStopAgn(pipelineId: string) {
-		let res = await commands.stopAgnFabric(pipelineId);
-		if (res.status == 'error') {
-			console.log('Error while stopping the pipeline ', res.error);
-			return;
+		try {
+			let res = await commands.stopAgnFabric(pipelineId);
+			if (res.status == 'error') {
+				console.error('Error while stopping the pipeline:', res.error);
+				return;
+			}
+			pipelines_list.update((list) =>
+				list.map((pipeline) =>
+					pipeline.id === pipelineId ? { ...pipeline, status: 'stopped' } : pipeline
+				)
+			);
+		} catch (error) {
+			console.error('Unexpected error while stopping the pipeline:', error);
 		}
-		pipelines_list.update((list) =>
-			list.map((pipeline) =>
-				pipeline.id === pipelineId ? { ...pipeline, status: 'stopped' } : pipeline
-			)
-		);
 	}
 
 	function navigateToStartPipeline() {

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Breadcrumb, BreadcrumbItem, Button, Card, Heading } from 'flowbite-svelte';
-	import { Input, Textarea, Toggle } from 'flowbite-svelte';
+	import { Input } from 'flowbite-svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
 	import { commands, type IngestedTokens } from '../../../../service/bindings';
 	import { pipelineState } from '../../../../stores/appState';
@@ -28,14 +28,21 @@
 	};
 
 	async function handleSubmit() {
-		ingested_tokens.data = [formData.data];
-		ingested_tokens.doc_source = formData.doc_source;
-		ingested_tokens.file = formData.file;
-		ingested_tokens.is_token_stream = true;
-		ingested_tokens.source_id = formData.source_id;
+		try {
+			ingested_tokens.data = [formData.data];
+			ingested_tokens.doc_source = formData.doc_source;
+			ingested_tokens.file = formData.file;
+			ingested_tokens.is_token_stream = true;
+			ingested_tokens.source_id = formData.source_id;
 
-		if (await commands.ingestTokens([ingested_tokens], $pipelineState.id)) {
-			console.log('Data submitted:');
+			const response = await commands.ingestTokens([ingested_tokens], $pipelineState.id);
+			if (response) {
+				console.log('Data submitted successfully.');
+			} else {
+				console.error('Failed to submit data.');
+			}
+		} catch (error) {
+			console.error('An error occurred while submitting data:', error);
 		}
 	}
 </script>

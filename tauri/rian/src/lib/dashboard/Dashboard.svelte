@@ -89,18 +89,26 @@
 	});
 
 	async function fetchPipelineData() {
-		if (!selectedPipeline || selectedPipeline == 'no_active_pipeline') {
-			return;
-		}
-		console.log('Calling the API with pipeline ID as ', selectedPipeline);
-		const response = await commands.describePipeline(selectedPipeline);
-		if (response.status == 'ok') {
-			const totalEvents = response.data.total_events;
-			const currentTime = performance.now() / 1000;
-			dataPoints.push({ x: currentTime % 100, y: totalEvents });
-			dataPoints = dataPoints.filter((dp) => currentTime - dp.x <= 100);
-			chartInstance.data.datasets[0].data = dataPoints;
-			chartInstance.update();
+		try {
+			if (!selectedPipeline || selectedPipeline == 'no_active_pipeline') {
+				return;
+			}
+			console.log('Calling the API with pipeline ID as ', selectedPipeline);
+			const response = await commands.describePipeline(selectedPipeline);
+
+			if (response.status == 'ok') {
+				const totalEvents = response.data.total_events;
+				const currentTime = performance.now() / 1000;
+				dataPoints.push({ x: currentTime % 100, y: totalEvents });
+				dataPoints = dataPoints.filter((dp) => currentTime - dp.x <= 100);
+				chartInstance.data.datasets[0].data = dataPoints;
+				chartInstance.update();
+			} else {
+				throw new Error(`Unexpected response status: ${response.status}`);
+			}
+		} catch (error) {
+			console.error('Error fetching pipeline data:', error);
+			alert(`Failed to fetch pipeline data: ${error.message || error}`);
 		}
 	}
 </script>

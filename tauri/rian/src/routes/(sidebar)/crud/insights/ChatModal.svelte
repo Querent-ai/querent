@@ -49,7 +49,7 @@
 				if (insight?.additionalOptions) {
 					for (const key in insight.additionalOptions) {
 						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
-							if (insight.additionalOptions[key].value.type == 'string') {
+							if (insight.additionalOptions[key].value.type === 'string') {
 								additional_options[key] = insight.additionalOptions[key].value
 									.value as unknown as string;
 							}
@@ -65,22 +65,21 @@
 				isLoadingInsight.set(true);
 
 				let res = await commands.triggerInsightAnalyst(request);
-				isLoadingInsight.set(false);
 				if (res.status == 'ok') {
 					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
 				} else {
-					console.log('Got error while starting insights ', res.error);
+					console.log('Error while starting insights:', res.error);
 				}
 			}
 		} catch (error) {
-			console.log('Got error while starting insights ', error);
+			console.error('Unexpected error while initializing chat:', error);
 		} finally {
 			isLoadingInsight.set(false);
 		}
 	}
 
-	function sendMessage() {
+	async function sendMessage() {
 		if (inputMessage.trim()) {
 			messages = [...messages, { text: inputMessage, isUser: true }];
 			messagesList.update((list) => [...list, { text: inputMessage, isUser: true }]);
@@ -94,8 +93,6 @@
 					};
 					isLoadingInsight.set(true);
 					let res = await commands.promptInsightAnalyst(request);
-					isLoadingInsight.set(false);
-
 					if (res.status == 'ok') {
 						let text = res.data.response
 							.replace(/\\n|\n/g, ' ')
@@ -105,29 +102,27 @@
 
 						messagesList.update((list) => [...list, { text: text, isUser: false }]);
 					} else {
-						console.log('Error while calling insights ', res.error);
+						console.log('Error while processing the insight query:', res.error);
 					}
 				}, 100);
 				inputMessage = '';
 			} catch (error) {
-				console.log('Got error while calling insights ', error);
+				console.error('Unexpected error while sending message:', error);
 			} finally {
 				isLoadingInsight.set(false);
 			}
 		}
-		isLoadingInsight.set(false);
 	}
 
-	async function closeModal() {
+	function closeModal() {
 		show = false;
 	}
 
-	// Helper function to format message text by replacing \n with <br>
 	function formatMessageText(text: string) {
 		return text.replace(/\n/g, '<br>');
 	}
 
-	function handleKeyDown(event: { key: string; shiftKey: any; preventDefault: () => void }) {
+	function handleKeyDown(event: { key: string; shiftKey: boolean; preventDefault: () => void }) {
 		if (event.key === 'Enter' && !event.shiftKey) {
 			event.preventDefault();
 			sendMessage();

@@ -17,8 +17,12 @@
 	$: hasKey = res;
 
 	onMount(async () => {
-		res = await commands.hasRianLicenseKey();
-		res = false;
+		try {
+			res = await commands.hasRianLicenseKey();
+		} catch (error) {
+			console.error('Error checking license key:', error);
+			alert(`Failed to check license key: ${error.message || error}`);
+		}
 	});
 
 	function handleModalClose(event: { detail: { verified: boolean } }) {

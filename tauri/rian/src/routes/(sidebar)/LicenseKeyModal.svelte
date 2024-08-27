@@ -8,17 +8,22 @@
 	let verificationMessage = '';
 
 	async function verifyLicense() {
-		if (email && key) {
-			let res = await commands.setRianLicenseKey(key);
-			if (res) {
-				console.log('Valid key');
-				dispatch('close', { verified: true });
+		try {
+			if (email && key) {
+				let res = await commands.setRianLicenseKey(key);
+				if (res) {
+					console.log('Valid key');
+					dispatch('close', { verified: true });
+				} else {
+					console.log('Invalid key');
+					verificationMessage = 'Failed to set the key. Please check your key and try again.';
+				}
 			} else {
-				console.log('Invalid key');
-				verificationMessage = 'Failed to set the key. Please check your key and try again';
+				verificationMessage = 'Please fill in all fields.';
 			}
-		} else {
-			verificationMessage = 'Please fill in all fields.';
+		} catch (error) {
+			console.error('Error verifying license:', error);
+			verificationMessage = `An error occurred: ${error.message || 'Unknown error'}. Please try again.`;
 		}
 	}
 </script>
