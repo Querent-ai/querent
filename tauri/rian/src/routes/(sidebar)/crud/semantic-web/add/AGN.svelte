@@ -105,6 +105,11 @@
 		info: string;
 	}
 
+	let newEntity = '';
+	let newEntityType = '';
+	let showNewEntityForm = false;
+	let searchTerm = '';
+
 	let models = [
 		{
 			id: 0,
@@ -221,8 +226,7 @@
 	};
 
 	function addRow() {
-		entityTable = [...entityTable, { entity: '', entityType: '' }];
-		updateFocus(entityTable.length - 1);
+		showNewEntityForm = true;
 	}
 
 	function deleteRow(index: number) {
@@ -230,11 +234,37 @@
 		entityTable = [...entityTable];
 	}
 
-	async function updateFocus(index: number) {
-		await tick();
-		const input = document.getElementById(`entity-input-${index}`);
-		if (input) {
-			input.focus();
+	function saveNewEntity(event: { preventDefault: () => void; }) {
+		event.preventDefault();
+		if (newEntity && newEntityType) {
+			entityTable = [...entityTable, { entity: newEntity, entityType: newEntityType }];
+			newEntity = '';
+			newEntityType = '';
+			showNewEntityForm = false;
+		} else {
+			showModal = true;
+			modalMessage = "Please enter both entity and its type"
+		}
+	}
+	let filteredTable: {
+		entity: string;
+		entityType: string;
+	}[];
+
+	$: {
+		filteredTable = entityTable.filter(row => 
+		row.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+		row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
+	);
+
+	console.log("Search item is ", searchTerm);
+	}
+
+	function handleSearch(event: KeyboardEvent) {
+		// event.preventDefault();
+		if (event.key === 'Enter') {
+			const target = event.target as HTMLInputElement;
+			searchTerm = target.value;
 		}
 	}
 
@@ -275,12 +305,11 @@
 						const lines = contents?.split('\n');
 						uploadedHeaders = lines[0].split(',');
 						uploadedData = lines.slice(1).map((line: string) => line.split(','));
-						let newEntities: { editing: boolean; entity: any; entityType: any }[] = [];
+						let newEntities: { entity: any; entityType: any }[] = [];
 
 					uploadedData.forEach((data) => {
 						if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
 							newEntities.push({
-								editing: false,
 								entity: data[0].trim(),
 								entityType: data[1].trim()
 							});
@@ -358,7 +387,7 @@
 					</span>
 				</label>
 				<div class="search-container">
-					<Search size="md" style="width: 300px" class="search-btn" />
+					<Search size="md" style="width: 300px" class="search-btn" on:keydown={handleSearch} />
 					<button type="button" class="add-row-btn" on:click={addRow}>+ Add New Entity Pair</button>
 				</div>
 				<div class="table-container">
@@ -371,7 +400,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each entityTable as row, index (row.entity + row.entityType)}
+							{#each filteredTable as row, index (row.entity + row.entityType)}
 								<tr>
 									<td>
 										{row.entity}
@@ -387,6 +416,13 @@
 						</tbody>
 					</table>
 				</div>
+				{#if showNewEntityForm}
+					<div class="new-entity-form">
+						<input type="text" bind:value={newEntity} placeholder="Entity" />
+						<input type="text" bind:value={newEntityType} placeholder="Entity Type" />
+						<button on:click={saveNewEntity}>Save</button>
+					</div>
+				{/if}
 
 				<div class="button-container">
 					<button type="button" class="open-csv-btn" on:click={openFileInput}
@@ -833,4 +869,34 @@
 		gap: 5px;
 		margin-bottom: 20px;
 	}
+
+	.new-entity-form {
+		display: grid;
+		grid-template-columns: 1fr 1fr 80px;
+		gap: 1px;
+		background-color: #ffffff;
+		border: 1px solid #ddd;
+		border-top: none;
+	}
+	.new-entity-form input, .new-entity-form button {
+		padding: 8px;
+		border: none;
+		background-color: white;
+	}
+
+
+	.new-entity-form button {
+		cursor: pointer;
+		margin-left: 15px;
+		margin-right: 10px;
+		margin-bottom: 10px;
+		background-color: #007bff;
+		color: white;
+		padding: 5px 5px;
+		font-size: 0.9em;
+		border: none;
+		border-radius: 10px;
+		display: inline-block;
+	}
+
 </style>
