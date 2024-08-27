@@ -108,7 +108,6 @@
 			}
 		} catch (error) {
 			console.error('Error fetching pipeline data:', error);
-			alert(`Failed to fetch pipeline data: ${error.message || error}`);
 		}
 	}
 </script>
