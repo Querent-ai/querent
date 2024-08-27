@@ -104,12 +104,11 @@
 					} else {
 						console.log('Error while processing the insight query:', res.error);
 					}
+					isLoadingInsight.set(false);
 				}, 100);
 				inputMessage = '';
 			} catch (error) {
 				console.error('Unexpected error while sending message:', error);
-			} finally {
-				isLoadingInsight.set(false);
 			}
 		}
 	}
