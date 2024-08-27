@@ -98,10 +98,6 @@ jobs:
           file: artifacts/windows-x86_64/*.sig
           overwrite: true
           tag_name: ${{ env.ASSET_VERSION }}
-      - name: Artifacts full path
-        run: |
-          echo "Artifacts full path"
-          ls -la artifacts
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
@@ -224,12 +220,13 @@ jobs:
           file: artifacts/linux-x86_64/*.sig
           overwrite: true
           tag_name: ${{ env.ASSET_VERSION }}
-      - name: Use Node.js 20.x
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
           registry-url: "https://registry.npmjs.org"
+      - name: Install pnpm
+        run: npm install -g pnpm
       - name: Generate update.json
         run: |
           npm install
