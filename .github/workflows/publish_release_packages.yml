@@ -45,19 +45,19 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  # build-windows-binaries:
-  #   strategy:
-  #     matrix:
-  #       target: [x86_64-pc-windows-msvc]
-  #   name: Build ${{ matrix.target }}
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./.github/actions/cargo-build-windows-binary
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         version: ${{ env.INPUT_RELEASE_VERSION }}
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+  build-windows-binaries:
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+    name: Build ${{ matrix.target }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cargo-build-windows-binary
+        with:
+          target: ${{ matrix.target }}
+          version: ${{ env.INPUT_RELEASE_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-tauri-rian-ui:
     permissions:

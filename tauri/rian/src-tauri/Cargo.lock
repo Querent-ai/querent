@@ -20,11 +20,11 @@ checksum = "8b5ace29ee3216de37c0546865ad08edef58b0f9e76838ed8959a84a990e58c5"
 
 [[package]]
 name = "actors"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "anyhow",
  "async-trait",
- "common 0.9.0",
+ "common 0.9.4",
  "flume",
  "futures",
  "once_cell",
@@ -2478,7 +2478,7 @@ dependencies = [
 
 [[package]]
 name = "cluster"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2488,7 +2488,7 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
- "common 0.9.0",
+ "common 0.9.4",
  "deadpool 0.10.0",
  "dialoguer",
  "diesel",
@@ -2606,7 +2606,7 @@ dependencies = [
 
 [[package]]
 name = "codegen"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "anyhow",
  "heck 0.4.1",
@@ -2669,7 +2669,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -3922,7 +3922,7 @@ checksum = "c34f04666d835ff5d62e058c3995147c06f42fe86ff053337632bca83e42702d"
 
 [[package]]
 name = "engines"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -3942,7 +3942,7 @@ dependencies = [
  "candle-nn",
  "candle-transformers",
  "chrono",
- "common 0.9.0",
+ "common 0.9.4",
  "crossbeam-channel",
  "csv",
  "deadpool 0.10.0",
@@ -5963,7 +5963,7 @@ dependencies = [
 
 [[package]]
 name = "ingestors"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -5980,7 +5980,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 0.9.0",
+ "common 0.9.4",
  "csv",
  "deadpool 0.10.0",
  "derive-getters",
@@ -6041,7 +6041,7 @@ dependencies = [
 
 [[package]]
 name = "insights"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -6058,7 +6058,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 0.9.0",
+ "common 0.9.4",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -6646,7 +6646,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "llms"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -6668,7 +6668,7 @@ dependencies = [
  "candle-transformers",
  "chrono",
  "clap",
- "common 0.9.0",
+ "common 0.9.4",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -7369,7 +7369,7 @@ checksum = "43794a0ace135be66a25d3ae77d41b91615fb68ae937f904090203e81f755b65"
 
 [[package]]
 name = "node"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -7381,7 +7381,7 @@ dependencies = [
  "clap",
  "cluster",
  "colored",
- "common 0.9.0",
+ "common 0.9.4",
  "dialoguer",
  "dirs 5.0.1",
  "engines",
@@ -9203,7 +9203,7 @@ dependencies = [
 
 [[package]]
 name = "proto"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -9212,7 +9212,7 @@ dependencies = [
  "bytesize",
  "bytestring",
  "codegen",
- "common 0.9.0",
+ "common 0.9.4",
  "dyn-clone",
  "glob",
  "http 0.2.12",
@@ -10022,10 +10022,10 @@ dependencies = [
 
 [[package]]
 name = "rian"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "cocoa 0.25.0",
- "common 0.9.0",
+ "common 0.9.4",
  "insights",
  "log 0.4.22",
  "macos-accessibility-client",
@@ -10062,7 +10062,7 @@ dependencies = [
 
 [[package]]
 name = "rian-core"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "actors",
  "anyhow",
@@ -10072,7 +10072,7 @@ dependencies = [
  "base64 0.21.7",
  "chrono",
  "cluster",
- "common 0.9.0",
+ "common 0.9.4",
  "crossbeam-channel",
  "csv",
  "engines",
@@ -11321,7 +11321,7 @@ dependencies = [
 
 [[package]]
 name = "sources"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -11337,7 +11337,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 0.9.0",
+ "common 0.9.4",
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
@@ -11973,13 +11973,13 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "0.9.0"
+version = "0.9.4"
 dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
  "chrono",
- "common 0.9.0",
+ "common 0.9.4",
  "csv",
  "deadpool 0.10.0",
  "diesel",
