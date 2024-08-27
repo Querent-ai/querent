@@ -234,7 +234,7 @@
 		entityTable = [...entityTable];
 	}
 
-	function saveNewEntity(event: { preventDefault: () => void; }) {
+	function saveNewEntity(event: { preventDefault: () => void }) {
 		event.preventDefault();
 		if (newEntity && newEntityType) {
 			entityTable = [...entityTable, { entity: newEntity, entityType: newEntityType }];
@@ -243,7 +243,7 @@
 			showNewEntityForm = false;
 		} else {
 			showModal = true;
-			modalMessage = "Please enter both entity and its type"
+			modalMessage = 'Please enter both entity and its type';
 		}
 	}
 	let filteredTable: {
@@ -252,12 +252,13 @@
 	}[];
 
 	$: {
-		filteredTable = entityTable.filter(row => 
-		row.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
-		row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
-	);
+		filteredTable = entityTable.filter(
+			(row) =>
+				row.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
+		);
 
-	console.log("Search item is ", searchTerm);
+		console.log('Search item is ', searchTerm);
 	}
 
 	function handleSearch(event: KeyboardEvent) {
@@ -307,16 +308,16 @@
 						uploadedData = lines.slice(1).map((line: string) => line.split(','));
 						let newEntities: { entity: any; entityType: any }[] = [];
 
-					uploadedData.forEach((data) => {
-						if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
-							newEntities.push({
-								entity: data[0].trim(),
-								entityType: data[1].trim()
-							});
-						} else {
-							console.log('Skipping invalid data:', data);
-						}
-					});
+						uploadedData.forEach((data) => {
+							if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
+								newEntities.push({
+									entity: data[0].trim(),
+									entityType: data[1].trim()
+								});
+							} else {
+								console.log('Skipping invalid data:', data);
+							}
+						});
 
 						if (newEntities.length > 0) {
 							entityTable = [...entityTable, ...newEntities];
@@ -878,12 +879,12 @@
 		border: 1px solid #ddd;
 		border-top: none;
 	}
-	.new-entity-form input, .new-entity-form button {
+	.new-entity-form input,
+	.new-entity-form button {
 		padding: 8px;
 		border: none;
 		background-color: white;
 	}
-
 
 	.new-entity-form button {
 		cursor: pointer;
@@ -898,5 +899,4 @@
 		border-radius: 10px;
 		display: inline-block;
 	}
-
 </style>
