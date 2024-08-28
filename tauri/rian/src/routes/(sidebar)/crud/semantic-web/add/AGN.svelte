@@ -86,7 +86,6 @@
 	let modalMessage = '';
 
 	let entityTable: {
-		editing: boolean;
 		entity: string;
 		entityType: string;
 	}[] = [];
@@ -106,6 +105,11 @@
 		name: string;
 		info: string;
 	}
+
+	let newEntity = '';
+	let newEntityType = '';
+	let showNewEntityForm = false;
+	let searchTerm = '';
 
 	let models = [
 		{
@@ -226,31 +230,42 @@
 	};
 
 	function addRow() {
-		entityTable = [...entityTable, { entity: '', entityType: '', editing: true }];
-		updateFocus(entityTable.length - 1);
+		showNewEntityForm = true;
 	}
 
-	function editRow(index: number) {
-		entityTable[index].editing = true;
-		updateFocus(index);
-	}
-
-	function saveRow(index: number) {
-		entityTable[index].editing = false;
-	}
-
-	function deleteRow(index: number) {
-		entityTable.splice(index, 1);
-		entityTable = [...entityTable];
-	}
-
-	async function updateFocus(index: number) {
-		await tick();
-		const input = document.getElementById(`entity-input-${index}`);
-		if (input) {
-			input.focus();
+	function deleteRow(entityToDelete: { entity: string; entityType: string }) {
+		const index = entityTable.findIndex(
+			(item) =>
+				item.entity === entityToDelete.entity && item.entityType === entityToDelete.entityType
+		);
+		if (index !== -1) {
+			entityTable.splice(index, 1);
+			entityTable = [...entityTable];
 		}
 	}
+
+	function saveNewEntity(event: { preventDefault: () => void }) {
+		event.preventDefault();
+		if (newEntity && newEntityType) {
+			entityTable = [...entityTable, { entity: newEntity, entityType: newEntityType }];
+			newEntity = '';
+			newEntityType = '';
+			showNewEntityForm = false;
+		} else {
+			showModal = true;
+			modalMessage = 'Please enter both entity and its type';
+		}
+	}
+	let filteredTable: {
+		entity: string;
+		entityType: string;
+	}[];
+
+	$: filteredTable = entityTable.filter(
+		(row) =>
+			row.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
+	);
 
 	async function downloadCSV() {
 		let exampleCSV = 'Entity, Entity type';
@@ -289,12 +304,11 @@
 						const lines = contents?.split('\n');
 						uploadedHeaders = lines[0].split(',');
 						uploadedData = lines.slice(1).map((line: string) => line.split(','));
-						let newEntities: { editing: boolean; entity: any; entityType: any }[] = [];
+						let newEntities: { entity: any; entityType: any }[] = [];
 
 						uploadedData.forEach((data) => {
 							if (data.length === 2 && data[0].trim() !== '' && data[1].trim() !== '') {
 								newEntities.push({
-									editing: false,
 									entity: data[0].trim(),
 									entityType: data[1].trim()
 								});
@@ -372,7 +386,7 @@
 					</span>
 				</label>
 				<div class="search-container">
-					<Search size="md" style="width: 300px" class="search-btn" />
+					<Search size="md" style="width: 300px" class="search-btn" bind:value={searchTerm} />
 					<button type="button" class="add-row-btn" on:click={addRow}>+ Add New Entity Pair</button>
 				</div>
 				<div class="table-container">
@@ -385,46 +399,29 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each entityTable as row, index (row.entity + row.entityType)}
+							{#each filteredTable as row, index (row.entity + row.entityType)}
 								<tr>
 									<td>
-										{#if row.editing}
-											<input
-												id={`entity-input-${index}`}
-												class="input-field"
-												type="text"
-												bind:value={row.entity}
-											/>
-										{:else}
-											{row.entity}
-										{/if}
+										{row.entity}
 									</td>
 									<td>
-										{#if row.editing}
-											<input
-												id={`entity-input-${index}`}
-												class="input-field"
-												type="text"
-												bind:value={row.entityType}
-											/>
-										{:else}
-											{row.entityType}
-										{/if}
+										{row.entityType}
 									</td>
 									<td class="button-cell">
-										{#if row.editing}
-											<button class="save-button" on:click={() => saveRow(index)}>Save</button>
-										{:else}
-											<button class="edit-button" on:click={() => editRow(index)}>Edit</button>
-											<button class="delete-button" on:click={() => deleteRow(index)}>Delete</button
-											>
-										{/if}
+										<button class="delete-button" on:click={() => deleteRow(row)}>Delete</button>
 									</td>
 								</tr>
 							{/each}
 						</tbody>
 					</table>
 				</div>
+				{#if showNewEntityForm}
+					<div class="new-entity-form">
+						<input type="text" bind:value={newEntity} placeholder="Entity" />
+						<input type="text" bind:value={newEntityType} placeholder="Entity Type" />
+						<button on:click={saveNewEntity}>Save</button>
+					</div>
+				{/if}
 
 				<div class="button-container">
 					<button type="button" class="open-csv-btn" on:click={openFileInput}
@@ -528,7 +525,6 @@
 		font-weight: bold;
 	}
 
-	.form-container input[type='text'],
 	.select-with-tags select,
 	.tags {
 		width: 100%;
@@ -736,10 +732,6 @@
 		text-align: center;
 	}
 
-	.section input[type='text'] {
-		margin-bottom: 10px;
-	}
-
 	.open-csv-btn {
 		display: inline-block;
 		margin: 0;
@@ -837,17 +829,6 @@
 		text-align: left;
 	}
 
-	td input {
-		width: 90%;
-		min-width: 200px;
-		box-sizing: border-box;
-		margin: 0;
-		padding: 10px;
-		border: 1px solid #ddd;
-		background: transparent;
-		font-size: 1em;
-	}
-
 	tr {
 		border-bottom: 1px solid #3a4453;
 		width: 100%;
@@ -860,18 +841,6 @@
 		min-width: 600px;
 	}
 
-	.save-button {
-		cursor: pointer;
-		margin-left: 5px;
-		background-color: #007bff;
-		color: white;
-		padding: 5px 10px;
-		font-size: 0.9em;
-		border: none;
-		border-radius: 10px;
-	}
-
-	.edit-button,
 	.delete-button {
 		cursor: pointer;
 		margin-left: 5px;
@@ -882,9 +851,6 @@
 		border: none;
 		border-radius: 10px;
 		display: inline-block;
-	}
-	.input-field {
-		width: 100%;
 	}
 
 	.search-container {
@@ -901,5 +867,34 @@
 		justify-content: flex-end;
 		gap: 5px;
 		margin-bottom: 20px;
+	}
+
+	.new-entity-form {
+		display: grid;
+		grid-template-columns: 1fr 1fr 80px;
+		gap: 1px;
+		background-color: #ffffff;
+		border: 1px solid #ddd;
+		border-top: none;
+	}
+	.new-entity-form input,
+	.new-entity-form button {
+		padding: 8px;
+		border: none;
+		background-color: white;
+	}
+
+	.new-entity-form button {
+		cursor: pointer;
+		margin-left: 15px;
+		margin-right: 10px;
+		margin-bottom: 10px;
+		background-color: #007bff;
+		color: white;
+		padding: 5px 5px;
+		font-size: 0.9em;
+		border: none;
+		border-radius: 10px;
+		display: inline-block;
 	}
 </style>
