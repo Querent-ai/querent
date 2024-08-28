@@ -251,8 +251,8 @@ pub fn create_binary_pairs(
 					}
 
 					// Add constraint: entity start index should not be between another entity's start and end indices
-					if (*start1 >= *start2 && *start1 <= *end2)
-						|| (*start2 >= *start1 && *start2 <= *end1)
+					if (*start1 >= *start2 && *start1 <= *end2) ||
+						(*start2 >= *start1 && *start2 <= *end1)
 					{
 						continue;
 					}
@@ -436,25 +436,25 @@ pub async fn calculate_biased_sentence_embedding(
 	let head_attention_score: f32 = attention_matrix
 		.iter()
 		.map(|row| {
-			(head_start_idx..=head_end_idx).map(|idx| row[idx]).sum::<f32>()
-				/ (head_end_idx - head_start_idx + 1) as f32
+			(head_start_idx..=head_end_idx).map(|idx| row[idx]).sum::<f32>() /
+				(head_end_idx - head_start_idx + 1) as f32
 		})
-		.sum::<f32>()
-		/ attention_matrix.len() as f32;
+		.sum::<f32>() /
+		attention_matrix.len() as f32;
 
 	let tail_attention_score: f32 = attention_matrix
 		.iter()
 		.map(|row| {
-			(tail_start_idx..=tail_end_idx).map(|idx| row[idx]).sum::<f32>()
-				/ (tail_end_idx - tail_start_idx + 1) as f32
+			(tail_start_idx..=tail_end_idx).map(|idx| row[idx]).sum::<f32>() /
+				(tail_end_idx - tail_start_idx + 1) as f32
 		})
-		.sum::<f32>()
-		/ attention_matrix.len() as f32;
+		.sum::<f32>() /
+		attention_matrix.len() as f32;
 	let mut biased_sentence_embedding = sentence_embedding;
 	for i in 0..biased_sentence_embedding.len() {
-		biased_sentence_embedding[i] += head_attention_score * head_embedding[i]
-			+ tail_attention_score * tail_embedding[i]
-			+ score * predicate_embedding[i];
+		biased_sentence_embedding[i] += head_attention_score * head_embedding[i] +
+			tail_attention_score * tail_embedding[i] +
+			score * predicate_embedding[i];
 	}
 	let norm: f32 = biased_sentence_embedding.iter().map(|&x| x * x).sum::<f32>().sqrt();
 	let normalized_biased_sentence_embedding: Vec<f32> =
