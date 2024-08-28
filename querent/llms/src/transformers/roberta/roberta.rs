@@ -1,15 +1,14 @@
 use crate::{
 	transformers::{
 		bert::bert_model_functions::DTYPE,
-		get_querent_data_path,
 		roberta::roberta_model_functions::{RobertaConfig, RobertaModel as CandleRobertaModel},
 	},
 	GenerateResult, Message,
 };
-
 use async_trait::async_trait;
 use candle_core::Tensor;
 use candle_nn::VarBuilder;
+use common::get_querent_data_path;
 use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokenizers::{PaddingParams, Tokenizer};

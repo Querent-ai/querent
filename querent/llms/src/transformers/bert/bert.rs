@@ -9,9 +9,9 @@ use hf_hub::{api::sync::ApiBuilder, Repo, RepoType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use tokenizers::{PaddingParams, Tokenizer};
 
-use crate::transformers::{get_querent_data_path, DistributionShift};
-
 use super::BertForTokenClassification;
+use crate::transformers::DistributionShift;
+use common::get_querent_data_path;
 
 #[derive(
 	Debug, Clone, Copy, Default, Hash, PartialEq, Eq, serde::Deserialize, serde::Serialize,

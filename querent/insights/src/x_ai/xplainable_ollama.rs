@@ -3,6 +3,7 @@ use crate::{
 	InsightError, InsightErrorKind, InsightInfo, InsightResult, InsightRunner,
 };
 use async_trait::async_trait;
+use common::get_querent_data_path;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use llms::client::{Ollama, OllamaClient};
 use serde_json::Value;
@@ -135,6 +136,7 @@ impl Insight for XAIOllama {
 		let embedding_model = TextEmbedding::try_new(InitOptions {
 			model_name: EmbeddingModel::AllMiniLML6V2,
 			show_download_progress: true,
+			cache_dir: get_querent_data_path(),
 			..Default::default()
 		})
 		.map_err(|e| InsightError::new(InsightErrorKind::Internal, e.into()))?;

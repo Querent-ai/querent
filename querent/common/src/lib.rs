@@ -34,3 +34,9 @@ pub use memory::*;
 pub mod schemas;
 pub use schemas::*;
 pub mod tools;
+use std::path::PathBuf;
+
+pub fn get_querent_data_path() -> PathBuf {
+	let data_path = dirs::data_dir().expect("Failed to get Querent data directory");
+	data_path.join("querent_data")
+}

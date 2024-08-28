@@ -50,6 +50,7 @@ reqwest = { workspace = true }
 reqwest-eventsource = { workspace = true }
 urlencoding = { workspace = true }
 stable_deref_trait = "1.2.0"
+dirs = { workspace = true }
 
 [features]
 testsuite = []

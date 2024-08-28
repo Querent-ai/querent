@@ -1,7 +1,7 @@
 use crate::discovery_traverser::process_auto_generated_suggestions;
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
-use common::{EventType, RuntimeType};
+use common::{get_querent_data_path, EventType, RuntimeType};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use proto::{
 	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
@@ -69,6 +69,7 @@ impl Actor for DiscoverySearch {
 		let embedding_model = TextEmbedding::try_new(InitOptions {
 			model_name: EmbeddingModel::AllMiniLML6V2,
 			show_download_progress: true,
+			cache_dir: get_querent_data_path(),
 			..Default::default()
 		})?;
 

@@ -1,5 +1,5 @@
 use actors::{AskError, MessageBus, Observe};
-use common::EventType;
+use common::{get_querent_data_path, EventType};
 use engines::agn::AttentionTensorsEngine;
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use futures_util::StreamExt;
@@ -320,6 +320,7 @@ pub async fn start_pipeline(
 	let embedding_model = TextEmbedding::try_new(InitOptions {
 		model_name: EmbeddingModel::AllMiniLML6V2,
 		show_download_progress: true,
+		cache_dir: get_querent_data_path(),
 		..Default::default()
 	})
 	.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
