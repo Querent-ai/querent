@@ -229,9 +229,15 @@
 		showNewEntityForm = true;
 	}
 
-	function deleteRow(index: number) {
-		entityTable.splice(index, 1);
-		entityTable = [...entityTable];
+	function deleteRow(entityToDelete: { entity: string; entityType: string }) {
+		const index = entityTable.findIndex(
+			(item) =>
+				item.entity === entityToDelete.entity && item.entityType === entityToDelete.entityType
+		);
+		if (index !== -1) {
+			entityTable.splice(index, 1);
+			entityTable = [...entityTable];
+		}
 	}
 
 	function saveNewEntity(event: { preventDefault: () => void }) {
@@ -251,15 +257,11 @@
 		entityType: string;
 	}[];
 
-	$: {
-		filteredTable = entityTable.filter(
-			(row) =>
-				row.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
-		);
-
-		console.log('Search item is ', searchTerm);
-	}
+	$: filteredTable = entityTable.filter(
+		(row) =>
+			row.entity.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
+	);
 
 	function handleSearch(event: KeyboardEvent) {
 		// event.preventDefault();
@@ -388,7 +390,7 @@
 					</span>
 				</label>
 				<div class="search-container">
-					<Search size="md" style="width: 300px" class="search-btn" on:keydown={handleSearch} />
+					<Search size="md" style="width: 300px" class="search-btn" bind:value={searchTerm} />
 					<button type="button" class="add-row-btn" on:click={addRow}>+ Add New Entity Pair</button>
 				</div>
 				<div class="table-container">
@@ -410,7 +412,7 @@
 										{row.entityType}
 									</td>
 									<td class="button-cell">
-										<button class="delete-button" on:click={() => deleteRow(index)}>Delete</button>
+										<button class="delete-button" on:click={() => deleteRow(row)}>Delete</button>
 									</td>
 								</tr>
 							{/each}
