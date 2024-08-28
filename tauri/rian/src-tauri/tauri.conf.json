@@ -1,6 +1,6 @@
 {
 	"productName": "rian",
-	"version": "0.9.4",
+	"version": "1.0.0",
 	"identifier": "xyz.querent.rian",
 	"build": {
 		"frontendDist": "../build",
