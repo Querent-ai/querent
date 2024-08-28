@@ -49,9 +49,12 @@
 				if (insight?.additionalOptions) {
 					for (const key in insight.additionalOptions) {
 						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
-							if (insight.additionalOptions[key].value.type === 'string') {
+							if (insight.additionalOptions[key].value.type === 'string' && key !== 'prompt') {
 								additional_options[key] = insight.additionalOptions[key].value
 									.value as unknown as string;
+							}
+							if (key === 'prompt') {
+								additional_options[key] = '';
 							}
 						}
 					}
