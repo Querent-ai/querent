@@ -1,6 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
-	import { commands } from '../../service/bindings-jsdoc';
+	import { commands } from '../../service/bindings';
+	import { isLicenseVerified } from '../../stores/appState';
 
 	const dispatch = createEventDispatcher();
 	let email = '';
@@ -28,30 +29,26 @@
 	}
 </script>
 
-<div class="modal-overlay">
-	<div class="modal-content">
-		<div class="description">
-			<p class="mb-3 text-center text-xl font-semibold">License key not found</p>
-			<p class="mb-5">Please enter your email and license key to activate your account.</p>
-		</div>
-		<form on:submit|preventDefault={verifyLicense}>
-			<label for="Email" class="text-l font-semibold">Please enter your Email address</label>
-			<input type="email" bind:value={email} placeholder="Email" required />
-			<label for="License-key" class="text-l font-semibold">Please enter your License key</label>
-			<input type="text" bind:value={key} placeholder="License Key" required />
-			<button type="submit" class="mt-5">Submit</button>
-		</form>
-		<p class="message text-s">{verificationMessage}</p>
+<div class:pointer-events-none={$isLicenseVerified}>
+	<div class="modal-overlay">
+		<div class="modal-content">
+			<div class="description">
+				<p class="mb-3 text-center text-xl font-semibold">License key not found</p>
+				<p class="mb-5">Please enter your email and license key to activate your account.</p>
+			</div>
+			<form on:submit|preventDefault={verifyLicense}>
+				<label for="Email" class="text-l font-semibold">Please enter your Email address</label>
+				<input type="email" bind:value={email} placeholder="Email" required />
+				<label for="License-key" class="text-l font-semibold">Please enter your License key</label>
+				<input type="text" bind:value={key} placeholder="License Key" required />
+				<button type="submit" class="mt-5">Submit</button>
+			</form>
+			<p class="message text-s">{verificationMessage}</p>
 
-		<div class="divider"></div>
-		<p class="info">OR</p>
-		<p class="info">
-			Get your license key at <a
-				href="https://querent.xyz/rian"
-				target="_blank"
-				rel="noopener noreferrer">querent.xyz</a
-			>
-		</p>
+			<div class="divider"></div>
+			<p class="info">OR</p>
+			<p class="info">Get your license key from <a href="https://querent.xyz">querent.xyz</a></p>
+		</div>
 	</div>
 </div>
 

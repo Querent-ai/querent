@@ -5,11 +5,8 @@
 	import Chart from 'chart.js/auto';
 	import { commands } from '../../service/bindings';
 
-	// import { getChartOptions } from '../../routes/(sidebar)/dashboard/chart_options';
-
 	import TopPairs from './TopPairs.svelte';
-	import { pipelineState } from '../../stores/appState';
-	// let vectorOptions = getChartOptions(false, 'vector');
+	import { pipelineStartTime, pipelineState } from '../../stores/appState';
 
 	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'no_active_pipeline';
 
@@ -47,13 +44,16 @@
 				scales: {
 					x: {
 						type: 'linear',
-						min: 0,
-						max: 100,
 						title: {
 							text: 'Time (seconds)',
 							display: true,
 							font: { size: 16 },
 							color: 'black'
+						},
+						ticks: {
+							callback: function (value, index, values) {
+								return Math.round(Number(value));
+							}
 						}
 					},
 					y: {
@@ -63,7 +63,8 @@
 							display: true,
 							font: { size: 16 },
 							color: 'black'
-						}
+						},
+						suggestedMax: 10
 					}
 				},
 				animation: {
@@ -93,16 +94,30 @@
 			if (!selectedPipeline || selectedPipeline == 'no_active_pipeline') {
 				return;
 			}
+			console.log('Pipeline start time initially ', $pipelineStartTime);
 			console.log('Calling the API with pipeline ID as ', selectedPipeline);
 			const response = await commands.describePipeline(selectedPipeline);
 
 			if (response.status == 'ok') {
 				const totalEvents = response.data.total_events;
-				const currentTime = performance.now() / 1000;
-				dataPoints.push({ x: currentTime % 100, y: totalEvents });
-				dataPoints = dataPoints.filter((dp) => currentTime - dp.x <= 100);
+				const currentUnixTime = Math.floor(Date.now() / 1000);
+				const timeSinceStart = currentUnixTime - $pipelineStartTime;
+
+				dataPoints.push({ x: timeSinceStart, y: totalEvents });
+
+				if (dataPoints.length > 10) {
+					dataPoints = dataPoints.slice(-10);
+				}
 				chartInstance.data.datasets[0].data = dataPoints;
+
+				const maxEvents = Math.max(...dataPoints.map((dp) => dp.y));
+				const newMax = Math.ceil(maxEvents * 1.2);
+				if (chartInstance.options?.scales?.y) {
+					(chartInstance.options.scales.y as any).max = newMax;
+				}
+
 				chartInstance.update();
+				console.log('Total events are ', totalEvents);
 			} else {
 				throw new Error(`Unexpected response status: ${response.status}`);
 			}

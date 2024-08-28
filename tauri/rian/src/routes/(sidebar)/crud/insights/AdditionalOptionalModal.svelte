@@ -58,7 +58,7 @@
 	<div class="modal-backdrop" role="dialog" aria-modal="true">
 		<div class="modal">
 			<div class="modal-header">
-				<h2>Additional Insights for {insightInfo.iconifyIcon}</h2>
+				<h2>Additional Insights for {insightInfo.name}</h2>
 				<button class="close-button" on:click={closeModal} aria-label="Close modal">&times;</button>
 			</div>
 			<div class="modal-body">
@@ -71,6 +71,7 @@
 								type="text"
 								bind:value={formData[key]}
 								placeholder={option.tooltip || ''}
+								disabled={key === 'prompt'}
 							/>
 						</div>
 					{/each}

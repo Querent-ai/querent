@@ -209,6 +209,9 @@ fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)
 	let mut indices = Vec::new();
 
 	for i in 0..tokens.len() {
+		if i + entity_tokens.len() > tokens.len() {
+			break;
+		}
 		let token_slice: Vec<String> = tokens[i..i + entity_tokens.len().min(tokens.len() - i)]
 			.iter()
 			.map(|s| s.to_lowercase())

@@ -249,7 +249,6 @@ impl InsightRunner for XAIRunner {
 					};
 
 					let human_message = vec![Message::new_human_message(&final_prompt)];
-					println!("Our Summary prompt -------------{:?}", human_message);
 					let summary = self.llm.generate(&human_message).await.map_err(|e| {
 						InsightError::new(
 							InsightErrorKind::Internal,
@@ -477,7 +476,6 @@ impl InsightRunner for XAIRunner {
 								}
 							}
 
-							println!("These are the fetched results -------------{:?}", fetched_results);
 							let unfiltered_results = extract_sentences(&fetched_results).join("\n");
 							let _unfiltered_prompt = format!(
 								"Query: {}\n\n\

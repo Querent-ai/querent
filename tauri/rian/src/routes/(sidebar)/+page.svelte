@@ -5,6 +5,7 @@
 	import { commands } from '../../service/bindings';
 	import LicenseKeyModal from './LicenseKeyModal.svelte';
 	import { onMount } from 'svelte';
+	import { isLicenseVerified } from '../../stores/appState';
 	export let data: PageData;
 
 	const path: string = '';
@@ -19,6 +20,7 @@
 	onMount(async () => {
 		try {
 			res = await commands.hasRianLicenseKey();
+			isLicenseVerified.set(res);
 		} catch (error) {
 			console.error('Error checking license key:', error);
 			alert(`Failed to check license key: ${error.message || error}`);
@@ -28,14 +30,19 @@
 	function handleModalClose(event: { detail: { verified: boolean } }) {
 		if (event.detail.verified) {
 			res = true;
+			isLicenseVerified.set(true);
 		}
 	}
 </script>
 
 <MetaTag {path} {description} {title} {subtitle} />
 {#if !hasKey}
-	<!-- we have to show modal here -->
-	<LicenseKeyModal on:close={handleModalClose} />
+	<div class="fixed inset-0 z-50 bg-black bg-opacity-50" style="pointer-events: none;"></div>
+	<div class="fixed inset-0 z-[51] flex items-center justify-center" style="pointer-events: none;">
+		<div style="pointer-events: auto;">
+			<LicenseKeyModal on:close={handleModalClose} />
+		</div>
+	</div>
 {/if}
 <main class="p-4">
 	<Dashboard {data} />

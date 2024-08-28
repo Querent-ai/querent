@@ -739,7 +739,10 @@ pub async fn list_collectors(
 
 	let mut config_list = Vec::new();
 
-	for (_key, collector) in collectors {
+	for (key, collector) in collectors {
+		if key == "RIAN_API_KEY" {
+			continue;
+		}
 		let config: CollectorConfig = from_str(&collector).map_err(|e| {
 			PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to create sources: {:?}", e))
 		})?;

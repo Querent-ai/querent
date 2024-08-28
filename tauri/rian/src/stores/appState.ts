@@ -75,6 +75,7 @@ const initialInsightSessionId: string = getFromLocalStorage('insightSessionId', 
 
 export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
+export const pipelineStartTime = writable<number>(0);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
 export const areCollectorsModified = writable(false);
 export const discoverylist = writable<DiscoveryDataPageList[]>([]);
@@ -86,6 +87,7 @@ export const discoverySessionId = writable<string>();
 export const isLoadingInsight = writable<boolean>(false);
 export const messagesList = writable<MessageType[]>(initialMessagesList);
 export const insightSessionId = writable<string>(initialInsightSessionId);
+export const isLicenseVerified = writable(false);
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);
