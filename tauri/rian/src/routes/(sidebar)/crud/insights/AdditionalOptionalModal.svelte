@@ -67,15 +67,17 @@
 			<div class="modal-body">
 				<form on:submit|preventDefault={submitForm}>
 					{#each Object.entries(insightInfo.additionalOptions) as [key, option]}
-						<div class="form-group">
-							<label for={key}>{key}</label>
-							<input
-								id={key}
-								type="text"
-								bind:value={formData[key]}
-								placeholder={option.tooltip || ''}
-							/>
-						</div>
+						{#if key != 'prompt'}
+							<div class="form-group">
+								<label for={key}>{key}</label>
+								<input
+									id={key}
+									type="text"
+									bind:value={formData[key]}
+									placeholder={option.tooltip || ''}
+								/>
+							</div>
+						{/if}
 					{/each}
 
 					<div class="button-group">
