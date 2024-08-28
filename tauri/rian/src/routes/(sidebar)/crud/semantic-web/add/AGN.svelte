@@ -3,6 +3,7 @@
 	import {
 		addPipelinesToList,
 		dataSources,
+		pipelineStartTime,
 		pipelineState,
 		updatePipeline,
 		type PipelinesData
@@ -157,6 +158,9 @@
 
 			if (result.status == 'ok') {
 				updatePipeline('running', result.data.pipeline_id);
+				let dateTime = Date.now();
+				let dateTimeSeconds = Math.round(dateTime / 1000);
+				pipelineStartTime.set(dateTimeSeconds);
 
 				let pipelineMetadata: PipelinesData = {
 					id: result.data.pipeline_id,

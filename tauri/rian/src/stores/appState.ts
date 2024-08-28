@@ -75,6 +75,7 @@ const initialInsightSessionId: string = getFromLocalStorage('insightSessionId', 
 
 export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
+export const pipelineStartTime = writable<number>(0);
 export const pipelines = writable<PipelinesData[]>(initialStatePipelinesList);
 export const areCollectorsModified = writable(false);
 export const discoverylist = writable<DiscoveryDataPageList[]>([]);
