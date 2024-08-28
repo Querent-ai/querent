@@ -20,6 +20,7 @@
 
 	function submitForm() {
 		let res: { [key: string]: CustomInsightOption } = {};
+		formData["prompt"] = "";
 
 		for (const key in formData) {
 			const value = formData[key];
