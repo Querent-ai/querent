@@ -351,14 +351,14 @@
 			<div class="section">
 				<div class="select-with-tags">
 					<label for="sourceSelector"
-						>Select Source <span class="tooltip"
+						>Select Sources <span class="tooltip"
 							><span class="icon-info">i</span><span class="tooltiptext"
 								>Choose all the sources from the list of sources that you have defined</span
 							>
 						</span></label
 					>
 					<select id="sourceSelector" on:change={handleAddSource}>
-						<option value="">-- Choose Source --</option>
+						<option value="">-- Choose Sources --</option>
 						{#each sourceNames as names}
 							<option value={names}>{names}</option>
 						{/each}
