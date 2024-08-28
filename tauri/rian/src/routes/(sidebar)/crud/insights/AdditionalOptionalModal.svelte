@@ -20,8 +20,6 @@
 
 	function submitForm() {
 		let res: { [key: string]: CustomInsightOption } = {};
-		formData['prompt'] = '';
-
 		for (const key in formData) {
 			const value = formData[key];
 
@@ -37,15 +35,11 @@
 	}
 
 	function initializeFormData() {
-		formData = Object.keys(insightInfo.additionalOptions).reduce(
-			(acc, key) => {
-				if (key !== 'prompt') {
-					acc[key] = '';
-				}
-				return acc;
-			},
-			{} as { [key: string]: string }
+		let formOptions = insightInfo.additionalOptions;
+		formOptions = Object.fromEntries(
+			Object.entries(formOptions).filter(([key, value]) => key !== 'prompt')
 		);
+		formData = Object.fromEntries(Object.entries(formOptions).map(([key, value]) => [key, '']));
 	}
 
 	$: if (show) {
@@ -61,23 +55,21 @@
 	<div class="modal-backdrop" role="dialog" aria-modal="true">
 		<div class="modal">
 			<div class="modal-header">
-				<h2>Additional Insights for {insightInfo.iconifyIcon}</h2>
+				<h2>Additional Insights for {insightInfo.name}</h2>
 				<button class="close-button" on:click={closeModal} aria-label="Close modal">&times;</button>
 			</div>
 			<div class="modal-body">
 				<form on:submit|preventDefault={submitForm}>
-					{#each Object.entries(insightInfo.additionalOptions) as [key, option]}
-						{#if key != 'prompt'}
-							<div class="form-group">
-								<label for={key}>{key}</label>
-								<input
-									id={key}
-									type="text"
-									bind:value={formData[key]}
-									placeholder={option.tooltip || ''}
-								/>
-							</div>
-						{/if}
+					{#each Object.entries(formData) as [key, option]}
+						<div class="form-group">
+							<label for={key}>{key}</label>
+							<input
+								id={key}
+								type="text"
+								bind:value={formData[key]}
+								placeholder={option.tooltip || ''}
+							/>
+						</div>
 					{/each}
 
 					<div class="button-group">
