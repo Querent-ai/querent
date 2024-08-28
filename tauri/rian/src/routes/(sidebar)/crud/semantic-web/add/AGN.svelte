@@ -263,14 +263,6 @@
 			row.entityType.toLowerCase().includes(searchTerm.toLowerCase())
 	);
 
-	function handleSearch(event: KeyboardEvent) {
-		// event.preventDefault();
-		if (event.key === 'Enter') {
-			const target = event.target as HTMLInputElement;
-			searchTerm = target.value;
-		}
-	}
-
 	async function downloadCSV() {
 		let exampleCSV = 'Entity, Entity type';
 
