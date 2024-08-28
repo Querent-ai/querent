@@ -49,12 +49,9 @@
 				if (insight?.additionalOptions) {
 					for (const key in insight.additionalOptions) {
 						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
-							if (insight.additionalOptions[key].value.type === 'string' && key !== 'prompt') {
+							if (insight.additionalOptions[key].value.type === 'string') {
 								additional_options[key] = insight.additionalOptions[key].value
 									.value as unknown as string;
-							}
-							if (key === 'prompt') {
-								additional_options[key] = '';
 							}
 						}
 					}
@@ -107,12 +104,12 @@
 					} else {
 						console.log('Error while processing the insight query:', res.error);
 					}
-					isLoadingInsight.set(false);
 				}, 100);
 				inputMessage = '';
 			} catch (error) {
 				console.error('Unexpected error while sending message:', error);
-				messagesList.set([]);
+			} finally {
+				isLoadingInsight.set(false);
 			}
 		}
 	}

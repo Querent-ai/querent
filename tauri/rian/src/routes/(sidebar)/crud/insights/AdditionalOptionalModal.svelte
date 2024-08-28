@@ -20,6 +20,7 @@
 
 	function submitForm() {
 		let res: { [key: string]: CustomInsightOption } = {};
+
 		for (const key in formData) {
 			const value = formData[key];
 
@@ -35,11 +36,13 @@
 	}
 
 	function initializeFormData() {
-		let formOptions = insightInfo.additionalOptions;
-		formOptions = Object.fromEntries(
-			Object.entries(formOptions).filter(([key, value]) => key !== 'prompt')
+		formData = Object.keys(insightInfo.additionalOptions).reduce(
+			(acc, key) => {
+				acc[key] = '';
+				return acc;
+			},
+			{} as { [key: string]: string }
 		);
-		formData = Object.fromEntries(Object.entries(formOptions).map(([key, value]) => [key, '']));
 	}
 
 	$: if (show) {
@@ -55,12 +58,12 @@
 	<div class="modal-backdrop" role="dialog" aria-modal="true">
 		<div class="modal">
 			<div class="modal-header">
-				<h2>Additional Insights for {insightInfo.name}</h2>
+				<h2>Additional Insights for {insightInfo.iconifyIcon}</h2>
 				<button class="close-button" on:click={closeModal} aria-label="Close modal">&times;</button>
 			</div>
 			<div class="modal-body">
 				<form on:submit|preventDefault={submitForm}>
-					{#each Object.entries(formData) as [key, option]}
+					{#each Object.entries(insightInfo.additionalOptions) as [key, option]}
 						<div class="form-group">
 							<label for={key}>{key}</label>
 							<input
