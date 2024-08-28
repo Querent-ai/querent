@@ -38,7 +38,9 @@
 	function initializeFormData() {
 		formData = Object.keys(insightInfo.additionalOptions).reduce(
 			(acc, key) => {
-				acc[key] = '';
+				if (key !== 'prompt') {
+					acc[key] = '';
+				}
 				return acc;
 			},
 			{} as { [key: string]: string }
