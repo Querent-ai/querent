@@ -88,6 +88,8 @@ export const isLoadingInsight = writable<boolean>(false);
 export const messagesList = writable<MessageType[]>(initialMessagesList);
 export const insightSessionId = writable<string>(initialInsightSessionId);
 export const isLicenseVerified = writable(false);
+export const statsDataTime = writable<number[]>([]);
+export const statsDataTotalEvents = writable<number[]>([]);
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);

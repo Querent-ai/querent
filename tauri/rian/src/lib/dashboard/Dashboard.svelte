@@ -6,7 +6,12 @@
 	import { commands } from '../../service/bindings';
 
 	import TopPairs from './TopPairs.svelte';
-	import { pipelineStartTime, pipelineState } from '../../stores/appState';
+	import {
+		pipelineStartTime,
+		pipelineState,
+		statsDataTime,
+		statsDataTotalEvents
+	} from '../../stores/appState';
 
 	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'no_active_pipeline';
 
@@ -27,16 +32,18 @@
 			console.error('Context element not found!');
 			return;
 		}
+
 		chartInstance = new Chart(ctx, {
 			type: 'line',
 			data: {
+				labels: $statsDataTime,
 				datasets: [
 					{
 						label: 'Total Events',
 						backgroundColor: 'rgb(255, 99, 132)',
 						borderColor: 'rgb(255, 99, 132)',
 						fill: false,
-						data: dataPoints
+						data: $statsDataTotalEvents
 					}
 				]
 			},
@@ -85,6 +92,8 @@
 			}
 		});
 
+		fetchPipelineData();
+
 		const intervalId = setInterval(() => fetchPipelineData(), 10000);
 		return () => clearInterval(intervalId);
 	});
@@ -103,14 +112,20 @@
 				const currentUnixTime = Math.floor(Date.now() / 1000);
 				const timeSinceStart = currentUnixTime - $pipelineStartTime;
 
-				dataPoints.push({ x: timeSinceStart, y: totalEvents });
+				statsDataTime.update((xData) => {
+					xData.push(timeSinceStart);
+					return xData.slice(-10);
+				});
 
-				if (dataPoints.length > 10) {
-					dataPoints = dataPoints.slice(-10);
-				}
-				chartInstance.data.datasets[0].data = dataPoints;
+				statsDataTotalEvents.update((yData) => {
+					yData.push(totalEvents);
+					return yData.slice(-10);
+				});
 
-				const maxEvents = Math.max(...dataPoints.map((dp) => dp.y));
+				chartInstance.data.labels = $statsDataTime;
+				chartInstance.data.datasets[0].data = $statsDataTotalEvents;
+
+				const maxEvents = Math.max(...$statsDataTotalEvents);
 				const newMax = Math.ceil(maxEvents * 1.2);
 				if (chartInstance.options?.scales?.y) {
 					(chartInstance.options.scales.y as any).max = newMax;
