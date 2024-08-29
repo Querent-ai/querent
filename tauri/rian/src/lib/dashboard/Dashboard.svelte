@@ -16,7 +16,6 @@
 	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'no_active_pipeline';
 
 	let chartInstance: Chart<'line', any[], unknown>;
-	let dataPoints: any[] = [];
 
 	onMount(() => {
 		const canvas = document.getElementById('myChart') as HTMLCanvasElement;
