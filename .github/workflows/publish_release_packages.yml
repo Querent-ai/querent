@@ -131,6 +131,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
+      - name: Install Tesseract OCR
+        run: sudo apt-get install -y tesseract-ocr
       - name: Install protoc (mac only)
         if: matrix.config.os == 'macos-latest'
         run: |
