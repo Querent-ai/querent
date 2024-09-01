@@ -13,9 +13,6 @@ rustflags = ["-C", "target-cpu=x86-64-v2", "--cfg", "tokio_unstable"]
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
 rustflags = [
-    "-C", "target-feature=+crt-static",
-    "-C", "link-arg=/NODEFAULTLIB:MSVCRT",
-    "-C", "link-arg=/DEFAULTLIB:libvcruntime.lib",
-    "-C", "link-arg=/DEFAULTLIB:libcmt.lib",
-    "-C", "link-arg=/DEFAULTLIB:ucrt.lib"
+    "-Zshare-generics=n",
+    "-Zthreads=16",
 ]
