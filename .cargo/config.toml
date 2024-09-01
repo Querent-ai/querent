@@ -12,7 +12,3 @@ rustflags = ["-C", "target-cpu=x86-64-v2", "--cfg", "tokio_unstable"]
 
 [target.x86_64-pc-windows-msvc]
 linker = "rust-lld.exe"
-rustflags = [
-    "-Zshare-generics=n",
-    "-Zthreads=16",
-]
