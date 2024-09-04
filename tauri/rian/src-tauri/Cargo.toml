@@ -72,19 +72,3 @@ license-check = []
 
 [patch.crates-io]
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
-
-[target.'cfg(windows)'.build]
-rustflags = [
-    "-C", "target-feature=+crt-static",
-    "-C", "link-arg=/NODEFAULTLIB:libvcruntimed.lib",
-    "-C", "link-arg=/NODEFAULTLIB:vcruntime.lib",
-    "-C", "link-arg=/NODEFAULTLIB:libcmtd.lib",
-    "-C", "link-arg=/NODEFAULTLIB:msvcrt.lib",
-    "-C", "link-arg=/NODEFAULTLIB:msvcrtd.lib",
-    "-C", "link-arg=/NODEFAULTLIB:libucrt.lib",
-    "-C", "link-arg=/NODEFAULTLIB:libucrtd.lib",
-    "-C", "link-arg=/NODEFAULTLIB:ucrtd.lib",
-    "-C", "link-arg=/DEFAULTLIB:libvcruntime.lib",
-    "-C", "link-arg=/DEFAULTLIB:libcmt.lib",  # Static C runtime
-    "-C", "link-arg=/DEFAULTLIB:ucrt.lib"     # Static Universal C runtime
-]
