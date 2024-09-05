@@ -257,7 +257,7 @@ ollama-rs = { version = "0.2.0", features = [
     "stream",
     "chat-history",
 ] }
-surrealdb = { version = "1.5.3", features = ["kv-rocksdb"] }
+surrealdb = { version = "1.5.4", features = ["kv-rocksdb"] }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
 typed-builder = "0.18.1"
@@ -275,6 +275,7 @@ specta-jsdoc = "=0.0.7"
 [patch.crates-io]
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
+esaxx-rs = { git = "https://github.com/Querent-ai/esaxx-rs" }
 
 [profile.release]
 panic = "unwind"

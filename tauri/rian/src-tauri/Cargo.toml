@@ -71,4 +71,6 @@ openssl-support = []
 license-check = []
 
 [patch.crates-io]
+bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
+esaxx-rs = { git = "https://github.com/Querent-ai/esaxx-rs" }

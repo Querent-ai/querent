@@ -85,7 +85,7 @@ jobs:
           path: tauri/rian/build
 
   build-tauri-rian-nodes:
-    needs: build-tauri-rian-ui
+    needs: [build-tauri-rian-ui]
     permissions:
       contents: write
       packages: write
@@ -102,9 +102,9 @@ jobs:
           - os: macos-latest
             arch: aarch64
             rust_target: aarch64-apple-darwin
-          # - os: windows-latest
-          #   arch: x86_64
-          #   rust_target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            arch: x86_64
+            rust_target: x86_64-pc-windows-msvc
     runs-on: ${{ matrix.config.os }}
     steps:
       - uses: actions/checkout@v4
