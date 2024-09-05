@@ -1,5 +1,5 @@
 import { writable, get } from 'svelte/store';
-import type { CollectorConfig, Insight } from '../service/bindings';
+import type { CollectorConfig, Insight, IndexingStatistics } from '../service/bindings';
 export const isVisible = writable(false);
 
 function saveToLocalStorage(key: string, value: any) {
@@ -70,6 +70,22 @@ export interface MessageType {
 	isUser: boolean;
 }
 
+export const describeStats = writable<IndexingStatistics>({
+	total_docs: 0,
+	total_events: 0,
+	total_events_processed: 0,
+	total_events_received: 0,
+	total_events_sent: 0,
+	total_batches: 0,
+	total_sentences: 0,
+	total_subjects: 0,
+	total_predicates: 0,
+	total_objects: 0,
+	total_graph_events: 0,
+	total_vector_events: 0,
+	total_data_processed_size: 0
+});
+
 const initialMessagesList: MessageType[] = getFromLocalStorage('messagesList', []);
 const initialInsightSessionId: string = getFromLocalStorage('insightSessionId', '');
 
@@ -88,6 +104,8 @@ export const isLoadingInsight = writable<boolean>(false);
 export const messagesList = writable<MessageType[]>(initialMessagesList);
 export const insightSessionId = writable<string>(initialInsightSessionId);
 export const isLicenseVerified = writable(false);
+export const statsDataTime = writable<number[]>([]);
+export const statsDataTotalEvents = writable<number[]>([]);
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);

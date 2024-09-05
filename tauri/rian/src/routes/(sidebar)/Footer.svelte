@@ -1,28 +1,19 @@
 <script lang="ts">
 	import { Frame, type LinkType } from 'flowbite-svelte';
-	import {
-		DiscordSolid,
-		DribbbleSolid,
-		FacebookSolid,
-		GithubSolid,
-		TwitterSolid
-	} from 'flowbite-svelte-icons';
+	import { DiscordSolid, GithubSolid, LinkedinSolid } from 'flowbite-svelte-icons';
 	import type { ComponentType } from 'svelte';
 
 	const links: LinkType[] = [
-		{ name: 'Terms and conditions', href: '#' },
-		{ name: 'Privacy Policy', href: '#' },
-		{ name: 'Licensing', href: '#' },
-		{ name: 'Cookie Policy', href: '#' },
-		{ name: 'Contact', href: '#' }
+		{ name: 'Terms and conditions', href: 'https://querent.xyz/policies' },
+		{ name: 'Privacy Policy', href: 'https://querent.xyz/policies' },
+		{ name: 'Licensing', href: 'https://github.com/Querent-ai/distribution/blob/main/LICENSE' },
+		{ name: 'Contact', href: 'mailto:contact@querent.xyz' }
 	];
 
 	const brands: [ComponentType, string][] = [
-		[FacebookSolid, ''],
-		[DiscordSolid, ''],
-		[TwitterSolid, ''],
-		[GithubSolid, ''],
-		[DribbbleSolid, '']
+		[DiscordSolid, 'https://discord.gg/3fVAVmZXyh'],
+		[GithubSolid, 'https://github.com/querent-ai'],
+		[LinkedinSolid, 'https://www.linkedin.com/company/96932226']
 	];
 </script>
 
@@ -38,6 +29,7 @@
 				<a
 					{href}
 					class="mr-4 text-sm font-normal text-gray-500 hover:underline dark:text-gray-400 sm:mr-6"
+					target="_blank"
 				>
 					{name}
 				</a>
@@ -46,7 +38,11 @@
 	</ul>
 	<div class="flex space-x-6 sm:justify-center">
 		{#each brands as [component, href]}
-			<a {href} class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+			<a
+				{href}
+				class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+				target="_blank"
+			>
 				<svelte:component this={component} size="md" />
 			</a>
 		{/each}

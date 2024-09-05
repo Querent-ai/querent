@@ -2,6 +2,7 @@
 	import { Card, Heading, TabItem, Tabs } from 'flowbite-svelte';
 	import { commands, type IndexingStatistics } from '../../service/bindings';
 	import { onDestroy, onMount } from 'svelte';
+	import { describeStats } from '../../stores/appState';
 
 	let selectedPipeline: string;
 	let runningPipelines: string[] = [];
@@ -14,6 +15,13 @@
 			res.forEach(([pipelineId, _]) => {
 				runningPipelines = [...runningPipelines, pipelineId];
 			});
+
+			if ($describeStats.total_docs > 0) {
+				productsArray = convertStatsToArray($describeStats);
+				fetchPipelineData(selectedPipeline);
+			} else {
+				fetchPipelineData(selectedPipeline);
+			}
 		} catch (error) {
 			console.error('Error fetching running pipelines:', error);
 			alert(`Failed to fetch running pipelines: ${error.message || error}`);
@@ -48,6 +56,7 @@
 			const response = await commands.describePipeline(selectedPipeline);
 			if (response.status == 'ok') {
 				products = response.data;
+				describeStats.set(products);
 				productsArray = convertStatsToArray(products);
 			} else {
 				throw new Error(`Unexpected response status: ${response.status}`);
