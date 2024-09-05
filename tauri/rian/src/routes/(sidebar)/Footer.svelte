@@ -1,12 +1,6 @@
 <script lang="ts">
 	import { Frame, type LinkType } from 'flowbite-svelte';
-	import {
-		DiscordSolid,
-		DribbbleSolid,
-		FacebookSolid,
-		GithubSolid,
-		TwitterSolid
-	} from 'flowbite-svelte-icons';
+	import { DiscordSolid, GithubSolid, LinkedinSolid } from 'flowbite-svelte-icons';
 	import type { ComponentType } from 'svelte';
 
 	const links: LinkType[] = [
@@ -17,11 +11,9 @@
 	];
 
 	const brands: [ComponentType, string][] = [
-		[FacebookSolid, ''],
-		[DiscordSolid, ''],
-		[TwitterSolid, ''],
-		[GithubSolid, ''],
-		[DribbbleSolid, '']
+		[DiscordSolid, 'https://discord.gg/3fVAVmZXyh'],
+		[GithubSolid, 'https://github.com/querent-ai'],
+		[LinkedinSolid, 'https://www.linkedin.com/company/96932226']
 	];
 </script>
 
@@ -46,7 +38,11 @@
 	</ul>
 	<div class="flex space-x-6 sm:justify-center">
 		{#each brands as [component, href]}
-			<a {href} class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">
+			<a
+				{href}
+				class="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+				target="_blank"
+			>
 				<svelte:component this={component} size="md" />
 			</a>
 		{/each}
