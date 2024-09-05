@@ -185,19 +185,19 @@ log = { version = "^0.4.17", features = [
   "max_level_debug",
   "release_max_level_debug"
 ] }
-actors = { version = "1.0.0", path = "./actors" }
-common = { version = "1.0.0", path = "./common" }
-rian-core = { version = "1.0.0", path = "./rian" }
-storage = { version = "1.0.0", path = "./storage" }
-cluster = { version = "1.0.0", path = "./cluster" }
-codegen = { version = "1.0.0", path = "./codegen" }
-proto = { version = "1.0.0", path = "./proto" }
-node = { version = "1.0.0", path = "./node" }
-sources = { version = "1.0.0", path = "./sources" }
-ingestors = { version = "1.0.0", path = "./ingestors" }
-engines = { version = "1.0.0", path = "./engines" }
-llms = { version = "1.0.0", path = "./llms" }
-insights = { version = "1.0.0", path = "./insights" }
+actors = { version = "1.0.1", path = "./actors" }
+common = { version = "1.0.1", path = "./common" }
+rian-core = { version = "1.0.1", path = "./rian" }
+storage = { version = "1.0.1", path = "./storage" }
+cluster = { version = "1.0.1", path = "./cluster" }
+codegen = { version = "1.0.1", path = "./codegen" }
+proto = { version = "1.0.1", path = "./proto" }
+node = { version = "1.0.1", path = "./node" }
+sources = { version = "1.0.1", path = "./sources" }
+ingestors = { version = "1.0.1", path = "./ingestors" }
+engines = { version = "1.0.1", path = "./engines" }
+llms = { version = "1.0.1", path = "./llms" }
+insights = { version = "1.0.1", path = "./insights" }
 milvus-sdk-rust = "0.1.0"
 neo4rs = "0.7.0"
 diesel-async = "0.4.1"

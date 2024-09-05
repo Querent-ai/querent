@@ -1,8 +1,8 @@
 {
 	"name": "rian",
-	"version": "0.8.1",
+	"version": "1.0.1",
 	"description": "Rian is realtime information aggregation network",
-	"license": "BSL-1.0",
+	"license": "BSL-1.1",
 	"private": true,
 	"scripts": {
 		"dev": "vite dev",
@@ -116,7 +116,8 @@
 		"Aggregation",
 		"Aggregator",
 		"Network",
-		"tauri"
+		"tauri",
+		"RIAN"
 	],
 	"repository": {
 		"type": "git",
