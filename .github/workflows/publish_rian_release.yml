@@ -62,42 +62,42 @@ jobs:
         run: |
           WORKFLOW_RUN_ID=$(cat workflow_run_id.txt)
           echo "WORKFLOW_RUN_ID=$WORKFLOW_RUN_ID" >> $GITHUB_ENV
-      # - name: Download R!AN Windows
-      #   uses: actions/download-artifact@v4
-      #   with:
-      #     name: tauri-rian-bundle-windows-latest-x86_64
-      #     path: artifacts/windows-x86_64
-      #     run-id: ${{ env.WORKFLOW_RUN_ID }}
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     merge-multiple: true
-      # - name: Move files to parent directory
-      #   run: |
-      #     mv artifacts/windows-x86_64/*/* artifacts/windows-x86_64/
-      #     ls -la artifacts/windows-x86_64
-      # - name: Upload R!AN Windows .msi
-      #   uses: quickwit-inc/upload-to-github-release@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     file: artifacts/windows-x86_64/*.msi
-      #     overwrite: true
-      #     tag_name: ${{ env.ASSET_VERSION }}
-      # - name: Upload R!AN Windows .exe
-      #   uses: quickwit-inc/upload-to-github-release@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     file: artifacts/windows-x86_64/*.exe
-      #     overwrite: true
-      #     tag_name: ${{ env.ASSET_VERSION }}
-      # - name: Upload Windows Signature
-      #   uses: quickwit-inc/upload-to-github-release@v1
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     file: artifacts/windows-x86_64/*.sig
-      #     overwrite: true
-      #     tag_name: ${{ env.ASSET_VERSION }}
+      - name: Download R!AN Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-rian-bundle-windows-latest-x86_64
+          path: artifacts/windows-x86_64
+          run-id: ${{ env.WORKFLOW_RUN_ID }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          merge-multiple: true
+      - name: Move files to parent directory
+        run: |
+          mv artifacts/windows-x86_64/*/* artifacts/windows-x86_64/
+          ls -la artifacts/windows-x86_64
+      - name: Upload R!AN Windows .msi
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/windows-x86_64/*.msi
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload R!AN Windows .exe
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/windows-x86_64/*.exe
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
+      - name: Upload Windows Signature
+        uses: quickwit-inc/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: artifacts/windows-x86_64/*.sig
+          overwrite: true
+          tag_name: ${{ env.ASSET_VERSION }}
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
