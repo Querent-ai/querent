@@ -1,50 +1,56 @@
 Business Source License 1.1
-===========================
 
 Parameters
 
-Licensor: QuerentAI LLC
-Licensed Work: Querent (the "Licensed Work") - The Licensed Work is (c) 2023 QuerentAI LLC.
-Additional Use Grant: You may make use of the Licensed Work, provided that you may not use the Licensed Work for AI-related services. A "AI-related services" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating systems dependent on Querent controlled by third parties.
-Change Date: 2026-07-30
-Change License: Apache License, Version 2.0
+Licensor: QuerentAI LLC  
+Licensed Work: Querent (the "Licensed Work") - The Licensed Work is (c) 2023 QuerentAI LLC.  
+Additional Use Grant: You may make use of the Licensed Work, provided that you may not use the Licensed Work for:
+1. AI-related services. An "AI-related service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating systems dependent on Querent controlled by third parties.
+2. Database Services, as defined by SurrealDB’s license: a "Database Service" is a commercial offering that allows third parties (other than your direct employees and contractors) to access the functionality of the Licensed Work by creating or managing tables whose schemas are controlled or managed by such third parties.
+3. Any use that integrates or embeds the Licensed Work in a service or product offering that provides database, big data, or analytics services to third parties unless explicitly authorized by the Licensor.
+
+Change Date: 2026-07-30  
+Change License: Apache License, Version 2.0  
 For information about alternative licensing arrangements for the Software, please email: contact-AT-protocolstreams.xyz
+
 Notice
 
 The Business Source License (this document, or the “License”) is not an Open Source license. However, the Licensed Work will eventually be made available under an Open Source License, as stated in this License. License text copyright (c) 2023 QuerentAI LLC. “Business Source License” is a trademark of QuerentAI LLC.
 
-------------------------------------------------------------------------------------
+---
 
 Business Source License 1.1
 
 Terms
 
-The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. The Licensor may make an Additional Use Grant, above, permitting limited production use.
+1. Grant of Rights: The Licensor hereby grants you the right to copy, modify, create derivative works, redistribute, and make non-production use of the Licensed Work. The Licensor may make an Additional Use Grant, above, permitting limited production use.
 
-Effective on the Change Date, or the fourth anniversary of the first publicly available distribution of a specific version of the Licensed Work under this License, whichever comes first, the Licensor hereby grants you rights under the terms of the Change License, and the rights granted in the paragraph above terminate.
+2. Change License: Effective on the Change Date, or the fourth anniversary of the first publicly available distribution of a specific version of the Licensed Work under this License, whichever comes first, the Licensor hereby grants you rights under the terms of the Change License, and the rights granted in the paragraph above terminate.
 
-If your use of the Licensed Work does not comply with the requirements currently in effect as described in this License, you must purchase a commercial license from the Licensor, its affiliated entities, or authorized resellers, or you must refrain from using the Licensed Work.
+3. Compliance: If your use of the Licensed Work does not comply with the requirements currently in effect as described in this License, you must purchase a commercial license from the Licensor, its affiliated entities, or authorized resellers, or you must refrain from using the Licensed Work.
 
-All copies of the original and modified Licensed Work, and derivative works of the Licensed Work, are subject to this License. This License applies separately for each version of the Licensed Work, and the Change Date may vary for each version of the Licensed Work released by Licensor.
+4. Attribution: Any distribution of the Licensed Work, or derivative works thereof, must include a copy of this License and prominently display the following notice:
+   "This software includes code developed by QuerentAI LLC. (https://querent.ai) and is licensed under the Business Source License 1.1."
 
-You must conspicuously display this License on each original or modified copy of the Licensed Work. If you receive the Licensed Work in original or modified form from a third party, the terms and conditions set forth in this License apply to your use of that work.
+5. Patent Rights: Subject to the terms and conditions of this License, the Licensor grants you a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this License) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Licensed Work, where such license applies only to those patent claims licensable by Licensor that are necessarily infringed by your use or distribution of the Licensed Work unmodified. If you institute patent litigation (including a cross-claim or counterclaim) against any entity alleging that the Licensed Work or a contribution incorporated within the Licensed Work constitutes direct or contributory patent infringement, then any patent licenses granted to you under this License for that Licensed Work shall terminate as of the date such litigation is filed.
 
-Any use of the Licensed Work in violation of this License will automatically terminate your rights under this License for the current and all other versions of the Licensed Work.
+6. Commercial Licensing: Licensor may offer commercial licenses to permit uses of the Licensed Work that are otherwise prohibited under this License. For more information or to inquire about commercial licensing, please contact Licensor at the provided email address.
 
-This License does not grant you any right in any trademark or logo of Licensor or its affiliates (provided that you may use a trademark or logo of Licensor as expressly required by this License).
+7. Contribution Policy: By contributing to the Licensed Work, you agree that your contributions are licensed under the same terms as the Licensed Work. You grant the Licensor a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license under your contributions, including any associated intellectual property rights, to use, reproduce, prepare derivative works of, distribute, and sublicense your contributions as part of the Licensed Work.
 
-TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSED WORK IS PROVIDED ON AN “AS IS” BASIS. LICENSOR HEREBY DISCLAIMS ALL WARRANTIES AND CONDITIONS, EXPRESS OR IMPLIED, INCLUDING (WITHOUT LIMITATION) WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND TITLE.
+8. License Termination: Any use of the Licensed Work in violation of this License will automatically terminate your rights under this License for the current and all other versions of the Licensed Work.
 
-QuerentAI LLC hereby grants you permission to use this License’s text to license your works and to refer to it using the trademark “Business Source License”, as long as you comply with the Covenants of Licensor below.
+9. Trademark Rights: This License does not grant you any right in any trademark or logo of Licensor or its affiliates (provided that you may use a trademark or logo of Licensor as expressly required by this License).
+
+10. Disclaimer of Warranty: TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSED WORK IS PROVIDED ON AN “AS IS” BASIS. LICENSOR HEREBY DISCLAIMS ALL WARRANTIES AND CONDITIONS, EXPRESS OR IMPLIED, INCLUDING (WITHOUT LIMITATION) WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND TITLE.
+
+11. Permission to Use License Text: QuerentAI LLC hereby grants you permission to use this License’s text to license your works and to refer to it using the trademark “Business Source License,” as long as you comply with the Covenants of Licensor below.
 
 Covenants of Licensor
 
-In consideration of the right to use this License’s text and the “Business Source License” name and trademark, Licensor covenants to [Your Company Name], and to all other recipients of the licensed work to be provided by Licensor:
+In consideration of the right to use this License’s text and the “Business Source License” name and trademark, Licensor covenants to QuerentAI LLC, and to all other recipients of the licensed work to be provided by Licensor:
 
-To specify as the Change License the Apache License, Version 2.0.
-
-To either: (a) specify an additional grant of rights to use that does not impose any additional restriction on the right granted in this License, as the Additional Use Grant; or (b) insert the text “None”.
-
-To specify a Change Date.
-
-Not to modify this License in any other way.
+1. To specify as the Change License the Apache License, Version 2.0.
+2. To either: (a) specify an additional grant of rights to use that does not impose any additional restriction on the right granted in this License, as the Additional Use Grant; or (b) insert the text “None”.
+3. To specify a Change Date.
+4. Not to modify this License in any other way.
