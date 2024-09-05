@@ -13,7 +13,7 @@
 		{ name: 'Terms and conditions', href: '#' },
 		{ name: 'Privacy Policy', href: '#' },
 		{ name: 'Licensing', href: 'https://github.com/Querent-ai/distribution/blob/main/LICENSE' },
-		{ name: 'Contact', href: '#' }
+		{ name: 'Contact', href: 'mailto:contact@querent.xyz' }
 	];
 
 	const brands: [ComponentType, string][] = [
