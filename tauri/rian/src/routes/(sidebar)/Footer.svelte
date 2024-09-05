@@ -4,8 +4,8 @@
 	import type { ComponentType } from 'svelte';
 
 	const links: LinkType[] = [
-		{ name: 'Terms and conditions', href: '#' },
-		{ name: 'Privacy Policy', href: '#' },
+		{ name: 'Terms and conditions', href: 'https://querent.xyz/policies' },
+		{ name: 'Privacy Policy', href: 'https://querent.xyz/policies' },
 		{ name: 'Licensing', href: 'https://github.com/Querent-ai/distribution/blob/main/LICENSE' },
 		{ name: 'Contact', href: 'mailto:contact@querent.xyz' }
 	];
