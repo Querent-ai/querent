@@ -12,8 +12,7 @@
 	const links: LinkType[] = [
 		{ name: 'Terms and conditions', href: '#' },
 		{ name: 'Privacy Policy', href: '#' },
-		{ name: 'Licensing', href: '#' },
-		{ name: 'Cookie Policy', href: '#' },
+		{ name: 'Licensing', href: 'https://github.com/Querent-ai/distribution/blob/main/LICENSE' },
 		{ name: 'Contact', href: '#' }
 	];
 
@@ -38,6 +37,7 @@
 				<a
 					{href}
 					class="mr-4 text-sm font-normal text-gray-500 hover:underline dark:text-gray-400 sm:mr-6"
+					target="_blank"
 				>
 					{name}
 				</a>
