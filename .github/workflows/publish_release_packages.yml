@@ -12,55 +12,52 @@ on:
       release-version:
         description: "Release version (v#.#.#[-rc#])"
         required: true
-  pull_request:
-    branches:
-      - main
 
 env:
-  INPUT_RELEASE_VERSION: "v1.0.0"
+  INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
 jobs:
-  # build-macos-binaries:
-  #   name: Build ${{ matrix.target }}
-  #   runs-on: macos-latest
-  #   strategy:
-  #     matrix:
-  #       target: [x86_64-apple-darwin, aarch64-apple-darwin]
+  build-macos-binaries:
+    name: Build ${{ matrix.target }}
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
 
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./.github/actions/cargo-build-macos-binary
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         version: ${{ env.INPUT_RELEASE_VERSION }}
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cargo-build-macos-binary
+        with:
+          target: ${{ matrix.target }}
+          version: ${{ env.INPUT_RELEASE_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  # build-linux-binaries:
-  #   strategy:
-  #     matrix:
-  #       target: [x86_64-unknown-linux-gnu]
-  #   name: Build ${{ matrix.target }}
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./.github/actions/cross-build-binary
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         version: ${{ env.INPUT_RELEASE_VERSION }}
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+  build-linux-binaries:
+    strategy:
+      matrix:
+        target: [x86_64-unknown-linux-gnu]
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cross-build-binary
+        with:
+          target: ${{ matrix.target }}
+          version: ${{ env.INPUT_RELEASE_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-  # build-windows-binaries:
-  #   strategy:
-  #     matrix:
-  #       target: [x86_64-pc-windows-msvc]
-  #   name: Build ${{ matrix.target }}
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: ./.github/actions/cargo-build-windows-binary
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         version: ${{ env.INPUT_RELEASE_VERSION }}
-  #         token: ${{ secrets.GITHUB_TOKEN }}
+  build-windows-binaries:
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+    name: Build ${{ matrix.target }}
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cargo-build-windows-binary
+        with:
+          target: ${{ matrix.target }}
+          version: ${{ env.INPUT_RELEASE_VERSION }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   build-tauri-rian-ui:
     permissions:
@@ -96,15 +93,15 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          # - os: ubuntu-latest
-          #   arch: x86_64
-          #   rust_target: x86_64-unknown-linux-gnu
-          # - os: macos-latest
-          #   arch: x86_64
-          #   rust_target: x86_64-apple-darwin
-          # - os: macos-latest
-          #   arch: aarch64
-          #   rust_target: aarch64-apple-darwin
+          - os: ubuntu-latest
+            arch: x86_64
+            rust_target: x86_64-unknown-linux-gnu
+          - os: macos-latest
+            arch: x86_64
+            rust_target: x86_64-apple-darwin
+          - os: macos-latest
+            arch: aarch64
+            rust_target: aarch64-apple-darwin
           - os: windows-latest
             arch: x86_64
             rust_target: x86_64-pc-windows-msvc
