@@ -435,17 +435,6 @@ pub async fn calculate_biased_sentence_embedding(
 		EngineError::new(EngineErrorKind::ModelError, Arc::new(anyhow::anyhow!(e.to_string())))
 	})?[0]
 		.clone();
-	if attention_matrix.len() == 0 ||
-		head_start_idx >= attention_matrix[0].len() ||
-		head_end_idx >= attention_matrix[0].len() ||
-		tail_start_idx >= attention_matrix[0].len() ||
-		tail_end_idx >= attention_matrix[0].len()
-	{
-		return Err(EngineError::new(
-			EngineErrorKind::ModelError,
-			Arc::new(anyhow::anyhow!("Entity indices out of bounds")),
-		));
-	}
 
 	// Calculate attention scores for head and tail entities
 	let head_attention_score: f32 = attention_matrix
