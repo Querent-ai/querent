@@ -3,12 +3,12 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{agn::HeadTailRelations, EngineError, EngineErrorKind};
 use chrono::{TimeZone, Utc};
 use fastembed::TextEmbedding;
+use lazy_static::lazy_static;
 use llms::LLM;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
-
 /// Represents a classified sentence with identified entities.
 #[derive(Debug, Serialize)]
 pub struct ClassifiedSentence {
@@ -52,16 +52,12 @@ pub struct ClassifiedSentenceWithRelations {
 	pub relations: Vec<HeadTailRelations>,
 }
 
-/// Removes newline characters from the given text.
+lazy_static! {
+	static ref NEWLINE_RE: Regex = Regex::new(r"\n+").unwrap();
+}
 pub fn remove_newlines(text: &str) -> String {
 	let sanitized_text = sanitize_text(text);
-	match Regex::new(r"\n+") {
-		Ok(re) => re.replace_all(&sanitized_text, " ").to_string(),
-		Err(e) => {
-			log::error!("Failed to create regex: {:?}", e);
-			sanitized_text
-		},
-	}
+	NEWLINE_RE.replace_all(&sanitized_text, " ").to_string()
 }
 
 /// Removes null bytes and any other invalid UTF-8 sequences from the given text.
@@ -205,18 +201,24 @@ pub fn match_entities_with_tokens(
 
 /// Finds all token indices for the given entity in the token list.
 fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)> {
-	let entity_tokens: Vec<String> = entity.split_whitespace().map(|s| s.to_lowercase()).collect();
+	if entity.is_empty() {
+		return vec![];
+	}
+	let entity_tokens: Vec<&str> = entity.split_whitespace().collect();
 	let mut indices = Vec::new();
 
-	for i in 0..tokens.len() {
-		if i + entity_tokens.len() > tokens.len() {
-			break;
-		}
-		let token_slice: Vec<String> = tokens[i..i + entity_tokens.len().min(tokens.len() - i)]
-			.iter()
-			.map(|s| s.to_lowercase())
-			.collect();
-		if i + entity_tokens.len() <= tokens.len() && token_slice == entity_tokens[..] {
+	// Ensure that the entity has at least one token and that the tokens list is long enough
+	if entity_tokens.is_empty() || tokens.is_empty() || entity_tokens.len() > tokens.len() {
+		return indices;
+	}
+
+	for i in 0..=tokens.len().saturating_sub(entity_tokens.len()) {
+		// Convert both entity tokens and sentence tokens to lowercase for comparison
+		let token_slice: Vec<String> =
+			tokens[i..i + entity_tokens.len()].iter().map(|t| t.to_lowercase()).collect();
+		let entity_lower: Vec<String> = entity_tokens.iter().map(|e| e.to_lowercase()).collect();
+
+		if token_slice == entity_lower {
 			indices.push((i, i + entity_tokens.len() - 1));
 		}
 	}
@@ -431,6 +433,17 @@ pub async fn calculate_biased_sentence_embedding(
 		EngineError::new(EngineErrorKind::ModelError, Arc::new(anyhow::anyhow!(e.to_string())))
 	})?[0]
 		.clone();
+	if attention_matrix.len() == 0 ||
+		head_start_idx >= attention_matrix[0].len() ||
+		head_end_idx >= attention_matrix[0].len() ||
+		tail_start_idx >= attention_matrix[0].len() ||
+		tail_end_idx >= attention_matrix[0].len()
+	{
+		return Err(EngineError::new(
+			EngineErrorKind::ModelError,
+			Arc::new(anyhow::anyhow!("Entity indices out of bounds")),
+		));
+	}
 
 	// Calculate attention scores for head and tail entities
 	let head_attention_score: f32 = attention_matrix
