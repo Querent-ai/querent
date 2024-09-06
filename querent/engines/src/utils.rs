@@ -201,25 +201,27 @@ pub fn match_entities_with_tokens(
 
 /// Finds all token indices for the given entity in the token list.
 fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)> {
-	if entity.is_empty() {
-		return vec![];
-	}
-	let entity_tokens: Vec<&str> = entity.split_whitespace().collect();
 	let mut indices = Vec::new();
-
-	// Ensure that the entity has at least one token and that the tokens list is long enough
-	if entity_tokens.is_empty() || tokens.is_empty() || entity_tokens.len() > tokens.len() {
+	if entity.is_empty() {
 		return indices;
 	}
 
-	for i in 0..=tokens.len().saturating_sub(entity_tokens.len()) {
-		// Convert both entity tokens and sentence tokens to lowercase for comparison
-		let token_slice: Vec<String> =
-			tokens[i..i + entity_tokens.len()].iter().map(|t| t.to_lowercase()).collect();
-		let entity_lower: Vec<String> = entity_tokens.iter().map(|e| e.to_lowercase()).collect();
+	let entity_tokens: Vec<String> = entity.split_whitespace().map(|e| e.to_lowercase()).collect();
+	let token_count = tokens.len();
+	let entity_token_count = entity_tokens.len();
 
-		if token_slice == entity_lower {
-			indices.push((i, i + entity_tokens.len() - 1));
+	// Ensure that the entity has at least one token and that the tokens list is long enough
+	if entity_token_count == 0 || token_count == 0 || entity_token_count > token_count {
+		return indices;
+	}
+
+	// Convert all tokens to lowercase once
+	let tokens_lower: Vec<String> = tokens.iter().map(|t| t.to_lowercase()).collect();
+
+	for i in 0..=token_count.saturating_sub(entity_token_count) {
+		// Compare token slices directly without allocating a new Vec each time
+		if tokens_lower[i..i + entity_token_count] == entity_tokens[..] {
+			indices.push((i, i + entity_token_count - 1));
 		}
 	}
 
