@@ -641,14 +641,18 @@ impl Storage for SurrealDB {
 				for (document_id, entity_mix) in most_mix_documents.into_iter() {
 					documents.push((document_id, entity_mix));
 				}
-				if documents.len() < 2 {
-					documents.push(documents[0].clone());
-				}
-				let combined_query = format!(
-						"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
+				let combined_query = if documents.len() < 2 {
+					format!(
+						"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. Document '{}' reveals a complex fabric of unique data points.",
+						documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0)
+					)
+				} else {
+					format!(
+						"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex fabric of unique data points, followed by '{}'.",
 						documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
 						documents[1].0.rsplit('/').next().unwrap_or(&documents[1].0)
-					);
+					)
+				};
 
 				suggestions.push(QuerySuggestion {
 					query: combined_query,
