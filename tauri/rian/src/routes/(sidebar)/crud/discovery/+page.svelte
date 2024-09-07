@@ -385,11 +385,7 @@
 									/>
 								</div>
 								<p class="tagline font-semibold">
-									{#if firstDiscoveryRequest}
-										{category.tags}
-									{:else}
-										{extractFileNameWithExtension(category.document)}
-									{/if}
+									{extractFileNameWithExtension(category.document)}
 								</p>
 								<p class="main-paragraph">
 									{category.sentence}
