@@ -72,7 +72,7 @@
 		fetchPipelineData(selectedPipeline);
 		intervalId = setInterval(() => {
 			fetchPipelineData(selectedPipeline);
-		}, 10000);
+		}, 5000);
 	});
 
 	onDestroy(() => {

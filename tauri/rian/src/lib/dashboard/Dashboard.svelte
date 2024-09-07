@@ -93,7 +93,7 @@
 
 		fetchPipelineData();
 
-		const intervalId = setInterval(() => fetchPipelineData(), 10000);
+		const intervalId = setInterval(() => fetchPipelineData(), 5000);
 		return () => clearInterval(intervalId);
 	});
 

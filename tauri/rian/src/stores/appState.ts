@@ -167,6 +167,26 @@ export function addDataSource(source: CollectorConfig): void {
 
 export function updatePipeline(mode: PipelineState['mode'], id: PipelineState['id']): void {
 	pipelineState.set({ id, mode });
+	// reset stats
+	describeStats.set({
+		total_docs: 0,
+		total_events: 0,
+		total_events_processed: 0,
+		total_events_received: 0,
+		total_events_sent: 0,
+		total_batches: 0,
+		total_sentences: 0,
+		total_subjects: 0,
+		total_predicates: 0,
+		total_objects: 0,
+		total_graph_events: 0,
+		total_vector_events: 0,
+		total_data_processed_size: 0
+	});
+
+	// reset stats data
+	statsDataTime.set([]);
+	statsDataTotalEvents.set([]);
 }
 
 export function getCurrentPipelineState(): PipelineState {
