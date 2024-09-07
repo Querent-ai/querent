@@ -200,7 +200,7 @@ impl Storage for SurrealDB {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-		dbg!(created);
+		log::debug!("Created: {:?}", created);
 
 		Ok(())
 	}
@@ -224,7 +224,7 @@ impl Storage for SurrealDB {
 						source: Arc::new(anyhow::Error::from(e)),
 					}
 				})?;
-			dbg!(created);
+			log::debug!("Created: {:?}", created);
 		}
 		Ok(())
 	}
@@ -243,7 +243,7 @@ impl Storage for SurrealDB {
 						source: Arc::new(anyhow::Error::from(e)),
 					}
 				})?;
-			dbg!(created);
+			log::debug!("Created: {:?}", created);
 		}
 
 		Ok(())
