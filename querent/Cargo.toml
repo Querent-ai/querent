@@ -270,6 +270,7 @@ dirs = "5.0.1"
 tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta", branch = "main", features = ["derive", "javascript", "typescript"] }
 specta-typescript = "=0.0.7"
 specta-jsdoc = "=0.0.7"
+lazy_static = "1.5.0"
 
 # patch unicode-normalization to version 1.22.0
 [patch.crates-io]

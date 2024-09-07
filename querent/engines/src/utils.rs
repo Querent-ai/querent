@@ -3,12 +3,12 @@ use std::{collections::HashMap, sync::Arc};
 use crate::{agn::HeadTailRelations, EngineError, EngineErrorKind};
 use chrono::{TimeZone, Utc};
 use fastembed::TextEmbedding;
+use lazy_static::lazy_static;
 use llms::LLM;
 use rand::{thread_rng, Rng};
 use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
-
 /// Represents a classified sentence with identified entities.
 #[derive(Debug, Serialize)]
 pub struct ClassifiedSentence {
@@ -52,16 +52,12 @@ pub struct ClassifiedSentenceWithRelations {
 	pub relations: Vec<HeadTailRelations>,
 }
 
-/// Removes newline characters from the given text.
+lazy_static! {
+	static ref NEWLINE_RE: Regex = Regex::new(r"\n+").unwrap();
+}
 pub fn remove_newlines(text: &str) -> String {
 	let sanitized_text = sanitize_text(text);
-	match Regex::new(r"\n+") {
-		Ok(re) => re.replace_all(&sanitized_text, " ").to_string(),
-		Err(e) => {
-			log::error!("Failed to create regex: {:?}", e);
-			sanitized_text
-		},
-	}
+	NEWLINE_RE.replace_all(&sanitized_text, " ").to_string()
 }
 
 /// Removes null bytes and any other invalid UTF-8 sequences from the given text.
@@ -205,19 +201,27 @@ pub fn match_entities_with_tokens(
 
 /// Finds all token indices for the given entity in the token list.
 fn find_all_token_indices(tokens: &[String], entity: &str) -> Vec<(usize, usize)> {
-	let entity_tokens: Vec<String> = entity.split_whitespace().map(|s| s.to_lowercase()).collect();
 	let mut indices = Vec::new();
+	if entity.is_empty() {
+		return indices;
+	}
 
-	for i in 0..tokens.len() {
-		if i + entity_tokens.len() > tokens.len() {
-			break;
-		}
-		let token_slice: Vec<String> = tokens[i..i + entity_tokens.len().min(tokens.len() - i)]
-			.iter()
-			.map(|s| s.to_lowercase())
-			.collect();
-		if i + entity_tokens.len() <= tokens.len() && token_slice == entity_tokens[..] {
-			indices.push((i, i + entity_tokens.len() - 1));
+	let entity_tokens: Vec<String> = entity.split_whitespace().map(|e| e.to_lowercase()).collect();
+	let token_count = tokens.len();
+	let entity_token_count = entity_tokens.len();
+
+	// Ensure that the entity has at least one token and that the tokens list is long enough
+	if entity_token_count == 0 || token_count == 0 || entity_token_count > token_count {
+		return indices;
+	}
+
+	// Convert all tokens to lowercase once
+	let tokens_lower: Vec<String> = tokens.iter().map(|t| t.to_lowercase()).collect();
+
+	for i in 0..=token_count.saturating_sub(entity_token_count) {
+		// Compare token slices directly without allocating a new Vec each time
+		if tokens_lower[i..i + entity_token_count] == entity_tokens[..] {
+			indices.push((i, i + entity_token_count - 1));
 		}
 	}
 
