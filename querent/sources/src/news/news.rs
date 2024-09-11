@@ -1,0 +1,317 @@
+use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use async_stream::stream;
+use async_trait::async_trait;
+use chrono::Utc;
+use google_drive3::chrono::DateTime;
+use common::CollectedBytes;
+use futures::Stream;
+use std::{ io::Cursor, ops::Range, path::{Path, PathBuf}, pin::Pin
+};
+use anyhow::Result;
+use tokio::io::{AsyncRead, BufReader};
+
+use super::structs::NewsResponse;
+
+#[derive(Clone, Debug)]
+pub struct NewsApiClient {
+    client: reqwest::Client,
+    api_token: String,
+    query_type: String,
+    query: String,
+    source_id: String,
+    language: Option<String>,
+    sort_by: Option<String>,
+    from: Option<DateTime<Utc>>,
+    to: Option<DateTime<Utc>>,
+    page_size: Option<u32>,
+    page: Option<u32>,
+    sources: Option<String>,
+    domains: Option<String>,
+    country: Option<String>,
+    category: Option<String>,
+}
+
+impl NewsApiClient {
+    pub fn new(api_key: &str, query_type: &str, query: &str, source_id: &str, language: Option<String>, sort_by: Option<String>, from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>, page_size: Option<u32>, page: Option<u32>, sources: Option<String>,
+        domains: Option<String>,
+        country: Option<String>,
+        category: Option<String>,) -> Self {
+        NewsApiClient {
+            client: reqwest::Client::new(),
+            api_token: api_key.to_string(),
+            query_type: query_type.to_string(),
+            query: query.to_string(),
+            source_id: source_id.to_string(),
+            language: language,
+            sort_by: sort_by,
+            to: to,
+            from: from,
+            page_size: page_size,
+            page: page,
+            sources: sources,
+            domains: domains,
+            country: country,
+            category: category,
+        }
+    }
+
+    pub async fn fetch_news(&self) -> Result<NewsResponse, SourceError> {
+        let url = self.create_query().await;
+
+        let response = self.client.get(&url).send().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while making the API request: {:?}", err).into(),
+            )
+        });
+
+        let news_response: NewsResponse = response?.json::<NewsResponse>().await?;
+
+        Ok(news_response)
+    }
+
+    pub async fn create_query(&self) -> String {
+        let mut url = format!(
+            "https://newsapi.org/v2/{}?q={}&apiKey={}",
+            self.query_type, self.query, self.api_token
+        );
+
+        if let Some(language) = &self.language {
+            if !language.is_empty() {
+                url.push_str(&format!("&language={}", language));
+            }
+        }
+        
+        if let Some(sort_by) = &self.sort_by {
+            if !sort_by.is_empty() {
+                url.push_str(&format!("&sortBy={}", sort_by));
+            }
+        }
+        
+        if let Some(page_size) = self.page_size {
+            if page_size > 0 {
+                url.push_str(&format!("&pageSize={}", page_size));
+            }
+        }
+        
+        if let Some(page) = self.page {
+            if page > 0 {
+                url.push_str(&format!("&page={}", page));
+            }
+        }
+        
+        if let Some(from) = self.from {
+            if !from.format("%Y-%m-%d").to_string().is_empty() {
+                url.push_str(&format!("&from={}", from.format("%Y-%m-%d")));
+            }
+        }
+        
+        if let Some(to) = self.to {
+            if !to.format("%Y-%m-%d").to_string().is_empty() {
+                url.push_str(&format!("&to={}", to.format("%Y-%m-%d")));
+            }
+        }
+        
+        if let Some(sources) = &self.sources {
+            if !sources.is_empty() {
+                url.push_str(&format!("&sources={}", sources));
+            }
+        }
+        if let Some(domains) = &self.domains {
+            if !domains.is_empty() {
+                url.push_str(&format!("&domains={}", domains));
+            }
+        }
+        if let Some(country) = &self.country {
+            if !country.is_empty() {
+                url.push_str(&format!("&country={}", country));
+            }
+        }
+        if let Some(category) = &self.category {
+            if !category.is_empty() {
+                url.push_str(&format!("&category={}", category));
+            }
+        }
+
+        url
+    }
+}
+
+fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
+    Cursor::new(description.into_bytes())
+}
+
+#[async_trait]
+impl Source for NewsApiClient {
+	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		let url = format!(
+            "https://newsapi.org/v2/top-headlines?pagesize=1&apiKey={}",
+            self.api_token
+        );
+
+        let response = self.client.get(&url).send().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while making the API request: {:?}", err).into(),
+            )
+        });
+
+        let news_response: NewsResponse = response?.json::<NewsResponse>().await?;
+
+        if news_response.status == "error" {
+            return Err(anyhow::anyhow!(news_response.message))
+        }
+
+        Ok(())
+	}
+
+	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
+		let news = self.fetch_news().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
+            )
+        })?;
+        let mut description: String = "".to_string();
+
+        if news.status == "ok" {
+            for individual_news in news.articles {
+                if let Some(desc) = individual_news.description {
+                    description.push_str(&desc);
+                }
+            }
+        }
+
+        Ok(description.into())
+	}
+
+	async fn get_slice_stream(
+		&self,
+		_path: &Path,
+		_range: Range<usize>,
+	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
+		
+        let news = self.fetch_news().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
+            )
+        })?;
+        let mut description: String = "".to_string();
+
+        if news.status == "ok" {
+            for individual_news in news.articles {
+                if let Some(desc) = individual_news.description {
+                    description.push_str(&desc);
+                }
+            }
+        }
+		Ok(Box::new(string_to_async_read(description)))
+	}
+
+	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
+		let news = self.fetch_news().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
+            )
+        })?;
+        let mut description: String = "".to_string();
+
+        if news.status == "ok" {
+            for individual_news in news.articles {
+                if let Some(desc) = individual_news.description {
+                    description.push_str(&desc);
+                }
+            }
+        }
+
+		Ok(description.into())
+	}
+
+	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
+        let news = self.fetch_news().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
+            )
+        })?;
+        let mut description: String = "".to_string();
+
+        if news.status == "ok" {
+            for individual_news in news.articles {
+                if let Some(desc) = individual_news.description {
+                    description.push_str(&desc);
+                }
+            }
+        }
+		Ok(description.len() as u64)
+	}
+
+	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
+        let news = self.fetch_news().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
+            )
+        })?;
+        let mut description: String = "".to_string();
+
+        if news.status == "ok" {
+            for individual_news in news.articles {
+                if let Some(desc) = individual_news.description {
+                    description.push_str(&desc);
+                }
+            }
+        }
+        let mut body_stream_reader = BufReader::new(description.as_bytes());
+        tokio::io::copy_buf(&mut body_stream_reader, output).await?;
+		Ok(())
+	}
+
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+        let source_id = self.source_id.clone();
+
+
+        let news = self.fetch_news().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
+            )
+        })?;
+		let stream = stream! {
+            if news.status == "ok" {
+                for individual_news in news.articles {
+
+                    let mut file_name = ".news".to_string();
+                    if let Some(title) = individual_news.title {
+                        file_name = format!("{}.news", title);
+                    };
+                    let file_name_path = Some(PathBuf::from(file_name));
+
+                    let data = individual_news.description.unwrap_or_else(|| String::from(""));
+
+                    let doc_source = Some(individual_news.source.name.unwrap_or_else(|| String::from("")));
+
+                    
+
+                    let collected_bytes = CollectedBytes::new(
+                        file_name_path,
+                        Some(Box::pin(string_to_async_read(data.clone()))),
+                        true,
+                        doc_source,
+                        Some(data.len()),
+                        source_id.clone(),
+                        None
+                    );
+                    yield Ok(collected_bytes)
+                    
+                }
+            }
+        };
+
+        Ok(Box::pin(stream))
+	}
+}
