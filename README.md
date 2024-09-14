@@ -4,62 +4,67 @@ Querent is an enterprise-grade Rust engine built on top of Querent, designed to 
 
 ## Features
 
-- **Semantic Querying:** Querent enables semantic querying by utilizing a SemanticPayload data structure. This allows users to express complex queries based on semantic relationships between entities.
+# R!AN: Real-time Information Aggregation Network
 
-- **Support for Multiple Index Databases:** Querent is designed to support various index databases, including Milvus and Neo4j. This flexibility allows users to choose the indexing solution that best fits their requirements.
+## Overview
 
-- **Modular Architecture:** The architecture of Querent is modular, making it easy to extend and integrate with different components. This modularity promotes scalability and maintainability.
+**R!AN** (Real-time Information Aggregation Network) is a lightweight, scalable framework designed for efficient knowledge extraction from unstructured data, particularly in large-scale environments like semantic fabrics. Based on the principles of **Komonovc Arnold Networks (KAN)**, R!AN specializes in extracting structured knowledge, such as semantic triples (subject-predicate-object), using a streamlined, attention-based architecture optimized for real-time applications.
 
-- **Indexing Actor:** Querent includes an indexing actor responsible for efficiently processing and indexing SemanticPayload data. The actor model ensures concurrent and asynchronous handling of indexing tasks.
+### Key Features
 
-- **Detailed Indexing Metrics:** The indexing actor tracks various metrics during the indexing process, such as the number of documents indexed, memory usage, indexing throughput, and more. These metrics provide insights into the performance and health of the indexing process.
+- **Lightweight LLM Integration**: Leverages lightweight language models (such as distilBERT) to extract attention weights for identifying key relationships in text.
+- **Efficient Triple Extraction**: Extracts subject-predicate-object triples from text using dependency parsing and NER techniques, optimized by attention mechanisms.
+- **Semantic Fabric Compatibility**: Seamlessly integrates with semantic fabric systems, structuring unstructured data into meaningful, interconnected knowledge networks.
+- **Scalable & Real-Time Processing**: Designed for distributed systems and real-time applications, allowing efficient large-scale knowledge extraction without overwhelming computational resources.
 
-- **Querying Capabilities:** Querent supports expressive querying capabilities, allowing users to perform complex searches based on semantic relationships, predicates, and other criteria.
+---
 
-- **Resource Utilization Monitoring:** The engine monitors resource utilization during both indexing and querying, helping users optimize performance and allocate resources effectively.
+## How R!AN Works
 
-## Sequence Diagram
+1. **Input Preprocessing**:
+   - Text is tokenized and processed by a lightweight LLM (e.g., distilBERT) to compute attention weights.
+   - Sentences are broken into components, focusing on entities and their relationships.
 
-```mermaid
-    sequenceDiagram
-        participant QSource as Q
-        participant SourceActor as SA
-        participant StorageMapper as SM
-        participant Indexer as I
-        participant EventStreamer as ES
+2. **Dependency Parsing**:
+   - **R!AN** uses dependency parsing (e.g., SpaCy) to identify the grammatical structure of the text, specifically focusing on subjects, predicates, and objects.
+   - The model extracts relevant relationships based on syntactic dependencies.
 
-        Q ->> SA: Initialization
-        SA ->> SM: Initialization
-        SM ->> I: Initialization
-        SM ->> ES: Initialization
+3. **Named Entity Recognition (NER)**:
+   - Named entities such as `PERSON`, `ORGANIZATION`, and `LOCATION` are identified to facilitate meaningful knowledge extraction.
 
-        loop Health Check
-            Q ->> SA: Check Health
-            SA ->> SM: Check Health
-            SM ->> I: Check Health
-            SM ->> ES: Check Health
-        end
+4. **Attention-Based Triple Extraction**:
+   - Attention weights from the lightweight LLM guide the process, highlighting important tokens (words) that likely form triples.
+   - Subject-Verb-Object structures are identified using these weights, forming the core of the knowledge triples.
 
-        alt Pipeline Healthy
-            SA ->> SM: Start Processing
-            SM ->> I: Start Processing
-            SM ->> ES: Start Processing
-        else Pipeline Unhealthy
-            SA ->> SM: Terminate
-            SM ->> I: Terminate
-            SM ->> ES: Terminate
-            SA ->> Q: Retry Initialization
-        end
-```
+5. **Validation & Schema Integration**:
+   - Extracted triples are validated against schemas or rules (if available), ensuring they conform to the required structure for the given application.
 
-## Architecture
+---
 
-![Architecure](docs/archv1.png?raw=true "Querent Architecture")
+## Why R!AN?
 
-## Contributing
+### 1. **Scalability for Large-Scale Problems**
+   R!AN is optimized for large-scale data extraction, making it ideal for environments like **semantic fabrics**, where vast datasets need to be processed in real-time.
 
-We welcome contributions to Querent! If you have ideas, bug reports, or feature requests, please [open an issue](https://github.com/querent-ai/querent/issues) or submit a pull request.
+### 2. **Cost-Efficient Processing**
+   By utilizing lightweight LLMs, R!AN provides a highly resource-efficient solution for real-time knowledge extraction without sacrificing much accuracy.
 
-## License
+### 3. **Adaptable & Domain-Agnostic**
+   While designed to extract general triples, R!AN can be adapted and fine-tuned for specific domains, making it highly flexible for different applications, from knowledge graphs to search optimization.
 
-Querent is licensed under the [BSL License](LICENSE).
+### 4. **Speed & Real-Time Application**
+   R!AN is built for real-time or near-real-time applications, processing massive streams of data in real-time environments without computational bottlenecks.
+
+
+## Applications
+
+1. **Knowledge Graph Construction**: Automate the extraction of structured knowledge to build knowledge graphs from raw text data.
+2. **Semantic Search Optimization**: Improve search relevancy by understanding entity relationships within large data sets.
+3. **Data Discovery in Semantic Fabrics**: Enable automated discovery and structuring of knowledge across distributed systems.
+4. **Natural Language Understanding (NLU)**: Enhance language models’ ability to grasp deeper context in dialogue systems, chatbots, and summarization.
+
+---
+
+## Conclusion
+
+R!AN is a cutting-edge, lightweight solution for large-scale semantic fabric systems. By utilizing attention-based knowledge extraction from lightweight models, R!AN ensures real-time, scalable, and cost-efficient knowledge aggregation, making it an ideal choice for modern, data-rich environments.
