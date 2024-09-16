@@ -91,12 +91,12 @@ impl From<serde_json::Error> for SourceError {
 }
 
 impl From<reqwest::Error> for SourceError {
-    fn from(err: reqwest::Error) -> Self {
-        SourceError::new(
-            SourceErrorKind::Io,
-            Arc::new(anyhow::anyhow!("Error while converting the request into struct: {:?}", err)),
-        )
-    }
+	fn from(err: reqwest::Error) -> Self {
+		SourceError::new(
+			SourceErrorKind::Io,
+			Arc::new(anyhow::anyhow!("Error while converting the request into struct: {:?}", err)),
+		)
+	}
 }
 
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
