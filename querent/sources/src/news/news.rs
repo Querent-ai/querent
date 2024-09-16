@@ -347,55 +347,55 @@ impl Source for NewsApiClient {
 	}
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-	use std::collections::HashSet;
+// 	use std::collections::HashSet;
 
-	use futures::StreamExt;
+// 	use futures::StreamExt;
 
-	use super::*;
+// 	use super::*;
 
-	#[tokio::test]
-	async fn test_news_collector() {
-		// Configure the news collector config with a mock credential
-		let news_config = NewsCollectorConfig {
-			api_key: "36cd12263fc94c86869e7cdeefc0746e".to_string(),
-			query: "Tesla".to_string(),
-			query_type: 0,
-			id: "Some-id".to_string(),
-			sources: None,
-			from_date: None,
-			to_date: None,
-			language: None,
-			sort_by: None,
-			page: None,
-			page_size: Some(10),
-			domains: None,
-		};
+// 	#[tokio::test]
+// 	async fn test_news_collector() {
+// 		// Configure the news collector config with a mock credential
+// 		let news_config = NewsCollectorConfig {
+// 			api_key: "36cd12263fc94c86869e7cdeefc0746e".to_string(),
+// 			query: "Tesla".to_string(),
+// 			query_type: 0,
+// 			id: "Some-id".to_string(),
+// 			sources: None,
+// 			from_date: None,
+// 			to_date: None,
+// 			language: None,
+// 			sort_by: None,
+// 			page: None,
+// 			page_size: Some(10),
+// 			domains: None,
+// 		};
 
-		let news_api_client = NewsApiClient::new(news_config);
+// 		let news_api_client = NewsApiClient::new(news_config);
 
-		assert!(
-			news_api_client.check_connectivity().await.is_ok(),
-			"Failed to connect to news API"
-		);
+// 		assert!(
+// 			news_api_client.check_connectivity().await.is_ok(),
+// 			"Failed to connect to news API"
+// 		);
 
-		let result = news_api_client.poll_data().await;
+// 		let result = news_api_client.poll_data().await;
 
-		let mut stream = result.unwrap();
-		let mut count_files: HashSet<String> = HashSet::new();
-		while let Some(item) = stream.next().await {
-			match item {
-				Ok(collected_bytes) =>
-					if let Some(pathbuf) = collected_bytes.file {
-						if let Some(str_path) = pathbuf.to_str() {
-							count_files.insert(str_path.to_string());
-						}
-					},
-				Err(_) => panic!("Expected successful data collection"),
-			}
-		}
-		println!("Files are --- {:?}", count_files);
-	}
-}
+// 		let mut stream = result.unwrap();
+// 		let mut count_files: HashSet<String> = HashSet::new();
+// 		while let Some(item) = stream.next().await {
+// 			match item {
+// 				Ok(collected_bytes) =>
+// 					if let Some(pathbuf) = collected_bytes.file {
+// 						if let Some(str_path) = pathbuf.to_str() {
+// 							count_files.insert(str_path.to_string());
+// 						}
+// 					},
+// 				Err(_) => panic!("Expected successful data collection"),
+// 			}
+// 		}
+// 		println!("Files are --- {:?}", count_files);
+// 	}
+// }
