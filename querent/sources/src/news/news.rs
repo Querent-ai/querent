@@ -352,8 +352,8 @@ mod tests {
 
 	use std::{collections::HashSet, env};
 
-	use futures::StreamExt;
 	use dotenv::dotenv;
+	use futures::StreamExt;
 
 	use super::*;
 
