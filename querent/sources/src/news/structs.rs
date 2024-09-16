@@ -24,8 +24,8 @@ pub struct Article {
 pub struct NewsResponse {
     pub status: String,
     #[serde(rename = "totalResults")]
-    pub total_results: u32,
-    pub articles: Vec<Article>,
-    pub code: String,
-    pub message: String,
+    pub total_results: Option<u32>,
+    pub articles: Option<Vec<Article>>,
+    pub code: Option<String>,
+    pub message: Option<String>,
 }

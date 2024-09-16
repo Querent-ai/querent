@@ -1,10 +1,11 @@
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use async_stream::stream;
 use async_trait::async_trait;
-use chrono::Utc;
+use chrono::{NaiveDate, Utc};
 use google_drive3::chrono::DateTime;
 use common::CollectedBytes;
 use futures::Stream;
+use proto::semantics::NewsCollectorConfig;
 use std::{ io::Cursor, ops::Range, path::{Path, PathBuf}, pin::Pin
 };
 use anyhow::Result;
@@ -27,38 +28,33 @@ pub struct NewsApiClient {
     page: Option<u32>,
     sources: Option<String>,
     domains: Option<String>,
-    country: Option<String>,
-    category: Option<String>,
 }
 
 impl NewsApiClient {
-    pub fn new(api_key: &str, query_type: &str, query: &str, source_id: &str, language: Option<String>, sort_by: Option<String>, from: Option<DateTime<Utc>>, to: Option<DateTime<Utc>>, page_size: Option<u32>, page: Option<u32>, sources: Option<String>,
-        domains: Option<String>,
-        country: Option<String>,
-        category: Option<String>,) -> Self {
+    pub fn new(config: NewsCollectorConfig) -> Self {
+        let to_date = Self::string_to_datetime(config.to_date.clone());
+        let from_date = Self::string_to_datetime(config.from_date.clone());
         NewsApiClient {
             client: reqwest::Client::new(),
-            api_token: api_key.to_string(),
-            query_type: query_type.to_string(),
-            query: query.to_string(),
-            source_id: source_id.to_string(),
-            language: language,
-            sort_by: sort_by,
-            to: to,
-            from: from,
-            page_size: page_size,
-            page: page,
-            sources: sources,
-            domains: domains,
-            country: country,
-            category: category,
+            api_token: config.api_key.to_string(),
+            query_type: config.query_type().as_str_name().to_string(),
+            query: config.query.to_string(),
+            source_id: config.id.to_string(),
+            language: config.language.clone(),
+            sort_by: Some(config.sort_by().as_str_name().to_string()),
+            to: to_date,
+            from: from_date,
+            page_size: Self::i32_to_u32(config.page_size),
+            page: Self::i32_to_u32(config.page),
+            sources: config.sources,
+            domains: config.domains,
         }
     }
 
     pub async fn fetch_news(&self) -> Result<NewsResponse, SourceError> {
         let url = self.create_query().await;
 
-        let response = self.client.get(&url).send().await.map_err(|err| {
+        let response = self.client.get(&url).header(reqwest::header::USER_AGENT, "Querent/1.0").send().await.map_err(|err| {
             SourceError::new(
                 SourceErrorKind::Io,
                 anyhow::anyhow!("Error while making the API request: {:?}", err).into(),
@@ -122,18 +118,21 @@ impl NewsApiClient {
                 url.push_str(&format!("&domains={}", domains));
             }
         }
-        if let Some(country) = &self.country {
-            if !country.is_empty() {
-                url.push_str(&format!("&country={}", country));
-            }
-        }
-        if let Some(category) = &self.category {
-            if !category.is_empty() {
-                url.push_str(&format!("&category={}", category));
-            }
-        }
 
         url
+    }
+
+    fn string_to_datetime(s: Option<String>) -> Option<DateTime<Utc>> {
+        s.and_then(|date_string| {
+            NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
+                .ok()
+                .map(|nd| nd.and_hms_opt(0, 0, 0).unwrap())
+                .map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
+        })
+    }
+
+    fn i32_to_u32(value: Option<i32>) -> Option<u32> {
+        value.and_then(|v| if v >= 0 { Some(v as u32) } else { None })
     }
 }
 
@@ -145,21 +144,34 @@ fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
 impl Source for NewsApiClient {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let url = format!(
-            "https://newsapi.org/v2/top-headlines?pagesize=1&apiKey={}",
+            "https://newsapi.org/v2/top-headlines?country=us&category=business&pagesize=1&apiKey={}",
             self.api_token
         );
 
-        let response = self.client.get(&url).send().await.map_err(|err| {
+        let response = self.client.get(&url).header(reqwest::header::USER_AGENT, "Querent/1.0").send().await.map_err(|err| {
             SourceError::new(
                 SourceErrorKind::Io,
                 anyhow::anyhow!("Error while making the API request: {:?}", err).into(),
             )
-        });
+        })?;
 
-        let news_response: NewsResponse = response?.json::<NewsResponse>().await?;
+        let body = response.text().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Error while reading response text: {:?}", err).into(),
+            )
+        })?;
 
-        if news_response.status == "error" {
-            return Err(anyhow::anyhow!(news_response.message))
+        let news_response: NewsResponse = serde_json::from_str(&body)
+        .map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Failed to parse JSON response: {:?}", err).into(),
+            )
+        })?;
+
+        if news_response.status != "ok" {
+            return Err(anyhow::anyhow!(news_response.message.unwrap()))
         }
 
         Ok(())
@@ -175,7 +187,8 @@ impl Source for NewsApiClient {
         let mut description: String = "".to_string();
 
         if news.status == "ok" {
-            for individual_news in news.articles {
+            let articles = news.articles.unwrap();
+            for individual_news in articles {
                 if let Some(desc) = individual_news.description {
                     description.push_str(&desc);
                 }
@@ -200,7 +213,8 @@ impl Source for NewsApiClient {
         let mut description: String = "".to_string();
 
         if news.status == "ok" {
-            for individual_news in news.articles {
+            let articles = news.articles.unwrap();
+            for individual_news in articles {
                 if let Some(desc) = individual_news.description {
                     description.push_str(&desc);
                 }
@@ -219,7 +233,8 @@ impl Source for NewsApiClient {
         let mut description: String = "".to_string();
 
         if news.status == "ok" {
-            for individual_news in news.articles {
+            let articles = news.articles.unwrap();
+            for individual_news in articles {
                 if let Some(desc) = individual_news.description {
                     description.push_str(&desc);
                 }
@@ -239,7 +254,8 @@ impl Source for NewsApiClient {
         let mut description: String = "".to_string();
 
         if news.status == "ok" {
-            for individual_news in news.articles {
+            let articles = news.articles.unwrap();
+            for individual_news in articles {
                 if let Some(desc) = individual_news.description {
                     description.push_str(&desc);
                 }
@@ -258,7 +274,8 @@ impl Source for NewsApiClient {
         let mut description: String = "".to_string();
 
         if news.status == "ok" {
-            for individual_news in news.articles {
+            let articles = news.articles.unwrap();
+            for individual_news in articles {
                 if let Some(desc) = individual_news.description {
                     description.push_str(&desc);
                 }
@@ -283,7 +300,8 @@ impl Source for NewsApiClient {
         })?;
 		let stream = stream! {
             if news.status == "ok" {
-                for individual_news in news.articles {
+                let articles = news.articles.unwrap();
+                for individual_news in articles {
 
                     let mut file_name = ".news".to_string();
                     if let Some(title) = individual_news.title {
@@ -313,5 +331,61 @@ impl Source for NewsApiClient {
         };
 
         Ok(Box::pin(stream))
+	}
+}
+
+
+#[cfg(test)]
+mod tests {
+
+	use std::collections::HashSet;
+
+use futures::StreamExt;
+
+use super::*;
+
+	#[tokio::test]
+	async fn test_news_collector() {
+		// Configure the news collector config with a mock credential
+		let news_config = NewsCollectorConfig {
+		    api_key: "36cd12263fc94c86869e7cdeefc0746e".to_string(),
+            query: "Tesla".to_string(),
+            query_type: 0,
+            id: "Some-id".to_string(),
+            sources: None,
+            from_date: None,
+            to_date: None,
+            language: None,
+            sort_by: None,
+            page: None,
+            page_size: Some(10),
+            domains: None,
+        };
+
+		let news_api_client = NewsApiClient::new(news_config);
+
+		assert!(
+			news_api_client.check_connectivity().await.is_ok(),
+			"Failed to connect to news API"
+		);
+
+		let result = news_api_client.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) => {
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					}
+				}
+				Err(_) => panic!("Expected successful data collection"),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
+
 	}
 }
