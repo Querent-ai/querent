@@ -134,7 +134,7 @@ impl NewsApiClient {
 
 	fn string_to_datetime(s: Option<String>) -> Option<DateTime<Utc>> {
 		s.and_then(|date_string| {
-			NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
+			NaiveDate::parse_from_str(&date_string, "%d-%m-%Y")
 				.ok()
 				.map(|nd| nd.and_hms_opt(0, 0, 0).unwrap())
 				.map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
@@ -317,23 +317,23 @@ impl Source for NewsApiClient {
 				for individual_news in articles {
 
 					let mut file_name = ".news".to_string();
-					if let Some(title) = individual_news.title {
+					if let Some(ref title) = individual_news.title {
 						file_name = format!("{}.news", title);
 					};
 					let file_name_path = Some(PathBuf::from(file_name));
 
-					let data = individual_news.description.unwrap_or_else(|| String::from(""));
+					let data = individual_news.clone();
+					let data_str = serde_json::to_string_pretty(&data.clone()).unwrap_or("".to_string());
+					let data_len = data_str.len();
 
 					let doc_source = Some(individual_news.source.name.unwrap_or_else(|| String::from("")));
 
-
-
 					let collected_bytes = CollectedBytes::new(
 						file_name_path,
-						Some(Box::pin(string_to_async_read(data.clone()))),
+						Some(Box::pin(string_to_async_read(data_str))),
 						true,
 						doc_source,
-						Some(data.len()),
+						Some(data_len),
 						source_id.clone(),
 						None
 					);
@@ -347,55 +347,57 @@ impl Source for NewsApiClient {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
+#[cfg(test)]
+mod tests {
 
-// 	use std::collections::HashSet;
+	use std::{collections::HashSet, env};
 
-// 	use futures::StreamExt;
+	use futures::StreamExt;
+	use dotenv::dotenv;
 
-// 	use super::*;
+	use super::*;
 
-// 	#[tokio::test]
-// 	async fn test_news_collector() {
-// 		// Configure the news collector config with a mock credential
-// 		let news_config = NewsCollectorConfig {
-// 			api_key: "36cd12263fc94c86869e7cdeefc0746e".to_string(),
-// 			query: "Tesla".to_string(),
-// 			query_type: 0,
-// 			id: "Some-id".to_string(),
-// 			sources: None,
-// 			from_date: None,
-// 			to_date: None,
-// 			language: None,
-// 			sort_by: None,
-// 			page: None,
-// 			page_size: Some(10),
-// 			domains: None,
-// 		};
+	#[tokio::test]
+	async fn test_news_collector() {
+		dotenv().ok();
+		// Configure the news collector config with a mock credential
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").map_err(|e| e.to_string()).unwrap(),
+			query: "Tesla".to_string(),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: Some("16-08-2024".to_string()),
+			to_date: Some("16-09-2024".to_string()),
+			language: None,
+			sort_by: None,
+			page: None,
+			page_size: Some(10),
+			domains: None,
+		};
 
-// 		let news_api_client = NewsApiClient::new(news_config);
+		let news_api_client = NewsApiClient::new(news_config);
 
-// 		assert!(
-// 			news_api_client.check_connectivity().await.is_ok(),
-// 			"Failed to connect to news API"
-// 		);
+		assert!(
+			news_api_client.check_connectivity().await.is_ok(),
+			"Failed to connect to news API"
+		);
 
-// 		let result = news_api_client.poll_data().await;
+		let result = news_api_client.poll_data().await;
 
-// 		let mut stream = result.unwrap();
-// 		let mut count_files: HashSet<String> = HashSet::new();
-// 		while let Some(item) = stream.next().await {
-// 			match item {
-// 				Ok(collected_bytes) =>
-// 					if let Some(pathbuf) = collected_bytes.file {
-// 						if let Some(str_path) = pathbuf.to_str() {
-// 							count_files.insert(str_path.to_string());
-// 						}
-// 					},
-// 				Err(_) => panic!("Expected successful data collection"),
-// 			}
-// 		}
-// 		println!("Files are --- {:?}", count_files);
-// 	}
-// }
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(_) => panic!("Expected successful data collection"),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
+	}
+}
