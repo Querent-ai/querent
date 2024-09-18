@@ -11,8 +11,8 @@
 	} from '../../../../service/bindings';
 
 	let drive_config: GoogleDriveCollectorConfig = {
-		drive_client_id: import.meta.env.VITE_DRIVE_CLIENT_ID,
-		drive_client_secret: import.meta.env.VITE_DRIVE_CLIENT_SECRET,
+		drive_client_id: '4402204563-bmfpspke6cl23j2975hd7dkuf2v4ii3n.apps.googleusercontent.com',
+		drive_client_secret: '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',
 		drive_refresh_token: '',
 		folder_to_crawl: '',
 		id: ''
@@ -45,11 +45,14 @@
 		const code = params.get('code');
 		if (code) {
 			try {
+				console.log('Code is ', code);
 				const result = await commands.getDriveCredentials();
 				if (result.status == 'ok') {
 					drive_client_id = result.data[0];
 					drive_client_secret = result.data[1];
 				}
+				drive_client_secret = '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';
+				drive_client_id = '4402204563-bmfpspke6cl23j2975hd7dkuf2v4ii3n.apps.googleusercontent.com';
 				const response = await fetch('https://oauth2.googleapis.com/token', {
 					method: 'POST',
 					headers: {
@@ -59,7 +62,7 @@
 						code: code,
 						client_id: drive_client_id,
 						client_secret: drive_client_secret,
-						redirect_uri: import.meta.env.VITE_DRIVE_REDIRECT_URL,
+						redirect_uri: 'http://localhost:5173/crud/sources/add',
 						grant_type: 'authorization_code'
 					})
 				});

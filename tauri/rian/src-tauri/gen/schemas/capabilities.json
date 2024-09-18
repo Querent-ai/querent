@@ -2,8 +2,9 @@
 	"rian-main-capability": {
 		"identifier": "rian-main-capability",
 		"description": "Capability for the core rian application",
+		"remote": { "urls": ["https://accounts.google.com", "https://www.google.com"] },
 		"local": true,
-		"windows": ["main"],
+		"windows": ["main", "google-oauth"],
 		"permissions": [
 			"dialog:allow-ask",
 			"dialog:allow-save",
@@ -15,7 +16,12 @@
 			"fs:allow-app-write",
 			"fs:allow-app-write-recursive",
 			"fs:allow-appcache-write",
-			"fs:allow-appcache-write-recursive"
+			"fs:allow-appcache-write-recursive",
+			"core:webview:allow-create-webview-window",
+			"shell:default",
+			"core:event:allow-listen",
+			"notification:allow-is-permission-granted",
+			"notification:default"
 		]
 	}
 }
