@@ -81,6 +81,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [verify, changes]
     if: ${{ needs.changes.outputs.rust == 'true' }}
+    env: 
+      NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

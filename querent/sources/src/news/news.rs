@@ -188,7 +188,7 @@ impl Source for NewsApiClient {
 		if news_response.status != "ok" {
 			return Err(anyhow::anyhow!(news_response
 				.message
-				.unwrap_or("Failed to set the connection for the News Source".to_string())))
+				.unwrap_or("Failed to set the connection for the News Source".to_string())));
 		}
 
 		Ok(())
@@ -384,9 +384,11 @@ mod tests {
 
 		let news_api_client = NewsApiClient::new(news_config);
 
+		let connectivity = news_api_client.check_connectivity().await;
 		assert!(
-			news_api_client.check_connectivity().await.is_ok(),
-			"Failed to connect to news API"
+			connectivity.is_ok(),
+			"Failed to connect to news API {:?}",
+			connectivity.err().unwrap()
 		);
 
 		let result = news_api_client.poll_data().await;
