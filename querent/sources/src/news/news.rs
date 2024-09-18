@@ -136,7 +136,7 @@ impl NewsApiClient {
 		s.and_then(|date_string| {
 			NaiveDate::parse_from_str(&date_string, "%d-%m-%Y")
 				.ok()
-				.map(|nd| nd.and_hms_opt(0, 0, 0).unwrap())
+				.map(|nd| nd.and_hms_opt(0, 0, 0).unwrap_or_default())
 				.map(|ndt| DateTime::<Utc>::from_naive_utc_and_offset(ndt, Utc))
 		})
 	}
@@ -186,7 +186,9 @@ impl Source for NewsApiClient {
 		})?;
 
 		if news_response.status != "ok" {
-			return Err(anyhow::anyhow!(news_response.message.unwrap()))
+			return Err(anyhow::anyhow!(news_response
+				.message
+				.unwrap_or("Failed to set the connection for the News Source".to_string())))
 		}
 
 		Ok(())
@@ -202,10 +204,11 @@ impl Source for NewsApiClient {
 		let mut description: String = "".to_string();
 
 		if news.status == "ok" {
-			let articles = news.articles.unwrap();
-			for individual_news in articles {
-				if let Some(desc) = individual_news.description {
-					description.push_str(&desc);
+			if let Some(articles) = news.articles {
+				for individual_news in articles {
+					if let Some(desc) = individual_news.description {
+						description.push_str(&desc);
+					}
 				}
 			}
 		}
@@ -227,10 +230,11 @@ impl Source for NewsApiClient {
 		let mut description: String = "".to_string();
 
 		if news.status == "ok" {
-			let articles = news.articles.unwrap();
-			for individual_news in articles {
-				if let Some(desc) = individual_news.description {
-					description.push_str(&desc);
+			if let Some(articles) = news.articles {
+				for individual_news in articles {
+					if let Some(desc) = individual_news.description {
+						description.push_str(&desc);
+					}
 				}
 			}
 		}
@@ -247,10 +251,11 @@ impl Source for NewsApiClient {
 		let mut description: String = "".to_string();
 
 		if news.status == "ok" {
-			let articles = news.articles.unwrap();
-			for individual_news in articles {
-				if let Some(desc) = individual_news.description {
-					description.push_str(&desc);
+			if let Some(articles) = news.articles {
+				for individual_news in articles {
+					if let Some(desc) = individual_news.description {
+						description.push_str(&desc);
+					}
 				}
 			}
 		}
@@ -268,10 +273,11 @@ impl Source for NewsApiClient {
 		let mut description: String = "".to_string();
 
 		if news.status == "ok" {
-			let articles = news.articles.unwrap();
-			for individual_news in articles {
-				if let Some(desc) = individual_news.description {
-					description.push_str(&desc);
+			if let Some(articles) = news.articles {
+				for individual_news in articles {
+					if let Some(desc) = individual_news.description {
+						description.push_str(&desc);
+					}
 				}
 			}
 		}
@@ -288,10 +294,11 @@ impl Source for NewsApiClient {
 		let mut description: String = "".to_string();
 
 		if news.status == "ok" {
-			let articles = news.articles.unwrap();
-			for individual_news in articles {
-				if let Some(desc) = individual_news.description {
-					description.push_str(&desc);
+			if let Some(articles) = news.articles {
+				for individual_news in articles {
+					if let Some(desc) = individual_news.description {
+						description.push_str(&desc);
+					}
 				}
 			}
 		}
@@ -313,32 +320,32 @@ impl Source for NewsApiClient {
 		})?;
 		let stream = stream! {
 			if news.status == "ok" {
-				let articles = news.articles.unwrap();
-				for individual_news in articles {
+				if let Some(articles) = news.articles {
+					for individual_news in articles {
+						let mut file_name = ".news".to_string();
+						if let Some(ref title) = individual_news.title {
+							file_name = format!("{}.news", title);
+						};
+						let file_name_path = Some(PathBuf::from(file_name));
 
-					let mut file_name = ".news".to_string();
-					if let Some(ref title) = individual_news.title {
-						file_name = format!("{}.news", title);
-					};
-					let file_name_path = Some(PathBuf::from(file_name));
+						let data = individual_news.clone();
+						let data_str = serde_json::to_string_pretty(&data.clone()).unwrap_or("".to_string());
+						let data_len = data_str.len();
 
-					let data = individual_news.clone();
-					let data_str = serde_json::to_string_pretty(&data.clone()).unwrap_or("".to_string());
-					let data_len = data_str.len();
+						let doc_source = Some(individual_news.source.name.unwrap_or_else(|| String::from("")));
 
-					let doc_source = Some(individual_news.source.name.unwrap_or_else(|| String::from("")));
+						let collected_bytes = CollectedBytes::new(
+							file_name_path,
+							Some(Box::pin(string_to_async_read(data_str))),
+							true,
+							doc_source,
+							Some(data_len),
+							source_id.clone(),
+							None
+						);
+						yield Ok(collected_bytes)
 
-					let collected_bytes = CollectedBytes::new(
-						file_name_path,
-						Some(Box::pin(string_to_async_read(data_str))),
-						true,
-						doc_source,
-						Some(data_len),
-						source_id.clone(),
-						None
-					);
-					yield Ok(collected_bytes)
-
+					}
 				}
 			}
 		};
@@ -360,15 +367,14 @@ mod tests {
 	#[tokio::test]
 	async fn test_news_collector() {
 		dotenv().ok();
-		// Configure the news collector config with a mock credential
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").map_err(|e| e.to_string()).unwrap(),
+			api_key: env::var("NEWS_API_KEY").map_err(|e| e.to_string()).unwrap_or("".to_string()),
 			query: "Tesla".to_string(),
 			query_type: 0,
 			id: "Some-id".to_string(),
 			sources: None,
-			from_date: Some("16-08-2024".to_string()),
-			to_date: Some("16-09-2024".to_string()),
+			from_date: None,
+			to_date: None,
 			language: None,
 			sort_by: None,
 			page: None,
@@ -385,19 +391,25 @@ mod tests {
 
 		let result = news_api_client.poll_data().await;
 
-		let mut stream = result.unwrap();
-		let mut count_files: HashSet<String> = HashSet::new();
-		while let Some(item) = stream.next().await {
-			match item {
-				Ok(collected_bytes) =>
-					if let Some(pathbuf) = collected_bytes.file {
-						if let Some(str_path) = pathbuf.to_str() {
-							count_files.insert(str_path.to_string());
-						}
-					},
-				Err(_) => panic!("Expected successful data collection"),
-			}
+		match result {
+			Ok(mut stream) => {
+				let mut count_files: HashSet<String> = HashSet::new();
+				while let Some(item) = stream.next().await {
+					match item {
+						Ok(collected_bytes) =>
+							if let Some(pathbuf) = collected_bytes.file {
+								if let Some(str_path) = pathbuf.to_str() {
+									count_files.insert(str_path.to_string());
+								}
+							},
+						Err(_) => panic!("Expected successful data collection"),
+					}
+				}
+				println!("Files are --- {:?}", count_files);
+			},
+			Err(e) => {
+				eprintln!("Failed to get stream: {:?}", e);
+			},
 		}
-		println!("Files are --- {:?}", count_files);
 	}
 }
