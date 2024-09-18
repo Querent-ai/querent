@@ -76,32 +76,48 @@
 		});
 		console.log('Created the webview window');
 
-		authWindow
-			.once('tauri://created', () => {
-				console.log('Inside this function11111111111111');
-				const intervalId = setInterval(() => {
-					// it is coming there each time and not getting the code because WebviewWindow is just loading the page itself and not AUTH_URL and hence not doing anything
-					const element = document.querySelector('textarea#code, input#code');
-					const code = (element as HTMLInputElement | HTMLTextAreaElement)?.value || '';
+		authWindow.once('tauri://created', function () {
+			console.log("WebView window created");
+		});
 
-					if (code) {
-						console.log('Gott the code as ', code);
-						clearInterval(intervalId);
-						getTokens(code)
-							.then(() => {
-								console.log('Closing the window now');
-								authWindow.close();
-								console.log('Closed the window');
-							})
-							.catch((error) => {
-								console.error('Error getting tokens:', error);
-							});
-					}
-				}, 500);
-			})
-			.catch((error) => {
-				console.error('Error setting up the window:', error);
-			});
+		authWindow.once('tauri://error', function (e) {
+			console.error('Error creating WebView window:', e);
+		});
+
+		// Listen for the window to be closed
+		authWindow.once('tauri://close-requested', function () {
+			console.log("OAuth window was closed");
+		});
+
+		// ----------------------------------------------------------------
+		// authWindow
+		// 	.once('tauri://created', () => {
+		// 		console.log('Inside this function11111111111111');
+		// 		const intervalId = setInterval(() => {
+		// 			// it is coming there each time and not getting the code because WebviewWindow is just loading the page itself and not AUTH_URL and hence not doing anything
+		// 			const element = document.querySelector('textarea#code, input#code');
+		// 			const code = (element as HTMLInputElement | HTMLTextAreaElement)?.value || '';
+
+		// 			if (code) {
+		// 				console.log('Gott the code as ', code);
+		// 				clearInterval(intervalId);
+		// 				getTokens(code)
+		// 					.then(() => {
+		// 						console.log('Closing the window now');
+		// 						authWindow.close();
+		// 						console.log('Closed the window');
+		// 					})
+		// 					.catch((error) => {
+		// 						console.error('Error getting tokens:', error);
+		// 					});
+		// 			}
+		// 		}, 500);
+		// 	})
+		// 	.catch((error) => {
+		// 		console.error('Error setting up the window:', error);
+		// 	});
+
+		//------------------------------------------------------------------
 
 		//window.location.href = AUTH_URL;
 	}
@@ -211,7 +227,7 @@
 
 	function selectSource(sourceName: string) {
 		if (sourceName === 'Google Drive') {
-			login();
+			login().catch(console.error);
 			selectedSource = 'Google Drive';
 			setIsVisible();
 		}

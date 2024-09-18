@@ -4,7 +4,7 @@
 	"description": "Capability for the core rian application",
 	"windows": ["main", "google-oauth"],
 	"remote": {
-		"urls": ["https://accounts.google.com", "https://www.google.com"]
+		"urls": ["https://accounts.google.com", "https://www.google.com", "https://www.youtube.com"]
 	},
 	"permissions": [
 		"dialog:allow-ask",
@@ -22,6 +22,7 @@
 		"shell:default",
 		"core:event:allow-listen",
 		"notification:allow-is-permission-granted",
-		"notification:default"
+		"notification:default",
+		"core:event:allow-unlisten"
 	]
 }
