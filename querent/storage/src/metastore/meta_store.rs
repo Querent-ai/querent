@@ -138,24 +138,6 @@ impl Storage for MetaStore {
 		Ok(vec![])
 	}
 
-	/// Store key value pair
-	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get value for key
-	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
-		Ok(None)
-	}
-
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
-		Ok(Vec::new())
-	}
-
-	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
 		let read_txn = self.db.begin_read().map_err(|e| StorageError {
@@ -476,16 +458,6 @@ impl Storage for MetaStore {
 			}
 		};
 		Ok(session)
-	}
-
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
-		Ok(None)
 	}
 
 	/// Asynchronously fetches popular queries .

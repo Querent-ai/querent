@@ -135,18 +135,6 @@ pub trait Storage: Send + Sync + 'static {
 		session_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>>;
 
-	/// Store key value pair
-	async fn store_secret(&self, key: &String, value: &String) -> StorageResult<()>;
-
-	/// Get value for key
-	async fn get_secret(&self, key: &String) -> StorageResult<Option<String>>;
-
-	/// Delete the key value pair
-	async fn delete_secret(&self, key: &String) -> StorageResult<()>;
-
-	/// Get all key value pair
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>>;
-
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>>;
 
@@ -209,12 +197,6 @@ pub trait Storage: Send + Sync + 'static {
 		response: Option<String>,
 	) -> StorageResult<()>;
 
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()>;
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>>;
-
 	/// Asynchronously fetches popular queries .
 	async fn autogenerate_queries(
 		&self,
@@ -234,5 +216,33 @@ pub trait Storage: Send + Sync + 'static {
 impl Debug for dyn Storage {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		f.debug_struct("Storage").finish()
+	}
+}
+
+/// SecretStorage is a trait for all storage types that store secrets.
+#[async_trait]
+pub trait SecretStorage: Send + Sync + 'static {
+	/// Store key value pair
+	async fn store_secret(&self, key: &String, value: &String) -> StorageResult<()>;
+
+	/// Get value for key
+	async fn get_secret(&self, key: &String) -> StorageResult<Option<String>>;
+
+	/// Delete the key value pair
+	async fn delete_secret(&self, key: &String) -> StorageResult<()>;
+
+	/// Get all key value pair
+	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>>;
+
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()>;
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>>;
+}
+
+impl Debug for dyn SecretStorage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("SecretStorage").finish()
 	}
 }
