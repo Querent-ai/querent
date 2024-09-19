@@ -1,6 +1,6 @@
 use crate::{
-	postgres_index::QuerySuggestion, storage::Storage, DiscoveredKnowledge, StorageError,
-	StorageErrorKind, StorageResult,
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, FabricAccessor, FabricStorage, Storage,
+	StorageError, StorageErrorKind, StorageResult,
 };
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
@@ -46,23 +46,12 @@ impl Neo4jStorage {
 }
 
 #[async_trait]
-impl Storage for Neo4jStorage {
+impl FabricStorage for Neo4jStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		// You can perform a simple query to check connectivity
 		let cypher_query = "RETURN 1";
 		let _ = self.graph.execute(Query::new(cypher_query.to_string())).await?;
 		Ok(())
-	}
-
-	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
-	async fn filter_and_query(
-		&self,
-		_session_id: &String,
-		_top_pairs: &Vec<String>,
-		_max_results: i32,
-		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>> {
-		Ok(vec![])
 	}
 
 	async fn insert_vector(
@@ -92,13 +81,6 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
-	async fn traverse_metadata_table(
-		&self,
-		_filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
-		Ok(vec![])
-	}
-
 	async fn similarity_search_l2(
 		&self,
 		_session_id: String,
@@ -121,14 +103,6 @@ impl Storage for Neo4jStorage {
 		_response: Option<String>,
 	) -> StorageResult<()> {
 		Ok(())
-	}
-
-	/// Get discovered knowledge
-	async fn get_discovered_data(
-		&self,
-		_session_id: String,
-	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		Ok(vec![])
 	}
 
 	async fn insert_graph(
@@ -199,6 +173,35 @@ impl Storage for Neo4jStorage {
 		}
 		Ok(())
 	}
+}
+
+#[async_trait]
+impl FabricAccessor for Neo4jStorage {
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_session_id: &String,
+		_top_pairs: &Vec<String>,
+		_max_results: i32,
+		_offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
+	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
+
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
+	}
 
 	/// Asynchronously fetches popular queries .
 	async fn autogenerate_queries(
@@ -209,6 +212,7 @@ impl Storage for Neo4jStorage {
 		Ok(Vec::new())
 	}
 }
+impl Storage for Neo4jStorage {}
 
 #[cfg(test)]
 mod tests {

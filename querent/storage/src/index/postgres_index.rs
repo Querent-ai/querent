@@ -1,4 +1,4 @@
-use crate::DiscoveredKnowledge;
+use crate::{DiscoveredKnowledge, FabricAccessor, FabricStorage, Storage};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel_async::{
@@ -12,7 +12,7 @@ use proto::semantics::PostgresConfig;
 
 use std::sync::Arc;
 
-use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
+use crate::{ActualDbPool, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
 use deadpool::Runtime;
 use diesel::{table, Insertable, Queryable, Selectable};
 use diesel_async::AsyncConnection;
@@ -86,7 +86,7 @@ impl PostgresStorage {
 }
 
 #[async_trait]
-impl Storage for PostgresStorage {
+impl FabricStorage for PostgresStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self.pool.get().await?;
 		Ok(())
@@ -108,14 +108,6 @@ impl Storage for PostgresStorage {
 		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(())
-	}
-
-	/// Get discovered knowledge
-	async fn get_discovered_data(
-		&self,
-		_session_id: String,
-	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		Ok(vec![])
 	}
 
 	/// Insert DiscoveryPayload into storage
@@ -145,13 +137,6 @@ impl Storage for PostgresStorage {
 		_offset: i64,
 		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		Ok(vec![])
-	}
-
-	async fn traverse_metadata_table(
-		&self,
-		_filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}
 
@@ -196,6 +181,24 @@ impl Storage for PostgresStorage {
 		})?;
 		Ok(())
 	}
+}
+
+#[async_trait]
+impl FabricAccessor for PostgresStorage {
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
+	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
 
 	/// Asynchronously fetches suggestions from semantic table.
 	async fn autogenerate_queries(
@@ -237,6 +240,7 @@ table! {
 	}
 }
 
+impl Storage for PostgresStorage {}
 #[cfg(test)]
 mod test {
 	use proto::semantics::StorageType;

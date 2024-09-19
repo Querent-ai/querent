@@ -82,7 +82,7 @@ impl StorageError {
 /// Storage is a trait for all storage types.
 /// Currently we support Graph, Vector and Index storages.
 #[async_trait]
-pub trait Storage: Send + Sync + 'static {
+pub trait FabricStorage: Send + Sync + 'static {
 	/// Check storage connection if applicable
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
 
@@ -124,17 +124,6 @@ pub trait Storage: Send + Sync + 'static {
 		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>>;
 
-	async fn traverse_metadata_table(
-		&self,
-		filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>>;
-
-	/// Get discovered data based on session_id
-	async fn get_discovered_data(
-		&self,
-		session_id: String,
-	) -> StorageResult<Vec<DiscoveredKnowledge>>;
-
 	/// Insert InsightKnowledge into storage
 	async fn insert_insight_knowledge(
 		&self,
@@ -142,7 +131,17 @@ pub trait Storage: Send + Sync + 'static {
 		session_id: Option<String>,
 		response: Option<String>,
 	) -> StorageResult<()>;
+}
 
+impl Debug for dyn FabricStorage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("FabricStorage").finish()
+	}
+}
+
+/// Acccesor for storage
+#[async_trait]
+pub trait FabricAccessor: Send + Sync + 'static {
 	/// Asynchronously fetches popular queries .
 	async fn autogenerate_queries(
 		&self,
@@ -157,7 +156,29 @@ pub trait Storage: Send + Sync + 'static {
 		max_results: i32,
 		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>>;
+
+	/// Get discovered data based on session_id
+	async fn get_discovered_data(
+		&self,
+		session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>>;
+
+	/// Get metadata if applicable
+	async fn traverse_metadata_table(
+		&self,
+		filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>>;
 }
+
+impl Debug for dyn FabricAccessor {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("FabricAccessor").finish()
+	}
+}
+
+/// Generic Storage trait which combines all storage traits.
+#[async_trait]
+pub trait Storage: FabricStorage + FabricAccessor {}
 
 impl Debug for dyn Storage {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
