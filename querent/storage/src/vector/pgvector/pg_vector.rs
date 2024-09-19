@@ -628,32 +628,6 @@ impl Storage for PGVector {
 		Ok(())
 	}
 
-	/// Store key value pair
-	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	/// Get value for key
-	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	//Delete the key value pair
-	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	//Get all collectors key value pairs
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
-		Ok(Vec::new())
-	}
-
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
 		Ok(Vec::new())
@@ -726,16 +700,6 @@ impl Storage for PGVector {
 		&self,
 		_session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>> {
-		Ok(None)
-	}
-
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
 		Ok(None)
 	}
 

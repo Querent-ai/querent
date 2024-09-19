@@ -15,7 +15,7 @@ use std::{
 	fmt::{Debug, Formatter},
 	sync::Arc,
 };
-use storage::Storage;
+use storage::SecretStorage;
 use tracing::{error, info};
 
 #[cfg(feature = "license-check")]
@@ -40,7 +40,7 @@ pub struct SemanticService {
 	cluster: Cluster,
 	semantic_pipelines: HashMap<String, PipelineHandle>,
 	#[allow(unused)]
-	secret_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn SecretStorage>,
 	pubsub_broker: PubSubBroker,
 	counters: SemanticServiceCounters,
 }
@@ -59,7 +59,7 @@ impl SemanticService {
 		node_id: String,
 		cluster: Cluster,
 		pubsub_broker: PubSubBroker,
-		secret_store: Arc<dyn Storage>,
+		secret_store: Arc<dyn SecretStorage>,
 	) -> Self {
 		Self {
 			node_id,

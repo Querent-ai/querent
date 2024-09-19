@@ -13,7 +13,9 @@ use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig
 use once_cell::sync::OnceCell;
 use proto::config::NodeConfig;
 use rian_core::{start_semantic_service, SemanticService, ShutdownPipeline};
-use storage::{create_metadata_store, create_secret_store, create_storages, Storage};
+use storage::{
+	create_metadata_store, create_secret_store, create_storages, SecretStorage, Storage,
+};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info};
 
@@ -35,7 +37,7 @@ pub struct QuerentServices {
 	pub insight_service: Option<Arc<dyn InsightService>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
-	pub secret_store: Arc<dyn Storage>,
+	pub secret_store: Arc<dyn SecretStorage>,
 	pub metadata_store: Arc<dyn Storage>,
 }
 

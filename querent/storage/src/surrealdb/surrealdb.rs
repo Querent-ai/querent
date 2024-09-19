@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
 	postgres_index::QuerySuggestion, DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError,
-	StorageErrorKind, StorageResult, RIAN_API_KEY,
+	StorageErrorKind, StorageResult,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -370,32 +370,6 @@ impl Storage for SurrealDB {
 		Ok(())
 	}
 
-	/// Store key value pair
-	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	/// Get value for key
-	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	//Delete the key value pair
-	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	//Get all collectors key value pairs
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
-		Ok(Vec::new())
-	}
-
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
 		Ok(Vec::new())
@@ -477,17 +451,6 @@ impl Storage for SurrealDB {
 		_session_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
-	}
-
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()> {
-		self.store_secret(&RIAN_API_KEY.to_string(), api_key).await?;
-		Ok(())
-	}
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
-		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 
 	/// Retrieve filtered results when query is empty and semantic pair filters are provided

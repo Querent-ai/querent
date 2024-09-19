@@ -57,16 +57,6 @@ impl Storage for Neo4jStorage {
 		Ok(())
 	}
 
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
-		Ok(None)
-	}
-
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
@@ -286,32 +276,6 @@ impl Storage for Neo4jStorage {
 			},
 		}
 		Ok(())
-	}
-
-	/// Store key value pair
-	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	/// Get value for key
-	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	//Delete the key value pair
-	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	//Get all collectors key value pairs
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
-		Ok(Vec::new())
 	}
 
 	/// Asynchronously fetches popular queries .

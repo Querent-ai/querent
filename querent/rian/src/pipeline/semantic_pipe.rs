@@ -12,7 +12,7 @@ use engines::Engine;
 use proto::semantics::{IndexingStatistics, IngestedTokens};
 use sources::Source;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use storage::Storage;
+use storage::{SecretStorage, Storage};
 use tokio::{
 	sync::{mpsc, Semaphore},
 	time::Instant,
@@ -42,7 +42,7 @@ pub struct PipelineSettings {
 	pub data_sources: Vec<Arc<dyn sources::Source>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
-	pub secret_store: Arc<dyn Storage>,
+	pub secret_store: Arc<dyn SecretStorage>,
 	pub engine: Arc<dyn Engine>,
 }
 
