@@ -7,7 +7,7 @@ use common::EventType;
 use proto::NodeConfig;
 use rian_core::InsightAgentService;
 
-use storage::{SecretStorage, Storage};
+use storage::{MetaStorage, SecretStorage, Storage};
 use tracing::info;
 pub mod client;
 pub use client::*;
@@ -20,7 +20,7 @@ pub async fn start_insight_service(
 	cluster: &Cluster,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
-	metadata_store: Arc<dyn Storage>,
+	metadata_store: Arc<dyn MetaStorage>,
 	secret_store: Arc<dyn SecretStorage>,
 ) -> anyhow::Result<Arc<dyn InsightService>> {
 	let license_key = secret_store

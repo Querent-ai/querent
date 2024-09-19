@@ -126,9 +126,10 @@ pub async fn create_secret_store(
 	Ok(secret_store)
 }
 
-pub async fn create_metadata_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+pub async fn create_metadata_store(
+	path: std::path::PathBuf,
+) -> anyhow::Result<Arc<dyn MetaStorage>> {
 	let metastore = MetaStore::new(path);
-	metastore.check_connectivity().await?;
 	let metastore = Arc::new(metastore);
 	Ok(metastore)
 }
