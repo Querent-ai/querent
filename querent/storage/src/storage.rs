@@ -246,3 +246,66 @@ impl Debug for dyn SecretStorage {
 		f.debug_struct("SecretStorage").finish()
 	}
 }
+
+#[async_trait]
+pub trait MetaStorage: Send + Sync {
+	/// Get all SemanticPipeline ran by this node
+	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>>;
+
+	/// Set SemanticPipeline ran by this node
+	async fn set_pipeline(
+		&self,
+		pipeline_id: &String,
+		pipeline: SemanticPipelineRequest,
+	) -> StorageResult<()>;
+
+	/// Get semantic pipeline by id
+	async fn get_pipeline(
+		&self,
+		pipeline_id: &String,
+	) -> StorageResult<Option<SemanticPipelineRequest>>;
+
+	/// Delete semantic pipeline by id
+	async fn delete_pipeline(&self, pipeline_id: &String) -> StorageResult<()>;
+
+	/// Get all Discovery sessions ran by this node
+	async fn get_all_discovery_sessions(
+		&self,
+	) -> StorageResult<Vec<(String, DiscoverySessionRequest)>>;
+
+	/// Set Discovery session ran by this node
+	async fn set_discovery_session(
+		&self,
+		session_id: &String,
+		session: DiscoverySessionRequest,
+	) -> StorageResult<()>;
+
+	/// Get Discovery session by id
+	async fn get_discovery_session(
+		&self,
+		session_id: &String,
+	) -> StorageResult<Option<DiscoverySessionRequest>>;
+
+	/// Get all Insight sessions ran by this node
+	async fn get_all_insight_sessions(&self)
+		-> StorageResult<Vec<(String, InsightAnalystRequest)>>;
+
+	/// Set Insight session ran by this node
+	async fn set_insight_session(
+		&self,
+		session_id: &String,
+		session: InsightAnalystRequest,
+	) -> StorageResult<()>;
+
+	/// Get Insight session by id
+	async fn get_insight_session(
+		&self,
+		session_id: &String,
+	) -> StorageResult<Option<InsightAnalystRequest>>;
+}
+
+impl Debug for dyn MetaStorage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("MetaStorage").finish()
+	}
+}

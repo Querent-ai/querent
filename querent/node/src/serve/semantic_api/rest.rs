@@ -121,7 +121,7 @@ async fn semantic_endpoint(
 
 /// Get pipelines metadata
 pub async fn get_pipelines_history(
-	metadata_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> Result<proto::semantics::PipelineRequestInfoList, PipelineErrors> {
 	let pipelines = metadata_store
 		.get_all_pipelines()
@@ -139,7 +139,7 @@ pub async fn get_pipelines_history(
 }
 
 pub fn get_pipelines_history_handler(
-	metadata_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics" / "list")
 		.and(warp::get())
@@ -234,7 +234,7 @@ pub async fn start_pipeline(
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
 	secret_store: Arc<dyn storage::SecretStorage>,
-	metadata_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 	// Extract entities from request.fixed_entities or use a default
@@ -364,7 +364,7 @@ pub fn start_pipeline_post_handler(
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
 	secret_store: Arc<dyn storage::SecretStorage>,
-	metadata_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics")
 		.and(warp::body::json())

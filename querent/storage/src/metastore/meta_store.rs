@@ -3,12 +3,8 @@ use std::{
 	sync::Arc,
 };
 
-use crate::{
-	postgres_index::QuerySuggestion, DiscoveredKnowledge, Storage, StorageError, StorageErrorKind,
-	StorageResult,
-};
+use crate::{MetaStorage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
@@ -50,94 +46,7 @@ impl MetaStore {
 }
 
 #[async_trait]
-impl Storage for MetaStore {
-	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		Ok(())
-	}
-
-	async fn insert_vector(
-		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
-	) -> StorageResult<()> {
-		Ok(()) // Placeholder, add vector insertion logic here
-	}
-
-	async fn insert_graph(
-		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
-	async fn filter_and_query(
-		&self,
-		_session_id: &String,
-		_top_pairs: &Vec<String>,
-		_max_results: i32,
-		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>> {
-		Ok(vec![])
-	}
-
-	/// Get discovered knowledge
-	async fn get_discovered_data(
-		&self,
-		_session_id: String,
-	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		Ok(vec![])
-	}
-
-	async fn index_knowledge(
-		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	async fn traverse_metadata_table(
-		&self,
-		_filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
-		Ok(vec![])
-	}
-
-	/// Insert InsightKnowledge into storage
-	async fn insert_insight_knowledge(
-		&self,
-		_query: Option<String>,
-		_session_id: Option<String>,
-		_response: Option<String>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Insert DiscoveryPayload into storage
-	async fn insert_discovered_knowledge(
-		&self,
-		_payload: &Vec<DocumentPayload>,
-	) -> StorageResult<()> {
-		// Your insert_discovered_knowledge implementation here
-		Ok(())
-	}
-
-	async fn similarity_search_l2(
-		&self,
-		_session_id: String,
-		_query: String,
-		_collection_id: String,
-		_payload: &Vec<f32>,
-		_max_results: i32,
-		_offset: i64,
-		_top_pairs_embeddings: &Vec<Vec<f32>>,
-	) -> StorageResult<Vec<DocumentPayload>> {
-		// Implement Neo4j similarity search logic (if needed)
-		Ok(vec![])
-	}
-
+impl MetaStorage for MetaStore {
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
 		let read_txn = self.db.begin_read().map_err(|e| StorageError {
@@ -458,14 +367,5 @@ impl Storage for MetaStore {
 			}
 		};
 		Ok(session)
-	}
-
-	/// Asynchronously fetches popular queries .
-	async fn autogenerate_queries(
-		&self,
-		_max_suggestions: i32,
-	) -> StorageResult<Vec<QuerySuggestion>> {
-		// Return an empty vector
-		Ok(Vec::new())
 	}
 }
