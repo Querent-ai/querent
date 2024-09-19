@@ -1,8 +1,8 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use crate::{
-	postgres_index::QuerySuggestion, storage::Storage, DiscoveredKnowledge, StorageError,
-	StorageErrorKind, StorageResult,
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, FabricAccessor, FabricStorage, Storage,
+	StorageError, StorageErrorKind, StorageResult,
 };
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
@@ -41,7 +41,7 @@ impl MilvusStorage {
 }
 
 #[async_trait]
-impl Storage for MilvusStorage {
+impl FabricStorage for MilvusStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self.client.list_collections().await?;
 		Ok(())
@@ -70,25 +70,6 @@ impl Storage for MilvusStorage {
 			}
 		}
 		Ok(())
-	}
-
-	/// Get discovered knowledge
-	async fn get_discovered_data(
-		&self,
-		_session_id: String,
-	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		Ok(vec![])
-	}
-
-	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
-	async fn filter_and_query(
-		&self,
-		_session_id: &String,
-		_top_pairs: &Vec<String>,
-		_max_results: i32,
-		_offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>> {
-		Ok(vec![])
 	}
 
 	/// Insert InsightKnowledge into storage
@@ -241,6 +222,27 @@ impl Storage for MilvusStorage {
 	) -> StorageResult<()> {
 		// Your insert_discovered_knowledge implementation here
 		Ok(())
+	}
+}
+#[async_trait]
+impl FabricAccessor for MilvusStorage {
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
+	}
+
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		_session_id: &String,
+		_top_pairs: &Vec<String>,
+		_max_results: i32,
+		_offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
 	}
 
 	async fn traverse_metadata_table(
@@ -452,6 +454,8 @@ impl MilvusStorage {
 		// }
 	}
 }
+
+impl Storage for MilvusStorage {}
 
 // #[cfg(test)]
 // mod tests {

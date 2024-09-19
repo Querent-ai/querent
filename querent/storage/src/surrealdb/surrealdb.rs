@@ -5,8 +5,8 @@ use std::{
 };
 
 use crate::{
-	postgres_index::QuerySuggestion, DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError,
-	StorageErrorKind, StorageResult,
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, FabricAccessor, FabricStorage,
+	SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -157,7 +157,7 @@ impl SurrealDB {
 }
 
 #[async_trait]
-impl Storage for SurrealDB {
+impl FabricStorage for SurrealDB {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _query_response = self.db.query("SELECT * FROM non_existing_table LIMIT 1;").await;
 		Ok(())
@@ -306,39 +306,6 @@ impl Storage for SurrealDB {
 		Ok(results)
 	}
 
-	async fn traverse_metadata_table(
-		&self,
-		filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
-		let mut combined_results: Vec<(
-			String,
-			String,
-			String,
-			String,
-			String,
-			String,
-			String,
-			f32,
-		)> = Vec::new();
-		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-		for (head, tail) in filtered_pairs {
-			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 0)
-				.await?;
-			traverse_node(&self.db, tail.clone(), &mut combined_results, &mut visited_pairs, 0)
-				.await?;
-		}
-
-		Ok(combined_results)
-	}
-
-	async fn insert_graph(
-		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
 	async fn index_knowledge(
 		&self,
 		collection_id: String,
@@ -367,6 +334,42 @@ impl Storage for SurrealDB {
 				})?;
 		}
 		Ok(())
+	}
+
+	async fn insert_graph(
+		&self,
+		_collection_id: String,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+}
+
+#[async_trait]
+impl FabricAccessor for SurrealDB {
+	async fn traverse_metadata_table(
+		&self,
+		filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		let mut combined_results: Vec<(
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			f32,
+		)> = Vec::new();
+		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
+		for (head, tail) in filtered_pairs {
+			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 0)
+				.await?;
+			traverse_node(&self.db, tail.clone(), &mut combined_results, &mut visited_pairs, 0)
+				.await?;
+		}
+
+		Ok(combined_results)
 	}
 
 	/// Get discovered knowledge
@@ -678,3 +681,5 @@ pub async fn traverse_node<'a>(
 
 	Ok(())
 }
+
+impl Storage for SurrealDB {}
