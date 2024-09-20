@@ -3,7 +3,7 @@ resolver = "2"
 members = ["sources", "ingestors", "engines", "llms", "insights", "actors", "common", "rian", "storage", "cluster", "node", "codegen", "proto",]
 
 [profile.dev]
-debug = false
+debug = true
 
 [workspace.dependencies]
 azure_core = { version = "0.13.0", features = ["enable_reqwest_rustls"] }
