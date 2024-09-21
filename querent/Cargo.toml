@@ -273,6 +273,7 @@ specta-jsdoc = "=0.0.7"
 lazy_static = "1.5.0"
 
 # patch unicode-normalization to version 1.22.0
+# TODO Querent to research on few third party crates
 [patch.crates-io]
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
