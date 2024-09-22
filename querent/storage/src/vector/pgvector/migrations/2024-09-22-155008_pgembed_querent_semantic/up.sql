@@ -1,4 +1,4 @@
-CREATE TABLE discovered_knowledge(
+CREATE TABLE IF NOT EXISTS discovered_knowledge(
     id SERIAL PRIMARY KEY,
     doc_id VARCHAR,
     doc_source VARCHAR,
@@ -13,14 +13,14 @@ CREATE TABLE discovered_knowledge(
     collection_id VARCHAR
 );
 
-CREATE TABLE embedded_knowledge(
+CREATE TABLE IF NOT EXISTS embedded_knowledge(
     id SERIAL PRIMARY KEY,
     embeddings vector(384),
     score FLOAT4,
     event_id VARCHAR
 );
 
-CREATE TABLE insight_knowledge (
+CREATE TABLE IF NOT EXISTS insight_knowledge (
     id SERIAL PRIMARY KEY,
     query VARCHAR,
     session_id VARCHAR,
@@ -28,7 +28,7 @@ CREATE TABLE insight_knowledge (
 
 );
 
-CREATE TABLE semantic_knowledge (
+CREATE TABLE IF NOT EXISTS semantic_knowledge (
     id SERIAL PRIMARY KEY,
     subject VARCHAR,
     subject_type VARCHAR,

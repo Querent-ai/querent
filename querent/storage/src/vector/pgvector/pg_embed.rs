@@ -1,7 +1,7 @@
 use crate::{
-	models::*, postgres_index::QuerySuggestion, semantic_knowledge, utils::traverse_node,
-	ActualDbPool, DieselError, FabricAccessor, FabricStorage, Storage, StorageError,
-	StorageErrorKind, StorageResult, POOL_TIMEOUT,
+	enable_extension, models::*, postgres_index::QuerySuggestion, semantic_knowledge,
+	utils::traverse_node, ActualDbPool, DieselError, FabricAccessor, FabricStorage, Storage,
+	StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
 };
 use diesel_migrations::MigrationHarness;
 
@@ -19,8 +19,8 @@ use diesel_async::{
 use diesel::r2d2::{ConnectionManager, Pool};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
 use pgvector::Vector;
-use postgresql_embedded::{PostgreSQL, Result, Settings, VersionReq};
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use postgresql_embedded::{PostgreSQL, Result, Settings, Status, VersionReq};
+use std::{collections::HashSet, path::PathBuf, sync::Arc, time::Duration};
 use tracing::error;
 
 use super::fetch_documents_for_embedding;
@@ -30,6 +30,7 @@ const MIGRATIONS: EmbeddedMigrations = embed_migrations!("src/vector/pgvector/mi
 pub struct PGEmbed {
 	pub pool: ActualDbPool,
 	pub db_path: PathBuf,
+	pub postgres: PostgreSQL,
 }
 
 impl PGEmbed {
@@ -39,13 +40,14 @@ impl PGEmbed {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?,
-			username: "querent-rian".to_string(),
-			password: "10074".to_string(),
-			installation_dir: path.clone(),
+			data_dir: path.clone(),
 			..Default::default()
 		};
 		let mut postgresql = PostgreSQL::new(settings);
-		log::info!("Installing the vector extension from TensorChord");
+		postgresql.setup().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 		postgresql_extensions::install(
 			postgresql.settings(),
 			"tensor-chord",
@@ -60,15 +62,11 @@ impl PGEmbed {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-		postgresql.setup().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
 		postgresql.start().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-		let database_name = "querent-rian-embed";
+		let database_name = "querent_rian_10074";
 		postgresql.create_database(database_name).await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -77,17 +75,18 @@ impl PGEmbed {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
+		// restart the postgresql server
+		postgresql.stop().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		postgresql.start().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 		let database_url = postgresql.settings().url(database_name);
-		let manager = ConnectionManager::<PgConnection>::new(database_url.clone());
-		let pool = Pool::builder()
-			.test_on_check_out(true)
-			.build(manager)
-			.expect("Could not build connection pool");
-		let mut mig_run = pool.clone().get().unwrap();
-		mig_run.run_pending_migrations(MIGRATIONS).unwrap();
-
 		// prepare async pool
-		let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
+		let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url.clone());
 		let pool = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
 			.max_size(10)
 			.wait_timeout(POOL_TIMEOUT)
@@ -99,15 +98,95 @@ impl PGEmbed {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-		Ok(PGEmbed { pool, db_path: path })
+		// pg vector says to configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+		// and restart the server
+		let conn = &mut pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+			.execute(conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+			.execute(conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		// close the pool
+		pool.close();
+		// restart the postgresql server
+		postgresql.stop().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		postgresql.start().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		// check if the database is created
+		postgresql.database_exists(database_name).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		// check if postgresql is running
+		while postgresql.status() != Status::Started {
+			eprintln!("current status: {:?}", postgresql.status());
+			tokio::time::sleep(Duration::from_secs(1)).await;
+		}
+		let database_url = postgresql.settings().url(database_name);
+		let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url.clone());
+		let pool_new = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
+			.max_size(10)
+			.wait_timeout(POOL_TIMEOUT)
+			.create_timeout(POOL_TIMEOUT)
+			.recycle_timeout(POOL_TIMEOUT)
+			.runtime(deadpool::Runtime::Tokio1)
+			.build()
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		// Enable the extension
+		enable_extension(&pool_new).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let manager_local = ConnectionManager::<PgConnection>::new(database_url.clone());
+		let pool_local = Pool::builder()
+			.test_on_check_out(true)
+			.build(manager_local)
+			.expect("Could not build connection pool");
+		let mut mig_run = pool_local.clone().get().unwrap();
+		mig_run.run_pending_migrations(MIGRATIONS).unwrap();
+		Ok(PGEmbed { pool: pool_new, db_path: path, postgres: postgresql })
 	}
 }
 
 #[async_trait]
 impl FabricStorage for PGEmbed {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _ = self.pool.get().await?;
-		Ok(())
+		let max_retries = 5;
+		let mut retries = 0;
+
+		loop {
+			match self.pool.get().await {
+				Ok(_) => return Ok(()), // Connected successfully
+				Err(e) if retries < max_retries => {
+					retries += 1;
+					eprintln!("Failed to connect with error: {:?}", e);
+					tokio::time::sleep(Duration::from_secs(2)).await; // Delay between retries
+				},
+				Err(e) => {
+					log::error!("Failed to connect to database: {:?}", e);
+				},
+			}
+		}
 	}
 
 	async fn insert_vector(
@@ -678,3 +757,33 @@ impl FabricAccessor for PGEmbed {
 }
 
 impl Storage for PGEmbed {}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[tokio::test]
+	async fn test_pgembed_connectivity() {
+		let db_path = PathBuf::from("/tmp/test_pgembed");
+		let embed = PGEmbed::new(db_path).await;
+		match embed {
+			Ok(embed) => {
+				let connectivity_result = embed.check_connectivity().await;
+				match connectivity_result {
+					Ok(_) => {
+						println!("Successfully connected to PGEmbed instance");
+						assert!(true);
+					},
+					Err(e) => {
+						eprintln!("Error connecting to PGEmbed instance: {:?}", e);
+						assert!(false, "Failed to connect to PGEmbed instance");
+					},
+				}
+			},
+			Err(e) => {
+				eprintln!("Error creating PGEmbed instance: {:?}", e);
+				assert!(false, "Failed to create PGEmbed instance");
+			},
+		}
+	}
+}

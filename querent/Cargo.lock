@@ -12238,6 +12238,7 @@ dependencies = [
  "rustls-native-certs 0.8.0",
  "serde",
  "serde_json",
+ "sqlx",
  "surrealdb",
  "thiserror",
  "tokio",

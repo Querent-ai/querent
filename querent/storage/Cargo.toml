@@ -45,3 +45,4 @@ postgresql_embedded = { workspace = true }
 postgresql_extensions = { workspace = true }
 diesel_migrations = { workspace = true }
 rustls-native-certs = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio"] }

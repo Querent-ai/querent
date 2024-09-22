@@ -275,6 +275,7 @@ lazy_static = "1.5.0"
 postgresql_embedded = "0.16.3"
 postgresql_extensions = "0.16.3"
 rustls-native-certs = "0.8.0"
+sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates
