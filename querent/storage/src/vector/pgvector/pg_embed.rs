@@ -1,14 +1,14 @@
 use crate::{
-	models::*, postgres_index::QuerySuggestion, semantic_knowledge, utils::traverse_node,
-	ActualDbPool, DieselError, FabricAccessor, FabricStorage, Storage, StorageError,
-	StorageErrorKind, StorageResult, POOL_TIMEOUT,
+	postgres_index::QuerySuggestion, semantic_knowledge, utils::traverse_node, ActualDbPool,
+	DieselError, FabricAccessor, FabricStorage, Storage, StorageError, StorageErrorKind,
+	StorageResult, POOL_TIMEOUT,
 };
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use deadpool::Runtime;
 use diesel::{
 	sql_types::{Array, BigInt, Text},
-	ExpressionMethods, QueryDsl,
+	table, ExpressionMethods, Insertable, QueryDsl, Queryable, QueryableByName, Selectable,
 };
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -23,12 +23,81 @@ use tracing::error;
 
 use super::fetch_documents_for_embedding;
 
-pub struct PGVector {
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[diesel(table_name = embedded_knowledge)]
+
+pub struct EmbeddedKnowledge {
+	pub embeddings: Option<Vector>,
+	pub score: f32,
+	pub event_id: String,
+}
+
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[diesel(table_name = insight_knowledge)]
+pub struct InsightKnowledge {
+	pub query: Option<String>,
+	pub session_id: Option<String>,
+	pub response: Option<String>,
+}
+
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[diesel(table_name = discovered_knowledge)]
+pub struct DiscoveredKnowledge {
+	pub doc_id: String,
+	pub doc_source: String,
+	pub sentence: String,
+	pub subject: String,
+	pub object: String,
+	pub cosine_distance: Option<f64>,
+	pub query_embedding: Option<Vector>,
+	pub query: Option<String>,
+	pub session_id: Option<String>,
+	pub score: Option<f64>,
+	pub collection_id: String,
+}
+
+impl DiscoveredKnowledge {
+	pub fn from_document_payload(payload: DocumentPayload) -> Self {
+		DiscoveredKnowledge {
+			doc_id: payload.doc_id,
+			doc_source: payload.doc_source,
+			sentence: payload.sentence,
+			subject: payload.subject,
+			object: payload.object,
+			cosine_distance: payload.cosine_distance,
+			query_embedding: Some(Vector::from(payload.query_embedding.unwrap_or_default())),
+			query: payload.query,
+			session_id: payload.session_id,
+			score: Some(payload.score as f64),
+			collection_id: payload.collection_id,
+		}
+	}
+}
+
+#[derive(QueryableByName)]
+struct FilteredResults {
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	document_id: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	subject: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	object: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	document_source: String,
+	#[diesel(sql_type = diesel::sql_types::Text)]
+	sentence: String,
+	#[diesel(sql_type = diesel::sql_types::Float)]
+	score: f32,
+	#[diesel(sql_type = pgvector::sql_types::Vector)]
+	embeddings: Vector,
+}
+
+pub struct PGEmbed {
 	pub pool: ActualDbPool,
 	pub config: PostgresConfig,
 }
 
-impl PGVector {
+impl PGEmbed {
 	pub async fn new(config: PostgresConfig) -> StorageResult<Self> {
 		let tls_enabled = config.url.contains("sslmode=require");
 		let manager = if tls_enabled {
@@ -58,12 +127,12 @@ impl PGVector {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
-		Ok(PGVector { pool, config })
+		Ok(PGEmbed { pool, config })
 	}
 }
 
 #[async_trait]
-impl FabricStorage for PGVector {
+impl FabricStorage for PGEmbed {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self.pool.get().await?;
 		Ok(())
@@ -246,7 +315,7 @@ impl FabricStorage for PGVector {
 }
 
 #[async_trait]
-impl FabricAccessor for PGVector {
+impl FabricAccessor for PGEmbed {
 	async fn filter_and_query(
 		&self,
 		session_id: &String,
@@ -636,4 +705,220 @@ impl FabricAccessor for PGVector {
 	}
 }
 
-impl Storage for PGVector {}
+table! {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	embedded_knowledge (id) {
+		id -> Int4,
+		embeddings -> Nullable<Vector>,
+		score -> Float4,
+		event_id -> VarChar,
+	}
+}
+
+table! {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	insight_knowledge (id) {
+		id -> Int4,
+		query -> Nullable<Text>,
+		session_id -> Nullable<Text>,
+		response -> Nullable<Text>,
+
+	}
+}
+
+table! {
+	use diesel::sql_types::*;
+	use pgvector::sql_types::*;
+
+	discovered_knowledge (id) {
+		id -> Int4,
+		doc_id -> Varchar,
+		doc_source -> Varchar,
+		sentence -> Text,
+		subject -> Text,
+		object -> Text,
+		cosine_distance -> Nullable<Float8>,
+		query_embedding -> Nullable<Vector>,
+		query -> Nullable<Text>,
+		session_id -> Nullable<Text>,
+		score -> Nullable<Float8>,
+		collection_id -> Text,
+	}
+}
+
+impl Storage for PGEmbed {}
+
+// #[cfg(test)]
+// mod test {
+// 	use super::*;
+// 	use crate::utils::{
+// 		extract_unique_pairs, find_intersection, get_top_k_pairs, process_traverser_results
+// 	};
+// 	use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
+// 	use proto::semantics::StorageType;
+// 	const TEST_DB_URL: &str = "postgres://querent:querent@localhost/querent_test?sslmode=prefer";
+
+// 	async fn setup_test_environment() -> PGEmbed {
+// 		// Create a PGEmbed instance with the test database URL
+// 		let config = PostgresConfig {
+// 			url: TEST_DB_URL.to_string(),
+// 			name: "test".to_string(),
+// 			storage_type: Some(StorageType::Index),
+// 		};
+
+// 		PGEmbed::new(config).await.expect("Failed to create Postgres Stroage instance")
+// 	}
+
+// 	// Test function
+// 	#[tokio::test]
+
+// 	async fn test_traverser_search() {
+// 		let mut current_query_embedding: Vec<f32> = Vec::new();
+// 		let embedding_model = TextEmbedding::try_new(InitOptions {
+// 			model_name: EmbeddingModel::AllMiniLML6V2,
+// 			show_download_progress: true,
+// 			..Default::default()
+// 		});
+// 		let embedder = match embedding_model {
+// 			Ok(embedder) => embedder,
+// 			Err(e) => {
+// 				eprintln!("Error initializing embedding model: {}", e);
+// 				return; // Exit the function if the model initialization fails
+// 			},
+// 		};
+
+// 		let query = "What is the fluid type in eagle ford shale?".to_string();
+// 		match embedder.embed(vec![query.clone()], None) {
+// 			Ok(embeddings) => {
+// 				current_query_embedding = embeddings[0].clone();
+// 				// Use current_query_embedding as needed
+// 			},
+// 			Err(e) => {
+// 				eprintln!("Error embedding query: {}", e);
+// 				return; // Exit the function if the embedding fails
+// 			},
+// 		}
+
+// 		let storage = setup_test_environment().await;
+// 		let results = storage
+// 			.similarity_search_l2(
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				&current_query_embedding,
+// 				2,
+// 				0,
+// 			)
+// 			.await;
+
+// 		println!("Results are -------{:?}", results);
+
+// 		let filtered_results = get_top_k_pairs(results.unwrap(), 2);
+// 		println!("Filtered Results --------{:?}", filtered_results);
+// 		let traverser_results_1 = storage.traverse_metadata_table(filtered_results.clone()).await;
+// 		let formatted_output_1 = match traverser_results_1 {
+// 			Ok(results) => extract_unique_pairs(results, filtered_results),
+// 			Err(e) => {
+// 				eprintln!("Error during traversal: {:?}", e);
+// 				filtered_results // or handle the error as needed
+// 			},
+// 		};
+
+// 		println!("Traverser for 1st query final pairs {:?}", formatted_output_1);
+// 		// match traverser_results_1 {
+// 		// 	Ok(results) => {
+// 		// 		println!("---------------------Traverser_1 Results --------{:?}", results);
+// 		// 		// let formatted_output = process_traverser_results(results);
+// 		// 		println!("--------------------------------------------");
+// 		// 			for line in formatted_output {
+// 		// 				println!("{}", line);
+// 		// }
+// 		// }
+// 		// Err(e) => {
+// 		// 	eprintln!("Error fetching semantic data: {:?}", e);
+// 		// }
+// 		// }
+
+// 		// Now user sees the output and gives 2nd query
+
+// 		// Example of embedding a second query
+
+// 		let second_query = "What is cyclic injection ?".to_string();
+// 		let second_query_embedding = match embedder.embed(vec![second_query.clone()], None) {
+// 			Ok(embeddings) => embeddings[0].clone(),
+// 			Err(e) => {
+// 				eprintln!("Error embedding second query: {}", e);
+// 				return; // Exit the function if the embedding fails
+// 			},
+// 		};
+
+// 		// Perform operations with the second query embedding
+// 		let second_results = storage
+// 			.similarity_search_l2(
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				"mock".to_string(),
+// 				&second_query_embedding,
+// 				1,
+// 				0,
+// 			)
+// 			.await;
+
+// 		let second_filtered_results = get_top_k_pairs(second_results.unwrap(), 2);
+// 		println!("Second Filtered Results --------{:?}", second_filtered_results);
+// 		let traverser_results_2 =
+// 			storage.traverse_metadata_table(second_filtered_results.clone()).await;
+// 		let formatted_output_2 = match traverser_results_2 {
+// 			Ok(results) => extract_unique_pairs(results, second_filtered_results),
+// 			Err(e) => {
+// 				eprintln!("Error during traversal: {:?}", e);
+// 				second_filtered_results // or handle the error as needed
+// 			},
+// 		};
+
+// 		println!("Traverser for 2nd query final pairs {:?}", formatted_output_2);
+
+// 		let results_intersection = find_intersection(formatted_output_1, formatted_output_2);
+
+// 		println!("Results Intersection ---{:?}", results_intersection);
+// 	}
+
+// 	#[tokio::test]
+// 	async fn test_postgres_storage() {
+// 		// Create a postgres config
+// 		let config = PostgresConfig {
+// 			url: TEST_DB_URL.to_string(),
+// 			name: "test".to_string(),
+// 			storage_type: Some(StorageType::Index),
+// 		};
+
+// 		// Create a PostgresStorage instance with the test database URL
+// 		let storage_result = PGEmbed::new(config).await;
+
+// 		// Ensure that the storage is created successfully
+// 		assert!(storage_result.is_ok());
+
+// 		// Get the storage instance from the result
+// 		let storage = storage_result.unwrap();
+
+// 		// Perform a connectivity check
+// 		let _connectivity_result = storage.check_connectivity().await;
+// 		// Ensure that the connectivity check is successful
+// 		// Works when there is a database running on the test database URL
+// 		//assert!(_connectivity_result.is_ok());
+// let auto_results = storage.autogenerate_queries(5).await;
+// match auto_results {
+// 	Ok(results) => {
+// 		println!("These are the results ------------------{:?}", results);
+// 	}
+// 	Err(e) => {
+// 		println!("Error occurred ------------------{:?}", e);
+// 	}
+// }
+// 		// You can add more test cases or assertions based on your specific requirements
+// 	}
+// }
