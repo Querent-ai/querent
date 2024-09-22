@@ -38,6 +38,7 @@ pub async fn create_storages(
 	let mut event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
 
+	// TODO here we can use PGEmbed and
 	if storage_configs.len() == 0 {
 		let surreal_db = create_default_storage(path_buf).await.map_err(|err| err)?;
 

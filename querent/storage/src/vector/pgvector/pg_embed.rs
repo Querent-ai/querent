@@ -1,7 +1,7 @@
 use crate::{
 	enable_extension, models::*, postgres_index::QuerySuggestion, semantic_knowledge,
-	utils::traverse_node, ActualDbPool, DieselError, FabricAccessor, FabricStorage, Storage,
-	StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
+	utils::traverse_node, ActualDbPool, DieselError, FabricAccessor, FabricStorage,
+	SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
 };
 use diesel_migrations::MigrationHarness;
 
@@ -358,9 +358,43 @@ impl FabricStorage for PGEmbed {
 
 	async fn index_knowledge(
 		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
+		collection_id: String,
+		payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
+		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		conn.transaction::<_, diesel::result::Error, _>(|conn| {
+			async move {
+				for (document_id, document_source, image_id, item) in payload {
+					let form = SemanticKnowledge {
+						subject: item.subject.clone(),
+						subject_type: item.subject_type.clone(),
+						object: item.object.clone(),
+						object_type: item.object_type.clone(),
+						sentence: item.sentence.clone(),
+						document_id: document_id.clone(),
+						document_source: document_source.clone(),
+						collection_id: Some(collection_id.clone()),
+						image_id: image_id.clone(),
+						event_id: item.event_id.clone(),
+						source_id: item.source_id.clone(),
+					};
+					diesel::insert_into(semantic_knowledge::dsl::semantic_knowledge)
+						.values(form)
+						.execute(conn)
+						.await?;
+				}
+				Ok(())
+			}
+			.scope_boxed()
+		})
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
 		Ok(())
 	}
 }
