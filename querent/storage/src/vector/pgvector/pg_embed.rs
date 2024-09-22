@@ -3,62 +3,103 @@ use crate::{
 	ActualDbPool, DieselError, FabricAccessor, FabricStorage, Storage, StorageError,
 	StorageErrorKind, StorageResult, POOL_TIMEOUT,
 };
+use diesel_migrations::MigrationHarness;
+
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use deadpool::Runtime;
 use diesel::{
 	sql_types::{Array, BigInt, Text},
-	ExpressionMethods, QueryDsl,
+	ExpressionMethods, PgConnection, QueryDsl,
 };
 use diesel_async::{
-	pg::AsyncPgConnection,
-	pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
-	scoped_futures::ScopedFutureExt,
-	AsyncConnection, RunQueryDsl,
+	pg::AsyncPgConnection, pooled_connection::AsyncDieselConnectionManager,
+	scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl,
 };
+
+use diesel::r2d2::{ConnectionManager, Pool};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations};
 use pgvector::Vector;
-use proto::semantics::PostgresConfig;
-use std::{collections::HashSet, sync::Arc};
+use postgresql_embedded::{PostgreSQL, Result, Settings, VersionReq};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 use tracing::error;
 
 use super::fetch_documents_for_embedding;
 
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("src/vector/pgvector/migrations/");
+
 pub struct PGEmbed {
 	pub pool: ActualDbPool,
-	pub config: PostgresConfig,
+	pub db_path: PathBuf,
 }
 
 impl PGEmbed {
-	pub async fn new(config: PostgresConfig) -> StorageResult<Self> {
-		let tls_enabled = config.url.contains("sslmode=require");
-		let manager = if tls_enabled {
-			// // diesel-async does not support any TLS connections out of the box, so we need to manually
-			// // provide a setup function which handles creating the connection
-			// let mut d_config = ManagerConfig::default();
-			// d_config.custom_setup = Box::new(establish_connection);
-			// AsyncDieselConnectionManager::<AsyncPgConnection>::new_with_config(
-			// 	config.url.clone(),
-			// 	d_config,
-			// )
-			// TODO: Support for TLS
-			log::warn!("TLS in pg connection directly is not supported yet");
-			AsyncDieselConnectionManager::<AsyncPgConnection>::new(config.url.clone())
-		} else {
-			AsyncDieselConnectionManager::<AsyncPgConnection>::new(config.url.clone())
+	pub async fn new(path: PathBuf) -> StorageResult<Self> {
+		let settings = Settings {
+			version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?,
+			username: "querent-rian".to_string(),
+			password: "10074".to_string(),
+			installation_dir: path.clone(),
+			..Default::default()
 		};
-		let pool = Pool::builder(manager)
+		let mut postgresql = PostgreSQL::new(settings);
+		log::info!("Installing the vector extension from TensorChord");
+		postgresql_extensions::install(
+			postgresql.settings(),
+			"tensor-chord",
+			"pgvecto.rs",
+			&VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?,
+		)
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		postgresql.setup().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		postgresql.start().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let database_name = "querent-rian-embed";
+		postgresql.create_database(database_name).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		postgresql.database_exists(database_name).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let database_url = postgresql.settings().url(database_name);
+		let manager = ConnectionManager::<PgConnection>::new(database_url.clone());
+		let pool = Pool::builder()
+			.test_on_check_out(true)
+			.build(manager)
+			.expect("Could not build connection pool");
+		let mut mig_run = pool.clone().get().unwrap();
+		mig_run.run_pending_migrations(MIGRATIONS).unwrap();
+
+		// prepare async pool
+		let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
+		let pool = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
 			.max_size(10)
 			.wait_timeout(POOL_TIMEOUT)
 			.create_timeout(POOL_TIMEOUT)
 			.recycle_timeout(POOL_TIMEOUT)
-			.runtime(Runtime::Tokio1)
+			.runtime(deadpool::Runtime::Tokio1)
 			.build()
 			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-
-		Ok(PGEmbed { pool, config })
+		Ok(PGEmbed { pool, db_path: path })
 	}
 }
 
