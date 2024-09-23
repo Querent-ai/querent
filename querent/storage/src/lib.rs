@@ -39,14 +39,14 @@ pub async fn create_storages(
 
 	// TODO here we can use PGEmbed and
 	if storage_configs.len() == 0 {
-		let surreal_db = create_default_storage(path_buf).await.map_err(|err| err)?;
+		let pg_embed_db = create_default_storage(path_buf).await.map_err(|err| err)?;
 
 		event_storages
 			.entry(EventType::Vector)
 			.or_insert_with(Vec::new)
-			.push(surreal_db.clone());
+			.push(pg_embed_db.clone());
 
-		index_storages.push(surreal_db);
+		index_storages.push(pg_embed_db);
 	}
 
 	for storage_config in storage_configs {
@@ -110,7 +110,7 @@ pub async fn create_storages(
 }
 
 pub async fn create_default_storage(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
-	let surreal_db = SurrealDB::new(path).await.map_err(|err| {
+	let surreal_db = PGEmbed::new(path).await.map_err(|err| {
 		log::error!("Surreal client creation failed: {:?}", err);
 		err
 	})?;
@@ -201,7 +201,7 @@ const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));
 async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
 	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
 	// drop the extension vectors if it exists
-	conn.batch_execute("DROP EXTENSION IF EXISTS vector").await?;
-	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
+	conn.batch_execute("DROP EXTENSION IF EXISTS vectors").await?;
+	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vectors").await?;
 	Ok(())
 }
