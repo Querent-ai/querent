@@ -258,7 +258,6 @@ ollama-rs = { version = "0.2.0", features = [
     "stream",
     "chat-history",
 ] }
-surrealdb = { version = "1.5.4", features = ["kv-rocksdb"] }
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
 typed-builder = "0.18.1"

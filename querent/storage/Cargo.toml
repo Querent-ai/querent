@@ -36,7 +36,6 @@ pgvector = { workspace = true }
 redb = { workspace = true }
 rmp-serde = { workspace = true }
 fastembed = { workspace = true }
-surrealdb = { workspace = true }
 bincode = { workspace = true }
 csv = { workspace = true }
 serde_json = { workspace = true }

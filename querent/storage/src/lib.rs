@@ -3,7 +3,6 @@ use common::EventType;
 use proto::semantics::{StorageConfig, StorageType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 pub use storage::*;
-use surrealdb::surrealdb::SurrealDB;
 pub mod vector;
 use tracing::info;
 pub use vector::*;
@@ -14,7 +13,6 @@ pub use index::*;
 pub mod secret;
 pub use secret::*;
 pub mod metastore;
-pub mod surrealdb;
 use diesel::result::{Error as DieselError, Error::QueryBuilderError};
 pub use metastore::*;
 
@@ -110,13 +108,13 @@ pub async fn create_storages(
 }
 
 pub async fn create_default_storage(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
-	let surreal_db = PGEmbed::new(path).await.map_err(|err| {
-		log::error!("Surreal client creation failed: {:?}", err);
+	let embedded_db = PGEmbed::new(path).await.map_err(|err| {
+		log::error!("embedded_db client creation failed: {:?}", err);
 		err
 	})?;
-	let _ = surreal_db.check_connectivity().await;
-	let surreal_db = Arc::new(surreal_db);
-	Ok(surreal_db)
+	let _ = embedded_db.check_connectivity().await;
+	let embedded_db = Arc::new(embedded_db);
+	Ok(embedded_db)
 }
 
 pub async fn create_secret_store(
