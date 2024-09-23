@@ -15,9 +15,8 @@ pub mod secret;
 pub use secret::*;
 pub mod metastore;
 pub mod surrealdb;
-pub use metastore::*;
-
 use diesel::result::{Error as DieselError, Error::QueryBuilderError};
+pub use metastore::*;
 
 use diesel_async::{
 	pg::AsyncPgConnection,
@@ -202,7 +201,7 @@ const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));
 async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
 	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
 	// drop the extension vectors if it exists
-	conn.batch_execute("DROP EXTENSION IF EXISTS vectors").await?;
-	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vectors").await?;
+	conn.batch_execute("DROP EXTENSION IF EXISTS vector").await?;
+	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
 	Ok(())
 }

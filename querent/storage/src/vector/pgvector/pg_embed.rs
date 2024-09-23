@@ -35,12 +35,14 @@ pub struct PGEmbed {
 
 impl PGEmbed {
 	pub async fn new(path: PathBuf) -> StorageResult<Self> {
+		let mut data_dir = path.clone();
+		data_dir.push("pg_embed");
 		let settings = Settings {
 			version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?,
-			data_dir: path.clone(),
+			data_dir,
 			..Default::default()
 		};
 		let mut postgresql = PostgreSQL::new(settings);
