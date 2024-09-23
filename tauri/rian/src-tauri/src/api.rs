@@ -12,6 +12,7 @@ use crate::{
 use node::ApiKeyPayload;
 use std::env;
 
+
 #[tauri::command]
 #[specta::specta]
 pub fn get_update_result() -> (bool, Option<UpdateResult>) {

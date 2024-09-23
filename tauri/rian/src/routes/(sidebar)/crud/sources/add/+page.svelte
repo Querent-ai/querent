@@ -24,133 +24,94 @@
 	import NewsIcon from './NewsComponent.svelte';
 	import GCSIcon from './GCSComponent.svelte';
 	import MetaTag from '../../../../utils/MetaTag.svelte';
-	import { onMount } from 'svelte';
 	import Modal from './Modal.svelte';
-	import { isVisible } from '../../../../../stores/appState';
-	import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
-	import { app } from '@tauri-apps/api';
+	import {
+		getGoogleDriveCodeFn,
+		googleDriveCode,
+		googleDriveRefreshToken,
+		isVisible
+	} from '../../../../../stores/appState';
+	import { open } from '@tauri-apps/plugin-shell';
 
-	import { listen } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/core';
+	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
+	import { commands } from '../../../../../service/bindings';
+	import { get } from 'svelte/store';
 
-	listen('tauri://protocol-request', (event) => {
-		const url = new URL(event.payload as string);
-		const code = url.searchParams.get('code');
-		if (code) {
-			console.log('reached inside this whatever function');
-		}
-	});
-
-	const CLIENT_ID = '4402204563-bmfpspke6cl23j2975hd7dkuf2v4ii3n.apps.googleusercontent.com';
-	const REDIRECT_URI = 'http://localhost:5173/crud/sources/add';
-	const AUTH_URL = `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=https://www.googleapis.com/auth/drive&access_type=offline`;
+	const CLIENT_ID = import.meta.env.VITE_DRIVE_CLIENT_ID;
+	const REDIRECT_URI = import.meta.env.VITE_DRIVE_REDIRECT_URL;
+	const AUTH_URL = `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
+	type OAuthResult =
+		| { status: 'success'; code: string }
+		| { status: 'error'; message: string }
+		| { status: 'timeout' };
 
 	async function login() {
-		// // opening a new window of the app itself
-		// const authWindow = new WebviewWindow('authWindow', {
-		// 	url: AUTH_URL,
-		// });
+		try {
+			console.log('AUTH URL IS ', AUTH_URL);
+			open(AUTH_URL);
 
-		// console.log("Url is ", AUTH_URL)
+			const res = await getDriveCode();
+			console.log('REs is ', res);
 
-		// authWindow.once('tauri://created', () => {
-		// 	console.log('Authentication window created');
-		// });
-
-		// authWindow.once('tauri://error', (error) => {
-		// 	console.error('Error loading authentication window:', error);
-		// });
-
-		// // shell working, opening in the browser
-		// open(AUTH_URL);
-
-		// const REDIRECT_URI = 'urn:ietf:wg:oauth:2.0:oob';
-		console.log('AUTH URRLLLLLLM    is ', AUTH_URL);
-
-		const authWindow = new WebviewWindow('google-oauth', {
-			url: AUTH_URL,
-			title: 'Google OAuth',
-			width: 400,
-			height: 400,
-			resizable: true
-		});
-		console.log('Created the webview window');
-
-		authWindow.once('tauri://created', function () {
-			console.log("WebView window created");
-		});
-
-		authWindow.once('tauri://error', function (e) {
-			console.error('Error creating WebView window:', e);
-		});
-
-		// Listen for the window to be closed
-		authWindow.once('tauri://close-requested', function () {
-			console.log("OAuth window was closed");
-		});
-
-		// ----------------------------------------------------------------
-		// authWindow
-		// 	.once('tauri://created', () => {
-		// 		console.log('Inside this function11111111111111');
-		// 		const intervalId = setInterval(() => {
-		// 			// it is coming there each time and not getting the code because WebviewWindow is just loading the page itself and not AUTH_URL and hence not doing anything
-		// 			const element = document.querySelector('textarea#code, input#code');
-		// 			const code = (element as HTMLInputElement | HTMLTextAreaElement)?.value || '';
-
-		// 			if (code) {
-		// 				console.log('Gott the code as ', code);
-		// 				clearInterval(intervalId);
-		// 				getTokens(code)
-		// 					.then(() => {
-		// 						console.log('Closing the window now');
-		// 						authWindow.close();
-		// 						console.log('Closed the window');
-		// 					})
-		// 					.catch((error) => {
-		// 						console.error('Error getting tokens:', error);
-		// 					});
-		// 			}
-		// 		}, 500);
-		// 	})
-		// 	.catch((error) => {
-		// 		console.error('Error setting up the window:', error);
-		// 	});
-
-		//------------------------------------------------------------------
-
-		//window.location.href = AUTH_URL;
+			if (res) {
+				await getTokens(res);
+				selectedSource = 'Google Drive';
+				setIsVisible();
+			}
+		} catch (error) {
+			console.log('Error starting the OAuth server  ', error);
+		}
 	}
 
+	async function getDriveCode(): Promise<string> {
+		return new Promise((resolve, reject) => {
+			const interval = setInterval(async () => {
+				try {
+					const data = getGoogleDriveCodeFn();
+					console.log('DAta is ', data);
+					if (data !== '') {
+						clearInterval(interval);
+						resolve(data);
+					}
+				} catch (error) {
+					clearInterval(interval);
+					reject(error);
+				}
+			}, 5000);
+		});
+	}
+
+	let drive_client_id: string;
+	let drive_client_secret: string;
 	async function getTokens(code: string) {
-		console.log('Inside this funciton');
-		const tokenUrl = 'https://oauth2.googleapis.com/token';
-		const response = await fetch(tokenUrl, {
+		const result = await commands.getDriveCredentials();
+		if (result.status == 'ok') {
+			drive_client_id = result.data[0];
+			drive_client_secret = result.data[1];
+		}
+		const redirect_uri = import.meta.env.VITE_DRIVE_REDIRECT_URL;
+		const response = await fetch('https://oauth2.googleapis.com/token', {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/x-www-form-urlencoded'
 			},
 			body: new URLSearchParams({
-				client_id: CLIENT_ID,
-				client_secret: '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',
 				code: code,
-				redirect_uri: REDIRECT_URI,
+				client_id: drive_client_id,
+				client_secret: drive_client_secret,
+				redirect_uri: redirect_uri,
 				grant_type: 'authorization_code'
 			})
 		});
 
-		const data = await response.json();
-		console.log('Token response:', data);
-		// Store these tokens securely and use them for API requests
-	}
-
-	onMount(() => {
-		const params = new URLSearchParams(window.location.search);
-		const code = params.get('code');
-		if (code) {
-			selectedSource = 'Google Drive';
+		if (!response.ok) {
+			console.error('HTTP error! status:', response.status);
+			console.log('Error response body:', await response.text());
+			return;
 		}
-	});
+		const data = await response.json();
+		googleDriveRefreshToken.set(data.refresh_token);
+	}
 
 	function getIcon(sourceName: string) {
 		return iconMapping[sourceName as keyof typeof iconMapping];
@@ -226,14 +187,11 @@
 	let modalMessage = '';
 
 	function selectSource(sourceName: string) {
-		if (sourceName === 'Google Drive') {
-			login().catch(console.error);
-			selectedSource = 'Google Drive';
-			setIsVisible();
-		}
 		if (premiumSources.includes(sourceName)) {
 			modalMessage = 'This feature is available only in premium';
 			showModal = true;
+		} else if (sourceName === 'Google Drive') {
+			login().catch(console.error);
 		} else {
 			$isVisible = true;
 			selectedSource = sourceName;

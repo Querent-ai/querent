@@ -2,9 +2,6 @@
 	"rian-main-capability": {
 		"identifier": "rian-main-capability",
 		"description": "Capability for the core rian application",
-		"remote": {
-			"urls": ["https://accounts.google.com", "https://www.google.com", "https://www.youtube.com"]
-		},
 		"local": true,
 		"windows": ["main", "google-oauth"],
 		"permissions": [
@@ -24,7 +21,8 @@
 			"core:event:allow-listen",
 			"notification:allow-is-permission-granted",
 			"notification:default",
-			"core:event:allow-unlisten"
+			"core:event:allow-unlisten",
+			"shell:default"
 		]
 	}
 }
