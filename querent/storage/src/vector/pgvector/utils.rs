@@ -342,3 +342,132 @@ pub async fn fetch_documents_for_embedding(
 		},
 	}
 }
+
+use diesel::QueryableByName;
+use diesel::sql_query;
+use diesel::sql_types::{Float4, Text, Float8};
+#[derive(QueryableByName, Debug)]
+struct EmbeddingResult {
+    #[diesel(sql_type = Text)] // Embeddings as a comma-separated string
+    embeddings: String,
+    #[diesel(sql_type = Float4)] // Score as Float4
+    score: f32,
+    #[diesel(sql_type = Text)] // Event ID as Text
+    event_id: String,
+    #[diesel(sql_type = Float8)] // Similarity value as Float8
+    similarity: f64,
+}
+
+// Define the struct to match the query result for semantic data
+#[derive(QueryableByName, Debug)]
+struct SemanticResult {
+    #[diesel(sql_type = Text)] // Document ID as Text
+    document_id: String,
+    #[diesel(sql_type = Text)] // Subject as Text
+    subject: String,
+    #[diesel(sql_type = Text)] // Object as Text
+    object: String,
+    #[diesel(sql_type = Text)] // Document Source as Text
+    document_source: String,
+    #[diesel(sql_type = Text)] // Sentence as Text
+    sentence: String,
+}
+
+pub async fn fetch_documents_for_embedding_pgembed(
+    conn: &mut AsyncPgConnection,
+    embedding: &Vec<f32>,
+    adjusted_offset: i64,
+    limit: i64,
+    session_id: &String,
+    query: &String,
+    collection_id: &String,
+    payload: &Vec<f32>,
+) -> StorageResult<Vec<DocumentPayload>> {
+    let target_vector = format!("'{}'", serde_json::to_string(embedding).expect("Failed to format embeddings"));
+    let query_result = sql_query(
+        &format!(
+            r#"
+            SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
+                   score, 
+                   event_id, 
+                   (embeddings <=> {})::FLOAT8 AS similarity 
+            FROM embedded_knowledge
+            ORDER BY similarity
+            LIMIT $1
+            OFFSET $2
+            "#,
+            target_vector
+        ),
+    )
+    .bind::<Float4, _>(limit as f32)
+    .bind::<Float4, _>(adjusted_offset as f32)
+    .load::<EmbeddingResult>(conn)
+    .await;
+
+    match query_result {
+        Ok(results) => {
+            let mut payload_results = Vec::new();
+            for EmbeddingResult {
+                embeddings,
+                score,
+                event_id,
+                similarity,
+            } in results
+            {
+                // println!("Embedding: {}, Score: {}, Event ID: {}, Similarity: {}", embeddings, score, event_id, similarity);
+                let query_result_semantic = sql_query(
+                    r#"
+                    SELECT document_id, subject, object, document_source, sentence
+                    FROM semantic_knowledge
+                    WHERE event_id = $1
+                    "#,
+                )
+                .bind::<Text, _>(&event_id)
+                .load::<SemanticResult>(conn)
+                .await;
+
+                match query_result_semantic {
+                    Ok(result_semantic) => {
+                        for SemanticResult {
+                            document_id,
+                            subject,
+                            object,
+                            document_source,
+                            sentence,
+                        } in result_semantic
+                        {
+                            let mut doc_payload = DocumentPayload::default();
+                            doc_payload.doc_id = document_id.clone();
+                            doc_payload.subject = subject.clone();
+                            doc_payload.object = object.clone();
+                            doc_payload.doc_source = document_source.clone();
+                            doc_payload.cosine_distance = Some(similarity); // Storing the similarity value
+                            doc_payload.score = score;
+                            doc_payload.sentence = sentence.clone();
+                            doc_payload.session_id = Some(session_id.clone());
+                            doc_payload.query_embedding = Some(payload.clone());
+                            doc_payload.query = Some(query.clone());
+                            doc_payload.collection_id = collection_id.clone();
+                            payload_results.push(doc_payload);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Error querying semantic data: {:?}", e);
+                        return Err(StorageError {
+                            kind: StorageErrorKind::Query,
+                            source: Arc::new(anyhow::Error::from(e)),
+                        });
+                    }
+                }
+            }
+            Ok(payload_results)
+        }
+        Err(err) => {
+            log::error!("Query failed: {:?}", err);
+            Err(StorageError {
+                kind: StorageErrorKind::Query,
+                source: Arc::new(anyhow::Error::from(err)),
+            })
+        }
+    }
+}
