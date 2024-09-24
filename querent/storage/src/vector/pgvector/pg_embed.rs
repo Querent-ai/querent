@@ -1004,8 +1004,8 @@ async fn test_similarity_search_l2() {
 	let payload = vec![1.0, 2.0, 3.0];
 	let max_results = 10;
 	let offset = 0;
-	// let top_pairs_embeddings = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
-	let top_pairs_embeddings = vec![];
+	let top_pairs_embeddings = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+	// let top_pairs_embeddings = vec![];
 	let search_results = embed
 		.similarity_search_l2(
 			session_id.clone(),
@@ -1031,4 +1031,117 @@ async fn test_similarity_search_l2() {
 			assert!(false, "Similarity search should not have failed.");
 		},
 	}
+}
+#[tokio::test]
+async fn test_autogenerate_queries() {
+    // Create the database path and initialize PGEmbed
+    let db_path = PathBuf::from("/tmp/test_pgembed_autogenerate_queries");
+    println!("Initializing PGEmbed with database path: {:?}", db_path);
+
+    let embed = PGEmbed::new(db_path.clone()).await.unwrap();
+    println!("PGEmbed initialized successfully.");
+
+    // Prepare and insert test data for semantic_knowledge
+    let conn = &mut embed.pool.get().await.unwrap();
+    println!("Database connection established.");
+
+    // Insert sample semantic knowledge into semantic_knowledge table
+    let insert_semantics = vec![
+        SemanticKnowledge {
+            document_id: "doc_1".to_string(),
+            subject: "subject_1".to_string(),
+            subject_type: "type_1".to_string(),
+            object: "object_1".to_string(),
+            object_type: "type_2".to_string(),
+            event_id: "event_1".to_string(),
+			collection_id: Some("".to_string()),
+			image_id: Some("".to_string()),
+			source_id: "".to_string(),
+			sentence:"This is 1".to_string(),
+			document_source:"".to_string(),
+        },
+        SemanticKnowledge {
+            document_id: "doc_2".to_string(),
+            subject: "subject_2".to_string(),
+            subject_type: "type_1".to_string(),
+            object: "object_2".to_string(),
+            object_type: "type_2".to_string(),
+            event_id: "event_2".to_string(),
+			collection_id: Some("".to_string()),
+			image_id: Some("".to_string()),
+			source_id: "".to_string(),
+			sentence:"This is 2".to_string(),
+			document_source:"".to_string(),
+        },
+        // Add more entries to cover top pairs and bottom pairs cases
+        SemanticKnowledge {
+            document_id: "doc_3".to_string(),
+            subject: "subject_3".to_string(),
+            subject_type: "type_3".to_string(),
+            object: "object_3".to_string(),
+            object_type: "type_4".to_string(),
+            event_id: "event_3".to_string(),
+			collection_id: Some("".to_string()),
+			image_id: Some("".to_string()),
+			source_id: "".to_string(),
+			sentence:"This is 3".to_string(),
+			document_source:"".to_string(),
+        },
+        SemanticKnowledge {
+            document_id: "doc_4".to_string(),
+            subject: "subject_4".to_string(),
+            subject_type: "type_1".to_string(),
+            object: "object_4".to_string(),
+            object_type: "type_2".to_string(),
+            event_id: "event_4".to_string(),
+			collection_id: Some("".to_string()),
+			image_id: Some("".to_string()),
+			source_id: "".to_string(),
+			sentence:"This is 4".to_string(),
+			document_source:"".to_string(),
+        },
+    ];
+
+    // Insert semantic knowledge into the database
+    for semantic in insert_semantics {
+        sql_query(
+            "INSERT INTO semantic_knowledge (document_id, subject, subject_type, object, object_type, event_id) 
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind::<Text, _>(semantic.document_id)
+        .bind::<Text, _>(semantic.subject)
+        .bind::<Text, _>(semantic.subject_type)
+        .bind::<Text, _>(semantic.object)
+        .bind::<Text, _>(semantic.object_type)
+        .bind::<Text, _>(semantic.event_id)
+        .execute(conn)
+        .await
+        .expect("Failed to insert semantic knowledge.");
+    }
+
+    // Define max_suggestions for testing
+    let max_suggestions = 5;
+
+    // Call the autogenerate_queries function and test the result
+    let query_suggestions = embed.autogenerate_queries(max_suggestions).await;
+
+    match query_suggestions {
+        Ok(suggestions) => {
+            println!("Query Suggestions: {:?}", suggestions);
+            assert!(!suggestions.is_empty(), "Expected suggestions but got none.");
+
+            // Verify the suggestions generated meet expected criteria
+            assert!(suggestions.len() <= max_suggestions as usize, "Number of suggestions exceeds max_suggestions.");
+
+            // Add more specific assertions based on the test data and expected suggestions
+            if !suggestions.is_empty() {
+                assert_eq!(suggestions[0].tags[0], "Filters", "Expected 'Filters' tag.");
+                // Additional assertions for query content and formatting can be added here
+            }
+        }
+        Err(e) => {
+            eprintln!("Failed to generate query suggestions: {:?}", e);
+            assert!(false, "Query suggestion generation should not have failed.");
+        }
+    }
 }
