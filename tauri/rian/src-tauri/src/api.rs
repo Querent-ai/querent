@@ -11,6 +11,10 @@ use crate::{
 };
 use node::ApiKeyPayload;
 use std::env;
+use dotenv::dotenv;
+use tiny_http::Server;
+use tiny_http::Response;
+use serde_urlencoded;
 
 
 #[tauri::command]
@@ -363,6 +367,8 @@ pub async fn prompt_insight_analyst(
 #[tauri::command]
 #[specta::specta]
 pub fn get_drive_credentials() -> Result<(String, String), String> {
+    dotenv().ok();
+
     let drive_client_id = env::var("DRIVE_CLIENT_ID").map_err(|e| e.to_string())?;
     let drive_client_secret = env::var("DRIVE_CLIENT_SECRET").map_err(|e| e.to_string())?;
 
@@ -423,4 +429,38 @@ pub async fn describe_pipeline(pipeline_id: String) -> Result<IndexingStatistics
             return Err(e.to_string());
         }
     }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn start_oauth_server() -> Result<String, String> {
+    let server = Server::http("localhost:5174").unwrap();
+
+    for request in server.incoming_requests() {
+        if request.url().starts_with("/confirmation") {
+            let url = request.url().to_string();
+            
+            if let Some(query_idx) = url.find('?') {
+                let query_str = &url[query_idx+1..];
+                if let Ok(params) = serde_urlencoded::from_str::<Vec<(String, String)>>(query_str) {
+                    for (key, value) in params {
+                        if key == "code" {
+                            let response = Response::from_string("You can close this page now");
+                            request.respond(response).unwrap();
+                            // Return the code from here
+                            return Ok(value);
+                        }
+                    }
+                }
+            }
+            
+            let response = Response::from_string("Waiting for code...");
+            request.respond(response).unwrap();
+        } else {
+            let response = Response::from_string("Invalid endpoint");
+            request.respond(response).unwrap();
+        }
+    }
+    
+    Err("Failed to capture the code".to_string())
 }

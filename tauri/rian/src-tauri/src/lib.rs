@@ -4,7 +4,7 @@ use api::{
     get_update_result, has_rian_license_key, ingest_tokens, list_available_insights,
     list_past_insights, prompt_insight_analyst, send_discovery_retriever_request, set_collectors,
     set_rian_license_key, start_agn_fabric, stop_agn_fabric, stop_insight_analyst,
-    trigger_insight_analyst
+    trigger_insight_analyst, start_oauth_server
 };
 use common::TerimateSignal;
 use log::{error, info};
@@ -25,7 +25,6 @@ use tauri_specta::{Builder, Event};
 use windows::{
     show_updater_window, CheckUpdateEvent, CheckUpdateResultEvent, PinnedFromWindowEvent,
 };
-use std::sync::Arc;
 
 mod api;
 mod tray;
@@ -101,7 +100,8 @@ pub fn run(node_config: NodeConfig) {
             get_drive_credentials,
             delete_collectors,
             ingest_tokens,
-            describe_pipeline
+            describe_pipeline,
+            start_oauth_server
         ])
         .events(tauri_specta::collect_events![
             CheckUpdateEvent,

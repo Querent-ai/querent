@@ -108,19 +108,6 @@ export const isLicenseVerified = writable(false);
 export const statsDataTime = writable<number[]>([]);
 export const statsDataTotalEvents = writable<number[]>([]);
 export const googleDriveRefreshToken = writable<string>('');
-export const googleDriveCode = writable<string>(initialDriveCode);
-
-googleDriveCode.subscribe(($googleDriveCode) => {
-	console.log('Reached here');
-	saveToLocalStorage('googleDriveCode', $googleDriveCode);
-
-	console.log('Value here is as given ', get(googleDriveCode));
-});
-
-export function getGoogleDriveCodeFn(): string {
-	console.log('COde is ', get(googleDriveCode));
-	return get(googleDriveCode);
-}
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);

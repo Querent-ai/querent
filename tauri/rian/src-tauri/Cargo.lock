@@ -3706,6 +3706,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
+
+[[package]]
 name = "dpi"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10057,6 +10063,7 @@ version = "1.0.1"
 dependencies = [
  "cocoa 0.25.0",
  "common 1.0.1",
+ "dotenv",
  "insights",
  "log 0.4.22",
  "macos-accessibility-client",
@@ -10067,6 +10074,7 @@ dependencies = [
  "proto",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "specta",
  "specta-jsdoc",
  "specta-typescript",

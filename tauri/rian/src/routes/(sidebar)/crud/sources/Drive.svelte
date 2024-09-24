@@ -16,8 +16,8 @@
 	import Modal from './add/Modal.svelte';
 
 	let drive_config: GoogleDriveCollectorConfig = {
-		drive_client_id: import.meta.env.VITE_DRIVE_CLIENT_ID,
-		drive_client_secret: import.meta.env.VITE_DRIVE_CLIENT_SECRET,
+		drive_client_id: '',
+		drive_client_secret: '',
 		drive_refresh_token: '',
 		folder_to_crawl: '',
 		id: ''
@@ -50,6 +50,11 @@
 				modalMessage = 'Please complete the oauth first ';
 				showModal = true;
 				return;
+			}
+			const result = await commands.getDriveCredentials();
+			if (result.status == 'ok') {
+				drive_config.drive_client_id = result.data[0];
+				drive_config.drive_client_secret = result.data[1];
 			}
 			drive_config.folder_to_crawl = folderPath;
 			drive_config.id = crypto.randomUUID();

@@ -25,33 +25,29 @@
 	import GCSIcon from './GCSComponent.svelte';
 	import MetaTag from '../../../../utils/MetaTag.svelte';
 	import Modal from './Modal.svelte';
-	import {
-		getGoogleDriveCodeFn,
-		googleDriveCode,
-		googleDriveRefreshToken,
-		isVisible
-	} from '../../../../../stores/appState';
+	import { googleDriveRefreshToken, isVisible } from '../../../../../stores/appState';
 	import { open } from '@tauri-apps/plugin-shell';
 
-	import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 	import { commands } from '../../../../../service/bindings';
-	import { get } from 'svelte/store';
 
-	const CLIENT_ID = import.meta.env.VITE_DRIVE_CLIENT_ID;
-	const REDIRECT_URI = import.meta.env.VITE_DRIVE_REDIRECT_URL;
-	const AUTH_URL = `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
-	type OAuthResult =
-		| { status: 'success'; code: string }
-		| { status: 'error'; message: string }
-		| { status: 'timeout' };
+	async function get_drive_client_secrets() {
+		const result = await commands.getDriveCredentials();
+		if (result.status == 'ok') {
+			CLIENT_ID = result.data[0];
+			REDIRECT_URI = 'http://localhost:5174/confirmation';
+		}
+	}
+	let CLIENT_ID: string;
+	let REDIRECT_URI: string;
 
 	async function login() {
 		try {
-			console.log('AUTH URL IS ', AUTH_URL);
+			await get_drive_client_secrets();
+
+			const AUTH_URL = `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
 			open(AUTH_URL);
 
 			const res = await getDriveCode();
-			console.log('REs is ', res);
 
 			if (res) {
 				await getTokens(res);
@@ -64,21 +60,17 @@
 	}
 
 	async function getDriveCode(): Promise<string> {
-		return new Promise((resolve, reject) => {
-			const interval = setInterval(async () => {
-				try {
-					const data = getGoogleDriveCodeFn();
-					console.log('DAta is ', data);
-					if (data !== '') {
-						clearInterval(interval);
-						resolve(data);
-					}
-				} catch (error) {
-					clearInterval(interval);
-					reject(error);
-				}
-			}, 5000);
-		});
+		try {
+			const code = await commands.startOauthServer();
+			if (code.status == 'ok') {
+				return code.data;
+			} else {
+				throw new Error('No code received');
+			}
+		} catch (error) {
+			console.error('Error fetching Google Drive code: ', error);
+			throw error;
+		}
 	}
 
 	let drive_client_id: string;
