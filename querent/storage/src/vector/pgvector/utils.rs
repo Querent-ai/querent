@@ -390,16 +390,17 @@ pub async fn fetch_documents_for_embedding_pgembed(
 		format!("'{}'", serde_json::to_string(embedding).expect("Failed to format embeddings"));
 	let query_result = sql_query(&format!(
 		r#"
-            SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
-                   score, 
-                   event_id, 
-                   (embeddings <=> {})::FLOAT8 AS similarity 
-            FROM embedded_knowledge
-            ORDER BY similarity
-            LIMIT $1
-            OFFSET $2
-            "#,
-		target_vector
+			SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
+					score, 
+					event_id, 
+					(embeddings <=> {})::FLOAT8 AS similarity 
+			FROM embedded_knowledge
+			WHERE (embeddings <=> {})::FLOAT8 < 0.5
+			ORDER BY similarity
+			LIMIT $1
+			OFFSET $2
+		"#,
+		target_vector, target_vector
 	))
 	.bind::<Float4, _>(limit as f32)
 	.bind::<Float4, _>(adjusted_offset as f32)
@@ -410,7 +411,6 @@ pub async fn fetch_documents_for_embedding_pgembed(
 		Ok(results) => {
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
-				// println!("Embedding: {}, Score: {}, Event ID: {}, Similarity: {}", embeddings, score, event_id, similarity);
 				let query_result_semantic = sql_query(
 					r#"
                     SELECT document_id, subject, object, document_source, sentence
@@ -437,7 +437,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
 							doc_payload.subject = subject.clone();
 							doc_payload.object = object.clone();
 							doc_payload.doc_source = document_source.clone();
-							doc_payload.cosine_distance = Some(similarity); // Storing the similarity value
+							doc_payload.cosine_distance = Some(similarity);
 							doc_payload.score = score;
 							doc_payload.sentence = sentence.clone();
 							doc_payload.session_id = Some(session_id.clone());
@@ -466,4 +466,12 @@ pub async fn fetch_documents_for_embedding_pgembed(
 			})
 		},
 	}
+}
+
+pub fn parse_vector(embedding_str: Option<String>) -> Option<Vector> {
+	embedding_str.map(|s| {
+		let float_values: Vec<f32> =
+			s.split(',').filter_map(|v| v.trim().parse::<f32>().ok()).collect();
+		Vector::from(float_values)
+	})
 }
