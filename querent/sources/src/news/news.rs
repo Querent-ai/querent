@@ -35,10 +35,10 @@ pub struct NewsApiClient {
 }
 
 impl NewsApiClient {
-	pub fn new(config: NewsCollectorConfig) -> Self {
+	pub async fn new(config: NewsCollectorConfig) -> anyhow::Result<Self> {
 		let to_date = Self::string_to_datetime(config.to_date.clone());
 		let from_date = Self::string_to_datetime(config.from_date.clone());
-		NewsApiClient {
+		Ok(NewsApiClient {
 			client: reqwest::Client::new(),
 			api_token: config.api_key.to_string(),
 			query_type: config.query_type().as_str_name().to_string(),
@@ -52,7 +52,7 @@ impl NewsApiClient {
 			page: Self::i32_to_u32(config.page),
 			sources: config.sources,
 			domains: config.domains,
-		}
+		})
 	}
 
 	pub async fn fetch_news(&self) -> Result<NewsResponse, SourceError> {
@@ -382,7 +382,7 @@ mod tests {
 			domains: None,
 		};
 
-		let news_api_client = NewsApiClient::new(news_config);
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
 
 		let connectivity = news_api_client.check_connectivity().await;
 		assert!(
