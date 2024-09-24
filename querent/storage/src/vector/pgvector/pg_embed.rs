@@ -24,31 +24,7 @@ use tracing::error;
 use super::{fetch_documents_for_embedding_pgembed, parse_vector};
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("src/vector/pgvector/migrations/");
-#[derive(QueryableByName, Debug)]
-struct DiscoveredKnowledgeRaw {
-	#[diesel(sql_type = Text)]
-	doc_id: String,
-	#[diesel(sql_type = Text)]
-	doc_source: String,
-	#[diesel(sql_type = Text)]
-	sentence: String,
-	#[diesel(sql_type = Text)]
-	subject: String,
-	#[diesel(sql_type = Text)]
-	object: String,
-	#[diesel(sql_type = Nullable<Double>)]
-	cosine_distance: Option<f64>,
-	#[diesel(sql_type = Nullable<Text>)]
-	session_id: Option<String>,
-	#[diesel(sql_type = Nullable<Double>)]
-	score: Option<f64>,
-	#[diesel(sql_type = Nullable<Text>)]
-	query: Option<String>,
-	#[diesel(sql_type = Nullable<Text>)]
-	query_embedding: Option<String>,
-	#[diesel(sql_type = Text)]
-	collection_id: String,
-}
+
 pub struct PGEmbed {
 	pub pool: ActualDbPool,
 	pub db_path: PathBuf,

@@ -1,7 +1,9 @@
 use common::DocumentPayload;
-use diesel::{table, Insertable, Queryable, QueryableByName, Selectable};
+use diesel::{
+	sql_types::{Double, Nullable, Text},
+	table, Insertable, Queryable, QueryableByName, Selectable,
+};
 use pgvector::Vector;
-
 #[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
 #[diesel(table_name = embedded_knowledge)]
 pub struct EmbeddedKnowledge {
@@ -113,4 +115,31 @@ table! {
 		score -> Nullable<Float8>,
 		collection_id -> Text,
 	}
+}
+
+#[derive(QueryableByName)]
+
+pub struct DiscoveredKnowledgeRaw {
+	#[diesel(sql_type = Text)]
+	pub doc_id: String,
+	#[diesel(sql_type = Text)]
+	pub doc_source: String,
+	#[diesel(sql_type = Text)]
+	pub sentence: String,
+	#[diesel(sql_type = Text)]
+	pub subject: String,
+	#[diesel(sql_type = Text)]
+	pub object: String,
+	#[diesel(sql_type = Nullable<Double>)]
+	pub cosine_distance: Option<f64>,
+	#[diesel(sql_type = Nullable<Text>)]
+	pub session_id: Option<String>,
+	#[diesel(sql_type = Nullable<Double>)]
+	pub score: Option<f64>,
+	#[diesel(sql_type = Nullable<Text>)]
+	pub query: Option<String>,
+	#[diesel(sql_type = Nullable<Text>)]
+	pub query_embedding: Option<String>,
+	#[diesel(sql_type = Text)]
+	pub collection_id: String,
 }
