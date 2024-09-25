@@ -6,16 +6,20 @@ use api::{
     set_rian_license_key, start_agn_fabric, stop_agn_fabric, stop_insight_analyst,
     trigger_insight_analyst,
 };
-use common::TerimateSignal;
+use common::{get_querent_data_path, TerimateSignal};
 use log::{error, info};
 use node::serve::service::QUERENT_SERVICES_ONCE;
 use node::{serve_quester_without_servers, shutdown_querent};
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use postgresql_embedded::{Settings, VersionReq};
 use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
 #[cfg(debug_assertions)]
 use specta_typescript::Typescript;
+use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering};
+use storage::{StorageError, StorageErrorKind};
 use sysinfo::System;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -39,6 +43,9 @@ pub static RUNNING_PIPELINE_ID: Mutex<Vec<(String, SemanticPipelineRequest)>> =
 pub static RUNNING_DISCOVERY_SESSION_ID: Mutex<String> = Mutex::new(String::new());
 pub static RUNNING_INSIGHTS_SESSIONS: Mutex<Vec<(String, InsightAnalystRequest)>> =
     Mutex::new(Vec::new());
+pub const FETCH_LIMIT_MAX: i64 = 50;
+pub const SITEMAP_LIMIT: i64 = 50000;
+pub const SITEMAP_DAYS: i64 = 31;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -130,9 +137,11 @@ pub fn run(node_config: NodeConfig) {
             )
             .expect("Failed to export JSDoc bindings");
     }
-
-    #[allow(unused_mut)]
-    let mut app = tauri::Builder::default()
+    // Start embedded querent services
+    let querent_data_path = get_querent_data_path();
+    let (_psql, url) =
+        start_postgres_sync(querent_data_path.clone()).expect("Failed to start embedded Postgres");
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
@@ -162,7 +171,11 @@ pub fn run(node_config: NodeConfig) {
             app_handle.plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
             app_handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             // start querent services
-            tauri::async_runtime::spawn(start_querent_services(node_config.clone(), sig_clone));
+            tauri::async_runtime::spawn(start_querent_services(
+                node_config.clone(),
+                sig_clone,
+                Some(url),
+            ));
             if !query_accessibility_permissions() {
                 if let Some(window) = app.get_webview_window("rian") {
                     window.minimize().unwrap();
@@ -273,8 +286,14 @@ fn monitor_pinned_event(app_handle: AppHandle) {
     });
 }
 
-async fn start_querent_services(node_config: NodeConfig, terminate_sig: TerimateSignal) {
-    match serve_quester_without_servers(node_config, terminate_sig.clone()).await {
+async fn start_querent_services(
+    node_config: NodeConfig,
+    terminate_sig: TerimateSignal,
+    embedded_url: Option<String>,
+) {
+    match serve_quester_without_servers(node_config, terminate_sig.clone(), embedded_url, None)
+        .await
+    {
         // if error occurs, we should terminate the app
         Ok(_) => {
             println!("QuerentServices started successfully");
@@ -284,4 +303,81 @@ async fn start_querent_services(node_config: NodeConfig, terminate_sig: Terimate
             terminate_sig.kill();
         }
     }
+}
+
+pub fn start_postgres_sync(
+    path: PathBuf,
+) -> Result<(postgresql_embedded::blocking::PostgreSQL, String), StorageError> {
+    let mut data_dir = path.clone();
+    data_dir.push("pg_embed");
+
+    let settings = Settings {
+        version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?,
+        data_dir,
+        ..Default::default()
+    };
+
+    let mut postgresql = postgresql_embedded::blocking::PostgreSQL::new(settings);
+
+    // Synchronously set up PostgreSQL
+    postgresql.setup().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+
+    // Install PostgreSQL extensions synchronously
+    let postgresql_settings = postgresql.settings().clone();
+    postgresql_extensions::blocking::install(
+        &postgresql_settings,
+        "tensor-chord",
+        "pgvecto.rs",
+        &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?,
+    )
+    .map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+
+    // Start PostgreSQL server synchronously
+    postgresql
+        .start()
+        .expect("Failed to start embedded Postgres");
+
+    let database_name = "querent_rian";
+
+    // Create the database synchronously
+    postgresql
+        .create_database(database_name)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+
+    // Check if the database exists
+    postgresql
+        .database_exists(database_name)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+
+    // Restart PostgreSQL server to apply extension changes
+    postgresql.stop().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+
+    postgresql.start().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+
+    let database_url = postgresql.settings().url(database_name);
+    Ok((postgresql, database_url))
 }
