@@ -185,12 +185,11 @@ pub async fn create_dynamic_sources(
 					},
 				}
 			},
-			_ => {
+			_ =>
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Invalid source type: {}",
 					collector.name.clone(),
-				)))
-			},
+				))),
 		};
 	}
 	Ok(sources)
