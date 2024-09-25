@@ -17,8 +17,8 @@ use diesel_async::{
 	scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl,
 };
 use diesel_migrations::{embed_migrations, EmbeddedMigrations};
-use postgresql_embedded::{PostgreSQL, Result, Settings, Status, VersionReq};
-use std::{collections::HashSet, path::PathBuf, sync::Arc, time::Duration};
+use postgresql_embedded::Result;
+use std::{collections::HashSet, sync::Arc, time::Duration};
 use tracing::error;
 
 use super::{fetch_documents_for_embedding_pgembed, parse_vector};
@@ -27,120 +27,10 @@ const MIGRATIONS: EmbeddedMigrations = embed_migrations!("src/vector/pgvector/mi
 
 pub struct PGEmbed {
 	pub pool: ActualDbPool,
-	pub db_path: PathBuf,
-	pub postgres: PostgreSQL,
 }
 
 impl PGEmbed {
-	pub async fn new(path: PathBuf) -> StorageResult<Self> {
-		let mut data_dir = path.clone();
-		data_dir.push("pg_embed");
-		let settings = Settings {
-			version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?,
-			data_dir,
-			..Default::default()
-		};
-		let mut postgresql = PostgreSQL::new(settings);
-		postgresql.setup().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		postgresql_extensions::install(
-			postgresql.settings(),
-			"tensor-chord",
-			"pgvecto.rs",
-			&VersionReq::parse("=0.3.0").map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?,
-		)
-		.await
-		.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		postgresql.start().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		let database_name = "querent_rian_10074";
-		postgresql.create_database(database_name).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-
-		postgresql.database_exists(database_name).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		// restart the postgresql server
-		postgresql.stop().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		postgresql.start().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		let database_url = postgresql.settings().url(database_name);
-		// prepare async pool
-		let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url.clone());
-		let pool = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
-			.max_size(10)
-			.wait_timeout(POOL_TIMEOUT)
-			.create_timeout(POOL_TIMEOUT)
-			.recycle_timeout(POOL_TIMEOUT)
-			.runtime(deadpool::Runtime::Tokio1)
-			.build()
-			.map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-		// pg vector says to configue shared_preload_libraries = 'vectors.so' in postgresql.conf
-		// and restart the server
-		let conn = &mut pool.get().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
-			.execute(conn)
-			.await
-			.map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-		diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
-			.execute(conn)
-			.await
-			.map_err(|e| StorageError {
-				kind: StorageErrorKind::Internal,
-				source: Arc::new(anyhow::Error::from(e)),
-			})?;
-		// close the pool
-		pool.close();
-		// restart the postgresql server
-		postgresql.stop().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		postgresql.start().await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		// check if the database is created
-		postgresql.database_exists(database_name).await.map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?;
-		// check if postgresql is running
-		while postgresql.status() != Status::Started {
-			eprintln!("current status: {:?}", postgresql.status());
-			tokio::time::sleep(Duration::from_secs(1)).await;
-		}
-		let database_url = postgresql.settings().url(database_name);
+	pub async fn new(database_url: String) -> StorageResult<Self> {
 		let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url.clone());
 		let pool = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
 			.max_size(10)
@@ -165,7 +55,7 @@ impl PGEmbed {
 			.expect("Could not build connection pool");
 		let mut mig_run = pool_local.clone().get().unwrap();
 		mig_run.run_pending_migrations(MIGRATIONS).unwrap();
-		Ok(PGEmbed { pool, db_path: path, postgres: postgresql })
+		Ok(PGEmbed { pool })
 	}
 }
 
@@ -795,11 +685,14 @@ impl Storage for PGEmbed {}
 use diesel::sql_query;
 use diesel::QueryableByName;
 
+#[allow(dead_code)]
 #[derive(QueryableByName, Debug)]
 struct RowCount {
 	#[diesel(sql_type = diesel::sql_types::BigInt)]
 	count: i64,
 }
+
+#[allow(dead_code)]
 #[derive(QueryableByName, Debug)]
 struct InsertedDataRaw {
 	#[diesel(sql_type = Text)]
@@ -810,169 +703,191 @@ struct InsertedDataRaw {
 	event_id: String,
 }
 
-#[tokio::test]
-async fn test_direct_insert_and_verify() {
-	let db_path = PathBuf::from("/tmp/test_pgembed");
-	println!("Initializing PGEmbed with database path: {:?}", db_path);
-
-	let embed = PGEmbed::new(db_path.clone()).await.unwrap();
-	println!("PGEmbed initialized successfully.");
-
-	// Get a connection from the pool
-	let conn = &mut embed.pool.get().await.unwrap();
-	println!("Database connection established.");
-	let payload = vec![
-		(
-			"doc_1".to_string(),
-			"source_1".to_string(),
-			None,
-			VectorPayload {
-				event_id: "event_1".to_string(),
-				embeddings: vec![1.0_f32, 2.0_f32, 3.0_f32],
-				score: 0.85_f32,
-			},
-		),
-		(
-			"doc_2".to_string(),
-			"source_2".to_string(),
-			None,
-			VectorPayload {
-				event_id: "event_2".to_string(),
-				embeddings: vec![4.0_f32, 5.0_f32, 6.0_f32],
-				score: 0.92_f32,
-			},
-		),
-	];
-	match embed.insert_vector("test_collection".to_string(), &payload).await {
-		Ok(_) => println!("Vectors inserted successfully using `insert_vector`."),
-		Err(e) => {
-			eprintln!("Failed to insert vectors using `insert_vector`: {:?}", e);
-			return;
-		},
-	}
-	println!("Fetching row count from embedded_knowledge table.");
-	let result: RowCount = match sql_query("SELECT COUNT(*) AS count FROM embedded_knowledge")
-		.get_result(conn)
-		.await
-	{
-		Ok(res) => {
-			println!("Row count fetched successfully: {:?}", res);
-			res
-		},
-		Err(e) => {
-			eprintln!("Failed to get row count: {:?}", e);
-			return;
-		},
-	};
-	assert_eq!(result.count, 2, "Expected 2 rows to be inserted.");
-	println!("Verified row count is correct: {}", result.count);
-	println!("Fetching inserted vectors as strings from embedded_knowledge table.");
-	let results: Vec<InsertedDataRaw> = match sql_query(
-		"SELECT array_to_string(embeddings::real[], ',') as embeddings, score, event_id 
-         FROM embedded_knowledge ORDER BY event_id",
-	)
-	.load(conn)
-	.await
-	{
-		Ok(res) => {
-			println!("Fetched results successfully: {:?}", res);
-			res
-		},
-		Err(e) => {
-			eprintln!("Failed to fetch inserted vectors: {:?}", e);
-			return;
-		},
-	};
-	let parsed_results: Vec<(Vec<f32>, f32, String)> = results
-		.into_iter()
-		.map(|row| {
-			let embeddings = row
-				.embeddings
-				.split(',')
-				.filter_map(|s| s.trim().parse::<f32>().ok())
-				.collect::<Vec<f32>>();
-
-			(embeddings, row.score, row.event_id)
-		})
-		.collect();
-	let expected_embeddings_1 = vec![1.0_f32, 2.0_f32, 3.0_f32];
-	let expected_embeddings_2 = vec![4.0_f32, 5.0_f32, 6.0_f32];
-	let expected_score_1 = 0.85_f32;
-	let expected_score_2 = 0.92_f32;
-	println!("Verifying first entry.----{:?}", parsed_results[0].0);
-	assert_eq!(parsed_results[0].0, expected_embeddings_1, "Embeddings mismatch for event_1");
-	assert_eq!(parsed_results[0].1, expected_score_1, "Score mismatch for event_1");
-	assert_eq!(parsed_results[0].2, "event_1", "Event ID mismatch for event_1");
-
-	println!("Verifying second entry.");
-	assert_eq!(parsed_results[1].0, expected_embeddings_2, "Embeddings mismatch for event_2");
-	assert_eq!(parsed_results[1].1, expected_score_2, "Score mismatch for event_2");
-	assert_eq!(parsed_results[1].2, "event_2", "Event ID mismatch for event_2");
-
-	println!("Dummy data was inserted and verified successfully.");
+#[allow(dead_code)]
+#[derive(QueryableByName, Debug)]
+struct InsertedDataDiscovery {
+	#[diesel(sql_type = Text)]
+	query_embedding: String,
+	#[diesel(sql_type = Double)]
+	score: f64,
+	#[diesel(sql_type = Text)]
+	doc_id: String,
 }
 
-#[tokio::test]
-async fn test_similarity_search_l2() {
-	let db_path = PathBuf::from("/tmp/test_pgembed_similarity_search");
-	println!("Initializing PGEmbed with database path: {:?}", db_path);
-	let embed = PGEmbed::new(db_path.clone()).await.unwrap();
-	println!("PGEmbed initialized successfully.");
-	let conn = &mut embed.pool.get().await.unwrap();
-	println!("Database connection established.");
-	let insert_vectors = vec![
-		VectorPayload {
-			event_id: "event_1".to_string(),
-			embeddings: vec![1.0, 2.0, 3.0],
-			score: 0.85,
-		},
-		VectorPayload {
-			event_id: "event_2".to_string(),
-			embeddings: vec![4.0, 5.0, 6.0],
-			score: 0.92,
-		},
-	];
-	let payload = insert_vectors
-		.into_iter()
-		.map(|vp| ("doc_1".to_string(), "source_1".to_string(), None, vp))
-		.collect::<Vec<_>>();
-	match embed.insert_vector("test_collection".to_string(), &payload).await {
-		Ok(_) => println!("Vectors inserted successfully."),
-		Err(e) => {
-			eprintln!("Failed to insert vectors: {:?}", e);
-			return;
-		},
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::start_postgres_embedded;
+	use std::path::PathBuf;
+
+	#[tokio::test]
+	async fn test_direct_insert_and_verify() {
+		let db_path = PathBuf::from("/tmp/test_direct_insert_and_verify");
+		println!("Initializing PGEmbed with database path: {:?}", db_path);
+		let res = start_postgres_embedded(db_path.clone()).await;
+		assert!(res.is_ok(), "Failed to start embedded postgres: {:?}", res);
+		let (_postgres, database_url) = res.unwrap();
+		let embed = PGEmbed::new(database_url).await.unwrap();
+		println!("PGEmbed initialized successfully.");
+
+		// Get a connection from the pool
+		let conn = &mut embed.pool.get().await.unwrap();
+		println!("Database connection established.");
+		let payload = vec![
+			(
+				"doc_1".to_string(),
+				"source_1".to_string(),
+				None,
+				VectorPayload {
+					event_id: "event_1".to_string(),
+					embeddings: vec![1.0_f32, 2.0_f32, 3.0_f32],
+					score: 0.85_f32,
+				},
+			),
+			(
+				"doc_2".to_string(),
+				"source_2".to_string(),
+				None,
+				VectorPayload {
+					event_id: "event_2".to_string(),
+					embeddings: vec![4.0_f32, 5.0_f32, 6.0_f32],
+					score: 0.92_f32,
+				},
+			),
+		];
+		match embed.insert_vector("test_collection".to_string(), &payload).await {
+			Ok(_) => println!("Vectors inserted successfully using `insert_vector`."),
+			Err(e) => {
+				eprintln!("Failed to insert vectors using `insert_vector`: {:?}", e);
+				return;
+			},
+		}
+		println!("Fetching row count from embedded_knowledge table.");
+		let result: RowCount = match sql_query("SELECT COUNT(*) AS count FROM embedded_knowledge")
+			.get_result(conn)
+			.await
+		{
+			Ok(res) => {
+				println!("Row count fetched successfully: {:?}", res);
+				res
+			},
+			Err(e) => {
+				eprintln!("Failed to get row count: {:?}", e);
+				return;
+			},
+		};
+		assert_eq!(result.count, 2, "Expected 2 rows to be inserted.");
+		println!("Verified row count is correct: {}", result.count);
+		println!("Fetching inserted vectors as strings from embedded_knowledge table.");
+		let results: Vec<InsertedDataRaw> = match sql_query(
+			"SELECT array_to_string(embeddings::real[], ',') as embeddings, score, event_id 
+         FROM embedded_knowledge ORDER BY event_id",
+		)
+		.load(conn)
+		.await
+		{
+			Ok(res) => {
+				println!("Fetched results successfully: {:?}", res);
+				res
+			},
+			Err(e) => {
+				eprintln!("Failed to fetch inserted vectors: {:?}", e);
+				return;
+			},
+		};
+		let parsed_results: Vec<(Vec<f32>, f32, String)> = results
+			.into_iter()
+			.map(|row| {
+				// Parse the embeddings string into a Vec<f32>
+				let embeddings = row
+					.embeddings
+					.split(',') // Split by comma
+					.filter_map(|s| s.trim().parse::<f32>().ok()) // Parse into f32
+					.collect::<Vec<f32>>();
+
+				(embeddings, row.score, row.event_id)
+			})
+			.collect();
+		let expected_embeddings_1 = vec![1.0_f32, 2.0_f32, 3.0_f32];
+		let expected_embeddings_2 = vec![4.0_f32, 5.0_f32, 6.0_f32];
+		let expected_score_1 = 0.85_f32;
+		let expected_score_2 = 0.92_f32;
+		println!("Verifying first entry.----{:?}", parsed_results[0].0);
+		assert_eq!(parsed_results[0].0, expected_embeddings_1, "Embeddings mismatch for event_1");
+		assert_eq!(parsed_results[0].1, expected_score_1, "Score mismatch for event_1");
+		assert_eq!(parsed_results[0].2, "event_1", "Event ID mismatch for event_1");
+
+		println!("Verifying second entry.");
+		assert_eq!(parsed_results[1].0, expected_embeddings_2, "Embeddings mismatch for event_2");
+		assert_eq!(parsed_results[1].1, expected_score_2, "Score mismatch for event_2");
+		assert_eq!(parsed_results[1].2, "event_2", "Event ID mismatch for event_2");
 	}
-	let insert_semantics = vec![
-		SemanticKnowledge {
-			document_id: "doc_1".to_string(),
-			subject: "subject_1".to_string(),
-			object: "object_1".to_string(),
-			document_source: "source_1".to_string(),
-			sentence: "Sample sentence 1.".to_string(),
-			event_id: "event_1".to_string(),
-			collection_id: Some("".to_string()),
-			image_id: Some("".to_string()),
-			object_type: "".to_string(),
-			source_id: "".to_string(),
-			subject_type: "".to_string(),
-		},
-		SemanticKnowledge {
-			document_id: "doc_2".to_string(),
-			subject: "subject_2".to_string(),
-			object: "object_2".to_string(),
-			document_source: "source_2".to_string(),
-			sentence: "Sample sentence 2.".to_string(),
-			event_id: "event_2".to_string(),
-			collection_id: Some("".to_string()),
-			image_id: Some("".to_string()),
-			object_type: "".to_string(),
-			source_id: "".to_string(),
-			subject_type: "".to_string(),
-		},
-	];
-	for semantic in insert_semantics {
-		sql_query(
+
+	#[tokio::test]
+	async fn test_similarity_search_l2() {
+		// sleep for 2 seconds to allow the previous test to finish
+		let db_path = PathBuf::from("/tmp/test_similarity_search_l2");
+		println!("Initializing PGEmbed with database path: {:?}", db_path);
+		let res = start_postgres_embedded(db_path.clone()).await;
+		assert!(res.is_ok(), "Failed to start embedded postgres: {:?}", res);
+		let (_postgres, database_url) = res.unwrap();
+		let embed = PGEmbed::new(database_url).await.unwrap();
+		println!("PGEmbed initialized successfully.");
+		let conn = &mut embed.pool.get().await.unwrap();
+		println!("Database connection established.");
+		let insert_vectors = vec![
+			VectorPayload {
+				event_id: "event_1".to_string(),
+				embeddings: vec![1.0, 2.0, 3.0],
+				score: 0.85,
+			},
+			VectorPayload {
+				event_id: "event_2".to_string(),
+				embeddings: vec![4.0, 5.0, 6.0],
+				score: 0.92,
+			},
+		];
+		let payload = insert_vectors
+			.into_iter()
+			.map(|vp| ("doc_1".to_string(), "source_1".to_string(), None, vp))
+			.collect::<Vec<_>>();
+		match embed.insert_vector("test_collection".to_string(), &payload).await {
+			Ok(_) => println!("Vectors inserted successfully."),
+			Err(e) => {
+				eprintln!("Failed to insert vectors: {:?}", e);
+				return;
+			},
+		}
+		let insert_semantics = vec![
+			SemanticKnowledge {
+				document_id: "doc_1".to_string(),
+				subject: "subject_1".to_string(),
+				object: "object_1".to_string(),
+				document_source: "source_1".to_string(),
+				sentence: "Sample sentence 1.".to_string(),
+				event_id: "event_1".to_string(),
+				collection_id: Some("".to_string()),
+				image_id: Some("".to_string()),
+				object_type: "".to_string(),
+				source_id: "".to_string(),
+				subject_type: "".to_string(),
+			},
+			SemanticKnowledge {
+				document_id: "doc_2".to_string(),
+				subject: "subject_2".to_string(),
+				object: "object_2".to_string(),
+				document_source: "source_2".to_string(),
+				sentence: "Sample sentence 2.".to_string(),
+				event_id: "event_2".to_string(),
+				collection_id: Some("".to_string()),
+				image_id: Some("".to_string()),
+				object_type: "".to_string(),
+				source_id: "".to_string(),
+				subject_type: "".to_string(),
+			},
+		];
+		for semantic in insert_semantics {
+			sql_query(
             "INSERT INTO semantic_knowledge (document_id, subject, object, document_source, sentence, event_id) VALUES ($1, $2, $3, $4, $5, $6)",
         )
         .bind::<Text, _>(semantic.document_id)
@@ -984,105 +899,109 @@ async fn test_similarity_search_l2() {
         .execute(conn)
         .await
         .expect("Failed to insert semantic knowledge.");
+		}
+		let session_id = "test_session".to_string();
+		let query = "test_query".to_string();
+		let collection_id = "test_collection".to_string();
+		let payload = vec![1.0, 2.0, 3.0];
+		let max_results = 10;
+		let offset = 0;
+		// let top_pairs_embeddings = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+		let top_pairs_embeddings = vec![];
+		let search_results = embed
+			.similarity_search_l2(
+				session_id.clone(),
+				query.clone(),
+				collection_id.clone(),
+				&payload,
+				max_results,
+				offset,
+				&top_pairs_embeddings,
+			)
+			.await;
+
+		match search_results {
+			Ok(results) => {
+				println!("Search results: {:?}", results);
+				assert!(!results.is_empty(), "Expected results but got none.");
+				assert_eq!(results[0].subject, "subject_1");
+				assert_eq!(results[0].object, "object_1");
+				// assert_eq!(results[0].cosine_distance, Some(0.0));
+			},
+			Err(e) => {
+				eprintln!("Similarity search failed: {:?}", e);
+				assert!(false, "Similarity search should not have failed.");
+			},
+		}
 	}
-	let session_id = "test_session".to_string();
-	let query = "test_query".to_string();
-	let collection_id = "test_collection".to_string();
-	let payload = vec![1.0, 2.0, 3.0];
-	let max_results = 10;
-	let offset = 0;
-	let top_pairs_embeddings = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
 
-	let search_results = embed
-		.similarity_search_l2(
-			session_id.clone(),
-			query.clone(),
-			collection_id.clone(),
-			&payload,
-			max_results,
-			offset,
-			&top_pairs_embeddings,
-		)
-		.await;
+	#[tokio::test]
+	async fn test_autogenerate_queries() {
+		let db_path = PathBuf::from("/tmp/test_pgembed_autogenerate_queries");
+		println!("Initializing PGEmbed with database path: {:?}", db_path);
+		let res = start_postgres_embedded(db_path.clone()).await;
+		assert!(res.is_ok(), "Failed to start embedded postgres: {:?}", res);
+		let (_postgres, database_url) = res.unwrap();
+		let embed = PGEmbed::new(database_url).await.unwrap();
+		println!("PGEmbed initialized successfully.");
+		let conn = &mut embed.pool.get().await.unwrap();
 
-	match search_results {
-		Ok(results) => {
-			println!("Search results: {:?}", results);
-			assert!(!results.is_empty(), "Expected results but got none.");
-			assert_eq!(results[0].subject, "subject_1");
-			assert_eq!(results[0].object, "object_1");
-		},
-		Err(e) => {
-			eprintln!("Similarity search failed: {:?}", e);
-			assert!(false, "Similarity search should not have failed.");
-		},
-	}
-}
-#[tokio::test]
-async fn test_autogenerate_queries() {
-	let db_path = PathBuf::from("/tmp/test_pgembed_autogenerate_queries");
-	println!("Initializing PGEmbed with database path: {:?}", db_path);
-
-	let embed = PGEmbed::new(db_path.clone()).await.unwrap();
-	println!("PGEmbed initialized successfully.");
-	let conn = &mut embed.pool.get().await.unwrap();
-
-	let insert_semantics = vec![
-		SemanticKnowledge {
-			document_id: "doc_1".to_string(),
-			subject: "subject_1".to_string(),
-			subject_type: "type_1".to_string(),
-			object: "object_1".to_string(),
-			object_type: "type_2".to_string(),
-			event_id: "event_1".to_string(),
-			collection_id: Some("".to_string()),
-			image_id: Some("".to_string()),
-			source_id: "".to_string(),
-			sentence: "This is 1".to_string(),
-			document_source: "".to_string(),
-		},
-		SemanticKnowledge {
-			document_id: "doc_2".to_string(),
-			subject: "subject_2".to_string(),
-			subject_type: "type_1".to_string(),
-			object: "object_2".to_string(),
-			object_type: "type_2".to_string(),
-			event_id: "event_2".to_string(),
-			collection_id: Some("".to_string()),
-			image_id: Some("".to_string()),
-			source_id: "".to_string(),
-			sentence: "This is 2".to_string(),
-			document_source: "".to_string(),
-		},
-		SemanticKnowledge {
-			document_id: "doc_3".to_string(),
-			subject: "subject_3".to_string(),
-			subject_type: "type_3".to_string(),
-			object: "object_3".to_string(),
-			object_type: "type_4".to_string(),
-			event_id: "event_3".to_string(),
-			collection_id: Some("".to_string()),
-			image_id: Some("".to_string()),
-			source_id: "".to_string(),
-			sentence: "This is 3".to_string(),
-			document_source: "".to_string(),
-		},
-		SemanticKnowledge {
-			document_id: "doc_4".to_string(),
-			subject: "subject_4".to_string(),
-			subject_type: "type_1".to_string(),
-			object: "object_4".to_string(),
-			object_type: "type_2".to_string(),
-			event_id: "event_4".to_string(),
-			collection_id: Some("".to_string()),
-			image_id: Some("".to_string()),
-			source_id: "".to_string(),
-			sentence: "This is 4".to_string(),
-			document_source: "".to_string(),
-		},
-	];
-	for semantic in insert_semantics {
-		sql_query(
+		let insert_semantics = vec![
+			SemanticKnowledge {
+				document_id: "doc_1".to_string(),
+				subject: "subject_1".to_string(),
+				subject_type: "type_1".to_string(),
+				object: "object_1".to_string(),
+				object_type: "type_2".to_string(),
+				event_id: "event_1".to_string(),
+				collection_id: Some("".to_string()),
+				image_id: Some("".to_string()),
+				source_id: "".to_string(),
+				sentence: "This is 1".to_string(),
+				document_source: "".to_string(),
+			},
+			SemanticKnowledge {
+				document_id: "doc_2".to_string(),
+				subject: "subject_2".to_string(),
+				subject_type: "type_1".to_string(),
+				object: "object_2".to_string(),
+				object_type: "type_2".to_string(),
+				event_id: "event_2".to_string(),
+				collection_id: Some("".to_string()),
+				image_id: Some("".to_string()),
+				source_id: "".to_string(),
+				sentence: "This is 2".to_string(),
+				document_source: "".to_string(),
+			},
+			SemanticKnowledge {
+				document_id: "doc_3".to_string(),
+				subject: "subject_3".to_string(),
+				subject_type: "type_3".to_string(),
+				object: "object_3".to_string(),
+				object_type: "type_4".to_string(),
+				event_id: "event_3".to_string(),
+				collection_id: Some("".to_string()),
+				image_id: Some("".to_string()),
+				source_id: "".to_string(),
+				sentence: "This is 3".to_string(),
+				document_source: "".to_string(),
+			},
+			SemanticKnowledge {
+				document_id: "doc_4".to_string(),
+				subject: "subject_4".to_string(),
+				subject_type: "type_1".to_string(),
+				object: "object_4".to_string(),
+				object_type: "type_2".to_string(),
+				event_id: "event_4".to_string(),
+				collection_id: Some("".to_string()),
+				image_id: Some("".to_string()),
+				source_id: "".to_string(),
+				sentence: "This is 4".to_string(),
+				document_source: "".to_string(),
+			},
+		];
+		for semantic in insert_semantics {
+			sql_query(
             "INSERT INTO semantic_knowledge (document_id, subject, subject_type, object, object_type, event_id) 
              VALUES ($1, $2, $3, $4, $5, $6)",
         )
@@ -1095,91 +1014,87 @@ async fn test_autogenerate_queries() {
         .execute(conn)
         .await
         .expect("Failed to insert semantic knowledge.");
-	}
-	let max_suggestions = 5;
-	let query_suggestions = embed.autogenerate_queries(max_suggestions).await;
+		}
+		let max_suggestions = 5;
+		let query_suggestions = embed.autogenerate_queries(max_suggestions).await;
 
-	match query_suggestions {
-		Ok(suggestions) => {
-			println!("Query Suggestions: {:?}", suggestions);
-			assert!(!suggestions.is_empty(), "Expected suggestions but got none.");
-			assert!(
-				suggestions.len() <= max_suggestions as usize,
-				"Number of suggestions exceeds max_suggestions."
-			);
-			if !suggestions.is_empty() {
-				assert_eq!(suggestions[0].tags[0], "Filters", "Expected 'Filters' tag.");
-			}
-		},
-		Err(e) => {
-			eprintln!("Failed to generate query suggestions: {:?}", e);
-			assert!(false, "Query suggestion generation should not have failed.");
-		},
+		match query_suggestions {
+			Ok(suggestions) => {
+				println!("Query Suggestions: {:?}", suggestions);
+				assert!(!suggestions.is_empty(), "Expected suggestions but got none.");
+				assert!(
+					suggestions.len() <= max_suggestions as usize,
+					"Number of suggestions exceeds max_suggestions."
+				);
+				if !suggestions.is_empty() {
+					assert_eq!(suggestions[0].tags[0], "Filters", "Expected 'Filters' tag.");
+				}
+			},
+			Err(e) => {
+				eprintln!("Failed to generate query suggestions: {:?}", e);
+				assert!(false, "Query suggestion generation should not have failed.");
+			},
+		}
 	}
-}
-
-#[derive(QueryableByName, Debug)]
-struct InsertedDataDiscovery {
-	#[diesel(sql_type = Text)]
-	query_embedding: String,
-	#[diesel(sql_type = Double)]
-	score: f64,
-	#[diesel(sql_type = Text)]
-	doc_id: String,
-}
-
-#[tokio::test]
-async fn test_insert_discovered_knowledge() {
-	let db_path = PathBuf::from("/tmp/test_pgembed_discovered_knowledge");
-	println!("Initializing PGEmbed with database path: {:?}", db_path);
-	let embed = PGEmbed::new(db_path.clone()).await.unwrap();
-	println!("PGEmbed initialized successfully.");
-	println!("Database connection established.");
-	let payload = vec![
-		DocumentPayload {
-			doc_id: "test_doc_1".to_string(),
-			doc_source: "test_source".to_string(),
-			sentence: "This is a test sentence.".to_string(),
-			knowledge: "test knowledge".to_string(),
-			subject: "test_subject".to_string(),
-			object: "test_object".to_string(),
-			cosine_distance: Some(0.5),
-			query_embedding: Some(vec![0.1, 0.2, 0.3, 0.4]),
-			query: Some("test query".to_string()),
-			session_id: Some("session_1".to_string()),
-			score: 0.8,
-			collection_id: "collection_1".to_string(),
-		},
-		DocumentPayload {
-			doc_id: "test_doc_2".to_string(),
-			doc_source: "test_source_2".to_string(),
-			sentence: "Another test sentence.".to_string(),
-			knowledge: "more test knowledge".to_string(),
-			subject: "test_subject_2".to_string(),
-			object: "test_object_2".to_string(),
-			cosine_distance: Some(0.6),
-			query_embedding: Some(vec![0.5, 0.6, 0.7, 0.8]),
-			query: Some("another test query".to_string()),
-			session_id: Some("session_2".to_string()),
-			score: 0.9,
-			collection_id: "collection_2".to_string(),
-		},
-	];
-	match embed.insert_discovered_knowledge(&payload).await {
-		Ok(_) => println!("Data inserted successfully using `insert_discovered_knowledge`."),
-		Err(e) => {
-			eprintln!("Failed to insert data using `insert_discovered_knowledge`: {:?}", e);
-			return;
-		},
-	}
-	let session_id = "session_1".to_string();
-	match embed.get_discovered_data(session_id.clone()).await {
-		Ok(fetched_data) => {
-			println!("Fetched data successfully using `get_discovered_data`: {:?}", fetched_data);
-		},
-		Err(e) => {
-			eprintln!("Failed to fetch data using `get_discovered_data`: {:?}", e);
-			return;
-		},
+	#[tokio::test]
+	async fn test_insert_discovered_knowledge() {
+		let db_path = PathBuf::from("/tmp/test_insert_discovered_knowledge");
+		println!("Initializing PGEmbed with database path: {:?}", db_path);
+		let res = start_postgres_embedded(db_path.clone()).await;
+		assert!(res.is_ok(), "Failed to start embedded postgres: {:?}", res);
+		let (_postgres, database_url) = res.unwrap();
+		let embed = PGEmbed::new(database_url).await.unwrap();
+		println!("PGEmbed initialized successfully.");
+		println!("Database connection established.");
+		let payload = vec![
+			DocumentPayload {
+				doc_id: "test_doc_1".to_string(),
+				doc_source: "test_source".to_string(),
+				sentence: "This is a test sentence.".to_string(),
+				knowledge: "test knowledge".to_string(),
+				subject: "test_subject".to_string(),
+				object: "test_object".to_string(),
+				cosine_distance: Some(0.5),
+				query_embedding: Some(vec![0.1, 0.2, 0.3, 0.4]),
+				query: Some("test query".to_string()),
+				session_id: Some("session_1".to_string()),
+				score: 0.8,
+				collection_id: "collection_1".to_string(),
+			},
+			DocumentPayload {
+				doc_id: "test_doc_2".to_string(),
+				doc_source: "test_source_2".to_string(),
+				sentence: "Another test sentence.".to_string(),
+				knowledge: "more test knowledge".to_string(),
+				subject: "test_subject_2".to_string(),
+				object: "test_object_2".to_string(),
+				cosine_distance: Some(0.6),
+				query_embedding: Some(vec![0.5, 0.6, 0.7, 0.8]),
+				query: Some("another test query".to_string()),
+				session_id: Some("session_2".to_string()),
+				score: 0.9,
+				collection_id: "collection_2".to_string(),
+			},
+		];
+		match embed.insert_discovered_knowledge(&payload).await {
+			Ok(_) => println!("Data inserted successfully using `insert_discovered_knowledge`."),
+			Err(e) => {
+				eprintln!("Failed to insert data using `insert_discovered_knowledge`: {:?}", e);
+				return;
+			},
+		}
+		let session_id = "session_1".to_string();
+		match embed.get_discovered_data(session_id.clone()).await {
+			Ok(fetched_data) => {
+				println!(
+					"Fetched data successfully using `get_discovered_data`: {:?}",
+					fetched_data
+				);
+			},
+			Err(e) => {
+				eprintln!("Failed to fetch data using `get_discovered_data`: {:?}", e);
+				return;
+			},
+		}
 	}
 }

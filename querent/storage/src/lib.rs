@@ -1,5 +1,6 @@
 pub mod storage;
 use common::EventType;
+use postgresql_embedded::{PostgreSQL, Settings, Status, VersionReq};
 use proto::semantics::{StorageConfig, StorageType};
 use std::{collections::HashMap, path::PathBuf, sync::Arc};
 pub use storage::*;
@@ -18,8 +19,11 @@ pub use metastore::*;
 
 use diesel_async::{
 	pg::AsyncPgConnection,
-	pooled_connection::deadpool::{Object as PooledConnection, Pool},
-	SimpleAsyncConnection,
+	pooled_connection::{
+		deadpool::{Object as PooledConnection, Pool},
+		AsyncDieselConnectionManager,
+	},
+	RunQueryDsl, SimpleAsyncConnection,
 };
 use std::{
 	ops::{Deref, DerefMut},
@@ -30,14 +34,16 @@ pub use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
 
 pub async fn create_storages(
 	storage_configs: &[StorageConfig],
-	path_buf: PathBuf,
+	embedded_databasurl: Option<String>,
 ) -> anyhow::Result<(HashMap<EventType, Vec<Arc<dyn Storage>>>, Vec<Arc<dyn Storage>>)> {
 	let mut event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>> = HashMap::new();
 	let mut index_storages: Vec<Arc<dyn Storage>> = Vec::new();
-
-	// TODO here we can use PGEmbed and
 	if storage_configs.len() == 0 {
-		let pg_embed_db = create_default_storage(path_buf).await.map_err(|err| err)?;
+		if embedded_databasurl.is_none() {
+			return Err(anyhow::anyhow!("No storage configuration provided"));
+		}
+		let database_url = embedded_databasurl.unwrap();
+		let pg_embed_db = create_default_storage(database_url).await.map_err(|err| err)?;
 
 		event_storages
 			.entry(EventType::Vector)
@@ -107,14 +113,134 @@ pub async fn create_storages(
 	Ok((event_storages, index_storages))
 }
 
-pub async fn create_default_storage(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
-	let embedded_db = PGEmbed::new(path).await.map_err(|err| {
+pub async fn create_default_storage(database_url: String) -> anyhow::Result<Arc<dyn Storage>> {
+	let embedded_db = PGEmbed::new(database_url).await.map_err(|err| {
 		log::error!("embedded_db client creation failed: {:?}", err);
 		err
 	})?;
 	let _ = embedded_db.check_connectivity().await;
 	let embedded_db = Arc::new(embedded_db);
 	Ok(embedded_db)
+}
+
+pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, String), StorageError> {
+	let mut data_dir = path.clone();
+	data_dir.push("pg_embed");
+
+	let settings = Settings {
+		version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?,
+		data_dir,
+		..Default::default()
+	};
+	eprintln!("start_postgres_embedded1");
+	let mut postgresql = PostgreSQL::new(settings);
+	postgresql.setup().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	postgresql_extensions::install(
+		postgresql.settings(),
+		"tensor-chord",
+		"pgvecto.rs",
+		&VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?,
+	)
+	.await
+	.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	eprintln!("start_postgres_embedded1");
+
+	postgresql.start().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	let database_name = "querent_rian";
+	postgresql.create_database(database_name).await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+
+	postgresql.database_exists(database_name).await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	// restart the postgresql server
+	postgresql.stop().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	postgresql.start().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	eprintln!("start_postgres_embedded1");
+
+	let database_url = postgresql.settings().url(database_name);
+	// prepare async pool
+	let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url.clone());
+	let pool = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
+		.max_size(10)
+		.wait_timeout(POOL_TIMEOUT)
+		.create_timeout(POOL_TIMEOUT)
+		.recycle_timeout(POOL_TIMEOUT)
+		.runtime(deadpool::Runtime::Tokio1)
+		.build()
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	// pg vector says to configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+	// and restart the server
+	let conn = &mut pool.get().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+		.execute(conn)
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+		.execute(conn)
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	// close the pool
+	pool.close();
+	eprintln!("start_postgres_embedded111");
+
+	// restart the postgresql server
+	postgresql.stop().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	postgresql.start().await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	// check if the database is created
+	postgresql.database_exists(database_name).await.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	// check if postgresql is running
+	while postgresql.status() != Status::Started {
+		eprintln!("current status: {:?}", postgresql.status());
+		tokio::time::sleep(Duration::from_secs(1)).await;
+	}
+	let database_url = postgresql.settings().url(database_name);
+	Ok((postgresql, database_url))
 }
 
 pub async fn create_secret_store(

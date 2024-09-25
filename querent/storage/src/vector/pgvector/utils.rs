@@ -351,6 +351,7 @@ use diesel::{
 
 #[derive(QueryableByName, Debug)]
 struct EmbeddingResult {
+	#[allow(dead_code)]
 	#[diesel(sql_type = Text)] // Embeddings as a comma-separated string
 	embeddings: String,
 	#[diesel(sql_type = Float4)] // Score as Float4
