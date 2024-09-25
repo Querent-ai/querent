@@ -7,7 +7,7 @@ use proto::semantics::{
 };
 use rian_core::{PipelineErrors, SemanticService};
 use std::{collections::HashMap, sync::Arc};
-use storage::Storage;
+use storage::{MetaStorage, SecretStorage, Storage};
 use tracing::instrument;
 
 use crate::{
@@ -20,8 +20,8 @@ pub struct SemanticsGrpcAdapter {
 	semantic_service_mailbox: MessageBus<SemanticService>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
-	secret_store: Arc<dyn Storage>,
-	metadata_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn SecretStorage>,
+	metadata_store: Arc<dyn MetaStorage>,
 }
 
 impl SemanticsGrpcAdapter {
@@ -29,8 +29,8 @@ impl SemanticsGrpcAdapter {
 		semantic_service_mailbox: MessageBus<SemanticService>,
 		event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 		index_storages: Vec<Arc<dyn storage::Storage>>,
-		secret_store: Arc<dyn storage::Storage>,
-		metadata_store: Arc<dyn storage::Storage>,
+		secret_store: Arc<dyn storage::SecretStorage>,
+		metadata_store: Arc<dyn storage::MetaStorage>,
 	) -> Self {
 		Self {
 			semantic_service_mailbox,

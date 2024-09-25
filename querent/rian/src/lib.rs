@@ -29,7 +29,7 @@ pub async fn start_semantic_service(
 	querent: &Querent,
 	cluster: &Cluster,
 	pubsub_broker: &PubSubBroker,
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> anyhow::Result<MessageBus<SemanticService>> {
 	info!("Starting semantic service");
 

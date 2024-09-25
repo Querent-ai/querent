@@ -73,6 +73,10 @@ jobs:
           default: true
           profile: minimal
           target: x86_64-unknown-linux-gnu
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./querent -> target"
       - name: Cargo check
         run: cd querent && make check
 
@@ -103,7 +107,10 @@ jobs:
           default: true
           profile: minimal
           target: x86_64-unknown-linux-gnu
-
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./querent -> target"
       - name: Cargo test
         run: cd querent && make test
 
@@ -117,7 +124,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
         with:
@@ -125,7 +131,6 @@ jobs:
           default: true
           profile: minimal
           target: x86_64-unknown-linux-gnu
-
       - name: Cargo fmt
         run: cd querent && make format-check
 
@@ -152,5 +157,9 @@ jobs:
           default: true
           profile: minimal
           target: x86_64-unknown-linux-gnu
+      - name: Setup cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./querent -> target"
       - name: Build
         run: cd querent && make build
