@@ -305,13 +305,12 @@ mod tests {
 		let mut count_files: HashSet<String> = HashSet::new();
 		while let Some(item) = stream.next().await {
 			match item {
-				Ok(collected_bytes) => {
+				Ok(collected_bytes) =>
 					if let Some(pathbuf) = collected_bytes.file {
 						if let Some(str_path) = pathbuf.to_str() {
 							count_files.insert(str_path.to_string());
 						}
-					}
-				},
+					},
 				Err(_) => panic!("Expected successful data collection"),
 			}
 		}

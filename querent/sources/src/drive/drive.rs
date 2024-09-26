@@ -93,12 +93,10 @@ impl GoogleDriveSource {
 		if mime_type.starts_with("application/vnd.google-apps.") {
 			match mime_type.as_str() {
 				"application/vnd.google-apps.document" => "application/pdf",
-				"application/vnd.google-apps.spreadsheet" => {
-					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-				},
-				"application/vnd.google-apps.presentation" => {
-					"application/vnd.openxmlformats-officedocument.presentationml.presentation"
-				},
+				"application/vnd.google-apps.spreadsheet" =>
+					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"application/vnd.google-apps.presentation" =>
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation",
 				_ => {
 					return Err(google_drive3::Error::FieldClash(
 						"Unsupported Google Apps file type",
@@ -367,12 +365,10 @@ async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_dri
 	if mime_type.starts_with("application/vnd.google-apps.") {
 		let _export_mime_type = match mime_type.as_str() {
 			"application/vnd.google-apps.document" => "application/pdf",
-			"application/vnd.google-apps.spreadsheet" => {
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-			},
-			"application/vnd.google-apps.presentation" => {
-				"application/vnd.openxmlformats-officedocument.presentationml.presentation"
-			},
+			"application/vnd.google-apps.spreadsheet" =>
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			"application/vnd.google-apps.presentation" =>
+				"application/vnd.openxmlformats-officedocument.presentationml.presentation",
 			_ => return Err(google_drive3::Error::FieldClash("Unsupported Google Apps file type")),
 		};
 
@@ -417,13 +413,12 @@ mod tests {
 		let mut count_files: HashSet<String> = HashSet::new();
 		while let Some(item) = stream.next().await {
 			match item {
-				Ok(collected_bytes) => {
+				Ok(collected_bytes) =>
 					if let Some(pathbuf) = collected_bytes.file {
 						if let Some(str_path) = pathbuf.to_str() {
 							count_files.insert(str_path.to_string());
 						}
-					}
-				},
+					},
 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
 			}
 		}
