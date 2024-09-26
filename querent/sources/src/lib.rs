@@ -13,6 +13,7 @@ pub mod drive;
 pub mod email;
 pub mod filesystem;
 pub mod gcs;
+pub mod news;
 pub mod onedrive;
 pub mod s3;
 use once_cell::sync::Lazy;

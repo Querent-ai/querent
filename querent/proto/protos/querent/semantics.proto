@@ -300,26 +300,43 @@ message SlackCollectorConfig {
   string id = 7;
 }
 
+enum QueryType {
+  Everything = 0;
+  TopHeadlines = 1;
+}
+
+enum SortBy {
+  Relevancy = 0;
+  Popularity = 1;
+  PublishedAt = 2;
+}
+
 // NewsCollectorConfig is a message to hold configuration for a News collector.
 message NewsCollectorConfig {
   // API key of the News collector.
   string api_key = 1;
   // Query of the News collector.
   string query = 2;
+  // Query type of the News collector.
+  QueryType query_type = 3;
+  // Comma separated sources of the news representing news sources or blogs
+  optional string sources = 4;
   // From date of the News collector.
-  string from_date = 3;
+  optional string from_date = 5;
   // To date of the News collector.
-  string to_date = 4;
+  optional string to_date = 6;
   // Language of the News collector.
-  string language = 5;
-  // Domains of the News collector.
-  string domains = 6;
-  // Exclude domains of the News collector.
-  string exclude_domains = 7;
-  // Sources of the News collector.
-  string sources = 8;
+  optional string language = 7;
+  // Sort by for the News Collector
+  optional SortBy sort_by = 8;
+  // Page Size of the News Response
+  optional int32 page_size = 9;
+  // Page number of the News Response
+  optional int32 page = 10;
+  // Comma-seperated string of Domains of the News Collector
+  optional string domains = 11;
   // Id for the collector
-  string id = 9;
+  string id = 12;
 }
 
 message OneDriveConfig {
