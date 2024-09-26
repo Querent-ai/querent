@@ -66,3 +66,4 @@ yup-oauth2 = { workspace = true }
 oauth2 = { workspace = true }
 onedrive-api = {workspace = true}
 reqwest = {workspace = true}
+dotenv = {workspace = true}
