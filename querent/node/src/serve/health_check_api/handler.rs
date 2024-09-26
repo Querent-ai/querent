@@ -5,7 +5,7 @@ use cluster::Cluster;
 use common::ServiceErrorCode;
 use rian_core::{verify_key, SemanticService};
 use serde::{Deserialize, Serialize};
-use storage::Storage;
+use storage::SecretStorage;
 use tracing::error;
 use warp::{hyper::StatusCode, reply::with_status, Filter, Rejection};
 
@@ -26,7 +26,7 @@ pub struct HealthCheckApi;
 pub fn health_check_handlers(
 	cluster: Cluster,
 	semantic_service: Option<MessageBus<SemanticService>>,
-	secret_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn SecretStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	liveness_handler(semantic_service)
 		.or(readiness_handler(cluster))
@@ -118,7 +118,7 @@ pub struct ApiKeyResponse {
 /// Set the API Key
 pub async fn set_api_key(
 	payload: ApiKeyPayload,
-	secret_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn SecretStorage>,
 ) -> Result<ApiKeyPayload, ApiError> {
 	let key = payload.key;
 	let key = key.trim();
@@ -155,7 +155,7 @@ pub async fn set_api_key(
 
 /// set api key fileter
 pub fn set_api_key_handler(
-	secret_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn SecretStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("health" / "apikey")
 		.and(warp::body::json())
@@ -180,7 +180,7 @@ pub fn set_api_key_handler(
 /// This API is used to get the API Key for RIAN from the secret store.
 /// The API Key is used to authenticate the RIAN service.
 /// API key is a string as is sent to node to be stored in secret store.
-pub async fn get_api_key(secret_store: Arc<dyn Storage>) -> Result<ApiKeyResponse, ApiError> {
+pub async fn get_api_key(secret_store: Arc<dyn SecretStorage>) -> Result<ApiKeyResponse, ApiError> {
 	let key = secret_store.get_rian_api_key().await.map_err(|e| {
 		error!("failed to get the API Key: {}", e);
 		ApiError {
@@ -193,7 +193,7 @@ pub async fn get_api_key(secret_store: Arc<dyn Storage>) -> Result<ApiKeyRespons
 
 /// get api key fileter
 pub fn get_api_key_handler(
-	secret_store: Arc<dyn Storage>,
+	secret_store: Arc<dyn SecretStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("health" / "apikey")
 		.and(warp::get())

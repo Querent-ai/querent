@@ -82,7 +82,7 @@ impl StorageError {
 /// Storage is a trait for all storage types.
 /// Currently we support Graph, Vector and Index storages.
 #[async_trait]
-pub trait Storage: Send + Sync + 'static {
+pub trait FabricStorage: Send + Sync + 'static {
 	/// Check storage connection if applicable
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
 
@@ -124,10 +124,38 @@ pub trait Storage: Send + Sync + 'static {
 		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>>;
 
-	async fn traverse_metadata_table(
+	/// Insert InsightKnowledge into storage
+	async fn insert_insight_knowledge(
 		&self,
-		filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>>;
+		query: Option<String>,
+		session_id: Option<String>,
+		response: Option<String>,
+	) -> StorageResult<()>;
+}
+
+impl Debug for dyn FabricStorage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("FabricStorage").finish()
+	}
+}
+
+/// Acccesor for storage
+#[async_trait]
+pub trait FabricAccessor: Send + Sync + 'static {
+	/// Asynchronously fetches popular queries .
+	async fn autogenerate_queries(
+		&self,
+		max_suggestions: i32,
+	) -> StorageResult<Vec<QuerySuggestion>>;
+
+	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
+	async fn filter_and_query(
+		&self,
+		session_id: &String,
+		top_pairs: &Vec<String>,
+		max_results: i32,
+		offset: i64,
+	) -> StorageResult<Vec<DocumentPayload>>;
 
 	/// Get discovered data based on session_id
 	async fn get_discovered_data(
@@ -135,6 +163,32 @@ pub trait Storage: Send + Sync + 'static {
 		session_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>>;
 
+	/// Get metadata if applicable
+	async fn traverse_metadata_table(
+		&self,
+		filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>>;
+}
+
+impl Debug for dyn FabricAccessor {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("FabricAccessor").finish()
+	}
+}
+
+/// Generic Storage trait which combines all storage traits.
+#[async_trait]
+pub trait Storage: FabricStorage + FabricAccessor {}
+
+impl Debug for dyn Storage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("Storage").finish()
+	}
+}
+
+/// SecretStorage is a trait for all storage types that store secrets.
+#[async_trait]
+pub trait SecretStorage: Send + Sync + 'static {
 	/// Store key value pair
 	async fn store_secret(&self, key: &String, value: &String) -> StorageResult<()>;
 
@@ -147,6 +201,21 @@ pub trait Storage: Send + Sync + 'static {
 	/// Get all key value pair
 	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>>;
 
+	/// Set API key for RIAN
+	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()>;
+
+	/// Get API key for RIAN
+	async fn get_rian_api_key(&self) -> StorageResult<Option<String>>;
+}
+
+impl Debug for dyn SecretStorage {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		f.debug_struct("SecretStorage").finish()
+	}
+}
+
+#[async_trait]
+pub trait MetaStorage: Send + Sync {
 	/// Get all SemanticPipeline ran by this node
 	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>>;
 
@@ -200,39 +269,10 @@ pub trait Storage: Send + Sync + 'static {
 		&self,
 		session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>>;
-
-	/// Insert InsightKnowledge into storage
-	async fn insert_insight_knowledge(
-		&self,
-		query: Option<String>,
-		session_id: Option<String>,
-		response: Option<String>,
-	) -> StorageResult<()>;
-
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()>;
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>>;
-
-	/// Asynchronously fetches popular queries .
-	async fn autogenerate_queries(
-		&self,
-		max_suggestions: i32,
-	) -> StorageResult<Vec<QuerySuggestion>>;
-
-	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
-	async fn filter_and_query(
-		&self,
-		session_id: &String,
-		top_pairs: &Vec<String>,
-		max_results: i32,
-		offset: i64,
-	) -> StorageResult<Vec<DocumentPayload>>;
 }
 
-impl Debug for dyn Storage {
+impl Debug for dyn MetaStorage {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		f.debug_struct("Storage").finish()
+		f.debug_struct("MetaStorage").finish()
 	}
 }

@@ -5,13 +5,12 @@ use std::{
 };
 
 use crate::{
-	postgres_index::QuerySuggestion, DiscoveredKnowledge, SemanticKnowledge, Storage, StorageError,
-	StorageErrorKind, StorageResult, RIAN_API_KEY,
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, FabricAccessor, FabricStorage,
+	SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
 };
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use surrealdb::{
@@ -158,7 +157,7 @@ impl SurrealDB {
 }
 
 #[async_trait]
-impl Storage for SurrealDB {
+impl FabricStorage for SurrealDB {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _query_response = self.db.query("SELECT * FROM non_existing_table LIMIT 1;").await;
 		Ok(())
@@ -307,39 +306,6 @@ impl Storage for SurrealDB {
 		Ok(results)
 	}
 
-	async fn traverse_metadata_table(
-		&self,
-		filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
-		let mut combined_results: Vec<(
-			String,
-			String,
-			String,
-			String,
-			String,
-			String,
-			String,
-			f32,
-		)> = Vec::new();
-		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
-		for (head, tail) in filtered_pairs {
-			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 0)
-				.await?;
-			traverse_node(&self.db, tail.clone(), &mut combined_results, &mut visited_pairs, 0)
-				.await?;
-		}
-
-		Ok(combined_results)
-	}
-
-	async fn insert_graph(
-		&self,
-		_collection_id: String,
-		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
 	async fn index_knowledge(
 		&self,
 		collection_id: String,
@@ -370,105 +336,40 @@ impl Storage for SurrealDB {
 		Ok(())
 	}
 
-	/// Store key value pair
-	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	/// Get value for key
-	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	//Delete the key value pair
-	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	//Get all collectors key value pairs
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
-		Ok(Vec::new())
-	}
-
-	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
-		Ok(Vec::new())
-	}
-
-	/// Set SemanticPipeline ran by this node
-	async fn set_pipeline(
+	async fn insert_graph(
 		&self,
-		_pipeline_id: &String,
-		_pipeline: SemanticPipelineRequest,
+		_collection_id: String,
+		_payload: &Vec<(String, String, Option<String>, SemanticKnowledgePayload)>,
 	) -> StorageResult<()> {
 		Ok(())
 	}
+}
 
-	/// Get semantic pipeline by id
-	async fn get_pipeline(
+#[async_trait]
+impl FabricAccessor for SurrealDB {
+	async fn traverse_metadata_table(
 		&self,
-		_pipeline_id: &String,
-	) -> StorageResult<Option<SemanticPipelineRequest>> {
-		Ok(None)
-	}
+		filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		let mut combined_results: Vec<(
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			String,
+			f32,
+		)> = Vec::new();
+		let mut visited_pairs: HashSet<(String, String)> = HashSet::new();
+		for (head, tail) in filtered_pairs {
+			traverse_node(&self.db, head.clone(), &mut combined_results, &mut visited_pairs, 0)
+				.await?;
+			traverse_node(&self.db, tail.clone(), &mut combined_results, &mut visited_pairs, 0)
+				.await?;
+		}
 
-	/// Delete semantic pipeline by id
-	async fn delete_pipeline(&self, _pipeline_id: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(
-		&self,
-	) -> StorageResult<Vec<(String, DiscoverySessionRequest)>> {
-		Ok(Vec::new())
-	}
-
-	/// Set Discovery session ran by this node
-	async fn set_discovery_session(
-		&self,
-		_session_id: &String,
-		_session: DiscoverySessionRequest,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get Discovery session by id
-	async fn get_discovery_session(
-		&self,
-		_session_id: &String,
-	) -> StorageResult<Option<DiscoverySessionRequest>> {
-		Ok(None)
-	}
-
-	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(
-		&self,
-	) -> StorageResult<Vec<(String, InsightAnalystRequest)>> {
-		Ok(Vec::new())
-	}
-
-	/// Set Insight session ran by this node
-	async fn set_insight_session(
-		&self,
-		_session_id: &String,
-		_session: InsightAnalystRequest,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get Insight session by id
-	async fn get_insight_session(
-		&self,
-		_session_id: &String,
-	) -> StorageResult<Option<InsightAnalystRequest>> {
-		Ok(None)
+		Ok(combined_results)
 	}
 
 	/// Get discovered knowledge
@@ -477,17 +378,6 @@ impl Storage for SurrealDB {
 		_session_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
-	}
-
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, api_key: &String) -> StorageResult<()> {
-		self.store_secret(&RIAN_API_KEY.to_string(), api_key).await?;
-		Ok(())
-	}
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
-		self.get_secret(&RIAN_API_KEY.to_string()).await
 	}
 
 	/// Retrieve filtered results when query is empty and semantic pair filters are provided
@@ -791,3 +681,5 @@ pub async fn traverse_node<'a>(
 
 	Ok(())
 }
+
+impl Storage for SurrealDB {}
