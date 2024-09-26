@@ -7,6 +7,8 @@ use api::{
     trigger_insight_analyst,
 };
 use common::{get_querent_data_path, TerimateSignal};
+use diesel::prelude::*;
+use diesel::r2d2;
 use log::{error, info};
 use node::serve::service::QUERENT_SERVICES_ONCE;
 use node::{serve_quester_without_servers, shutdown_querent};
@@ -377,6 +379,53 @@ pub fn start_postgres_sync(
         kind: StorageErrorKind::Internal,
         source: Arc::new(anyhow::Error::from(e)),
     })?;
+    let database_url = postgresql.settings().url(database_name);
+    let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(database_url.clone());
+    let pool = r2d2::Pool::builder()
+        .max_size(10)
+        .build(manager)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+
+    // Configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+    // and restart the server
+    let conn = &mut pool.get().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+        .execute(conn)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+    diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+        .execute(conn)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+    // close the pool
+    drop(pool);
+
+    // restart the postgresql server
+    postgresql.stop().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+    postgresql.start().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+    // check if the database is created
+    postgresql
+        .database_exists(database_name)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
 
     let database_url = postgresql.settings().url(database_name);
     Ok((postgresql, database_url))
