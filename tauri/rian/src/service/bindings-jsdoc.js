@@ -371,7 +371,7 @@ export const universalConstant = 42;
 
 /**
  * NewsCollectorConfig is a message to hold configuration for a News collector.
- * @typedef { { api_key: string; query: string; from_date: string; to_date: string; language: string; domains: string; exclude_domains: string; sources: string; id: string } } NewsCollectorConfig
+ * @typedef { { api_key: string; query: string; query_type: number; sources: string | null; from_date: string | null; to_date: string | null; language: string | null; sort_by: number | null; page_size: number | null; page: number | null; domains: string | null; id: string } } NewsCollectorConfig
  */
 
 /**

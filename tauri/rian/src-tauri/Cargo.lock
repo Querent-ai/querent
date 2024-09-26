@@ -11394,6 +11394,7 @@ dependencies = [
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
+ "dotenv",
  "futures",
  "futures-util",
  "google-drive3",

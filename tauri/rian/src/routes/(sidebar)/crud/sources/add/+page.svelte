@@ -81,7 +81,7 @@
 			drive_client_id = result.data[0];
 			drive_client_secret = result.data[1];
 		}
-		const redirect_uri = import.meta.env.VITE_DRIVE_REDIRECT_URL;
+		const redirect_uri = 'http://localhost:5174/confirmation';
 		const response = await fetch('https://oauth2.googleapis.com/token', {
 			method: 'POST',
 			headers: {

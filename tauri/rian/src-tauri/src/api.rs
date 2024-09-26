@@ -12,8 +12,7 @@ use crate::{
 use node::ApiKeyPayload;
 use std::env;
 use dotenv::dotenv;
-use tiny_http::Server;
-use tiny_http::Response;
+use tiny_http::{Response, Header, Server};
 use serde_urlencoded;
 
 
@@ -445,7 +444,22 @@ pub async fn start_oauth_server() -> Result<String, String> {
                 if let Ok(params) = serde_urlencoded::from_str::<Vec<(String, String)>>(query_str) {
                     for (key, value) in params {
                         if key == "code" {
-                            let response = Response::from_string("You can close this page now");
+                            let html_response = format!(
+                                r#"
+                                <html>
+                                    <head><title>Authorization Success</title></head>
+                                    <body>
+                                        <h1>Authorization Successful</h1>
+                                        <p>You can close this page and continue on the app now.</p>
+                                    </body>
+                                </html>
+                                "#,
+                            );
+                            let response = Response::from_string(html_response)
+                                .with_header(Header {
+                                    field: "Content-Type".parse().unwrap(),
+                                    value: "text/html; charset=UTF-8".parse().unwrap(),
+                                });
                             request.respond(response).unwrap();
                             // Return the code from here
                             return Ok(value);
