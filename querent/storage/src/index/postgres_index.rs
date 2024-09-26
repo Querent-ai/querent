@@ -1,4 +1,4 @@
-use crate::DiscoveredKnowledge;
+use crate::{DiscoveredKnowledge, FabricAccessor, FabricStorage, Storage};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel_async::{
@@ -8,15 +8,11 @@ use diesel_async::{
 	RunQueryDsl,
 };
 
-use proto::{
-	discovery::DiscoverySessionRequest,
-	insights::InsightAnalystRequest,
-	semantics::{PostgresConfig, SemanticPipelineRequest},
-};
+use proto::semantics::PostgresConfig;
 
 use std::sync::Arc;
 
-use crate::{ActualDbPool, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
+use crate::{ActualDbPool, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT};
 use deadpool::Runtime;
 use diesel::{table, Insertable, Queryable, Selectable};
 use diesel_async::AsyncConnection;
@@ -90,20 +86,10 @@ impl PostgresStorage {
 }
 
 #[async_trait]
-impl Storage for PostgresStorage {
+impl FabricStorage for PostgresStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self.pool.get().await?;
 		Ok(())
-	}
-
-	/// Set API key for RIAN
-	async fn set_rian_api_key(&self, _api_key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get API key for RIAN
-	async fn get_rian_api_key(&self) -> StorageResult<Option<String>> {
-		Ok(None)
 	}
 
 	/// Insert InsightKnowledge into storage
@@ -122,14 +108,6 @@ impl Storage for PostgresStorage {
 		_payload: &Vec<(String, String, Option<String>, VectorPayload)>,
 	) -> StorageResult<()> {
 		Ok(())
-	}
-
-	/// Get discovered knowledge
-	async fn get_discovered_data(
-		&self,
-		_session_id: String,
-	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		Ok(vec![])
 	}
 
 	/// Insert DiscoveryPayload into storage
@@ -159,13 +137,6 @@ impl Storage for PostgresStorage {
 		_offset: i64,
 		_top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		Ok(vec![])
-	}
-
-	async fn traverse_metadata_table(
-		&self,
-		_filtered_pairs: &[(String, String)],
-	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
 		Ok(vec![])
 	}
 
@@ -210,6 +181,24 @@ impl Storage for PostgresStorage {
 		})?;
 		Ok(())
 	}
+}
+
+#[async_trait]
+impl FabricAccessor for PostgresStorage {
+	/// Get discovered knowledge
+	async fn get_discovered_data(
+		&self,
+		_session_id: String,
+	) -> StorageResult<Vec<DiscoveredKnowledge>> {
+		Ok(vec![])
+	}
+
+	async fn traverse_metadata_table(
+		&self,
+		_filtered_pairs: &[(String, String)],
+	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>> {
+		Ok(vec![])
+	}
 
 	/// Asynchronously fetches suggestions from semantic table.
 	async fn autogenerate_queries(
@@ -218,107 +207,6 @@ impl Storage for PostgresStorage {
 	) -> StorageResult<Vec<QuerySuggestion>> {
 		// Return an empty vector
 		Ok(Vec::new())
-	}
-
-	/// Store key value pair
-	async fn store_secret(&self, _key: &String, _value: &String) -> StorageResult<()> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	/// Get value for key
-	async fn get_secret(&self, _key: &String) -> StorageResult<Option<String>> {
-		Err(StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::anyhow!("Not implemented")),
-		})
-	}
-
-	//Delete the key value pair
-	async fn delete_secret(&self, _key: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	//Get all collectors key value pairs
-	async fn get_all_secrets(&self) -> StorageResult<Vec<(String, String)>> {
-		Ok(Vec::new())
-	}
-
-	/// Get all SemanticPipeline ran by this node
-	async fn get_all_pipelines(&self) -> StorageResult<Vec<(String, SemanticPipelineRequest)>> {
-		Ok(Vec::new())
-	}
-
-	/// Set SemanticPipeline ran by this node
-	async fn set_pipeline(
-		&self,
-		_pipeline_id: &String,
-		_pipeline: SemanticPipelineRequest,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get semantic pipeline by id
-	async fn get_pipeline(
-		&self,
-		_pipeline_id: &String,
-	) -> StorageResult<Option<SemanticPipelineRequest>> {
-		Ok(None)
-	}
-
-	/// Delete semantic pipeline by id
-	async fn delete_pipeline(&self, _pipeline_id: &String) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get all Discovery sessions ran by this node
-	async fn get_all_discovery_sessions(
-		&self,
-	) -> StorageResult<Vec<(String, DiscoverySessionRequest)>> {
-		Ok(Vec::new())
-	}
-
-	/// Set Discovery session ran by this node
-	async fn set_discovery_session(
-		&self,
-		_session_id: &String,
-		_session: DiscoverySessionRequest,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get Discovery session by id
-	async fn get_discovery_session(
-		&self,
-		_session_id: &String,
-	) -> StorageResult<Option<DiscoverySessionRequest>> {
-		Ok(None)
-	}
-
-	/// Get all Insight sessions ran by this node
-	async fn get_all_insight_sessions(
-		&self,
-	) -> StorageResult<Vec<(String, InsightAnalystRequest)>> {
-		Ok(Vec::new())
-	}
-
-	/// Set Insight session ran by this node
-	async fn set_insight_session(
-		&self,
-		_session_id: &String,
-		_session: InsightAnalystRequest,
-	) -> StorageResult<()> {
-		Ok(())
-	}
-
-	/// Get Insight session by id
-	async fn get_insight_session(
-		&self,
-		_session_id: &String,
-	) -> StorageResult<Option<InsightAnalystRequest>> {
-		Ok(None)
 	}
 
 	/// Retrieve Filetered Results when query is empty and semantic pair filters are provided
@@ -352,6 +240,7 @@ table! {
 	}
 }
 
+impl Storage for PostgresStorage {}
 #[cfg(test)]
 mod test {
 	use proto::semantics::StorageType;

@@ -6,7 +6,7 @@ use error::DiscoveryError;
 use proto::NodeConfig;
 use rian_core::discovery_service::DiscoveryAgentService;
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use storage::Storage;
+use storage::{MetaStorage, SecretStorage, Storage};
 use tracing::info;
 
 mod client;
@@ -24,8 +24,8 @@ pub async fn start_discovery_service(
 	cluster: &Cluster,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	index_storages: Vec<Arc<dyn Storage>>,
-	metadata_store: Arc<dyn Storage>,
-	secret_store: Arc<dyn Storage>,
+	metadata_store: Arc<dyn MetaStorage>,
+	secret_store: Arc<dyn SecretStorage>,
 ) -> anyhow::Result<Arc<dyn DiscoveryService>> {
 	let licence_key = secret_store
 		.get_rian_api_key()

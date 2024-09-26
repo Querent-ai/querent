@@ -12,7 +12,7 @@ use proto::{
 	InsightRequestInfo, InsightRequestInfoList,
 };
 use rian_core::InsightAgentService;
-use storage::Storage;
+use storage::{MetaStorage, Storage};
 
 #[async_trait]
 pub trait InsightService: 'static + Send + Sync {
@@ -42,7 +42,7 @@ pub trait InsightService: 'static + Send + Sync {
 pub struct InsightImpl {
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
-	pub metadata_store: Arc<dyn Storage>,
+	pub metadata_store: Arc<dyn MetaStorage>,
 	pub insight_agent_service_message_bus: MessageBus<InsightAgentService>,
 }
 
@@ -50,7 +50,7 @@ impl InsightImpl {
 	pub fn new(
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
-		metadata_store: Arc<dyn Storage>,
+		metadata_store: Arc<dyn MetaStorage>,
 		insight_agent_service_message_bus: MessageBus<InsightAgentService>,
 	) -> Self {
 		InsightImpl {

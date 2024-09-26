@@ -8,7 +8,7 @@ use proto::{
 };
 use rian_core::discovery_service::DiscoveryAgentService;
 use std::{collections::HashMap, sync::Arc};
-use storage::Storage;
+use storage::{MetaStorage, Storage};
 
 use crate::discovery_api::discovery_service::error::DiscoveryError;
 
@@ -40,7 +40,7 @@ pub trait DiscoveryService: 'static + Send + Sync {
 pub struct DiscoveryImpl {
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
-	pub metadata_store: Arc<dyn Storage>,
+	pub metadata_store: Arc<dyn MetaStorage>,
 	pub discovery_agent_service_message_bus: MessageBus<DiscoveryAgentService>,
 }
 
@@ -48,7 +48,7 @@ impl DiscoveryImpl {
 	pub fn new(
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
-		metadata_store: Arc<dyn Storage>,
+		metadata_store: Arc<dyn MetaStorage>,
 		discovery_agent_service_message_bus: MessageBus<DiscoveryAgentService>,
 	) -> Self {
 		DiscoveryImpl {

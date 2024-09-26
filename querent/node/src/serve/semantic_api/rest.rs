@@ -121,7 +121,7 @@ async fn semantic_endpoint(
 
 /// Get pipelines metadata
 pub async fn get_pipelines_history(
-	metadata_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> Result<proto::semantics::PipelineRequestInfoList, PipelineErrors> {
 	let pipelines = metadata_store
 		.get_all_pipelines()
@@ -139,7 +139,7 @@ pub async fn get_pipelines_history(
 }
 
 pub fn get_pipelines_history_handler(
-	metadata_store: Arc<dyn storage::Storage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics" / "list")
 		.and(warp::get())
@@ -233,8 +233,8 @@ pub async fn start_pipeline(
 	semantic_service_mailbox: MessageBus<SemanticService>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
-	secret_store: Arc<dyn storage::Storage>,
-	metadata_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> Result<SemanticPipelineResponse, PipelineErrors> {
 	let new_uuid = uuid::Uuid::new_v4().to_string().replace("-", "");
 	// Extract entities from request.fixed_entities or use a default
@@ -363,8 +363,8 @@ pub fn start_pipeline_post_handler(
 	semantic_service_bus: Option<MessageBus<SemanticService>>,
 	event_storages: HashMap<EventType, Vec<Arc<dyn storage::Storage>>>,
 	index_storages: Vec<Arc<dyn storage::Storage>>,
-	secret_store: Arc<dyn storage::Storage>,
-	metadata_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
+	metadata_store: Arc<dyn storage::MetaStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics")
 		.and(warp::body::json())
@@ -581,7 +581,7 @@ pub fn restart_pipeline_post_handler(
 }
 
 pub fn set_collectors_post_handler(
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics" / "collectors")
 		.and(warp::body::json())
@@ -604,7 +604,7 @@ pub fn set_collectors_post_handler(
 )]
 pub async fn set_collectors(
 	collector: CollectorConfig,
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> Result<CollectorConfigResponse, PipelineErrors> {
 	let collector_string = serde_json::to_string(&collector).map_err(|e| {
 		PipelineErrors::InvalidParams(anyhow::anyhow!("Unable to convert to json string: {:?}", e))
@@ -637,7 +637,7 @@ pub async fn set_collectors(
 
 pub async fn set_collectors_all(
 	collectors: Vec<CollectorConfig>,
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> Result<CollectorConfigResponse, PipelineErrors> {
 	for collector in collectors {
 		let collector_string = serde_json::to_string(&collector).map_err(|e| {
@@ -673,7 +673,7 @@ pub async fn set_collectors_all(
 }
 
 pub fn delete_collectors_delete_handler(
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics" / "collectors" / "purge")
 		.and(warp::body::json())
@@ -697,7 +697,7 @@ pub fn delete_collectors_delete_handler(
 
 pub async fn delete_collectors(
 	collector: DeleteCollectorRequest,
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> Result<DeleteCollectorResponse, PipelineErrors> {
 	for key in collector.id.clone() {
 		secret_store.delete_secret(&key).await.map_err(|e| {
@@ -712,7 +712,7 @@ pub async fn delete_collectors(
 }
 
 pub fn list_collectors_list_handler(
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = Rejection> + Clone {
 	warp::path!("semantics" / "collectors" / "list")
 		.and(warp::get())
@@ -732,7 +732,7 @@ pub fn list_collectors_list_handler(
 )]
 
 pub async fn list_collectors(
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> Result<ListCollectorConfig, PipelineErrors> {
 	let collectors = secret_store.get_all_secrets().await.map_err(|e| {
 		PipelineErrors::InvalidParams(anyhow::anyhow!("Failed to list sources: {:?}", e))

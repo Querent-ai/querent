@@ -118,16 +118,18 @@ pub async fn create_default_storage(path: std::path::PathBuf) -> anyhow::Result<
 	Ok(surreal_db)
 }
 
-pub async fn create_secret_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+pub async fn create_secret_store(
+	path: std::path::PathBuf,
+) -> anyhow::Result<Arc<dyn SecretStorage>> {
 	let secret_store = SecretStore::new(path);
-	secret_store.check_connectivity().await?;
 	let secret_store = Arc::new(secret_store);
 	Ok(secret_store)
 }
 
-pub async fn create_metadata_store(path: std::path::PathBuf) -> anyhow::Result<Arc<dyn Storage>> {
+pub async fn create_metadata_store(
+	path: std::path::PathBuf,
+) -> anyhow::Result<Arc<dyn MetaStorage>> {
 	let metastore = MetaStore::new(path);
-	metastore.check_connectivity().await?;
 	let metastore = Arc::new(metastore);
 	Ok(metastore)
 }

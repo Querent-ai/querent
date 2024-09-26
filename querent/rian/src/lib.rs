@@ -29,7 +29,7 @@ pub async fn start_semantic_service(
 	querent: &Querent,
 	cluster: &Cluster,
 	pubsub_broker: &PubSubBroker,
-	secret_store: Arc<dyn storage::Storage>,
+	secret_store: Arc<dyn storage::SecretStorage>,
 ) -> anyhow::Result<MessageBus<SemanticService>> {
 	info!("Starting semantic service");
 
@@ -109,11 +109,27 @@ pub async fn create_dynamic_sources(
 				sources.push(Arc::new(azure_source));
 			},
 			Some(proto::semantics::Backend::Drive(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
 				let drive_source =
 					sources::drive::drive::GoogleDriveSource::new(config.clone()).await;
 				sources.push(Arc::new(drive_source));
 			},
-			Some(proto::semantics::Backend::Onedrive(config)) =>
+			Some(proto::semantics::Backend::Onedrive(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
 				match sources::onedrive::onedrive::OneDriveSource::new(config.clone()).await {
 					Ok(onedrive_source) => {
 						sources.push(Arc::new(onedrive_source));
@@ -124,8 +140,39 @@ pub async fn create_dynamic_sources(
 							e
 						)));
 					},
-				},
-			Some(proto::semantics::Backend::Email(config)) =>
+				}
+			},
+			Some(proto::semantics::Backend::News(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
+				match sources::news::news::NewsApiClient::new(config.clone()).await {
+					Ok(news_source) => {
+						sources.push(Arc::new(news_source) as Arc<dyn sources::Source>);
+					},
+					Err(e) => {
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+							"Failed to initialize news source: {:?} ",
+							e
+						)));
+					},
+				}
+			},
+
+			Some(proto::semantics::Backend::Email(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
 				match sources::email::email::EmailSource::new(config.clone()).await {
 					Ok(email_source) => {
 						sources.push(Arc::new(email_source) as Arc<dyn sources::Source>);
@@ -136,7 +183,8 @@ pub async fn create_dynamic_sources(
 							e
 						)));
 					},
-				},
+				}
+			},
 			_ =>
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Invalid source type: {}",
