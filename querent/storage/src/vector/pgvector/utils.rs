@@ -3,7 +3,7 @@ use crate::{
 	StorageResult,
 };
 use common::DocumentPayload;
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{sql_types::BigInt, ExpressionMethods, QueryDsl};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use pgvector::{Vector, VectorExpressionMethods};
 use std::{
@@ -11,7 +11,6 @@ use std::{
 	sync::Arc,
 };
 use tracing::error;
-
 /// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
 	let mut unique_entries = HashSet::new();
@@ -341,4 +340,138 @@ pub async fn fetch_documents_for_embedding(
 			})
 		},
 	}
+}
+
+use diesel::{
+	sql_query,
+	sql_types::{Float4, Float8, Text},
+	QueryableByName,
+};
+
+#[derive(QueryableByName, Debug)]
+struct EmbeddingResult {
+	#[allow(dead_code)]
+	#[diesel(sql_type = Text)]
+	embeddings: String,
+	#[diesel(sql_type = Float4)]
+	score: f32,
+	#[diesel(sql_type = Text)]
+	event_id: String,
+	#[diesel(sql_type = Float8)]
+	similarity: f64,
+}
+
+#[derive(QueryableByName, Debug)]
+struct SemanticResult {
+	#[diesel(sql_type = Text)]
+	document_id: String,
+	#[diesel(sql_type = Text)]
+	subject: String,
+	#[diesel(sql_type = Text)]
+	object: String,
+	#[diesel(sql_type = Text)]
+	document_source: String,
+	#[diesel(sql_type = Text)]
+	sentence: String,
+}
+
+pub async fn fetch_documents_for_embedding_pgembed(
+	conn: &mut AsyncPgConnection,
+	embedding: &Vec<f32>,
+	adjusted_offset: i64,
+	limit: i64,
+	session_id: &String,
+	query: &String,
+	collection_id: &String,
+	payload: &Vec<f32>,
+) -> StorageResult<Vec<DocumentPayload>> {
+	let target_vector =
+		format!("'{}'", serde_json::to_string(embedding).expect("Failed to format embeddings"));
+
+	let query_result = sql_query(&format!(
+		r#"
+            SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
+                   score, 
+                   event_id, 
+                   (embeddings <=> {})::FLOAT8 AS similarity 
+            FROM embedded_knowledge
+            WHERE (embeddings <=> {})::FLOAT8 < 0.1
+            ORDER BY similarity ASC
+            LIMIT $1
+            OFFSET $2
+        "#,
+		target_vector, target_vector
+	))
+	.bind::<BigInt, _>(limit)
+	.bind::<BigInt, _>(adjusted_offset)
+	.load::<EmbeddingResult>(conn)
+	.await;
+
+	match query_result {
+		Ok(results) => {
+			let mut payload_results = Vec::new();
+			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
+				let query_result_semantic = sql_query(
+					r#"
+                    SELECT document_id, subject, object, document_source, sentence
+                    FROM semantic_knowledge
+                    WHERE event_id = $1
+                    "#,
+				)
+				.bind::<Text, _>(&event_id)
+				.load::<SemanticResult>(conn)
+				.await;
+
+				match query_result_semantic {
+					Ok(result_semantic) => {
+						for SemanticResult {
+							document_id,
+							subject,
+							object,
+							document_source,
+							sentence,
+						} in result_semantic
+						{
+							let mut doc_payload = DocumentPayload::default();
+							doc_payload.doc_id = document_id.clone();
+							doc_payload.subject = subject.clone();
+							doc_payload.object = object.clone();
+							doc_payload.doc_source = document_source.clone();
+							doc_payload.cosine_distance = Some(similarity);
+							doc_payload.score = score;
+							doc_payload.sentence = sentence.clone();
+							doc_payload.session_id = Some(session_id.clone());
+							doc_payload.query_embedding = Some(payload.clone());
+							doc_payload.query = Some(query.clone());
+							doc_payload.collection_id = collection_id.clone();
+							payload_results.push(doc_payload);
+						}
+					},
+					Err(e) => {
+						error!("Error querying semantic data: {:?}", e);
+						return Err(StorageError {
+							kind: StorageErrorKind::Query,
+							source: Arc::new(anyhow::Error::from(e)),
+						});
+					},
+				}
+			}
+			Ok(payload_results)
+		},
+		Err(err) => {
+			log::error!("Query failed: {:?}", err);
+			Err(StorageError {
+				kind: StorageErrorKind::Query,
+				source: Arc::new(anyhow::Error::from(err)),
+			})
+		},
+	}
+}
+
+pub fn parse_vector(embedding_str: Option<String>) -> Option<Vector> {
+	embedding_str.map(|s| {
+		let float_values: Vec<f32> =
+			s.split(',').filter_map(|v| v.trim().parse::<f32>().ok()).collect();
+		Vector::from(float_values)
+	})
 }

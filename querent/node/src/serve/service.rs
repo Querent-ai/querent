@@ -11,11 +11,12 @@ use actors::{ActorExitStatus, MessageBus, Querent};
 use cluster::{start_cluster_service, Cluster};
 use common::{BoxFutureInfaillible, EventType, Host, PubSubBroker, RuntimesConfig, TerimateSignal};
 use once_cell::sync::OnceCell;
+use postgresql_embedded::PostgreSQL;
 use proto::config::NodeConfig;
 use rian_core::{start_semantic_service, SemanticService, ShutdownPipeline};
 use storage::{
-	create_metadata_store, create_secret_store, create_storages, MetaStorage, SecretStorage,
-	Storage,
+	create_metadata_store, create_secret_store, create_storages, start_postgres_embedded,
+	MetaStorage, SecretStorage, Storage,
 };
 use tokio::sync::oneshot;
 use tracing::{debug, error, info};
@@ -40,6 +41,8 @@ pub struct QuerentServices {
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn SecretStorage>,
 	pub metadata_store: Arc<dyn MetaStorage>,
+	pub psql: Option<PostgreSQL>,
+	pub database_url: Option<String>,
 }
 
 fn get_querent_data_path() -> PathBuf {
@@ -57,11 +60,19 @@ pub async fn serve_quester(
 	let quester_cloud = Querent::new();
 	info!("Creating storages 🗄️");
 	let querent_data_path = get_querent_data_path();
+	let mut database_url: Option<String> = None;
+	let mut embedded_psql: Option<PostgreSQL> = None;
+	if node_config.storage_configs.0.len() == 0 {
+		info!("No storage configurations found: using embedded storage");
+		let (psql, url) = start_postgres_embedded(querent_data_path.clone()).await?;
+		database_url = Some(url);
+		embedded_psql = Some(psql);
+	}
 	let secret_store = create_secret_store(querent_data_path.clone().to_path_buf()).await?;
 	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
 
 	let (event_storages, index_storages) =
-		create_storages(&node_config.storage_configs.0, querent_data_path.to_path_buf()).await?;
+		create_storages(&node_config.storage_configs.0, database_url.clone()).await?;
 
 	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);
@@ -132,6 +143,8 @@ pub async fn serve_quester(
 		insight_service: Some(insight_service),
 		secret_store,
 		metadata_store,
+		psql: embedded_psql,
+		database_url,
 	});
 	info!("Starting REST server 📡: check /api-doc.json for available APIs");
 	info!("Rest server listening on {}", rest_listen_addr);
@@ -209,6 +222,8 @@ pub async fn serve_quester(
 pub async fn serve_quester_without_servers(
 	node_config: NodeConfig,
 	terminate_sig: TerimateSignal,
+	embedded_database_url: Option<String>,
+	psql: Option<PostgreSQL>,
 ) -> anyhow::Result<()> {
 	let cluster = start_cluster_service(&node_config).await?;
 	let event_broker = PubSubBroker::default();
@@ -219,7 +234,7 @@ pub async fn serve_quester_without_servers(
 	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
 
 	let (event_storages, index_storages) =
-		create_storages(&node_config.storage_configs.0, querent_data_path.to_path_buf()).await?;
+		create_storages(&node_config.storage_configs.0, embedded_database_url.clone()).await?;
 
 	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);
@@ -271,6 +286,8 @@ pub async fn serve_quester_without_servers(
 		index_storages,
 		secret_store,
 		metadata_store,
+		psql,
+		database_url: embedded_database_url,
 	});
 	// set the QuerentServices in the global static variable
 	let set_res = QUERENT_SERVICES_ONCE.set(services.clone());
