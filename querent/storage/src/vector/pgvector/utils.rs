@@ -3,7 +3,7 @@ use crate::{
 	StorageResult,
 };
 use common::DocumentPayload;
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{sql_types::BigInt, ExpressionMethods, QueryDsl};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use pgvector::{Vector, VectorExpressionMethods};
 use std::{
@@ -11,7 +11,6 @@ use std::{
 	sync::Arc,
 };
 use tracing::error;
-
 /// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
 	let mut unique_entries = HashSet::new();
@@ -352,28 +351,27 @@ use diesel::{
 #[derive(QueryableByName, Debug)]
 struct EmbeddingResult {
 	#[allow(dead_code)]
-	#[diesel(sql_type = Text)] // Embeddings as a comma-separated string
+	#[diesel(sql_type = Text)]
 	embeddings: String,
-	#[diesel(sql_type = Float4)] // Score as Float4
+	#[diesel(sql_type = Float4)]
 	score: f32,
-	#[diesel(sql_type = Text)] // Event ID as Text
+	#[diesel(sql_type = Text)]
 	event_id: String,
-	#[diesel(sql_type = Float8)] // Similarity value as Float8
+	#[diesel(sql_type = Float8)]
 	similarity: f64,
 }
 
-// Define the struct to match the query result for semantic data
 #[derive(QueryableByName, Debug)]
 struct SemanticResult {
-	#[diesel(sql_type = Text)] // Document ID as Text
+	#[diesel(sql_type = Text)]
 	document_id: String,
-	#[diesel(sql_type = Text)] // Subject as Text
+	#[diesel(sql_type = Text)]
 	subject: String,
-	#[diesel(sql_type = Text)] // Object as Text
+	#[diesel(sql_type = Text)]
 	object: String,
-	#[diesel(sql_type = Text)] // Document Source as Text
+	#[diesel(sql_type = Text)]
 	document_source: String,
-	#[diesel(sql_type = Text)] // Sentence as Text
+	#[diesel(sql_type = Text)]
 	sentence: String,
 }
 
@@ -389,22 +387,23 @@ pub async fn fetch_documents_for_embedding_pgembed(
 ) -> StorageResult<Vec<DocumentPayload>> {
 	let target_vector =
 		format!("'{}'", serde_json::to_string(embedding).expect("Failed to format embeddings"));
+
 	let query_result = sql_query(&format!(
 		r#"
-			SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
-					score, 
-					event_id, 
-					(embeddings <=> {})::FLOAT8 AS similarity 
-			FROM embedded_knowledge
-			WHERE (embeddings <=> {})::FLOAT8 < 0.5
-			ORDER BY similarity
-			LIMIT $1
-			OFFSET $2
-		"#,
+            SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
+                   score, 
+                   event_id, 
+                   (embeddings <=> {})::FLOAT8 AS similarity 
+            FROM embedded_knowledge
+            WHERE (embeddings <=> {})::FLOAT8 < 0.1
+            ORDER BY similarity ASC
+            LIMIT $1
+            OFFSET $2
+        "#,
 		target_vector, target_vector
 	))
-	.bind::<Float4, _>(limit as f32)
-	.bind::<Float4, _>(adjusted_offset as f32)
+	.bind::<BigInt, _>(limit)
+	.bind::<BigInt, _>(adjusted_offset)
 	.load::<EmbeddingResult>(conn)
 	.await;
 

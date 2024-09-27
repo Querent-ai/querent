@@ -22,6 +22,7 @@ use specta_typescript::Typescript;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering};
+use std::time::Duration;
 use storage::{StorageError, StorageErrorKind};
 use sysinfo::System;
 use tauri::{AppHandle, Manager};
@@ -32,6 +33,7 @@ use tauri_specta::{Builder, Event};
 use windows::{
     show_updater_window, CheckUpdateEvent, CheckUpdateResultEvent, PinnedFromWindowEvent,
 };
+const POOL_TIMEOUT: Duration = Duration::from_secs(50);
 
 mod api;
 mod tray;
@@ -348,37 +350,41 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
         source: Arc::new(anyhow::Error::from(e)),
     })?;
     settings.temporary = false;
-    settings.data_dir = data_dir;
+    settings.data_dir = data_dir.clone();
     settings.username = "postgres".to_string();
     settings.password = "postgres".to_string();
     settings.password_file = password_dir.join(passwword_file_name);
     let mut postgresql = postgresql_embedded::blocking::PostgreSQL::new(settings);
 
-    // Synchronously set up PostgreSQL
-    postgresql.setup().map_err(|e| StorageError {
-        kind: StorageErrorKind::Internal,
-        source: Arc::new(anyhow::Error::from(e)),
-    })?;
-
-    // Install PostgreSQL extensions synchronously
-    let postgresql_settings = postgresql.settings().clone();
-    postgresql_extensions::blocking::install(
-        &postgresql_settings,
-        "tensor-chord",
-        "pgvecto.rs",
-        &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+    if is_postgres_running(&data_dir) {
+        info!("PostgreSQL server is already running. Skipping startup.");
+    } else {
+        // Synchronously set up PostgreSQL
+        postgresql.setup().map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
-        })?,
-    )
-    .map_err(|e| StorageError {
-        kind: StorageErrorKind::Internal,
-        source: Arc::new(anyhow::Error::from(e)),
-    })?;
-    // Start PostgreSQL server synchronously
-    postgresql
-        .start()
-        .expect("Failed to start embedded Postgres");
+        })?;
+
+        // Install PostgreSQL extensions synchronously
+        let postgresql_settings = postgresql.settings().clone();
+        postgresql_extensions::blocking::install(
+            &postgresql_settings,
+            "tensor-chord",
+            "pgvecto.rs",
+            &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+                kind: StorageErrorKind::Internal,
+                source: Arc::new(anyhow::Error::from(e)),
+            })?,
+        )
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+        // Start PostgreSQL server synchronously
+        postgresql
+            .start()
+            .expect("Failed to start embedded Postgres");
+    }
     // Check if the database exists
     let exists = postgresql
         .database_exists(DB_NAME)
@@ -416,6 +422,7 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(database_url.clone());
     let pool = r2d2::Pool::builder()
         .max_size(10)
+        .connection_timeout(POOL_TIMEOUT)
         .build(manager)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
@@ -463,4 +470,9 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     // store the postgresql instance
     *PG_EMBED.lock() = Some(postgresql);
     Ok(())
+}
+
+fn is_postgres_running(data_dir: &PathBuf) -> bool {
+    let pid_file = data_dir.join("postmaster.pid");
+    pid_file.exists()
 }
