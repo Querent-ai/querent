@@ -9,12 +9,11 @@ use crate::{
     UpdateResult, QUERENT_SERVICES_ONCE, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
     RUNNING_PIPELINE_ID, UPDATE_RESULT,
 };
-use node::ApiKeyPayload;
-use std::env;
 use dotenv::dotenv;
-use tiny_http::{Response, Header, Server};
+use node::ApiKeyPayload;
 use serde_urlencoded;
-
+use std::env;
+use tiny_http::{Header, Response, Server};
 
 #[tauri::command]
 #[specta::specta]
@@ -438,9 +437,9 @@ pub async fn start_oauth_server() -> Result<String, String> {
     for request in server.incoming_requests() {
         if request.url().starts_with("/confirmation") {
             let url = request.url().to_string();
-            
+
             if let Some(query_idx) = url.find('?') {
-                let query_str = &url[query_idx+1..];
+                let query_str = &url[query_idx + 1..];
                 if let Ok(params) = serde_urlencoded::from_str::<Vec<(String, String)>>(query_str) {
                     for (key, value) in params {
                         if key == "code" {
@@ -455,8 +454,8 @@ pub async fn start_oauth_server() -> Result<String, String> {
                                 </html>
                                 "#,
                             );
-                            let response = Response::from_string(html_response)
-                                .with_header(Header {
+                            let response =
+                                Response::from_string(html_response).with_header(Header {
                                     field: "Content-Type".parse().unwrap(),
                                     value: "text/html; charset=UTF-8".parse().unwrap(),
                                 });
@@ -467,7 +466,7 @@ pub async fn start_oauth_server() -> Result<String, String> {
                     }
                 }
             }
-            
+
             let response = Response::from_string("Waiting for code...");
             request.respond(response).unwrap();
         } else {
@@ -475,6 +474,6 @@ pub async fn start_oauth_server() -> Result<String, String> {
             request.respond(response).unwrap();
         }
     }
-    
+
     Err("Failed to capture the code".to_string())
 }
