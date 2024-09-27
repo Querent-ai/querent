@@ -22,7 +22,6 @@ use specta_typescript::Typescript;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering};
-use std::time::Duration;
 use storage::{StorageError, StorageErrorKind};
 use sysinfo::System;
 use tauri::{AppHandle, Manager};
@@ -33,7 +32,6 @@ use tauri_specta::{Builder, Event};
 use windows::{
     show_updater_window, CheckUpdateEvent, CheckUpdateResultEvent, PinnedFromWindowEvent,
 };
-const POOL_TIMEOUT: Duration = Duration::from_secs(50);
 
 mod api;
 mod tray;
@@ -422,7 +420,6 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(database_url.clone());
     let pool = r2d2::Pool::builder()
         .max_size(10)
-        .connection_timeout(POOL_TIMEOUT)
         .build(manager)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
