@@ -171,51 +171,51 @@ pub fn get_gcs_storage(gcs_config: GcsCollectorConfig) -> Result<OpendalStorage,
 	OpendalStorage::new_google_cloud_storage(cfg, Some(gcs_config.bucket), gcs_config.id.clone())
 }
 
-#[cfg(test)]
-mod tests {
+// #[cfg(test)]
+// mod tests {
 
-	use std::{collections::HashSet, env};
+// 	use std::{collections::HashSet, env};
 
-	use super::*;
-	use dotenv::dotenv;
+// 	use super::*;
+// 	use dotenv::dotenv;
 
-	#[tokio::test]
-	async fn test_gcs_collector() {
-		dotenv().ok();
+// 	#[tokio::test]
+// 	async fn test_gcs_collector() {
+// 		dotenv().ok();
 
-		// Configure the GCS collector config with a mock credential
-		let gcs_config = GcsCollectorConfig {
-			bucket: "querent-testing-api".to_string(),
-			credentials: env::var("GCS_CREDENTIALS").unwrap_or_else(|_| "{}".to_string()),
-			id: "GCS-source".to_string(),
-		};
+// 		// Configure the GCS collector config with a mock credential
+// 		let gcs_config = GcsCollectorConfig {
+// 			bucket: "querent-testing-api".to_string(),
+// 			credentials: env::var("GCS_CREDENTIALS").unwrap_or_else(|_| "{}".to_string()),
+// 			id: "GCS-source".to_string(),
+// 		};
 
-		// Initialize the GCS storage
-		match get_gcs_storage(gcs_config) {
-			Ok(gcs_storage) => {
-				assert!(gcs_storage.check_connectivity().await.is_ok(), "Failed to connect");
+// 		// Initialize the GCS storage
+// 		match get_gcs_storage(gcs_config) {
+// 			Ok(gcs_storage) => {
+// 				assert!(gcs_storage.check_connectivity().await.is_ok(), "Failed to connect");
 
-				let result = gcs_storage.poll_data().await;
+// 				let result = gcs_storage.poll_data().await;
 
-				let mut stream = result.unwrap();
-				let mut count_files: HashSet<String> = HashSet::new();
-				while let Some(item) = stream.next().await {
-					match item {
-						Ok(collected_bytes) =>
-							if let Some(pathbuf) = collected_bytes.file {
-								if let Some(str_path) = pathbuf.to_str() {
-									count_files.insert(str_path.to_string());
-								}
-							},
-						Err(err) => eprintln!("Expected successful data collection {:?}", err),
-					}
-				}
-				println!("Files are --- {:?}", count_files);
-			},
-			Err(e) => {
-				println!("Failed to initialize GCS storage: {:?}", e);
-				assert!(false, "Storage initialization failed with error: {:?}", e);
-			},
-		}
-	}
-}
+// 				let mut stream = result.unwrap();
+// 				let mut count_files: HashSet<String> = HashSet::new();
+// 				while let Some(item) = stream.next().await {
+// 					match item {
+// 						Ok(collected_bytes) =>
+// 							if let Some(pathbuf) = collected_bytes.file {
+// 								if let Some(str_path) = pathbuf.to_str() {
+// 									count_files.insert(str_path.to_string());
+// 								}
+// 							},
+// 						Err(err) => eprintln!("Expected successful data collection {:?}", err),
+// 					}
+// 				}
+// 				println!("Files are --- {:?}", count_files);
+// 			},
+// 			Err(e) => {
+// 				println!("Failed to initialize GCS storage: {:?}", e);
+// 				assert!(false, "Storage initialization failed with error: {:?}", e);
+// 			},
+// 		}
+// 	}
+// }

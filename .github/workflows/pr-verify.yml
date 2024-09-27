@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [verify, changes]
     if: ${{ needs.changes.outputs.rust == 'true' }}
-    env: 
+    env:
       AZURE_CONNECTION_STRING: ${{secrets.AZURE_CONNECTION_STRING}}
       AZURE_CREDENTIALS: ${{secrets.AZURE_CREDENTIALS}}
       DRIVE_CLIENT_SECRET: ${{secrets.DRIVE_CLIENT_SECRET}}
@@ -97,6 +97,7 @@ jobs:
       ONEDRIVE_REFRESH_TOKEN: ${{secrets.ONEDRIVE_REFRESH_TOKEN}}
       AWS_ACCESS_KEY: ${{secrets.AWS_ACCESS_KEY}}
       AWS_SECRET_KEY: ${{secrets.AWS_SECRET_KEY}}
+      NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

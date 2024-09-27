@@ -516,26 +516,35 @@ pub struct NewsCollectorConfig {
     /// Query of the News collector.
     #[prost(string, tag = "2")]
     pub query: ::prost::alloc::string::String,
+    /// Query type of the News collector.
+    #[prost(enumeration = "QueryType", tag = "3")]
+    pub query_type: i32,
+    /// Comma separated sources of the news representing news sources or blogs
+    #[prost(string, optional, tag = "4")]
+    pub sources: ::core::option::Option<::prost::alloc::string::String>,
     /// From date of the News collector.
-    #[prost(string, tag = "3")]
-    pub from_date: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "5")]
+    pub from_date: ::core::option::Option<::prost::alloc::string::String>,
     /// To date of the News collector.
-    #[prost(string, tag = "4")]
-    pub to_date: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "6")]
+    pub to_date: ::core::option::Option<::prost::alloc::string::String>,
     /// Language of the News collector.
-    #[prost(string, tag = "5")]
-    pub language: ::prost::alloc::string::String,
-    /// Domains of the News collector.
-    #[prost(string, tag = "6")]
-    pub domains: ::prost::alloc::string::String,
-    /// Exclude domains of the News collector.
-    #[prost(string, tag = "7")]
-    pub exclude_domains: ::prost::alloc::string::String,
-    /// Sources of the News collector.
-    #[prost(string, tag = "8")]
-    pub sources: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "7")]
+    pub language: ::core::option::Option<::prost::alloc::string::String>,
+    /// Sort by for the News Collector
+    #[prost(enumeration = "SortBy", optional, tag = "8")]
+    pub sort_by: ::core::option::Option<i32>,
+    /// Page Size of the News Response
+    #[prost(int32, optional, tag = "9")]
+    pub page_size: ::core::option::Option<i32>,
+    /// Page number of the News Response
+    #[prost(int32, optional, tag = "10")]
+    pub page: ::core::option::Option<i32>,
+    /// Comma-seperated string of Domains of the News Collector
+    #[prost(string, optional, tag = "11")]
+    pub domains: ::core::option::Option<::prost::alloc::string::String>,
     /// Id for the collector
-    #[prost(string, tag = "9")]
+    #[prost(string, tag = "12")]
     pub id: ::prost::alloc::string::String,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
@@ -590,6 +599,67 @@ impl Model {
             "BERT" => Some(Self::Bert),
             "GeoBert" => Some(Self::GeoBert),
             "PubMedBert" => Some(Self::PubMedBert),
+            _ => None,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum QueryType {
+    Everything = 0,
+    TopHeadlines = 1,
+}
+impl QueryType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            QueryType::Everything => "Everything",
+            QueryType::TopHeadlines => "TopHeadlines",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "Everything" => Some(Self::Everything),
+            "TopHeadlines" => Some(Self::TopHeadlines),
+            _ => None,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum SortBy {
+    Relevancy = 0,
+    Popularity = 1,
+    PublishedAt = 2,
+}
+impl SortBy {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            SortBy::Relevancy => "Relevancy",
+            SortBy::Popularity => "Popularity",
+            SortBy::PublishedAt => "PublishedAt",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "Relevancy" => Some(Self::Relevancy),
+            "Popularity" => Some(Self::Popularity),
+            "PublishedAt" => Some(Self::PublishedAt),
             _ => None,
         }
     }
