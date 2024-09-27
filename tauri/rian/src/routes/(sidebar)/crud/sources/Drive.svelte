@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Button, Input, Label } from 'flowbite-svelte';
-	import { addDataSource, type CollectorMetadata } from '../../../../stores/appState';
+	import {
+		addDataSource,
+		googleDriveRefreshToken,
+		type CollectorMetadata
+	} from '../../../../stores/appState';
 	import { goto } from '$app/navigation';
 	import { isVisible } from '../../../../stores/appState';
 	import {
@@ -9,10 +13,11 @@
 		type CollectorConfig,
 		type GoogleDriveCollectorConfig
 	} from '../../../../service/bindings';
+	import Modal from './add/Modal.svelte';
 
 	let drive_config: GoogleDriveCollectorConfig = {
-		drive_client_id: import.meta.env.VITE_DRIVE_CLIENT_ID,
-		drive_client_secret: import.meta.env.VITE_DRIVE_CLIENT_SECRET,
+		drive_client_id: '',
+		drive_client_secret: '',
 		drive_refresh_token: '',
 		folder_to_crawl: '',
 		id: ''
@@ -36,56 +41,25 @@
 
 	let folderPath = '';
 	let name = '';
-	let drive_client_id: string;
-	let drive_client_secret: string;
+	let showModal = false;
+	let modalMessage = '';
 
-	onMount(async () => {
-		const params = new URLSearchParams(window.location.search);
-		const url = new URL(window.location.href);
-		const code = params.get('code');
-		if (code) {
-			try {
-				const result = await commands.getDriveCredentials();
-				if (result.status == 'ok') {
-					drive_client_id = result.data[0];
-					drive_client_secret = result.data[1];
-				}
-				const response = await fetch('https://oauth2.googleapis.com/token', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/x-www-form-urlencoded'
-					},
-					body: new URLSearchParams({
-						code: code,
-						client_id: drive_client_id,
-						client_secret: drive_client_secret,
-						redirect_uri: import.meta.env.VITE_DRIVE_REDIRECT_URL,
-						grant_type: 'authorization_code'
-					})
-				});
-
-				if (!response.ok) {
-					console.error('HTTP error! status:', response.status);
-					console.log('Error response body:', await response.text());
-					return;
-				}
-
-				const data = await response.json();
-				drive_config.drive_refresh_token = data.refresh_token;
-
-				url.searchParams.delete('code');
-				url.searchParams.delete('scope');
-				window.history.replaceState({}, '', url.toString());
-			} catch (error) {
-				console.error('Error during token exchange:', error);
-			}
-		}
-	});
-
-	function handleSubmit() {
+	async function handleSubmit() {
 		if (folderPath && name) {
+			if (!$googleDriveRefreshToken || $googleDriveRefreshToken == '') {
+				modalMessage = 'Please complete the oauth first ';
+				showModal = true;
+				return;
+			}
+			const result = await commands.getDriveCredentials();
+			if (result.status == 'ok') {
+				drive_config.drive_client_id = result.data[0];
+				drive_config.drive_client_secret = result.data[1];
+			}
 			drive_config.folder_to_crawl = folderPath;
 			drive_config.id = crypto.randomUUID();
+			drive_config.drive_refresh_token = $googleDriveRefreshToken;
+
 			collector_config.backend = { drive: drive_config };
 			collector_config.name = name;
 
@@ -94,6 +68,8 @@
 			metadata.type = 'drive';
 			addDataSource(collector_config);
 			commands.setCollectors([collector_config]);
+
+			googleDriveRefreshToken.set('');
 
 			goto('/crud/sources');
 		} else {
@@ -143,4 +119,6 @@
 			</div>
 		</form>
 	</div>
+
+	<Modal bind:show={showModal} message={modalMessage} />
 {/if}

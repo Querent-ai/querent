@@ -59,6 +59,9 @@ node = { path = "../../../querent/node" }
 common = { path = "../../../querent/common" }
 proto = { path = "../../../querent/proto" }
 insights = { path = "../../../querent/insights" }
+tiny_http = "0.12.0"
+serde_urlencoded = "0.7"
+dotenv = "0.15"
 storage = { path = "../../../querent/storage" }
 
 [target.'cfg(target_os = "macos")'.dependencies]

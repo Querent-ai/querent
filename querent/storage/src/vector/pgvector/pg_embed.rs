@@ -613,11 +613,19 @@ impl FabricAccessor for PGEmbed {
 				for (document_id, entity_mix) in most_mix_documents.into_iter().take(5) {
 					documents.push((document_id, entity_mix));
 				}
-				let combined_query = format!(
+				let combined_query: String;
+				if documents.len() == 1 {
+					combined_query =  format!(
+						"A unique document stands out for its rich diversity of semantic connections, reflecting a broad spectrum of topics: '{}'.",
+						documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
+					);
+				} else {
+					combined_query =  format!(
 						"Certain documents stand out for their rich diversity of semantic connections, reflecting a broad spectrum of topics. For instance, document '{}' reveals a complex network of unique data points, followed by '{}'.",
 						documents[0].0.rsplit('/').next().unwrap_or(&documents[0].0),
 						documents[1].0.rsplit('/').next().unwrap_or(&documents[1].0),
 					);
+				};
 
 				suggestions.push(QuerySuggestion {
 					query: combined_query,

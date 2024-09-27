@@ -2,7 +2,7 @@
 	"$schema": "../gen/schemas/capabilities.json",
 	"identifier": "rian-main-capability",
 	"description": "Capability for the core rian application",
-	"windows": ["main"],
+	"windows": ["main", "google-oauth"],
 	"permissions": [
 		"dialog:allow-ask",
 		"dialog:allow-save",
@@ -14,6 +14,13 @@
 		"fs:allow-app-write",
 		"fs:allow-app-write-recursive",
 		"fs:allow-appcache-write",
-		"fs:allow-appcache-write-recursive"
+		"fs:allow-appcache-write-recursive",
+		"core:webview:allow-create-webview-window",
+		"shell:default",
+		"core:event:allow-listen",
+		"notification:allow-is-permission-granted",
+		"notification:default",
+		"core:event:allow-unlisten",
+		"shell:default"
 	]
 }

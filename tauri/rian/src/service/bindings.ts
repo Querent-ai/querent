@@ -131,6 +131,14 @@ export const commands = {
 			if (e instanceof Error) throw e;
 			else return { status: 'error', error: e as any };
 		}
+	},
+	async startOauthServer(): Promise<Result<string, string>> {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('start_oauth_server') };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e as any };
+		}
 	}
 };
 
