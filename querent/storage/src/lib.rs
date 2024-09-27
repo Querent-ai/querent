@@ -31,6 +31,7 @@ use std::{
 };
 
 pub use crate::{Storage, StorageError, StorageErrorKind, StorageResult};
+const DB_NAME: &str = "querent_rian_node_v1";
 
 pub async fn create_storages(
 	storage_configs: &[StorageConfig],
@@ -125,17 +126,34 @@ pub async fn create_default_storage(database_url: String) -> anyhow::Result<Arc<
 
 pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, String), StorageError> {
 	let mut data_dir = path.clone();
-	data_dir.push("pg_embed");
-
-	let settings = Settings {
-		version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+	data_dir.push("rian_postgres_node");
+	// create the data directory if it does not exist
+	if !data_dir.exists() {
+		std::fs::create_dir_all(&data_dir).map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
-		})?,
-		data_dir,
-		..Default::default()
-	};
-	eprintln!("start_postgres_embedded1");
+		})?;
+	}
+	let mut password_dir = path.clone();
+	password_dir.push("rian_postgres_password");
+	// create the password directory if it does not exist
+	if !password_dir.exists() {
+		std::fs::create_dir_all(&password_dir).map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	}
+	let passwword_file_name = ".pgpass";
+	let mut settings = Settings::new();
+	settings.version = VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	settings.temporary = false;
+	settings.data_dir = data_dir;
+	settings.username = "postgres".to_string();
+	settings.password = "postgres".to_string();
+	settings.password_file = password_dir.join(passwword_file_name);
 	let mut postgresql = PostgreSQL::new(settings);
 	postgresql.setup().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
@@ -155,22 +173,24 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-	eprintln!("start_postgres_embedded1");
-
 	postgresql.start().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-	let database_name = "querent_rian";
-	postgresql.create_database(database_name).await.map_err(|e| StorageError {
+	let exists = postgresql.database_exists(DB_NAME).await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-
-	postgresql.database_exists(database_name).await.map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
-		source: Arc::new(anyhow::Error::from(e)),
-	})?;
+	if !exists {
+		postgresql.create_database(DB_NAME).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	}
+	if exists {
+		let db_url = postgresql.settings().url(DB_NAME);
+		return Ok((postgresql, db_url));
+	}
 	// restart the postgresql server
 	postgresql.stop().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
@@ -180,9 +200,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-	eprintln!("start_postgres_embedded1");
-
-	let database_url = postgresql.settings().url(database_name);
+	let database_url = postgresql.settings().url(DB_NAME);
 	// prepare async pool
 	let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url.clone());
 	let pool = diesel_async::pooled_connection::deadpool::Pool::builder(manager)
@@ -218,7 +236,6 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		})?;
 	// close the pool
 	pool.close();
-	eprintln!("start_postgres_embedded111");
 
 	// restart the postgresql server
 	postgresql.stop().await.map_err(|e| StorageError {
@@ -230,7 +247,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 	// check if the database is created
-	postgresql.database_exists(database_name).await.map_err(|e| StorageError {
+	postgresql.database_exists(DB_NAME).await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
@@ -239,7 +256,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		eprintln!("current status: {:?}", postgresql.status());
 		tokio::time::sleep(Duration::from_secs(1)).await;
 	}
-	let database_url = postgresql.settings().url(database_name);
+	let database_url = postgresql.settings().url(DB_NAME);
 	Ok((postgresql, database_url))
 }
 

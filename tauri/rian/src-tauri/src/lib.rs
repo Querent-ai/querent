@@ -53,7 +53,7 @@ lazy_static::lazy_static! {
     static ref PG_EMBED: Arc<Mutex<Option<PostgreSQL>>> = Arc::new(Mutex::new(None));
 }
 
-const DB_NAME: &str = "querent_rian_v1";
+const DB_NAME: &str = "querent_rian_standalone_v1";
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -324,7 +324,7 @@ async fn start_querent_services(
 
 pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     let mut data_dir = path.clone();
-    data_dir.push("rian_postgres");
+    data_dir.push("rian_postgres_standalone");
     // create the data directory if it does not exist
     if !data_dir.exists() {
         std::fs::create_dir_all(&data_dir).map_err(|e| StorageError {
