@@ -5,8 +5,8 @@ Parameters
 Licensor: QuerentAI LLC  
 Licensed Work: Querent (the "Licensed Work") - The Licensed Work is (c) 2023 QuerentAI LLC.  
 Additional Use Grant: You may make use of the Licensed Work, provided that you may not use the Licensed Work for:
-1. AI-related services. An "AI-related service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating systems dependent on Querent controlled by third parties.
-2. Database Services, as defined by SurrealDB’s license: a "Database Service" is a commercial offering that allows third parties (other than your direct employees and contractors) to access the functionality of the Licensed Work by creating or managing tables whose schemas are controlled or managed by such third parties.
+1. AI-related services: An "AI-related service" is a commercial offering that allows third parties (other than your employees and contractors) to access the functionality of the Licensed Work by creating systems dependent on Querent controlled by third parties.
+2. Database Services: a "Database Service" is a commercial offering that allows third parties (other than your direct employees and contractors) to access the functionality of the Licensed Work by creating or managing tables whose schemas are controlled or managed by such third parties.
 3. Any use that integrates or embeds the Licensed Work in a service or product offering that provides database, big data, or analytics services to third parties unless explicitly authorized by the Licensor.
 
 Change Date: 2026-07-30  
