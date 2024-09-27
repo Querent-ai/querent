@@ -353,35 +353,45 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     settings.password = "postgres".to_string();
     settings.password_file = password_dir.join(passwword_file_name);
     let mut postgresql = postgresql_embedded::blocking::PostgreSQL::new(settings);
+    // Synchronously set up PostgreSQL
+    postgresql.setup().map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
 
+    // Install PostgreSQL extensions synchronously
+    let postgresql_settings = postgresql.settings().clone();
+    postgresql_extensions::blocking::install(
+        &postgresql_settings,
+        "tensor-chord",
+        "pgvecto.rs",
+        &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?,
+    )
+    .map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+
+    // Start PostgreSQL server synchronously
+    // Check if PostgreSQL is already running; stop it if it is.
     if is_postgres_running(&data_dir) {
-        info!("PostgreSQL server is already running. Skipping startup.");
-    } else {
-        // Synchronously set up PostgreSQL
-        postgresql.setup().map_err(|e| StorageError {
+        postgresql.stop().map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
         })?;
-
-        // Install PostgreSQL extensions synchronously
-        let postgresql_settings = postgresql.settings().clone();
-        postgresql_extensions::blocking::install(
-            &postgresql_settings,
-            "tensor-chord",
-            "pgvecto.rs",
-            &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+    }
+    match postgresql.start() {
+        Ok(_) => log::info!("PostgreSQL started successfully."),
+        Err(e) => {
+            eprintln!("Failed to start PostgreSQL: {:?}", e);
+            return Err(StorageError {
                 kind: StorageErrorKind::Internal,
                 source: Arc::new(anyhow::Error::from(e)),
-            })?,
-        )
-        .map_err(|e| StorageError {
-            kind: StorageErrorKind::Internal,
-            source: Arc::new(anyhow::Error::from(e)),
-        })?;
-        // Start PostgreSQL server synchronously
-        postgresql
-            .start()
-            .expect("Failed to start embedded Postgres");
+            });
+        }
     }
     // Check if the database exists
     let exists = postgresql
