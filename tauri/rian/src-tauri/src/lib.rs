@@ -14,6 +14,7 @@ use node::serve::service::QUERENT_SERVICES_ONCE;
 use node::{serve_quester_without_servers, shutdown_querent};
 use once_cell::sync::OnceCell;
 use parking_lot::Mutex;
+use postgresql_embedded::blocking::PostgreSQL;
 use postgresql_embedded::{Settings, VersionReq};
 use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
 #[cfg(debug_assertions)]
@@ -48,6 +49,11 @@ pub static RUNNING_INSIGHTS_SESSIONS: Mutex<Vec<(String, InsightAnalystRequest)>
 pub const FETCH_LIMIT_MAX: i64 = 50;
 pub const SITEMAP_LIMIT: i64 = 50000;
 pub const SITEMAP_DAYS: i64 = 31;
+lazy_static::lazy_static! {
+    static ref PG_EMBED: Arc<Mutex<Option<PostgreSQL>>> = Arc::new(Mutex::new(None));
+}
+
+const DB_NAME: &str = "querent_rian_standalone_v1";
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -141,8 +147,14 @@ pub fn run(node_config: NodeConfig) {
     }
     // Start embedded querent services
     let querent_data_path = get_querent_data_path();
-    let (_psql, url) =
-        start_postgres_sync(querent_data_path.clone()).expect("Failed to start embedded Postgres");
+    start_postgres_sync(querent_data_path.clone()).expect("Failed to start embedded Postgres");
+    if PG_EMBED.lock().is_none() {
+        error!("Failed to start embedded Postgres");
+        return;
+    }
+    let _psql = PG_EMBED.lock().take().unwrap();
+    let url = _psql.settings().url(DB_NAME);
+    info!("Postgres started at: {}", url);
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
@@ -247,6 +259,9 @@ pub fn run(node_config: NodeConfig) {
         }
         _ => {}
     });
+
+    _psql.stop().expect("Failed to stop embedded Postgres");
+    drop(_psql);
 }
 
 fn schedule_update_checks(app_handle: AppHandle) {
@@ -265,7 +280,7 @@ fn schedule_update_checks(app_handle: AppHandle) {
                     }));
                     tray::create_tray(&app_handle).unwrap();
                 }
-                Ok(None) => {
+                Ok(_) => {
                     if let Some(Some(_)) = *UPDATE_RESULT.lock() {
                         *UPDATE_RESULT.lock() = Some(None);
                         tray::create_tray(&app_handle).unwrap();
@@ -307,23 +322,37 @@ async fn start_querent_services(
     }
 }
 
-pub fn start_postgres_sync(
-    path: PathBuf,
-) -> Result<(postgresql_embedded::blocking::PostgreSQL, String), StorageError> {
+pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     let mut data_dir = path.clone();
-    data_dir.push("pg_embed");
-
-    let settings = Settings {
-        version: VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+    data_dir.push("rian_postgres_standalone");
+    // create the data directory if it does not exist
+    if !data_dir.exists() {
+        std::fs::create_dir_all(&data_dir).map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
-        })?,
-        data_dir,
-        ..Default::default()
-    };
-
+        })?;
+    }
+    let mut password_dir = path.clone();
+    password_dir.push("rian_postgres_password");
+    // create the password directory if it does not exist
+    if !password_dir.exists() {
+        std::fs::create_dir_all(&password_dir).map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+    }
+    let passwword_file_name = ".pgpass";
+    let mut settings = Settings::new();
+    settings.version = VersionReq::parse("=16.4.0").map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+    settings.temporary = false;
+    settings.data_dir = data_dir.clone();
+    settings.username = "postgres".to_string();
+    settings.password = "postgres".to_string();
+    settings.password_file = password_dir.join(passwword_file_name);
     let mut postgresql = postgresql_embedded::blocking::PostgreSQL::new(settings);
-
     // Synchronously set up PostgreSQL
     postgresql.setup().map_err(|e| StorageError {
         kind: StorageErrorKind::Internal,
@@ -347,28 +376,46 @@ pub fn start_postgres_sync(
     })?;
 
     // Start PostgreSQL server synchronously
-    postgresql
-        .start()
-        .expect("Failed to start embedded Postgres");
-
-    let database_name = "querent_rian";
+    // Check if PostgreSQL is already running; stop it if it is.
+    if is_postgres_running(&data_dir) {
+        postgresql.stop().map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+    }
+    match postgresql.start() {
+        Ok(_) => log::info!("PostgreSQL started successfully."),
+        Err(e) => {
+            eprintln!("Failed to start PostgreSQL: {:?}", e);
+            return Err(StorageError {
+                kind: StorageErrorKind::Internal,
+                source: Arc::new(anyhow::Error::from(e)),
+            });
+        }
+    }
+    // Check if the database exists
+    let exists = postgresql
+        .database_exists(DB_NAME)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
 
     // Create the database synchronously
-    postgresql
-        .create_database(database_name)
-        .map_err(|e| StorageError {
-            kind: StorageErrorKind::Internal,
-            source: Arc::new(anyhow::Error::from(e)),
-        })?;
-
-    // Check if the database exists
-    postgresql
-        .database_exists(database_name)
-        .map_err(|e| StorageError {
-            kind: StorageErrorKind::Internal,
-            source: Arc::new(anyhow::Error::from(e)),
-        })?;
-
+    if !exists {
+        postgresql
+            .create_database(DB_NAME)
+            .map_err(|e| StorageError {
+                kind: StorageErrorKind::Internal,
+                source: Arc::new(anyhow::Error::from(e)),
+            })?;
+    }
+    // if exists we dont need to do below steps that would mean it has been done before
+    if exists {
+        // store the postgresql instance
+        *PG_EMBED.lock() = Some(postgresql);
+        return Ok(());
+    }
     // Restart PostgreSQL server to apply extension changes
     postgresql.stop().map_err(|e| StorageError {
         kind: StorageErrorKind::Internal,
@@ -379,7 +426,7 @@ pub fn start_postgres_sync(
         kind: StorageErrorKind::Internal,
         source: Arc::new(anyhow::Error::from(e)),
     })?;
-    let database_url = postgresql.settings().url(database_name);
+    let database_url = postgresql.settings().url(DB_NAME);
     let manager = diesel::r2d2::ConnectionManager::<PgConnection>::new(database_url.clone());
     let pool = r2d2::Pool::builder()
         .max_size(10)
@@ -421,12 +468,18 @@ pub fn start_postgres_sync(
     })?;
     // check if the database is created
     postgresql
-        .database_exists(database_name)
+        .database_exists(DB_NAME)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
         })?;
 
-    let database_url = postgresql.settings().url(database_name);
-    Ok((postgresql, database_url))
+    // store the postgresql instance
+    *PG_EMBED.lock() = Some(postgresql);
+    Ok(())
+}
+
+fn is_postgres_running(data_dir: &PathBuf) -> bool {
+    let pid_file = data_dir.join("postmaster.pid");
+    pid_file.exists()
 }
