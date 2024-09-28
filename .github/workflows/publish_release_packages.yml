@@ -129,15 +129,15 @@ jobs:
         if: matrix.config.os == 'macos-latest'
         run: |
           brew install protobuf
-          brew install postgresql libpq
+          brew install postgresql@16 libpq
       - name: Install protoc (windows only)
         if: matrix.config.os == 'windows-latest'
         run: |
           choco install protoc
-          choco install postgresql12 --force --params '/Password:root'
-          powershell -Command "echo 'C:\\Program Files\\PostgreSQL\\12\\bin' | Out-File -Encoding ascii -Append $env:GITHUB_PATH"
-          powershell -Command "echo 'C:\\Program Files\\PostgreSQL\\12\\lib' | Out-File -Encoding ascii -Append $env:GITHUB_PATH"
-          powershell -Command "echo 'PQ_LIB_DIR=C:\\Program Files\\PostgreSQL\\12\\lib' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
+          choco install postgresql16 --force --params '/Password:root'
+          powershell -Command "echo 'C:\\Program Files\\PostgreSQL\\16\\bin' | Out-File -Encoding ascii -Append $env:GITHUB_PATH"
+          powershell -Command "echo 'C:\\Program Files\\PostgreSQL\\16\\lib' | Out-File -Encoding ascii -Append $env:GITHUB_PATH"
+          powershell -Command "echo 'PQ_LIB_DIR=C:\\Program Files\\PostgreSQL\\16\\lib' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
           powershell -Command "echo 'PG_DATABASE_URL=postgres://postgres:root@localhost/' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
           powershell -Command "echo 'PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
       - name: Refresh Environment Variables
@@ -176,7 +176,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
         env:
-          MACOSX_DEPLOYMENT_TARGET: "14.0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -201,7 +200,6 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
         env:
-          MACOSX_DEPLOYMENT_TARGET: "14.0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}

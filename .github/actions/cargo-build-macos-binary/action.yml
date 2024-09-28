@@ -20,7 +20,7 @@ runs:
       shell: bash
     - name: Install pq and postgres
       shell: bash
-      run: brew install postgresql libpq
+      run: brew install postgresql@16 libpq
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
@@ -44,7 +44,7 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build binary
-      run: MACOSX_DEPLOYMENT_TARGET=14.0 cargo build --release  --target ${{ matrix.target }} --features "license-check","openssl-support" --bin rian
+      run: cargo build --release  --target ${{ matrix.target }} --features "license-check","openssl-support" --bin rian
       shell: bash
       working-directory: ./querent
       env:
