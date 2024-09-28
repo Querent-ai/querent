@@ -18,8 +18,11 @@ importers:
         specifier: 2.0.0-rc.0
         version: 2.0.0-rc.0
       '@tauri-apps/plugin-fs':
-        specifier: 2.0.0-rc.1
-        version: 2.0.0-rc.1
+        specifier: 2.0.0-rc.0
+        version: 2.0.0-rc.0
+      '@tauri-apps/plugin-shell':
+        specifier: 2.0.0-rc.0
+        version: 2.0.0-rc.0
       chart.js:
         specifier: ^4.4.3
         version: 4.4.3
@@ -768,9 +771,6 @@ packages:
     resolution: {integrity: sha512-v454Qs3REHc3Za59U+/eSmBsdmF+3NE5+76+lFDaitVqN4ZglDHENDaMARYKGJVZuxiSkzyqG0SeG7lLQjVkPA==}
     engines: {node: '>= 18.18', npm: '>= 6.6.0', yarn: '>= 1.19.1'}
 
-  '@tauri-apps/api@2.0.0-rc.2':
-    resolution: {integrity: sha512-qIJJ1gKkzpPmEmIGTpja6XhuCD8A+vEh/wKaO7TzbxKiws5w3E+Kg4sBtwrH85hjMyqT0SgAUVaUk9XS7FBg3g==}
-
   '@tauri-apps/cli-darwin-arm64@2.0.0-rc.0':
     resolution: {integrity: sha512-jpQc++6ESFUuBpoXvJNPTRtrmToMIByOynZ4K5SAwI9RkKUikSaDmlRZV0GisOVPT7TT08khk7MPtAQeFyjqwA==}
     engines: {node: '>= 10'}
@@ -839,8 +839,11 @@ packages:
   '@tauri-apps/plugin-dialog@2.0.0-rc.0':
     resolution: {integrity: sha512-DPOXYe8SQ6Radk/67EOdaomlxL7oF99JO/ZUaPp1IBEs3Wro7lhlz63CfdKIBfKIZTLJLzP1R7/EiPL/GTA3Bg==}
 
-  '@tauri-apps/plugin-fs@2.0.0-rc.1':
-    resolution: {integrity: sha512-r6N5dqBNXy9YAK9XbiEqAq3ZKBIN+TWevE7ZFmSRdvdSB1urrLweYu4wxycY2kDaDPzSeeOIJhCmqdNrFT9OSA==}
+  '@tauri-apps/plugin-fs@2.0.0-rc.0':
+    resolution: {integrity: sha512-74VCXEZlzTJ+Jv1V3KrV0qIHhSePpE/ljsF78rcEuvSfyTxLtt/Sb5CIUmVhFlKTRFOH9dX50T4dTZ3qFLyRnA==}
+
+  '@tauri-apps/plugin-shell@2.0.0-rc.0':
+    resolution: {integrity: sha512-bhUcQcrqZoK8H1DFXapr5r1Z75oh6Kd5Tltz97XpZFLREEqp+KhN2Fvyh8r/fKAyenYsTYUIsDsyGdjdueuF9g==}
 
   '@types/cookie@0.6.0':
     resolution: {integrity: sha512-4Kh9a6B2bQciAhf7FSuMRRkUWecJgJu9nPnx3yzpsfXX/c50REIqpHY4C82bXP90qrLtXtkDxTZosYO3UpOwlA==}
@@ -3407,8 +3410,6 @@ snapshots:
 
   '@tauri-apps/api@2.0.0-rc.0': {}
 
-  '@tauri-apps/api@2.0.0-rc.2': {}
-
   '@tauri-apps/cli-darwin-arm64@2.0.0-rc.0':
     optional: true
 
@@ -3456,9 +3457,13 @@ snapshots:
     dependencies:
       '@tauri-apps/api': 2.0.0-rc.0
 
-  '@tauri-apps/plugin-fs@2.0.0-rc.1':
+  '@tauri-apps/plugin-fs@2.0.0-rc.0':
     dependencies:
-      '@tauri-apps/api': 2.0.0-rc.2
+      '@tauri-apps/api': 2.0.0-rc.0
+
+  '@tauri-apps/plugin-shell@2.0.0-rc.0':
+    dependencies:
+      '@tauri-apps/api': 2.0.0-rc.0
 
   '@types/cookie@0.6.0': {}
 

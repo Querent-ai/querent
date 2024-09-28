@@ -131,6 +131,14 @@ export const commands = {
 			if (e instanceof Error) throw e;
 			else return { status: 'error', error: e as any };
 		}
+	},
+	async startOauthServer(): Promise<Result<string, string>> {
+		try {
+			return { status: 'ok', data: await TAURI_INVOKE('start_oauth_server') };
+		} catch (e) {
+			if (e instanceof Error) throw e;
+			else return { status: 'error', error: e as any };
+		}
 	}
 };
 
@@ -607,29 +615,41 @@ export type NewsCollectorConfig = {
 	 */
 	query: string;
 	/**
+	 * Query type of the News collector.
+	 */
+	query_type: number;
+	/**
+	 * Comma separated sources of the news representing news sources or blogs
+	 */
+	sources: string | null;
+	/**
 	 * From date of the News collector.
 	 */
-	from_date: string;
+	from_date: string | null;
 	/**
 	 * To date of the News collector.
 	 */
-	to_date: string;
+	to_date: string | null;
 	/**
 	 * Language of the News collector.
 	 */
-	language: string;
+	language: string | null;
 	/**
-	 * Domains of the News collector.
+	 * Sort by for the News Collector
 	 */
-	domains: string;
+	sort_by: number | null;
 	/**
-	 * Exclude domains of the News collector.
+	 * Page Size of the News Response
 	 */
-	exclude_domains: string;
+	page_size: number | null;
 	/**
-	 * Sources of the News collector.
+	 * Page number of the News Response
 	 */
-	sources: string;
+	page: number | null;
+	/**
+	 * Comma-seperated string of Domains of the News Collector
+	 */
+	domains: string | null;
 	/**
 	 * Id for the collector
 	 */
@@ -741,7 +761,7 @@ import { type WebviewWindow as __WebviewWindow__ } from '@tauri-apps/api/webview
 type __EventObj__<T> = {
 	listen: (cb: TAURI_API_EVENT.EventCallback<T>) => ReturnType<typeof TAURI_API_EVENT.listen<T>>;
 	once: (cb: TAURI_API_EVENT.EventCallback<T>) => ReturnType<typeof TAURI_API_EVENT.once<T>>;
-	emit: T extends null
+	emit: null extends T
 		? (payload?: T) => ReturnType<typeof TAURI_API_EVENT.emit>
 		: (payload: T) => ReturnType<typeof TAURI_API_EVENT.emit>;
 };
