@@ -18,13 +18,9 @@ runs:
     - name: Install protoc
       run: brew install protobuf
       shell: bash
-    - name: Install brew install libpq && brew link --force libpq
+    - name: Install libpq and postgresql16
       run: |
-        brew install libpq
-        brew link --overwrite libpq
-        echo "export LIBPQ_INCLUDE_DIR=$(brew --prefix libpq)/include" >> $GITHUB_ENV
-        echo "export LIBPQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
-        echo "export PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
+        brew install --skip-post-install postgresql16 libpq
       shell: bash
     - name: Install rustup
       shell: bash
