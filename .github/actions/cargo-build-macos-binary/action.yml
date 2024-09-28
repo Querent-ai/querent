@@ -20,7 +20,7 @@ runs:
       shell: bash
     - name: Install libpq and postgresql16
       run: |
-        brew install --skip-post-install postgresql16 libpq
+        brew install --skip-post-install postgresql@16 libpq
       shell: bash
     - name: Install rustup
       shell: bash
