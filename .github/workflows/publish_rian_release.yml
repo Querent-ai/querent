@@ -65,7 +65,7 @@ jobs:
       - name: Download R!AN Windows
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-windows-latest-x86_64
+          name: tauri-rian-bundle-windows-2022-x86_64
           path: artifacts/windows-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -101,7 +101,7 @@ jobs:
       - name: Download R!AN Mac (aarch64)
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-macos-latest-aarch64
+          name: tauri-rian-bundle-macos-14-aarch64
           path: artifacts/darwin-aarch64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -143,7 +143,7 @@ jobs:
       - name: Download R!AN Mac (x86_64)
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-macos-latest-x86_64
+          name: tauri-rian-bundle-macos-12-x86_64
           path: artifacts/darwin-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -179,7 +179,7 @@ jobs:
       - name: Download R!AN Linux
         uses: actions/download-artifact@v4
         with:
-          name: tauri-rian-bundle-ubuntu-latest-x86_64
+          name: tauri-rian-bundle-ubuntu-22.04-x86_64
           path: artifacts/linux-x86_64
           run-id: ${{ env.WORKFLOW_RUN_ID }}
           github-token: ${{ secrets.GITHUB_TOKEN }}

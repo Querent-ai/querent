@@ -82,6 +82,7 @@ jobs:
           args: -- --profile release --features license-check,openssl-support
       - uses: actions/upload-artifact@v4
         with:
+          name: tauri-rian-bundle-macos-12-x86_64
           path: |
             tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
             tauri/rian/src-tauri/target/release/bundle/**/*.dmg
@@ -176,6 +177,7 @@ jobs:
           args: -- --profile release --features license-check,openssl-support
       - uses: actions/upload-artifact@v4
         with:
+          name: tauri-rian-bundle-ubuntu-22.04-x86_64
           path: |
             tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
             tauri/rian/src-tauri/target/release/bundle/**/*.dmg
@@ -224,6 +226,7 @@ jobs:
           args: -- --profile release --features license-check,openssl-support
       - uses: actions/upload-artifact@v4
         with:
+          name: tauri-rian-bundle-windows-2022-x86_64
           path: |
             tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
             tauri/rian/src-tauri/target/release/bundle/**/*.dmg
