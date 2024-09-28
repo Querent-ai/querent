@@ -20,8 +20,9 @@ runs:
       shell: bash
     - name: Install brew install libpq && brew link --force libpq
       run: |
+        brew unlink postgresql@14
         brew install libpq
-        brew link --force libpq
+        brew link --overwrite libpq
         echo "export LIBPQ_INCLUDE_DIR=$(brew --prefix libpq)/include" >> $GITHUB_ENV
         echo "export LIBPQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
         echo "export PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
@@ -57,6 +58,7 @@ runs:
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
         POSTGRESQL_VERSION: 16
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Bundle archive
       run: |
         make archive BINARY_FILE=target/${{ inputs.target }}/release/rian \

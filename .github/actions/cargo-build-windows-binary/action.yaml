@@ -37,8 +37,6 @@ runs:
     - name: Install libpq
       run: |
           choco install postgresql16 --force --params '/Password:password'
-          set PATH=%PATH%;C:\Program Files\PostgreSQL\16\bin;C:\Program Files\PostgreSQL\16\lib"
-          echo "##vso[task.setvariable variable=PATH;]%PATH%;C:\Program Files\PostgreSQL\16\bin;C:\Program Files\PostgreSQL\16\lib"
       shell: bash
     - name: Install nasm
       uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
@@ -60,6 +58,7 @@ runs:
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
         POSTGRESQL_VERSION: 16
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         PQ_LIB_DIR: "C:\\Program Files\\PostgreSQL\\16\\lib"
         LIB: ${{ env.LIB }}
       working-directory: ./querent
