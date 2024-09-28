@@ -19,7 +19,12 @@ runs:
       run: brew install protobuf
       shell: bash
     - name: Install brew install libpq && brew link --force libpq
-      run: brew install libpq
+      run: |
+        brew install libpq
+        brew link --force libpq
+        echo "export LIBPQ_INCLUDE_DIR=$(brew --prefix libpq)/include" >> $GITHUB_ENV
+        echo "export LIBPQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
+        echo "export PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
       shell: bash
     - name: Install rustup
       shell: bash
