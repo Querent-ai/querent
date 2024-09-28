@@ -1,6 +1,6 @@
 [package]
 name = "storage"
-version = "1.0.1"
+version = "1.0.2"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -22,7 +22,7 @@ diesel-async = { workspace = true, features = [
   "postgres",
   "deadpool",
 ]}
-diesel  = { workspace = true }
+diesel = { workspace = true, features = ["postgres", "r2d2"] }
 deadpool = { workspace = true }
 rustls = { workspace = true }
 tracing = { workspace = true }
@@ -36,8 +36,14 @@ pgvector = { workspace = true }
 redb = { workspace = true }
 rmp-serde = { workspace = true }
 fastembed = { workspace = true }
-surrealdb = { workspace = true }
 bincode = { workspace = true }
 csv = { workspace = true }
 serde_json = { workspace = true }
 itertools = { workspace = true }
+postgresql_embedded = { workspace = true }
+postgresql_extensions = { workspace = true }
+diesel_migrations = { workspace = true }
+rustls-native-certs = { workspace = true }
+sqlx = { workspace = true, features = ["runtime-tokio"] }
+once_cell = { workspace = true }
+lazy_static = { workspace = true }
