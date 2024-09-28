@@ -118,11 +118,8 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: tauri/rian
-      - name: Install Rust nightly
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          targets: ${{ matrix.config.rust_target }}
-          toolchain: "1.79.0"
+      - name: Install Rust Toolchain
+        run: rustup toolchain install nightly
       - name: Install protoc (ubuntu only)
         if: matrix.config.os == 'ubuntu-latest'
         run: |
@@ -179,6 +176,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         if: matrix.config.os != 'macos-latest' || matrix.config.arch != 'aarch64'
         env:
+          MACOSX_DEPLOYMENT_TARGET: "14.0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -203,6 +201,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         if: matrix.config.os == 'macos-latest' && matrix.config.arch == 'aarch64'
         env:
+          MACOSX_DEPLOYMENT_TARGET: "14.0"
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
