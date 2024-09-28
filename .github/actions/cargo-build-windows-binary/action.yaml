@@ -44,7 +44,6 @@ runs:
           powershell -Command "echo 'PG_DATABASE_URL=postgres://postgres:root@localhost/' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
           powershell -Command "echo 'PG_EXAMPLE_DATABASE_URL=postgres://postgres:root@localhost/diesel_example' | Out-File -Encoding ascii -Append $env:GITHUB_ENV"
     - name: Refresh Environment Variables
-      if: matrix.config.os == 'windows-latest'
       shell: powershell
       run: |
         Import-Module "$env:ChocolateyInstall\helpers\chocolateyProfile.psm1"
