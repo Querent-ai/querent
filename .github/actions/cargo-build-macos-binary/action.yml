@@ -20,7 +20,6 @@ runs:
       shell: bash
     - name: Install brew install libpq && brew link --force libpq
       run: |
-        brew unlink postgresql@14
         brew install libpq
         brew link --overwrite libpq
         echo "export LIBPQ_INCLUDE_DIR=$(brew --prefix libpq)/include" >> $GITHUB_ENV
