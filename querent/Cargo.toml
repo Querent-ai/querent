@@ -39,7 +39,7 @@ dyn-clone = "1.0.10"
 enum-iterator = "1.4"
 env_logger = "0.10"
 fail = "0.5"
-fastembed = {git = "https://github.com/saraswatpuneet/fastembed-rs.git", branch = "main" }
+fastembed = { git = "https://github.com/Anush008/fastembed-rs", branch = "main" }
 flume = "0.11"
 fnv = "1"
 futures = "0.3"

@@ -195,6 +195,15 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: windows-2022
     steps:
+      - name: VCKG install onnxruntime
+        run: |
+          # Prepare deps
+          vcpkg integrate install
+          # Download libonnxruntime's static library and tell ORT crate to use it
+          tmp_dir=$(mktemp -d)
+          curl -sSL https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-win-x64-static_lib-1.16.3.zip -o $tmp_dir/onnxruntime.zip
+          unzip -d $tmp_dir $tmp_dir/onnxruntime.zip
+          export ORT_STRATEGY=system ORT_LIB_LOCATION=$tmp_dir/lib
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4

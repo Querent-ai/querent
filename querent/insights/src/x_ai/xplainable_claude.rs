@@ -120,14 +120,11 @@ impl Insight for XAIClaude {
 				_ => "".to_string(),
 			},
 		);
-
-		let embedding_model = TextEmbedding::try_new(InitOptions {
-			model_name: EmbeddingModel::AllMiniLML6V2,
-			show_download_progress: true,
-			cache_dir: get_querent_data_path(),
-			..Default::default()
-		})
-		.map_err(|e| InsightError::new(InsightErrorKind::Internal, e.into()))?;
+		let model_details = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
+			.with_cache_dir(get_querent_data_path())
+			.with_show_download_progress(true);
+		let embedding_model = TextEmbedding::try_new(model_details)
+			.map_err(|e| InsightError::new(InsightErrorKind::Internal, e.into()))?;
 
 		Ok(Arc::new(XAIRunner {
 			config: config.clone(),

@@ -316,14 +316,11 @@ pub async fn start_pipeline(
 	let embedder =
 		Arc::new(BertLLM::new(options).map_err(|e| PipelineErrors::UnknownError(e.to_string()))?);
 
-	// Initialize the embedding model
-	let embedding_model = TextEmbedding::try_new(InitOptions {
-		model_name: EmbeddingModel::AllMiniLML6V2,
-		show_download_progress: true,
-		cache_dir: get_querent_data_path(),
-		..Default::default()
-	})
-	.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
+	let model_details: InitOptions = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
+		.with_cache_dir(get_querent_data_path())
+		.with_show_download_progress(true);
+	let embedding_model = TextEmbedding::try_new(model_details)
+		.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
 
 	let engine = Arc::new(AttentionTensorsEngine::new(
 		embedder,
