@@ -203,6 +203,7 @@ jobs:
           unzip -d $tmp_dir $tmp_dir/onnxruntime.zip
           export ORT_STRATEGY=system ORT_LIB_LOCATION=$tmp_dir/lib
           echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
         shell: bash
       - uses: actions/checkout@v4
       - name: Install Node.js
