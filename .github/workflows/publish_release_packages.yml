@@ -202,6 +202,7 @@ jobs:
           curl -sSL https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-win-x64-static_lib-1.16.3.zip -o $tmp_dir/onnxruntime.zip
           unzip -d $tmp_dir $tmp_dir/onnxruntime.zip
           export ORT_STRATEGY=system ORT_LIB_LOCATION=$tmp_dir/lib
+          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
         shell: bash
       - uses: actions/checkout@v4
       - name: Install Node.js
