@@ -34,8 +34,8 @@ runs:
     - name: Install protoc
       run: choco install protoc
       shell: bash
-    - name: Install libpq
-      shell: bash
+    - name: Install posgres
+      shell: powershell
       run: |
           choco install postgresql16 --force --params '/Password:password'
           powershell -Command "echo 'C:\\Program Files\\PostgreSQL\\16\\bin' | Out-File -Encoding ascii -Append $env:GITHUB_PATH"
