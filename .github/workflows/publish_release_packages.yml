@@ -41,152 +41,152 @@ jobs:
         with:
           name: tauri-rian
           path: tauri/rian/build
-  build-macos-binaries-x86_64:
-    needs: [build-tauri-rian-ui]
-    name: Build ${{ matrix.target }}
-    runs-on: macos-12
-    strategy:
-      matrix:
-        target: [x86_64-apple-darwin]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: tauri/rian
-      - uses: ./.github/actions/cargo-build-macos-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-      - name: Tauri info
-        run: cargo tauri info
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          POSTGRESQL_VERSION: 16
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tauriScript: cargo tauri
-          projectPath: ./tauri/rian
-          args: -- --profile release --features license-check,openssl-support
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tauri-rian-bundle-macos-12-x86_64
-          path: |
-            tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
-            tauri/rian/src-tauri/target/release/bundle/**/*.dmg
-            tauri/rian/src-tauri/target/release/bundle/**/*.deb
-            tauri/rian/src-tauri/target/release/bundle/**/*.rpm
-            tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
-            tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
-            tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
-            tauri/rian/src-tauri/target/release/bundle/**/*.sig
-  build-macos-binaries-aarch64:
-    needs: [build-tauri-rian-ui]
-    name: Build ${{ matrix.target }}
-    runs-on: macos-14
-    strategy:
-      matrix:
-        target: [aarch64-apple-darwin]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: tauri/rian
-      - uses: ./.github/actions/cargo-build-macos-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-      - name: Tauri info
-        run: cargo tauri info
-      - name: Build Tauri App (macOS aarch64)
-        uses: tauri-apps/tauri-action@v0
-        env:
-          POSTGRESQL_VERSION: 16
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support
-          tauriScript: cargo tauri
-          projectPath: ./tauri/rian
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tauri-rian-bundle-macos-14-aarch64
-          path: |
-            tauri/rian/src-tauri/target/*/release/bundle/**/*.dmg
-            tauri/rian/src-tauri/target/*/release/bundle/macos/*.tar.gz
-            tauri/rian/src-tauri/target/*/release/bundle/**/*.sig
-  build-linux-binaries:
-    needs: [build-tauri-rian-ui]
-    strategy:
-      matrix:
-        target: [x86_64-unknown-linux-gnu]
-    name: Build ${{ matrix.target }}
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: tauri/rian
-      - uses: ./.github/actions/cross-build-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          POSTGRESQL_VERSION: 16
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tauriScript: cargo tauri
-          projectPath: ./tauri/rian
-          args: -- --profile release --features license-check,openssl-support
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tauri-rian-bundle-ubuntu-22.04-x86_64
-          path: |
-            tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
-            tauri/rian/src-tauri/target/release/bundle/**/*.dmg
-            tauri/rian/src-tauri/target/release/bundle/**/*.deb
-            tauri/rian/src-tauri/target/release/bundle/**/*.rpm
-            tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
-            tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
-            tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
-            tauri/rian/src-tauri/target/release/bundle/**/*.sig
+  # build-macos-binaries-x86_64:
+  #   needs: [build-tauri-rian-ui]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: macos-12
+  #   strategy:
+  #     matrix:
+  #       target: [x86_64-apple-darwin]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         registry-url: "https://registry.npmjs.org"
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --no-frozen-lockfile
+  #       working-directory: tauri/rian
+  #     - uses: ./.github/actions/cargo-build-macos-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install Cargo Tauri for info
+  #       run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+  #     - name: Tauri info
+  #       run: cargo tauri info
+  #     - name: Build Tauri App
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         POSTGRESQL_VERSION: 16
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #       with:
+  #         tauriScript: cargo tauri
+  #         projectPath: ./tauri/rian
+  #         args: -- --profile release --features license-check,openssl-support
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tauri-rian-bundle-macos-12-x86_64
+  #         path: |
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.dmg
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.deb
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.rpm
+  #           tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
+  #           tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
+  #           tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.sig
+  # build-macos-binaries-aarch64:
+  #   needs: [build-tauri-rian-ui]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: macos-14
+  #   strategy:
+  #     matrix:
+  #       target: [aarch64-apple-darwin]
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         registry-url: "https://registry.npmjs.org"
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --no-frozen-lockfile
+  #       working-directory: tauri/rian
+  #     - uses: ./.github/actions/cargo-build-macos-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install Cargo Tauri for info
+  #       run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+  #     - name: Tauri info
+  #       run: cargo tauri info
+  #     - name: Build Tauri App (macOS aarch64)
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         POSTGRESQL_VERSION: 16
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #       with:
+  #         args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support
+  #         tauriScript: cargo tauri
+  #         projectPath: ./tauri/rian
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tauri-rian-bundle-macos-14-aarch64
+  #         path: |
+  #           tauri/rian/src-tauri/target/*/release/bundle/**/*.dmg
+  #           tauri/rian/src-tauri/target/*/release/bundle/macos/*.tar.gz
+  #           tauri/rian/src-tauri/target/*/release/bundle/**/*.sig
+  # build-linux-binaries:
+  #   needs: [build-tauri-rian-ui]
+  #   strategy:
+  #     matrix:
+  #       target: [x86_64-unknown-linux-gnu]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         registry-url: "https://registry.npmjs.org"
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --no-frozen-lockfile
+  #       working-directory: tauri/rian
+  #     - uses: ./.github/actions/cross-build-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install Cargo Tauri for info
+  #       run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+  #     - name: Build Tauri App
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         POSTGRESQL_VERSION: 16
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #       with:
+  #         tauriScript: cargo tauri
+  #         projectPath: ./tauri/rian
+  #         args: -- --profile release --features license-check,openssl-support
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tauri-rian-bundle-ubuntu-22.04-x86_64
+  #         path: |
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.dmg
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.deb
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.rpm
+  #           tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
+  #           tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
+  #           tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.sig
   build-windows-binaries:
     needs: [build-tauri-rian-ui]
     strategy:
