@@ -55,9 +55,9 @@ impl InsightRunner for GraphBuilderRunner {
 		for (event_type, storages) in self.config.event_storages.iter() {
 			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
-					if query.is_empty() {
-						// TODO : send all data from the fabric to Neo4j and skip adding in insights table
-					}
+					if self.config.semantic_pipeline_id.is_empty() && self.config.discovery_session_id.is_empty() {
+						// TODO: send all data from the fabric to Neo4j and skip adding to insights table
+					}					
 
 					let mut fetched_results = Vec::new();
 					let mut _total_fetched = 0;
@@ -73,6 +73,9 @@ impl InsightRunner for GraphBuilderRunner {
 								10,
 								0,
 								&vec![],
+								Some("".to_string()),
+								Some("".to_string()),
+
 							)
 							.await;
 

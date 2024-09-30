@@ -180,6 +180,8 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							10,
 							self.current_offset,
 							&vec![],
+							Some("".to_string()),
+							Some("".to_string()),
 						)
 						.await;
 					match search_results {

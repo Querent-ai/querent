@@ -243,6 +243,8 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 									10,
 									self.current_offset + total_fetched,
 									&top_pair_embeddings,
+									Some("".to_string()),
+									Some("".to_string()),
 								)
 								.await;
 						}

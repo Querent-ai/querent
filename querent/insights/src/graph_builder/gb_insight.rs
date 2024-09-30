@@ -18,7 +18,7 @@ impl GBV1 {
 			info: InsightInfo {
 				id: "querent.insights.graph_builder.gbv1".to_string(),
 				name: "Querent Graph Builder".to_string(),
-				description: "Transfer Learning is a research problem in machine learning that focuses on storing knowledge gained while solving one problem and applying it to a different but related problem.".to_string(),
+				description: "Graph builder will allow user to traverse the datafabrics and plot the results in a neo4j instance.".to_string(),
 				version: "0.0.1-dev".to_string(),
 				author: "Querent AI".to_string(),
 				license: "BSL-1.0".to_string(),
