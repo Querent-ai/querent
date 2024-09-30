@@ -17,8 +17,8 @@ pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String,
 	let mut unique_payloads: Vec<_> = payloads
 		.into_iter()
 		.filter(|p| {
-			unique_entries.insert((p.subject.clone(), p.object.clone())) &&
-				p.cosine_distance <= Some(0.2)
+			unique_entries.insert((p.subject.clone(), p.object.clone()))
+				&& p.cosine_distance <= Some(0.2)
 		})
 		.collect();
 	unique_payloads.sort_by(|a, b| {
@@ -57,7 +57,7 @@ pub async fn traverse_node(
 			.load::<(i32, String, String, String, String, String, String)>(conn)
 			.await;
 		match inward_query_result {
-			Ok(results) =>
+			Ok(results) => {
 				for result in results {
 					let (id, doc_id, subject, object, doc_source, sentence, event_id) = result;
 					let score_query_result = embedded_knowledge::dsl::embedded_knowledge
@@ -67,7 +67,7 @@ pub async fn traverse_node(
 						.await;
 
 					match score_query_result {
-						Ok(score) =>
+						Ok(score) => {
 							if visited_pairs.insert((subject.clone(), object.clone())) {
 								combined_results.push((
 									id.to_string(),
@@ -93,12 +93,14 @@ pub async fn traverse_node(
 									direction,
 								))
 								.await?;
-							},
+							}
+						},
 						Err(e) => {
 							error!("Error querying score for event_id {}: {:?}", event_id, e);
 						},
 					}
-				},
+				}
+			},
 			Err(e) => {
 				error!("Error querying inward edges for node {}: {:?}", node, e);
 				return Err(StorageError {
@@ -124,7 +126,7 @@ pub async fn traverse_node(
 			.await;
 
 		match outward_query_result {
-			Ok(results) =>
+			Ok(results) => {
 				for result in results {
 					let (id, doc_id, subject, object, doc_source, sentence, event_id) = result;
 					let score_query_result = embedded_knowledge::dsl::embedded_knowledge
@@ -134,7 +136,7 @@ pub async fn traverse_node(
 						.await;
 
 					match score_query_result {
-						Ok(score) =>
+						Ok(score) => {
 							if visited_pairs.insert((subject.clone(), object.clone())) {
 								combined_results.push((
 									id.to_string(),
@@ -160,12 +162,14 @@ pub async fn traverse_node(
 									direction,
 								))
 								.await?;
-							},
+							}
+						},
 						Err(e) => {
 							error!("Error querying score for event_id {}: {:?}", event_id, e);
 						},
 					}
-				},
+				}
+			},
 			Err(e) => {
 				error!("Error querying outward edges for node {}: {:?}", node, e);
 				return Err(StorageError {
@@ -409,7 +413,6 @@ pub async fn fetch_documents_for_embedding_pgembed(
 
 	match query_result {
 		Ok(results) => {
-			println!("These are the results -----------------{:?}", results);
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
 				let query_result_semantic = sql_query(
