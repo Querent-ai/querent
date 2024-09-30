@@ -109,7 +109,6 @@ impl InsightRunner for XAIRunner {
 								0,
 								&vec![],
 								Some("".to_string()),
-								Some("".to_string()),
 							)
 							.await;
 
@@ -399,7 +398,6 @@ impl InsightRunner for XAIRunner {
 										10,
 										0,
 										&vec![],
-										Some("".to_string()),
 										Some("".to_string()),
 									)
 									.await;

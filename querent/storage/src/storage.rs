@@ -122,7 +122,6 @@ pub trait FabricStorage: Send + Sync + 'static {
 		max_results: i32,
 		offset: i64,
 		top_pairs_embeddings: &Vec<Vec<f32>>,
-		discovery_id: Option<String>,
 		semantic_pipeline_id: Option<String>,
 	) -> StorageResult<Vec<DocumentPayload>>;
 	

@@ -181,7 +181,6 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 							self.current_offset,
 							&vec![],
 							Some("".to_string()),
-							Some("".to_string()),
 						)
 						.await;
 					match search_results {

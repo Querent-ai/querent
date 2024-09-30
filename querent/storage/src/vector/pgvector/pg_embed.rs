@@ -233,7 +233,6 @@ impl FabricStorage for PGEmbed {
 		max_results: i32,
 		offset: i64,
 		top_pairs_embeddings: &Vec<Vec<f32>>,
-		discovery_id: Option<String>,
 		semantic_pipeline_id: Option<String>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
@@ -927,8 +926,7 @@ mod tests {
 				max_results,
 				offset,
 				&top_pairs_embeddings,
-				Some("".to_string()),
-				Some("".to_string()),
+				Some("".to_string()),			
 			)
 			.await;
 
