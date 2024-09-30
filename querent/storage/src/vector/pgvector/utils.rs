@@ -395,7 +395,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
                    event_id, 
                    (embeddings <=> {})::FLOAT8 AS similarity 
             FROM embedded_knowledge
-            WHERE (embeddings <=> {})::FLOAT8 < 0.1
+            WHERE (embeddings <=> {})::FLOAT8 < 0.3
             ORDER BY similarity ASC
             LIMIT $1
             OFFSET $2
@@ -409,6 +409,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
 
 	match query_result {
 		Ok(results) => {
+			println!("These are the results -----------------{:?}", results);
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
 				let query_result_semantic = sql_query(
