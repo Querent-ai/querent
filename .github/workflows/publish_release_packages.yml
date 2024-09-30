@@ -195,7 +195,7 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: windows-2022
     steps:
-      - name: VCPKG install onnxruntime
+      - name: Install OnnXRuntime
         shell: powershell
         run: |
           # Create a temporary directory for onnxruntime download and extraction
@@ -210,6 +210,12 @@ jobs:
           # Persist environment variables to GitHub Actions environment
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_STRATEGY=$env:ORT_STRATEGY"
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_LIB_LOCATION=$env:ORT_LIB_LOCATION"
+      - name: Windows setup (bundled)
+        run: |
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+          vcpkg install openssl:x64-windows-static-md
+          vcpkg install libpq:x64-windows-static-md
+          echo "PQ_LIB_STATIC=1" | Out-File -FilePath $env:GITHUB_ENV -Append
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
