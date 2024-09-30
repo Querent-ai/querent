@@ -201,17 +201,12 @@ jobs:
           # Create a temporary directory for onnxruntime download and extraction
           $tmp_dir = New-TemporaryFile
           $tmp_dir_path = [System.IO.Path]::GetDirectoryName($tmp_dir.FullName)
-
           # Download the onnxruntime static library zip file
-          Invoke-WebRequest -Uri "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-win-x64-static_lib-1.16.3.zip" -OutFile "$tmp_dir_path\onnxruntime.zip"
-
-          # Unzip the downloaded file
-          Expand-Archive -Path "$tmp_dir_path\onnxruntime.zip" -DestinationPath $tmp_dir_path
-
-          # Set environment variables for ORT strategy and library location
+          Invoke-WebRequest -Uri "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-win-x64-static_lib-1.16.3.zip" -OutFile (Join-Path $tmp_dir_path "onnxruntime.zip")
+          # Unzip the downloaded file directly into the temporary path
+          Expand-Archive -Path (Join-Path $tmp_dir_path "onnxruntime.zip") -DestinationPath $tmp_dir_path          # Set environment variables for ORT strategy and library location
           $env:ORT_STRATEGY = "system"
-          $env:ORT_LIB_LOCATION = "$tmp_dir_path\onnxruntime-win-x64-static_lib-1.16.3\lib"
-
+          $env:ORT_LIB_LOCATION = (Join-Path $tmp_dir_path "lib")
           # Persist environment variables to GitHub Actions environment
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_STRATEGY=$env:ORT_STRATEGY"
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_LIB_LOCATION=$env:ORT_LIB_LOCATION"
