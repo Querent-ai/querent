@@ -136,7 +136,6 @@ impl FabricStorage for PostgresStorage {
 		_max_results: i32,
 		_offset: i64,
 		_top_pairs_embeddings: &Vec<Vec<f32>>,
-		semantic_pipeline_id: Option<String>,
 	) -> StorageResult<Vec<DocumentPayload>> {
 		Ok(vec![])
 	}

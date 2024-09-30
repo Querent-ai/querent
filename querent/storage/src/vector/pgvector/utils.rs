@@ -290,18 +290,24 @@ pub async fn fetch_documents_for_embedding(
 		Ok(result) => {
 			let mut results = Vec::new();
 			for (_embeddings, score, event_id, other_cosine_distance) in result {
-				let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
-					.select((
-						semantic_knowledge::dsl::document_id,
-						semantic_knowledge::dsl::subject,
-						semantic_knowledge::dsl::object,
-						semantic_knowledge::dsl::document_source,
-						semantic_knowledge::dsl::sentence,
-					))
-					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
-					.offset(0)
-					.load::<(String, String, String, String, String)>(conn)
-					.await;
+				let mut query_semantic = semantic_knowledge::dsl::semantic_knowledge
+                    .select((
+                        semantic_knowledge::dsl::document_id,
+                        semantic_knowledge::dsl::subject,
+                        semantic_knowledge::dsl::object,
+                        semantic_knowledge::dsl::document_source,
+                        semantic_knowledge::dsl::sentence,
+                    ))
+                    .filter(semantic_knowledge::dsl::event_id.eq(event_id))
+                    .into_boxed();
+                if !collection_id.is_empty() {
+                    query_semantic = query_semantic.filter(semantic_knowledge::dsl::collection_id.eq(collection_id));
+                }
+                let query_result_semantic = query_semantic
+                    .offset(0)
+                    .load::<(String, String, String, String, String)>(conn)
+                    .await;
+
 
 				match query_result_semantic {
 					Ok(result_semantic) => {
@@ -317,7 +323,7 @@ pub async fn fetch_documents_for_embedding(
 							doc_payload.session_id = Some(session_id.clone());
 							doc_payload.query_embedding = Some(payload.clone());
 							doc_payload.query = Some(query.clone());
-							doc_payload.collection_id = collection_id.clone();
+							doc_payload.collection_id = collection_id.to_string();
 							results.push(doc_payload);
 						}
 					},
@@ -411,16 +417,19 @@ pub async fn fetch_documents_for_embedding_pgembed(
 		Ok(results) => {
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
-				let query_result_semantic = sql_query(
-					r#"
+				let semantic_query_string = 
+                    r#"
                     SELECT document_id, subject, object, document_source, sentence
                     FROM semantic_knowledge
-                    WHERE event_id = $1
-                    "#,
-				)
-				.bind::<Text, _>(&event_id)
-				.load::<SemanticResult>(conn)
-				.await;
+                    WHERE event_id = $1 
+                      AND (COALESCE($2, '') = '' OR collection_id = $2)
+                    "#;
+
+                let semantic_query = diesel::sql_query(semantic_query_string)
+                    .bind::<Text, _>(&event_id)
+                    .bind::<Text, _>(collection_id);
+
+                let query_result_semantic = semantic_query.load::<SemanticResult>(conn).await;
 
 				match query_result_semantic {
 					Ok(result_semantic) => {

@@ -73,7 +73,6 @@ impl InsightRunner for GraphBuilderRunner {
 								10,
 								0,
 								&vec![],
-								Some("".to_string()),
 
 							)
 							.await;

@@ -91,7 +91,6 @@ impl FabricStorage for MilvusStorage {
 		max_results: i32,
 		_offset: i64,
 		_top_pairs_embeddings: &Vec<Vec<f32>>,
-		semantic_pipeline_id: Option<String>,
 		
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let collection_name = format!("pipeline_{}", collection_id);
