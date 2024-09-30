@@ -289,45 +289,46 @@ impl Source for OneDriveSource {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use std::collections::HashSet;
-//     use futures::StreamExt;
-//     use proto::semantics::OneDriveConfig;
-//     use crate::{onedrive::onedrive::OneDriveSource, Source};
+#[cfg(test)]
+mod tests {
+	use crate::{onedrive::onedrive::OneDriveSource, Source};
+	use dotenv::dotenv;
+	use futures::StreamExt;
+	use proto::semantics::OneDriveConfig;
+	use std::{collections::HashSet, env};
 
-//     #[tokio::test]
-//     async fn test_onedrive_collector() {
-//         let onedrive_config = OneDriveConfig {
-//             client_id: "c7c05424-b4d5-4af9-8f97-9e2de234b1b4".to_string(),
-//             client_secret: "I-08Q~fZ~Vsbm6Mc7rj4sqyzgjlYIA5WN5jG.cLn".to_string(),
-//             redirect_uri: "http://localhost:8000/callback".to_string(),
-//             refresh_token: "M.C540_BAY.0.U.-Cg3wuI8L3FPX!LmwIHH1W8ChFNgervWiVAwuppNW9EC1W8iXHE797KeL!OU6*ywNfZD1*FVuVNroTPyH3HrzaP3ZiG!xepBUpmDKq1NjmXDFya6rlBABG*ahheNyOHv*WV9gYb*voX11ic00XJmxYyzEnHCxjbZ5SU75rWqzAgltIilcVoQm8VhLSeMYpRkUzDWS*Jeg6Ht8AuPJHpmetwdME7b33pOiKupGlFKn7OH1SoO7Xsc6JYcp96hneg8TS8mLg1!tVN9NkRcv1q1JjxxgLPPRXn*Xub7Y61rew91E9GdaXTAzJzFiRAL8ISH2*vq4gEzxmAG*wtfV9nMzT85JH2xxpdMvrvaXsrMrqJUm".to_string(),
-//             folder_path: "/testing".to_string(),
-//             id: "test".to_string(),
-//         };
+	#[tokio::test]
+	async fn test_onedrive_collector() {
+		dotenv().ok();
+		let onedrive_config = OneDriveConfig {
+			client_id: env::var("ONEDRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			client_secret: env::var("ONEDRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: env::var("ONEDRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_path: "/testing".to_string(),
+			id: "test".to_string(),
+		};
 
-//         let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
-//         let connectivity = drive_storage.check_connectivity().await;
+		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
+		let connectivity = drive_storage.check_connectivity().await;
 
-//         println!("Connectivity: {:?}", connectivity);
+		println!("Connectivity: {:?}", connectivity);
 
-//         let result = drive_storage.poll_data().await;
+		let result = drive_storage.poll_data().await;
 
-//         let mut stream = result.unwrap();
-//         let mut count_files: HashSet<String> = HashSet::new();
-//         while let Some(item) = stream.next().await {
-//             match item {
-//                 Ok(collected_bytes) => {
-//                     if let Some(pathbuf) = collected_bytes.file {
-//                         if let Some(str_path) = pathbuf.to_str() {
-//                             count_files.insert(str_path.to_string());
-//                         }
-//                     }
-//                 },
-//                 Err(err) => eprintln!("Expected successful data collection {:?}", err),
-//             }
-//         }
-//         println!("Files are --- {:?}", count_files);
-//     }
-// }
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
+	}
+}

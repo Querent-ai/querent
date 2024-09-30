@@ -320,50 +320,49 @@ impl From<AzureErrorWrapper> for SourceError {
 	}
 }
 
-// #[cfg(test)]
-// mod tests {
+#[cfg(test)]
+mod tests {
 
-// 	use std::collections::HashSet;
+	use std::{collections::HashSet, env};
 
-// use super::*;
+	use super::*;
+	use dotenv::dotenv;
 
-// 	#[tokio::test]
-// 	async fn test_azure_collector() {
-// 		// Configure the GCS collector config with a mock credential
-// 		let azure_config = AzureCollectorConfig {
-// 		    account_url: "".to_string(),
-// 			connection_string: "DefaultEndpointsProtocol=https;AccountName=querent;AccountKey=AB6gsGVuwGDs3OoFzJc0eQ4OtRj35wYgHGt3PPLafCHye3Ze9xw6t4cZfUNIXM5pNoBMGeehGUDo+AStQSTTnQ==;EndpointSuffix=core.windows.net".to_string(),
-// 			credentials: "AB6gsGVuwGDs3OoFzJc0eQ4OtRj35wYgHGt3PPLafCHye3Ze9xw6t4cZfUNIXM5pNoBMGeehGUDo+AStQSTTnQ==".to_string(),
-// 			container: "testfiles".to_string(),
-// 			chunk_size: 1024,
-// 			prefix: "".to_string(),
-//         };
+	#[tokio::test]
+	async fn test_azure_collector() {
+		dotenv().ok();
+		// Configure the GCS collector config with a mock credential
+		let azure_config = AzureCollectorConfig {
+			connection_string: env::var("AZURE_CONNECTION_STRING")
+				.unwrap_or_else(|_| "".to_string()),
+			credentials: env::var("AZURE_CREDENTIALS").unwrap_or_else(|_| "".to_string()),
+			container: "testfiles".to_string(),
+			prefix: "".to_string(),
+			id: "Azure-source-id".to_string(),
+		};
 
-// 		let azure_storage = AzureBlobStorage::new(azure_config);
+		let azure_storage = AzureBlobStorage::new(azure_config);
 
-// 		assert!(
-// 			azure_storage.check_connectivity().await.is_ok(),
-// 			"Failed to connect to azure storage"
-// 		);
+		assert!(
+			azure_storage.check_connectivity().await.is_ok(),
+			"Failed to connect to azure storage"
+		);
 
-// 		let result = azure_storage.poll_data().await;
+		let result = azure_storage.poll_data().await;
 
-// 		let mut stream = result.unwrap();
-// 		let mut count_files: HashSet<String> = HashSet::new();
-// 		while let Some(item) = stream.next().await {
-// 			match item {
-// 				Ok(collected_bytes) => {
-
-// 					if let Some(pathbuf) = collected_bytes.file {
-// 						if let Some(str_path) = pathbuf.to_str() {
-// 							count_files.insert(str_path.to_string());
-// 						}
-// 					}
-// 				}
-// 				Err(_) => panic!("Expected successful data collection"),
-// 			}
-// 		}
-// 		println!("Files are --- {:?}", count_files);
-
-// 	}
-// }
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(_) => panic!("Expected successful data collection"),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
+	}
+}
