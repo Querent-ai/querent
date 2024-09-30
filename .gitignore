@@ -24,3 +24,4 @@ querent/.fastembed_cache/
 **/build
 node_modules/
 **/.fastembed_cache/
+.env

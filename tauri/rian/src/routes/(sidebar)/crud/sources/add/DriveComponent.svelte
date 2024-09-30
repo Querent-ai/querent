@@ -45,6 +45,5 @@
 		width: 32px; /* Fixed width */
 		height: 32px; /* Fixed height */
 		display: block; /* Ensure SVG is not inline */
-		filter: grayscale(100%); /* Convert to grayscale */
 	}
 </style>
