@@ -24,25 +24,86 @@
 	import NewsIcon from './NewsComponent.svelte';
 	import GCSIcon from './GCSComponent.svelte';
 	import MetaTag from '../../../../utils/MetaTag.svelte';
-	import { onMount } from 'svelte';
 	import Modal from './Modal.svelte';
-	import { isVisible } from '../../../../../stores/appState';
+	import { googleDriveRefreshToken, isVisible } from '../../../../../stores/appState';
+	import { open } from '@tauri-apps/plugin-shell';
 
-	const CLIENT_ID = import.meta.env.VITE_DRIVE_CLIENT_ID;
-	const REDIRECT_URI = import.meta.env.VITE_DRIVE_REDIRECT_URL;
-	const AUTH_URL = `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&response_type=code&scope=https://www.googleapis.com/auth/drive&access_type=offline`;
+	import { commands } from '../../../../../service/bindings';
 
-	function login() {
-		window.location.href = AUTH_URL;
+	async function get_drive_client_secrets() {
+		const result = await commands.getDriveCredentials();
+		if (result.status == 'ok') {
+			CLIENT_ID = result.data[0];
+			REDIRECT_URI = 'http://localhost:5174/confirmation';
+		}
+	}
+	let CLIENT_ID: string;
+	let REDIRECT_URI: string;
+
+	async function login() {
+		try {
+			await get_drive_client_secrets();
+
+			const AUTH_URL = `https://accounts.google.com/o/oauth2/auth?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=https://www.googleapis.com/auth/drive.readonly&access_type=offline`;
+			open(AUTH_URL);
+
+			const res = await getDriveCode();
+
+			if (res) {
+				await getTokens(res);
+				selectedSource = 'Google Drive';
+				setIsVisible();
+			}
+		} catch (error) {
+			console.log('Error starting the OAuth server  ', error);
+		}
 	}
 
-	onMount(() => {
-		const params = new URLSearchParams(window.location.search);
-		const code = params.get('code');
-		if (code) {
-			selectedSource = 'Google Drive';
+	async function getDriveCode(): Promise<string> {
+		try {
+			const code = await commands.startOauthServer();
+			if (code.status == 'ok') {
+				return code.data;
+			} else {
+				throw new Error('No code received');
+			}
+		} catch (error) {
+			console.error('Error fetching Google Drive code: ', error);
+			throw error;
 		}
-	});
+	}
+
+	let drive_client_id: string;
+	let drive_client_secret: string;
+	async function getTokens(code: string) {
+		const result = await commands.getDriveCredentials();
+		if (result.status == 'ok') {
+			drive_client_id = result.data[0];
+			drive_client_secret = result.data[1];
+		}
+		const redirect_uri = 'http://localhost:5174/confirmation';
+		const response = await fetch('https://oauth2.googleapis.com/token', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/x-www-form-urlencoded'
+			},
+			body: new URLSearchParams({
+				code: code,
+				client_id: drive_client_id,
+				client_secret: drive_client_secret,
+				redirect_uri: redirect_uri,
+				grant_type: 'authorization_code'
+			})
+		});
+
+		if (!response.ok) {
+			console.error('HTTP error! status:', response.status);
+			console.log('Error response body:', await response.text());
+			return;
+		}
+		const data = await response.json();
+		googleDriveRefreshToken.set(data.refresh_token);
+	}
 
 	function getIcon(sourceName: string) {
 		return iconMapping[sourceName as keyof typeof iconMapping];
@@ -122,6 +183,8 @@
 		if (premiumSources.includes(sourceName)) {
 			modalMessage = 'This feature is available only in premium';
 			showModal = true;
+		} else if (sourceName === 'Google Drive') {
+			login().catch(console.error);
 		} else {
 			$isVisible = true;
 			selectedSource = sourceName;
