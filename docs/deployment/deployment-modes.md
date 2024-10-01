@@ -18,4 +18,4 @@ This deployment mode is the simplest way to get started with Querent. Launch all
 
 ## Cluster mode (multi-node)
 
-You can deploy Querent on multiple nodes. We provide a [Helm chart](kubernetes.md) to help you deploy Querent on Kubernetes. In cluster mode, you must store your index data on a shared storage backend such as Postgres, Milvus, or Neo4j. The shared storage backend is used to store the index data and metadata, and it is accessed by all the nodes in the cluster.
+You can deploy Querent on multiple nodes. We provide a [Helm chart](kubernetes.md) to help you deploy Querent on Kubernetes. In cluster mode, you must store your index data on a shared storage backend such as Postgres, or Neo4j. The shared storage backend is used to store the index data and metadata, and it is accessed by all the nodes in the cluster.

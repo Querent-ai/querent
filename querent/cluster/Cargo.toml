@@ -54,7 +54,6 @@ chitchat = { workspace = true }
 warp = { workspace = true }
 serde_qs = { workspace = true }
 hyper = { workspace = true }
-milvus-sdk-rust= { workspace = true }
 neo4rs = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }

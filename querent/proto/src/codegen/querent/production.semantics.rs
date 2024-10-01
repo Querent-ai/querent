@@ -542,11 +542,8 @@ pub struct StorageConfig {
 	/// Postgres configuration.
 	#[prost(message, optional, tag = "1")]
 	pub postgres: ::core::option::Option<PostgresConfig>,
-	/// Milvus configuration.
-	#[prost(message, optional, tag = "2")]
-	pub milvus: ::core::option::Option<MilvusConfig>,
 	/// Neo4j configuration.
-	#[prost(message, optional, tag = "3")]
+	#[prost(message, optional, tag = "2")]
 	pub neo4j: ::core::option::Option<Neo4jConfig>,
 }
 /// PostgresConfig is a message to hold configuration for a Postgres storage.
@@ -563,27 +560,6 @@ pub struct PostgresConfig {
 	/// URL of the Postgres storage.
 	#[prost(string, tag = "3")]
 	pub url: ::prost::alloc::string::String,
-}
-/// MilvusConfig is a message to hold configuration for a Milvus storage.
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
-pub struct MilvusConfig {
-	/// Name of the Milvus storage.
-	#[prost(string, tag = "1")]
-	pub name: ::prost::alloc::string::String,
-	/// Type of the storage.
-	#[prost(message, optional, tag = "2")]
-	pub storage_type: ::core::option::Option<StorageType>,
-	/// URL of the Milvus storage.
-	#[prost(string, tag = "3")]
-	pub url: ::prost::alloc::string::String,
-	/// Username for the Milvus storage.
-	#[prost(string, tag = "4")]
-	pub username: ::prost::alloc::string::String,
-	/// Password for the Milvus storage.
-	#[prost(string, tag = "5")]
-	pub password: ::prost::alloc::string::String,
 }
 /// Neo4jConfig is a message to hold configuration for a Neo4j storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
