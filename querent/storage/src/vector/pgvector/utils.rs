@@ -297,6 +297,7 @@ pub async fn fetch_documents_for_embedding(
 						semantic_knowledge::dsl::object,
 						semantic_knowledge::dsl::document_source,
 						semantic_knowledge::dsl::sentence,
+						semantic_knowledge::dsl::collection_id,
 					))
 					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
 					.into_boxed();
@@ -306,12 +307,20 @@ pub async fn fetch_documents_for_embedding(
 				}
 				let query_result_semantic = query_semantic
 					.offset(0)
-					.load::<(String, String, String, String, String)>(conn)
+					.load::<(String, String, String, String, String, Option<String>)>(conn)
 					.await;
 
 				match query_result_semantic {
 					Ok(result_semantic) => {
-						for (doc_id, subject, object, document_store, sentence) in result_semantic {
+						for (
+							doc_id,
+							subject,
+							object,
+							document_store,
+							sentence,
+							collection_id_semantic,
+						) in result_semantic
+						{
 							let mut doc_payload = DocumentPayload::default();
 							doc_payload.doc_id = doc_id.clone();
 							doc_payload.subject = subject.clone();
@@ -323,7 +332,8 @@ pub async fn fetch_documents_for_embedding(
 							doc_payload.session_id = Some(session_id.clone());
 							doc_payload.query_embedding = Some(payload.clone());
 							doc_payload.query = Some(query.clone());
-							doc_payload.collection_id = collection_id.to_string();
+							doc_payload.collection_id =
+								collection_id_semantic.unwrap_or("".to_string()).to_string();
 							results.push(doc_payload);
 						}
 					},
@@ -379,6 +389,8 @@ struct SemanticResult {
 	document_source: String,
 	#[diesel(sql_type = Text)]
 	sentence: String,
+	#[diesel(sql_type = Text)]
+	collection_id: String,
 }
 
 pub async fn fetch_documents_for_embedding_pgembed(
@@ -420,7 +432,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
 				println!("This is the similarity ------{:?}", similarity);
 				println!("This is the collection_id ------{:?}", collection_id);
 				let semantic_query_string = r#"
-                    SELECT document_id, subject, object, document_source, sentence
+                    SELECT document_id, subject, object, document_source, sentence, collection_id
                     FROM semantic_knowledge
                     WHERE event_id = $1 
                       AND (COALESCE($2, '') = '' OR collection_id = $2)
@@ -440,6 +452,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
 							object,
 							document_source,
 							sentence,
+							collection_id,
 						} in result_semantic
 						{
 							let mut doc_payload = DocumentPayload::default();

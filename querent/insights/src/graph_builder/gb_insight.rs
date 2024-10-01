@@ -3,6 +3,8 @@ use crate::{
 	InsightError, InsightErrorKind, InsightInfo, InsightResult, InsightRunner,
 };
 use async_trait::async_trait;
+use common::get_querent_data_path;
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use serde_json::Value;
 use std::{collections::HashMap, sync::Arc};
 
@@ -116,7 +118,6 @@ impl Insight for GBV1 {
 	}
 
 	fn get_runner(&self, config: &InsightConfig) -> InsightResult<Arc<dyn InsightRunner>> {
-		println!("Trying to Sytart Runner-----");
 		let neo4j_instance_url = config.get_custom_option("neo4j_instance_url");
 		if neo4j_instance_url.is_none() {
 			return Err(InsightError::new(
@@ -173,10 +174,14 @@ impl Insight for GBV1 {
 				_ => None,
 			},
 		);
-		println!("Trying to Sytart Runner-----222222222222222");
+		let model_details = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
+			.with_cache_dir(get_querent_data_path())
+			.with_show_download_progress(true);
+		let embedding_model = TextEmbedding::try_new(model_details)
+			.map_err(|e| InsightError::new(InsightErrorKind::Internal, e.into()))?;
 		let graph_builder_runner = GraphBuilderRunner {
 			config: config.clone(),
-			embedding_model: None,
+			embedding_model: Some(embedding_model),
 			neo4j_instance_url,
 			neo4j_username,
 			neo4j_password,
