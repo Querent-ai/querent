@@ -547,7 +547,6 @@ impl FabricAccessor for PGVector {
 		&self,
 		session_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		// Ok(vec![])
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),

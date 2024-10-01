@@ -234,6 +234,7 @@ impl FabricStorage for PGEmbed {
 		offset: i64,
 		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
+		println!("This is the collection_id 222------{:?}", collection_id);
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -914,7 +915,6 @@ mod tests {
 		let payload = vec![1.0, 2.0, 3.0];
 		let max_results = 10;
 		let offset = 0;
-		// let top_pairs_embeddings = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
 		let top_pairs_embeddings = vec![];
 		let search_results = embed
 			.similarity_search_l2(

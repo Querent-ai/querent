@@ -393,7 +393,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
 ) -> StorageResult<Vec<DocumentPayload>> {
 	let target_vector =
 		format!("'{}'", serde_json::to_string(embedding).expect("Failed to format embeddings"));
-
+	println!("target vector ----{:?}", target_vector);
 	let query_result = sql_query(&format!(
 		r#"
             SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
@@ -401,7 +401,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
                    event_id, 
                    (embeddings <=> {})::FLOAT8 AS similarity 
             FROM embedded_knowledge
-            WHERE (embeddings <=> {})::FLOAT8 < 0.1
+            WHERE (embeddings <=> {})::FLOAT8 < 0.5
             ORDER BY similarity ASC
             LIMIT $1
             OFFSET $2
@@ -415,8 +415,11 @@ pub async fn fetch_documents_for_embedding_pgembed(
 
 	match query_result {
 		Ok(results) => {
+			
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
+				println!("This is the similarity ------{:?}", similarity);
+				println!("This is the collection_id ------{:?}", collection_id);
 				let semantic_query_string = 
                     r#"
                     SELECT document_id, subject, object, document_source, sentence

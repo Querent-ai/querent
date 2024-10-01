@@ -30,8 +30,9 @@ impl Neo4jStorage {
 					source: Arc::new(anyhow::Error::from(err)),
 				}
 			})?;
-
+		println!("Connection tried ------");	
 		let graph = Graph::connect(config.clone()).await;
+		println!("Connection tried ------222222222222222");
 		match graph {
 			Ok(graph) => Ok(Neo4jStorage { graph: Arc::new(graph), config }),
 			Err(err) => {
