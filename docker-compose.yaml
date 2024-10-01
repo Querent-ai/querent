@@ -36,7 +36,7 @@ services:
       start_period: 3s
 
   querent:
-    image: querent/rian:v4.3.0
+    image: querent/rian:v1.0.1
     ports:
       - "1111:1111"
       - "2222:2222"
@@ -45,10 +45,6 @@ services:
       postgres:
         condition: service_healthy
       neo4j:
-        condition: service_healthy
-      etcd:
-        condition: service_healthy
-      minio:
         condition: service_healthy
     volumes:
       - ./config:/external-config

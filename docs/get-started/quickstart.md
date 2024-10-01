@@ -78,10 +78,6 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_healthy
-      etcd:
-        condition: service_healthy
-      minio:
-        condition: service_healthy
     volumes:
       - ./config:/external-config
     environment:
