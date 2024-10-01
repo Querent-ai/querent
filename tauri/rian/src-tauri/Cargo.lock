@@ -9739,6 +9739,7 @@ dependencies = [
  "tauri-utils",
  "tiny_http",
  "tokio",
+ "vcpkg",
  "windows 0.58.0",
 ]
 

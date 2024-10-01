@@ -81,6 +81,9 @@ rustls = { workspace = true }
 dirs = { workspace = true }
 postgresql_embedded = { workspace = true }
 
+[dev-dependencies]
+vcpkg = "0.2.15"
+
 [build-dependencies]
 time = { workspace = true }
 
