@@ -212,7 +212,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_LIB_LOCATION=$env:ORT_LIB_LOCATION"
       - name: Windows static postgresql
         run: |
-          vcpkg integrate install
+          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
           vcpkg install openssl:x64-windows-static-md
           vcpkg install libpq:x64-windows-static-md
           echo "PQ_LIB_STATIC=1" | Out-File -FilePath $env:GITHUB_ENV -Append

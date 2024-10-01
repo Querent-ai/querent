@@ -4,6 +4,7 @@ extern crate vcpkg;
 fn main() {
     #[cfg(target_os = "windows")]
     {
+        println!("cargo:rustc-link-lib=libpq");
         let pq_installed = setup_libpq_vcpkg();
         if !pq_installed {
             panic!("libpq not found");
@@ -12,12 +13,17 @@ fn main() {
     tauri_build::build()
 }
 
-#[cfg(target_os = "windows")]
+#[cfg(target_env = "msvc")]
 fn setup_libpq_vcpkg() -> bool {
-    vcpkg::find_package("libpq")
+    vcpkg::Config::new()
+        .find_package("libpq")
         .map(|_| {
-            // found libpq which depends on openssl
-            vcpkg::Config::new().find_package("openssl").ok();
+            // found libpq, now try to find openssl
+            if let Err(_) = vcpkg::Config::new().find_package("openssl") {
+                eprintln!("Warning: OpenSSL not found, continuing without it.");
+            }
+
+            // Link additional Windows libraries
             println!("cargo:rustc-link-lib=crypt32");
             println!("cargo:rustc-link-lib=gdi32");
             println!("cargo:rustc-link-lib=user32");
