@@ -79,7 +79,10 @@ windows = "0.58.0"
 custom-protocol = [ "tauri/custom-protocol" ]
 openssl-support = []
 license-check = []
-
+bundled = [
+  "postgresql_embedded/bundled",
+]
+default = ["openssl-support", "license-check", "bundled"]
 [patch.crates-io]
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }

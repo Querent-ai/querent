@@ -46,3 +46,9 @@ rustls-native-certs = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio"] }
 once_cell = { workspace = true }
 lazy_static = { workspace = true }
+
+[features]
+bundled = [
+  "postgresql_embedded/bundled",
+]
+default = ["bundled"]
