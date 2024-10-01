@@ -131,6 +131,7 @@ fn download_windows_npcap_sdk() {
 #[cfg(target_env = "msvc")]
 fn setup_libpq_vcpkg() -> bool {
 	vcpkg::Config::new()
+		.target_triplet("x64-windows-static-md")
 		.find_package("libpq")
 		.map(|_| {
 			// found libpq, now try to find openssl
