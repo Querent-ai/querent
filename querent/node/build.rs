@@ -7,8 +7,9 @@ fn main() {
 	if cfg!(target_os = "windows") {
 		let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
 		// move two level up
-		let dir_libs = Path::new(&dir).join("..").join("..").join("..").canonicalize().unwrap();
-
+		let dir_libs = Path::new(&dir).join("..").join("..").canonicalize().unwrap();
+		// move one level up for target folder
+		let dir = Path::new(&dir).parent().unwrap().canonicalize().unwrap();
 		let profile = env::var("PROFILE").unwrap();
 
 		// Set libpq.lib folder for the linker
