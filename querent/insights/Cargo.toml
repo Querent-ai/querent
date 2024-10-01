@@ -18,7 +18,6 @@ llms = { workspace = true }
 async-trait = { workspace = true }
 async-stream = { workspace = true }
 anyhow = { workspace = true }
-milvus-sdk-rust= { workspace = true }
 neo4rs = { workspace = true }
 tokio-postgres = { workspace = true }
 tokio-postgres-rustls = { workspace = true }

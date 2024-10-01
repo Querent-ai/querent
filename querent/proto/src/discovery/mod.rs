@@ -1,5 +1,5 @@
 use crate::error::{GrpcServiceError, ServiceError, ServiceErrorCode};
-pub use crate::semantics::{MilvusConfig, Neo4jConfig, PostgresConfig, StorageConfig, StorageType};
+pub use crate::semantics::{Neo4jConfig, PostgresConfig, StorageConfig, StorageType};
 use actors::AskError;
 use bytes::Bytes;
 use bytestring::ByteString;

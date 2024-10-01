@@ -1,7 +1,7 @@
 use proto::{
 	discovery::{
 		DiscoveryAgentType, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
-		DiscoverySessionResponse, Insight, MilvusConfig, Neo4jConfig, PostgresConfig,
+		DiscoverySessionResponse, Insight, Neo4jConfig, PostgresConfig,
 		StopDiscoverySessionRequest, StopDiscoverySessionResponse, StorageConfig,
 	},
 	semantics::StorageType,
@@ -36,7 +36,6 @@ use crate::{
 		StorageConfig,
 		PostgresConfig,
 		Neo4jConfig,
-		MilvusConfig,
 		StorageType,
 		StopDiscoverySessionRequest,
 		StopDiscoverySessionResponse,

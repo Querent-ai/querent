@@ -2138,7 +2138,6 @@ dependencies = [
  "indicatif",
  "itertools 0.12.1",
  "log 0.4.22",
- "milvus-sdk-rust",
  "neo4rs",
  "num_cpus",
  "numfmt",
@@ -2229,7 +2228,7 @@ dependencies = [
  "quote",
  "serde",
  "syn 2.0.77",
- "tonic-build 0.9.2",
+ "tonic-build",
 ]
 
 [[package]]
@@ -3545,7 +3544,6 @@ dependencies = [
  "llms",
  "log 0.4.22",
  "md5",
- "milvus-sdk-rust",
  "neo4rs",
  "once_cell",
  "opendal",
@@ -5421,7 +5419,6 @@ dependencies = [
  "log 0.4.22",
  "lopdf",
  "md5",
- "milvus-sdk-rust",
  "neo4rs",
  "once_cell",
  "opendal",
@@ -5498,7 +5495,6 @@ dependencies = [
  "llms",
  "log 0.4.22",
  "md5",
- "milvus-sdk-rust",
  "neo4rs",
  "once_cell",
  "opendal",
@@ -6032,7 +6028,6 @@ dependencies = [
  "hyper-rustls 0.24.2",
  "log 0.4.22",
  "md5",
- "milvus-sdk-rust",
  "neo4rs",
  "ollama-rs",
  "once_cell",
@@ -6387,25 +6382,6 @@ dependencies = [
  "migrations_internals",
  "proc-macro2",
  "quote",
-]
-
-[[package]]
-name = "milvus-sdk-rust"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e291050787c486091140a968f4d90759638a55f0883bcf30acc8f0470efaf0"
-dependencies = [
- "anyhow",
- "base64 0.21.7",
- "prost 0.11.9",
- "serde",
- "serde_json",
- "strum 0.24.1",
- "strum_macros 0.24.3",
- "thiserror",
- "tokio",
- "tonic 0.8.3",
- "tonic-build 0.8.4",
 ]
 
 [[package]]
@@ -7173,7 +7149,7 @@ dependencies = [
  "reqwest 0.12.7",
  "serde",
  "serde_json",
- "strum 0.26.3",
+ "strum",
  "thiserror",
  "url 2.5.2",
 ]
@@ -8587,7 +8563,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tonic 0.9.2",
- "tonic-build 0.9.2",
+ "tonic-build",
  "tower",
  "tracing",
  "tracing-opentelemetry",
@@ -10460,7 +10436,6 @@ dependencies = [
  "log 0.4.22",
  "mailparse",
  "md5",
- "milvus-sdk-rust",
  "native-tls",
  "neo4rs",
  "oauth2",
@@ -11212,7 +11187,6 @@ dependencies = [
  "itertools 0.12.1",
  "lazy_static",
  "log 0.4.22",
- "milvus-sdk-rust",
  "neo4rs",
  "once_cell",
  "pgvector",
@@ -11284,30 +11258,11 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.24.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
-
-[[package]]
-name = "strum"
 version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros 0.26.4",
-]
-
-[[package]]
-name = "strum_macros"
-version = "0.24.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e385be0d24f186b4ce2f9982191e7101bb737312ad61c1f2f984f34bcf85d59"
-dependencies = [
- "heck 0.4.1",
- "proc-macro2",
- "quote",
- "rustversion",
- "syn 1.0.109",
+ "strum_macros",
 ]
 
 [[package]]
@@ -12375,41 +12330,6 @@ dependencies = [
 
 [[package]]
 name = "tonic"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f219fad3b929bef19b1f86fbc0358d35daed8f2cac972037ac0dc10bbb8d5fb"
-dependencies = [
- "async-stream",
- "async-trait",
- "axum",
- "base64 0.13.1",
- "bytes",
- "futures-core",
- "futures-util",
- "h2 0.3.26",
- "http 0.2.12",
- "http-body 0.4.6",
- "hyper 0.14.30",
- "hyper-timeout",
- "percent-encoding 2.3.1",
- "pin-project",
- "prost 0.11.9",
- "prost-derive 0.11.9",
- "rustls-native-certs 0.6.3",
- "rustls-pemfile 1.0.4",
- "tokio",
- "tokio-rustls 0.23.4",
- "tokio-stream",
- "tokio-util",
- "tower",
- "tower-layer",
- "tower-service",
- "tracing",
- "tracing-futures",
-]
-
-[[package]]
-name = "tonic"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3082666a3a6433f7f511c7192923fa1fe07c69332d3c6a2e6bb040b569199d5a"
@@ -12462,19 +12382,6 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
-]
-
-[[package]]
-name = "tonic-build"
-version = "0.8.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bf5e9b9c0f7e0a7c027dcfaba7b2c60816c7049171f679d99ee2ff65d0de8c4"
-dependencies = [
- "prettyplease 0.1.25",
- "proc-macro2",
- "prost-build",
- "quote",
- "syn 1.0.109",
 ]
 
 [[package]]
@@ -12574,16 +12481,6 @@ checksum = "c06d3da6113f116aaee68e4d601191614c9053067f9ab7f6edbcb161237daa54"
 dependencies = [
  "once_cell",
  "valuable",
-]
-
-[[package]]
-name = "tracing-futures"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
-dependencies = [
- "pin-project",
- "tracing",
 ]
 
 [[package]]
