@@ -7077,6 +7077,7 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",
+ "vcpkg",
  "warp",
  "zip 0.5.13",
 ]
@@ -9739,6 +9740,7 @@ dependencies = [
  "tauri-utils",
  "tiny_http",
  "tokio",
+ "vcpkg",
  "windows 0.58.0",
 ]
 

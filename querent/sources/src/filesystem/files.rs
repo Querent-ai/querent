@@ -193,3 +193,43 @@ impl Source for LocalFolderSource {
 		result
 	}
 }
+
+#[cfg(test)]
+mod tests {
+
+	use std::{collections::HashSet, path::PathBuf};
+
+	use futures::StreamExt;
+
+	use crate::Source;
+
+	use super::LocalFolderSource;
+
+	#[tokio::test]
+	async fn test_local_file_collector() {
+		let local_storage = LocalFolderSource::new(
+			PathBuf::from("src/filesystem/".to_string()),
+			"LocalFolderSource".to_string(),
+		);
+		let connectivity = local_storage.check_connectivity().await;
+
+		println!("Connectivity: {:?}", connectivity);
+
+		let result = local_storage.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
+	}
+}

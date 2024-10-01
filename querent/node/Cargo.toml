@@ -83,6 +83,7 @@ postgresql_embedded = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
+vcpkg = "0.2.15"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
 http_req = "0.7.0"

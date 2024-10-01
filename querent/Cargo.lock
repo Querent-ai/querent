@@ -6757,6 +6757,7 @@ dependencies = [
  "utoipa",
  "utoipa-swagger-ui",
  "uuid",
+ "vcpkg",
  "warp",
  "zip 0.5.13",
 ]
