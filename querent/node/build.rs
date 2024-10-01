@@ -31,11 +31,6 @@ fn main() {
 	commit_info();
 	#[cfg(target_os = "windows")]
 	{
-		println!("cargo:rustc-link-lib=libpq");
-		let pq_installed = setup_libpq_vcpkg();
-		if !pq_installed {
-			panic!("libpq not found");
-		}
 		download_windows_npcap_sdk();
 	}
 }
