@@ -85,16 +85,6 @@ pub async fn create_storages(
 						.push(postgres.clone());
 				}
 			},
-			StorageConfig { milvus: Some(config), .. } => {
-				let milvus = MilvusStorage::new(config.clone()).await.map_err(|err| {
-					log::error!("Milvus client creation failed: {:?}", err);
-					err
-				})?;
-
-				milvus.check_connectivity().await?;
-				let milvus = Arc::new(milvus);
-				event_storages.entry(EventType::Vector).or_insert_with(Vec::new).push(milvus);
-			},
 			StorageConfig { neo4j: Some(config), .. } => {
 				let neo4j = Neo4jStorage::new(config.clone()).await.map_err(|err| {
 					log::error!("Neo4j client creation failed: {:?}", err);
