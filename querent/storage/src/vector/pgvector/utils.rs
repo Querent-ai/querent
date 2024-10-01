@@ -291,23 +291,23 @@ pub async fn fetch_documents_for_embedding(
 			let mut results = Vec::new();
 			for (_embeddings, score, event_id, other_cosine_distance) in result {
 				let mut query_semantic = semantic_knowledge::dsl::semantic_knowledge
-                    .select((
-                        semantic_knowledge::dsl::document_id,
-                        semantic_knowledge::dsl::subject,
-                        semantic_knowledge::dsl::object,
-                        semantic_knowledge::dsl::document_source,
-                        semantic_knowledge::dsl::sentence,
-                    ))
-                    .filter(semantic_knowledge::dsl::event_id.eq(event_id))
-                    .into_boxed();
-                if !collection_id.is_empty() {
-                    query_semantic = query_semantic.filter(semantic_knowledge::dsl::collection_id.eq(collection_id));
-                }
-                let query_result_semantic = query_semantic
-                    .offset(0)
-                    .load::<(String, String, String, String, String)>(conn)
-                    .await;
-
+					.select((
+						semantic_knowledge::dsl::document_id,
+						semantic_knowledge::dsl::subject,
+						semantic_knowledge::dsl::object,
+						semantic_knowledge::dsl::document_source,
+						semantic_knowledge::dsl::sentence,
+					))
+					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
+					.into_boxed();
+				if !collection_id.is_empty() {
+					query_semantic = query_semantic
+						.filter(semantic_knowledge::dsl::collection_id.eq(collection_id));
+				}
+				let query_result_semantic = query_semantic
+					.offset(0)
+					.load::<(String, String, String, String, String)>(conn)
+					.await;
 
 				match query_result_semantic {
 					Ok(result_semantic) => {
@@ -415,24 +415,22 @@ pub async fn fetch_documents_for_embedding_pgembed(
 
 	match query_result {
 		Ok(results) => {
-			
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
 				println!("This is the similarity ------{:?}", similarity);
 				println!("This is the collection_id ------{:?}", collection_id);
-				let semantic_query_string = 
-                    r#"
+				let semantic_query_string = r#"
                     SELECT document_id, subject, object, document_source, sentence
                     FROM semantic_knowledge
                     WHERE event_id = $1 
                       AND (COALESCE($2, '') = '' OR collection_id = $2)
                     "#;
 
-                let semantic_query = diesel::sql_query(semantic_query_string)
-                    .bind::<Text, _>(&event_id)
-                    .bind::<Text, _>(collection_id);
+				let semantic_query = diesel::sql_query(semantic_query_string)
+					.bind::<Text, _>(&event_id)
+					.bind::<Text, _>(collection_id);
 
-                let query_result_semantic = semantic_query.load::<SemanticResult>(conn).await;
+				let query_result_semantic = semantic_query.load::<SemanticResult>(conn).await;
 
 				match query_result_semantic {
 					Ok(result_semantic) => {

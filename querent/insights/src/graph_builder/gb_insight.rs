@@ -1,5 +1,6 @@
 use crate::{
-	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue, InsightError, InsightErrorKind, InsightInfo, InsightResult, InsightRunner
+	ConfigCallbackResponse, CustomInsightOption, Insight, InsightConfig, InsightCustomOptionValue,
+	InsightError, InsightErrorKind, InsightInfo, InsightResult, InsightRunner,
 };
 use async_trait::async_trait;
 use serde_json::Value;
@@ -28,7 +29,9 @@ impl GBV1 {
 					value: "bolt://localhost:7687".to_string(),
 					hidden: Some(false),
 				},
-				tooltip: Some("The URL of your Neo4j instance (e.g., bolt://localhost:7687)".to_string()),
+				tooltip: Some(
+					"The URL of your Neo4j instance (e.g., bolt://localhost:7687)".to_string(),
+				),
 			},
 		);
 		additional_options.insert(
@@ -76,7 +79,9 @@ impl GBV1 {
 					value: "neo4j".to_string(),
 					hidden: Some(false),
 				},
-				tooltip: Some("The name of the Neo4j database (leave empty for default)".to_string()),
+				tooltip: Some(
+					"The name of the Neo4j database (leave empty for default)".to_string(),
+				),
 			},
 		);
 		Self {
@@ -126,7 +131,7 @@ impl Insight for GBV1 {
 					InsightErrorKind::Unauthorized,
 					anyhow::anyhow!("Invalid Neo4j instance URL format").into(),
 				));
-			}
+			},
 		};
 		let neo4j_username = config.get_custom_option("neo4j_username");
 		if neo4j_username.is_none() {
@@ -142,7 +147,7 @@ impl Insight for GBV1 {
 					InsightErrorKind::Unauthorized,
 					anyhow::anyhow!("Invalid Neo4j username format").into(),
 				));
-			}
+			},
 		};
 		let neo4j_password = config.get_custom_option("neo4j_password");
 		if neo4j_password.is_none() {
@@ -158,7 +163,7 @@ impl Insight for GBV1 {
 					InsightErrorKind::Unauthorized,
 					anyhow::anyhow!("Invalid Neo4j password format").into(),
 				));
-			}
+			},
 		};
 		let neo4j_database = config.get_custom_option("neo4j_database");
 		let neo4j_database = neo4j_database.map_or_else(
@@ -179,5 +184,4 @@ impl Insight for GBV1 {
 		};
 		Ok(Arc::new(graph_builder_runner))
 	}
-	
 }

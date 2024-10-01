@@ -123,7 +123,6 @@ pub trait FabricStorage: Send + Sync + 'static {
 		offset: i64,
 		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>>;
-	
 
 	/// Insert InsightKnowledge into storage
 	async fn insert_insight_knowledge(
@@ -161,7 +160,8 @@ pub trait FabricAccessor: Send + Sync + 'static {
 	/// Get discovered data based on session_id
 	async fn get_discovered_data(
 		&self,
-		session_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>>;
 
 	/// Get metadata if applicable

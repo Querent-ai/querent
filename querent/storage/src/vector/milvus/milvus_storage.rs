@@ -91,7 +91,6 @@ impl FabricStorage for MilvusStorage {
 		max_results: i32,
 		_offset: i64,
 		_top_pairs_embeddings: &Vec<Vec<f32>>,
-		
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let collection_name = format!("pipeline_{}", collection_id);
 		let collection = self.client.get_collection(collection_name.as_str()).await;
@@ -230,7 +229,8 @@ impl FabricAccessor for MilvusStorage {
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,
-		_session_id: String,
+		_discovery_session_id: String,
+		_pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
 	}

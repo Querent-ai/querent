@@ -1,33 +1,34 @@
-use crate::{InsightConfig, InsightError,
-	InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
+use crate::{
+	InsightConfig, InsightError, InsightErrorKind, InsightInput, InsightOutput, InsightResult,
+	InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;
 use common::{EventType, SemanticKnowledgePayload};
 use fastembed::TextEmbedding;
 use futures::{pin_mut, Stream, StreamExt};
+use lazy_static::lazy_static;
 use neo4rs::Graph;
+use proto::{Neo4jConfig, StorageType};
 use serde_json::Value;
 use std::{
 	collections::{HashMap, HashSet},
 	pin::Pin,
 	sync::{Arc, RwLock},
 };
-use lazy_static::lazy_static;
-use tokio::sync::Mutex;
 use storage::{FabricStorage, Neo4jStorage, StorageErrorKind, StorageResult};
-use proto::{Neo4jConfig, StorageType};
+use tokio::sync::Mutex;
 lazy_static! {
-    static ref NEO4J_STORAGE: Mutex<Option<(Arc<Neo4jStorage>, Neo4jConfig)>> = Mutex::new(None);
+	static ref NEO4J_STORAGE: Mutex<Option<(Arc<Neo4jStorage>, Neo4jConfig)>> = Mutex::new(None);
 }
 
 pub struct GraphBuilderRunner {
 	pub config: InsightConfig,
 	pub embedding_model: Option<TextEmbedding>,
 	pub neo4j_instance_url: String,
-    pub neo4j_username: String,
-    pub neo4j_password: String,
-    pub neo4j_database: Option<String>,
+	pub neo4j_username: String,
+	pub neo4j_password: String,
+	pub neo4j_database: Option<String>,
 }
 
 #[async_trait]
@@ -49,33 +50,33 @@ impl InsightRunner for GraphBuilderRunner {
 			fetch_size: 100,
 			max_connection_pool_size: 5,
 		};
-		
+
 		let mut storage_lock = NEO4J_STORAGE.lock().await;
-        // Check if a storage exists and if the config matches
-        let neo4j_storage = match &*storage_lock {
-            Some((existing_storage, existing_config)) if existing_config == &new_config => {
-                Arc::clone(existing_storage)
-            }
-            _ => {
-                let new_storage = Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
-                    InsightError::new(
-                        InsightErrorKind::Internal,
-                        anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
-                    )
-                })?);
-                *storage_lock = Some((Arc::clone(&new_storage), new_config));
-                new_storage
-            }
-        };
+		// Check if a storage exists and if the config matches
+		let neo4j_storage = match &*storage_lock {
+			Some((existing_storage, existing_config)) if existing_config == &new_config =>
+				Arc::clone(existing_storage),
+			_ => {
+				let new_storage =
+					Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
+						InsightError::new(
+							InsightErrorKind::Internal,
+							anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
+						)
+					})?);
+				*storage_lock = Some((Arc::clone(&new_storage), new_config));
+				new_storage
+			},
+		};
 		println!("Reached outside -----------------");
-		// let query = input.data.get("query").and_then(Value::as_str);
-		// let query = match query {
-		// 	Some(q) => q,
-		// 	None => {
-		// 		tracing::info!("Query is missing. Generating auto-suggestions.");
-		// 		"Auto_Suggest"
-		// 	},
-		// };
+		let query = input.data.get("query").and_then(Value::as_str);
+		let query = match query {
+			Some(q) => q,
+			None => {
+				tracing::info!("Query is missing. Generating auto-suggestions.");
+				"Auto_Suggest"
+			},
+		};
 
 		// let embedding_model = self.embedding_model.as_ref().ok_or_else(|| {
 		// 	InsightError::new(
@@ -92,49 +93,80 @@ impl InsightRunner for GraphBuilderRunner {
 		for (event_type, storages) in self.config.event_storages.iter() {
 			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
-					println!("Reached outside -----------------222222");
-				match storage.get_discovered_data(self.config.discovery_session_id.clone()).await {
-					Ok(discovered_data) => {
-						// Step 2: Prepare the data for insertion into Neo4j.
-						let mut neo4j_payload: Vec<(String, String, Option<String>, SemanticKnowledgePayload)> = Vec::new();
-						for knowledge in discovered_data {
-							let semantic_payload = SemanticKnowledgePayload {
-								subject: knowledge.subject.clone(),
-								object: knowledge.object.clone(),
-								predicate: "related".to_string(),
-								sentence: knowledge.sentence.clone(),
-								subject_type: "Entity".to_string(),
-								object_type: "Entity".to_string(), 
-								predicate_type: "relationship".to_string(),
-								blob: Some("".to_string()),
-								image_id: Some("".to_string()),
-								event_id: "".to_string(),
-								source_id: "".to_string(),
-							};
-							neo4j_payload.push((
-								knowledge.doc_id.clone(),
-								knowledge.doc_source.clone(),
-								None,
-								semantic_payload,
-							));
-						}
+					if !query.is_empty() {
+						// Skip processing if query is present and not empty
+						continue;
+					}
 
-						// Step 3: Use the Neo4j storage instance to insert the data.
-						match neo4j_storage.insert_graph(
-							"your_collection_id".to_string(), // Replace with actual collection ID
-							&neo4j_payload
-						).await {
-							Ok(_) => {
-								log::info!("Successfully inserted discovered knowledge into Neo4j");
-							},
-							Err(err) => {
-								log::error!("Failed to insert discovered knowledge into Neo4j: {:?}", err);
-							},
-						}
-					},
-					Err(err) => {
-						log::error!("Failed to fetch discovered data: {:?}", err);
-					},}
+					// If the query is not present, then proceed with fetching discovered data
+					match storage
+						.get_discovered_data(
+							self.config.discovery_session_id.clone(),
+							self.config.semantic_pipeline_id.clone(),
+						)
+						.await
+					{
+						Ok(discovered_data) => {
+							println!(
+								"Reached outside -----------------222222----{:?}",
+								self.config.discovery_session_id
+							);
+
+							let mut neo4j_payload: Vec<(
+								String,
+								String,
+								Option<String>,
+								SemanticKnowledgePayload,
+							)> = Vec::new();
+
+							for knowledge in discovered_data {
+								let semantic_payload = SemanticKnowledgePayload {
+									subject: knowledge.subject.clone(),
+									object: knowledge.object.clone(),
+									predicate: knowledge
+										.sentence
+										.split_whitespace()
+										.take(10)
+										.collect::<Vec<&str>>()
+										.join(" "),
+									sentence: knowledge.sentence.clone(),
+									subject_type: "Entity".to_string(),
+									object_type: "Entity".to_string(),
+									predicate_type: "relationship".to_string(),
+									blob: Some("".to_string()),
+									image_id: Some("".to_string()),
+									event_id: "".to_string(),
+									source_id: "".to_string(),
+								};
+
+								neo4j_payload.push((
+									knowledge.doc_id.clone(),
+									knowledge.doc_source.clone(),
+									None,
+									semantic_payload,
+								));
+							}
+
+							if !neo4j_payload.is_empty() {
+								match neo4j_storage
+									.insert_graph(session_id.to_string(), &neo4j_payload)
+									.await
+								{
+									Ok(_) => {
+										log::info!(
+											"Successfully inserted discovered knowledge into Neo4j"
+										);
+									},
+									Err(err) => {
+										log::error!("Failed to insert discovered knowledge into Neo4j: {:?}", err);
+									},
+								}
+							}
+						},
+						Err(err) => {
+							log::error!("Failed to fetch discovered data: {:?}", err);
+						},
+					}
 
 					// let mut fetched_results = Vec::new();
 					// let mut _total_fetched = 0;

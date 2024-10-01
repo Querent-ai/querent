@@ -644,19 +644,24 @@ impl FabricAccessor for PGEmbed {
 
 	async fn get_discovered_data(
 		&self,
-		session_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-		let query = format!(
+		let mut query = String::from(
 			"SELECT doc_id, doc_source, sentence, subject, object, cosine_distance, session_id, score, query, 
 			array_to_string(query_embedding::real[], ',') as query_embedding, collection_id
-			 FROM discovered_knowledge
-			 WHERE session_id = '{}'",
-			session_id
+			FROM discovered_knowledge WHERE 1 = 1"
 		);
+		if !discovery_session_id.is_empty() {
+			query.push_str(&format!(" AND session_id = '{}'", discovery_session_id));
+		}
+		if !pipeline_id.is_empty() {
+			query.push_str(&format!(" AND collection_id = '{}'", pipeline_id));
+		}
 		let results: Vec<DiscoveredKnowledgeRaw> = match diesel::sql_query(query).load(conn).await {
 			Ok(res) => res,
 			Err(e) => {
@@ -924,7 +929,7 @@ mod tests {
 				&payload,
 				max_results,
 				offset,
-				&top_pairs_embeddings,		
+				&top_pairs_embeddings,
 			)
 			.await;
 
@@ -1092,7 +1097,7 @@ mod tests {
 			},
 		}
 		let session_id = "session_1".to_string();
-		match embed.get_discovered_data(session_id.clone()).await {
+		match embed.get_discovered_data(session_id.clone(), "".to_string()).await {
 			Ok(fetched_data) => {
 				println!(
 					"Fetched data successfully using `get_discovered_data`: {:?}",

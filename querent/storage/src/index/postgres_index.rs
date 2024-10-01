@@ -188,7 +188,8 @@ impl FabricAccessor for PostgresStorage {
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,
-		_session_id: String,
+		_discovery_session_id: String,
+		_pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
 	}

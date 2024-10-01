@@ -175,7 +175,6 @@ impl FabricStorage for PGVector {
 		max_results: i32,
 		offset: i64,
 		top_pairs_embeddings: &Vec<Vec<f32>>,
-		
 	) -> StorageResult<Vec<DocumentPayload>> {
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -545,7 +544,8 @@ impl FabricAccessor for PGVector {
 
 	async fn get_discovered_data(
 		&self,
-		session_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
@@ -554,7 +554,7 @@ impl FabricAccessor for PGVector {
 		let results = conn
 			.transaction::<_, diesel::result::Error, _>(|conn| {
 				async move {
-					let query_result = discovered_knowledge::dsl::discovered_knowledge
+					let mut query = discovered_knowledge::dsl::discovered_knowledge
 						.select((
 							discovered_knowledge::dsl::doc_id,
 							discovered_knowledge::dsl::doc_source,
@@ -568,7 +568,17 @@ impl FabricAccessor for PGVector {
 							discovered_knowledge::dsl::query_embedding,
 							discovered_knowledge::dsl::collection_id,
 						))
-						.filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+						.into_boxed();
+					if !discovery_session_id.is_empty() {
+						query = query
+							.filter(discovered_knowledge::dsl::session_id.eq(&discovery_session_id))
+					}
+					if !pipeline_id.is_empty() {
+						query =
+							query.filter(discovered_knowledge::dsl::collection_id.eq(&pipeline_id));
+					}
+
+					let query_result = query
 						.load::<(
 							String,
 							String,
