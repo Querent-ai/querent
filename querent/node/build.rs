@@ -1,8 +1,6 @@
 use std::{env, process::Command};
 
 use time::{macros::format_description, OffsetDateTime};
-#[cfg(target_os = "windows")]
-extern crate vcpkg;
 
 fn main() {
 	println!(
@@ -126,26 +124,4 @@ fn download_windows_npcap_sdk() {
 	io::copy(&mut npcap_lib, &mut lib_file).unwrap();
 
 	println!("cargo:rustc-link-search=native={}", lib_dir.to_str().unwrap());
-}
-
-#[cfg(target_env = "msvc")]
-fn setup_libpq_vcpkg() -> bool {
-	vcpkg::Config::new()
-		.target_triplet("x64-windows-static-md")
-		.find_package("libpq")
-		.map(|_| {
-			// found libpq, now try to find openssl
-			if let Err(_) = vcpkg::Config::new().find_package("openssl") {
-				eprintln!("Warning: OpenSSL not found, continuing without it.");
-			}
-
-			// Link additional Windows libraries
-			println!("cargo:rustc-link-lib=crypt32");
-			println!("cargo:rustc-link-lib=gdi32");
-			println!("cargo:rustc-link-lib=user32");
-			println!("cargo:rustc-link-lib=secur32");
-			println!("cargo:rustc-link-lib=shell32");
-			println!("cargo:rustc-link-lib=wldap32");
-		})
-		.is_ok()
 }
