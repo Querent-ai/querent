@@ -4,13 +4,16 @@ extern crate vcpkg;
 fn main() {
     #[cfg(target_os = "windows")]
     {
-        setup_libpq_vcpkg();
+        let pq_installed = setup_libpq_vcpkg();
+        if !pq_installed {
+            panic!("libpq not found");
+        }
     }
     tauri_build::build()
 }
 
 #[cfg(target_os = "windows")]
-fn setup_libpq_vcpkg() {
+fn setup_libpq_vcpkg() -> bool {
     vcpkg::find_package("libpq")
         .map(|_| {
             // found libpq which depends on openssl
