@@ -275,6 +275,7 @@ postgresql_embedded = { version = "0.16.3", default-features = false, features =
 postgresql_extensions = "0.16.3"
 rustls-native-certs = "0.8.0"
 sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
+openssl-sys = { version = "0.9.93", features = ["vendored"] }
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates

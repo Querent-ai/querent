@@ -1,6 +1,8 @@
 use std::{env, process::Command};
 
 use time::{macros::format_description, OffsetDateTime};
+#[cfg(target_os = "windows")]
+extern crate vcpkg;
 
 fn main() {
 	println!(
@@ -13,7 +15,10 @@ fn main() {
 	println!("cargo:rustc-env=BUILD_TARGET={}", env::var("TARGET").unwrap());
 	commit_info();
 	#[cfg(target_os = "windows")]
-	download_windows_npcap_sdk();
+	{
+		setup_libpq_vcpkg();
+		download_windows_npcap_sdk();
+	}
 }
 
 /// Extracts commit date, hash, and tags
@@ -117,4 +122,25 @@ fn download_windows_npcap_sdk() {
 	io::copy(&mut npcap_lib, &mut lib_file).unwrap();
 
 	println!("cargo:rustc-link-search=native={}", lib_dir.to_str().unwrap());
+}
+
+#[cfg(target_os = "windows")]
+fn setup_libpq_vcpkg() {
+	// Try to configure libpq using vcpkg
+	match vcpkg::find_package("libpq") {
+		Ok(_) => {
+			// vcpkg setup succeeded
+			println!("cargo:rustc-link-lib=libpq");
+			println!("cargo:rustc-link-lib=crypt32");
+			println!("cargo:rustc-link-lib=gdi32");
+			println!("cargo:rustc-link-lib=user32");
+			println!("cargo:rustc-link-lib=secur32");
+			println!("cargo:rustc-link-lib=shell32");
+			println!("cargo:rustc-link-lib=wldap32");
+		},
+		Err(_) => {
+			// Handle errors if vcpkg setup fails
+			panic!("Failed to configure libpq via vcpkg.");
+		},
+	}
 }
