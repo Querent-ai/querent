@@ -49,6 +49,14 @@ jobs:
   #     matrix:
   #       target: [x86_64-apple-darwin]
   #   steps:
+  #     - name: Download and setup libonnxruntime
+  #       run: |
+  #         mkdir /tmp/onnxruntime
+  #         curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+  #         export ORT_STRATEGY=system
+  #         export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
+  #         echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+  #         echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
   #     - uses: actions/checkout@v4
   #     - name: Install Node.js
   #       uses: actions/setup-node@v4
@@ -79,7 +87,7 @@ jobs:
   #       with:
   #         tauriScript: cargo tauri
   #         projectPath: ./tauri/rian
-  #         args: -- --profile release --features license-check,openssl-support
+  #         args: -- --profile release --features license-check,openssl-support,bundled
   #     - uses: actions/upload-artifact@v4
   #       with:
   #         name: tauri-rian-bundle-macos-12-x86_64
@@ -100,6 +108,14 @@ jobs:
   #     matrix:
   #       target: [aarch64-apple-darwin]
   #   steps:
+  #     - name: Download and setup libonnxruntime
+  #       run: |
+  #         mkdir /tmp/onnxruntime
+  #         curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+  #         export ORT_STRATEGY=system
+  #         export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
+  #         echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+  #         echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
   #     - uses: actions/checkout@v4
   #     - name: Install Node.js
   #       uses: actions/setup-node@v4
@@ -128,7 +144,7 @@ jobs:
   #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
   #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
   #       with:
-  #         args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support
+  #         args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support,bundled
   #         tauriScript: cargo tauri
   #         projectPath: ./tauri/rian
   #     - uses: actions/upload-artifact@v4
@@ -146,6 +162,14 @@ jobs:
   #   name: Build ${{ matrix.target }}
   #   runs-on: ubuntu-22.04
   #   steps:
+  #     - name: Download and setup libonnxruntime
+  #       run: |
+  #         mkdir /tmp/onnxruntime
+  #         curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+  #         export ORT_STRATEGY=system
+  #         export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
+  #         echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+  #         echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
   #     - uses: actions/checkout@v4
   #     - name: Install Node.js
   #       uses: actions/setup-node@v4
@@ -174,7 +198,7 @@ jobs:
   #       with:
   #         tauriScript: cargo tauri
   #         projectPath: ./tauri/rian
-  #         args: -- --profile release --features license-check,openssl-support
+  #         args: -- --profile release --features license-check,openssl-support,bundled
   #     - uses: actions/upload-artifact@v4
   #       with:
   #         name: tauri-rian-bundle-ubuntu-22.04-x86_64
@@ -210,12 +234,6 @@ jobs:
           # Persist environment variables to GitHub Actions environment
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_STRATEGY=$env:ORT_STRATEGY"
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_LIB_LOCATION=$env:ORT_LIB_LOCATION"
-      - name: Windows static postgresql
-        run: |
-          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
-          vcpkg install openssl:x64-windows-static-md
-          vcpkg install libpq:x64-windows-static-md
-          echo "PQ_LIB_STATIC=1" | Out-File -FilePath $env:GITHUB_ENV -Append
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -244,7 +262,7 @@ jobs:
         with:
           tauriScript: cargo tauri
           projectPath: ./tauri/rian
-          args: -- --profile release --features license-check,openssl-support
+          args: -- --profile release --features license-check,openssl-support,bundled
       - uses: actions/upload-artifact@v4
         with:
           name: tauri-rian-bundle-windows-2022-x86_64

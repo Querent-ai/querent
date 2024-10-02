@@ -1,36 +1,33 @@
-#[cfg(target_os = "windows")]
-extern crate vcpkg;
+use std::env;
+use std::fs;
+use std::path::Path;
 
 fn main() {
-    #[cfg(target_os = "windows")]
-    {
-        println!("cargo:rustc-link-lib=libpq");
-        let pq_installed = setup_libpq_vcpkg();
-        if !pq_installed {
-            panic!("libpq not found");
-        }
+    // This is just a hack to simplify Windows build
+    if cfg!(target_os = "windows") {
+        let dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+        // move two level up
+        let dir_libs = Path::new(&dir)
+            .join("..")
+            .join("..")
+            .canonicalize()
+            .unwrap();
+        // move one level up for target folder
+        let dir = Path::new(&dir).parent().unwrap().canonicalize().unwrap();
+        let profile = env::var("PROFILE").unwrap();
+
+        // Set libpq.lib folder for the linker
+        let libs = Path::new(&dir_libs).join("win_libs");
+        println!("cargo:rustc-link-search={}", libs.display());
+        let out_dir = Path::new(&dir).join("target").join(&profile);
+        fs::copy(libs.join("libiconv-2.dll"), out_dir.join("libiconv-2.dll")).unwrap();
+        fs::copy(libs.join("libintl-9.dll"), out_dir.join("libintl-9.dll")).unwrap();
+        fs::copy(libs.join("libpq.dll"), out_dir.join("libpq.dll")).unwrap();
+        fs::copy(
+            libs.join("libssl-3-x64.dll"),
+            out_dir.join("libssl-3-x64.dll"),
+        )
+        .unwrap();
     }
     tauri_build::build()
-}
-
-#[cfg(target_env = "msvc")]
-fn setup_libpq_vcpkg() -> bool {
-    vcpkg::Config::new()
-        .target_triplet("x64-windows-static-md")
-        .find_package("libpq")
-        .map(|_| {
-            // found libpq, now try to find openssl
-            if let Err(_) = vcpkg::Config::new().find_package("openssl") {
-                eprintln!("Warning: OpenSSL not found, continuing without it.");
-            }
-
-            // Link additional Windows libraries
-            println!("cargo:rustc-link-lib=crypt32");
-            println!("cargo:rustc-link-lib=gdi32");
-            println!("cargo:rustc-link-lib=user32");
-            println!("cargo:rustc-link-lib=secur32");
-            println!("cargo:rustc-link-lib=shell32");
-            println!("cargo:rustc-link-lib=wldap32");
-        })
-        .is_ok()
 }
