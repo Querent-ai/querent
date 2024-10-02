@@ -91,5 +91,4 @@
 		color: white;
 		margin-right: 10px;
 	}
-
 </style>

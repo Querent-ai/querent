@@ -43,7 +43,6 @@
 			},
 			{} as { [key: string]: string }
 		);
-		
 	}
 	let additionalOptionsEntries: [string, CustomInsightOption][];
 
