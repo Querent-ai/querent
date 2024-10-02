@@ -81,16 +81,14 @@ impl GBV1 {
 					value: "neo4j".to_string(),
 					hidden: Some(false),
 				},
-				tooltip: Some(
-					"The name of the Neo4j database (leave empty for default)".to_string(),
-				),
+				tooltip: Some("The name of the Neo4j database".to_string()),
 			},
 		);
 		Self {
 			info: InsightInfo {
 				id: "querent.insights.graph_builder.gbv1".to_string(),
 				name: "Querent Graph Builder".to_string(),
-				description: "Graph builder will allow user to traverse the datafabrics and plot the results in a neo4j instance.".to_string(),
+				description: "Graph builder will allow user to plot the fabric knowledge discovery results in a neo4j instance.".to_string(),
 				version: "0.0.1-dev".to_string(),
 				author: "Querent AI".to_string(),
 				license: "BSL-1.0".to_string(),
@@ -167,13 +165,21 @@ impl Insight for GBV1 {
 			},
 		};
 		let neo4j_database = config.get_custom_option("neo4j_database");
-		let neo4j_database = neo4j_database.map_or_else(
-			|| None, // Use None if the database is not provided
-			|opt| match opt.value.clone() {
-				InsightCustomOptionValue::String { value, .. } => Some(value),
-				_ => None,
+		if neo4j_database.is_none() {
+			return Err(InsightError::new(
+				InsightErrorKind::Unauthorized,
+				anyhow::anyhow!("Neo4j password is required").into(),
+			));
+		}
+		let neo4j_database = match neo4j_database.unwrap().value.clone() {
+			InsightCustomOptionValue::String { value, .. } => value,
+			_ => {
+				return Err(InsightError::new(
+					InsightErrorKind::Unauthorized,
+					anyhow::anyhow!("Invalid Neo4j database format").into(),
+				));
 			},
-		);
+		};
 		let model_details = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
 			.with_cache_dir(get_querent_data_path())
 			.with_show_download_progress(true);

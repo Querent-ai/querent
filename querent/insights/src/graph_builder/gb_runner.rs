@@ -27,7 +27,7 @@ pub struct GraphBuilderRunner {
 	pub neo4j_instance_url: String,
 	pub neo4j_username: String,
 	pub neo4j_password: String,
-	pub neo4j_database: Option<String>,
+	pub neo4j_database: String,
 }
 
 #[async_trait]
@@ -43,9 +43,9 @@ impl InsightRunner for GraphBuilderRunner {
 			name: "neo4j".to_string(),
 			storage_type: Some(StorageType::Graph),
 			url: self.neo4j_instance_url.to_string(),
-			username: self.neo4j_username.clone(),
-			password: self.neo4j_password.clone(),
-			db_name: self.neo4j_database.clone().unwrap_or("".to_string()),
+			username: self.neo4j_username.to_string(),
+			password: self.neo4j_password.to_string(),
+			db_name: self.neo4j_database.to_string(),
 			fetch_size: 100,
 			max_connection_pool_size: 5,
 		};
@@ -115,7 +115,8 @@ impl InsightRunner for GraphBuilderRunner {
 								let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
 									HashMap::new();
 								if let Some(first_result) = results.first() {
-									discovery_session_id = first_result.session_id.clone().unwrap();
+									discovery_session_id =
+										first_result.session_id.clone().unwrap_or("".to_string());
 								}
 								for document in &results {
 									let tag = format!(
@@ -127,7 +128,7 @@ impl InsightRunner for GraphBuilderRunner {
 										let mut tags_set = HashSet::new();
 										tags_set.insert(tag);
 										combined_results.insert(
-											document.sentence.clone(),
+											document.sentence.to_string(),
 											(tags_set, document.score),
 										);
 
@@ -153,11 +154,11 @@ impl InsightRunner for GraphBuilderRunner {
 					match storage
 						.get_discovered_data(
 							if !discovery_session_id.is_empty() {
-								discovery_session_id.clone()
+								discovery_session_id
 							} else {
-								self.config.discovery_session_id.clone()
+								self.config.discovery_session_id.to_string()
 							},
-							self.config.semantic_pipeline_id.clone(),
+							self.config.semantic_pipeline_id.to_string(),
 						)
 						.await
 					{
@@ -170,15 +171,15 @@ impl InsightRunner for GraphBuilderRunner {
 							)> = Vec::new();
 							for knowledge in discovered_data {
 								let semantic_payload = SemanticKnowledgePayload {
-									subject: knowledge.subject.clone(),
-									object: knowledge.object.clone(),
+									subject: knowledge.subject,
+									object: knowledge.object,
 									predicate: knowledge
 										.sentence
 										.split_whitespace()
 										.take(5)
 										.collect::<Vec<&str>>()
 										.join(" "),
-									sentence: knowledge.sentence.clone(),
+									sentence: knowledge.sentence,
 									subject_type: "Entity".to_string(),
 									object_type: "Entity".to_string(),
 									predicate_type: "relationship".to_string(),
@@ -189,8 +190,8 @@ impl InsightRunner for GraphBuilderRunner {
 								};
 
 								neo4j_payload.push((
-									knowledge.doc_id.clone(),
-									knowledge.doc_source.clone(),
+									knowledge.doc_id,
+									knowledge.doc_source,
 									None,
 									semantic_payload,
 								));
@@ -216,7 +217,11 @@ impl InsightRunner for GraphBuilderRunner {
 							log::error!("Failed to fetch discovered data: {:?}", err);
 						},
 					}
-					return Ok(InsightOutput { data: Value::String("Successfully inserted fabric data in Neo4j".to_string()) });
+					return Ok(InsightOutput {
+						data: Value::String(
+							"Successfully inserted fabric data in Neo4j".to_string(),
+						),
+					});
 				}
 			}
 		}
