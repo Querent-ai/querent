@@ -2,18 +2,17 @@ use crate::{
 	insert_discovered_knowledge_async, InsightConfig, InsightError, InsightErrorKind, InsightInput,
 	InsightOutput, InsightResult, InsightRunner,
 };
-use async_stream::stream;
 use async_trait::async_trait;
 use common::{EventType, SemanticKnowledgePayload};
 use fastembed::TextEmbedding;
-use futures::{pin_mut, Stream, StreamExt};
+use futures::Stream;
 use lazy_static::lazy_static;
 use proto::{Neo4jConfig, StorageType};
 use serde_json::Value;
 use std::{
 	collections::{HashMap, HashSet},
 	pin::Pin,
-	sync::{Arc, RwLock},
+	sync::Arc,
 };
 use storage::{FabricStorage, Neo4jStorage};
 use tokio::sync::Mutex;
@@ -49,20 +48,29 @@ impl InsightRunner for GraphBuilderRunner {
 			fetch_size: 100,
 			max_connection_pool_size: 5,
 		};
-
 		let mut storage_lock = NEO4J_STORAGE.lock().await;
 		let neo4j_storage = match &*storage_lock {
-			Some((existing_storage, existing_config)) if existing_config == &new_config =>
-				Arc::clone(existing_storage),
+			Some((existing_storage, existing_config)) if existing_config == &new_config => {
+				Arc::clone(existing_storage)
+			},
 			_ => {
-				let new_storage =
-					Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
+				let new_storage = Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
+					InsightError::new(
+						InsightErrorKind::Internal,
+						anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
+					)
+				})?);
+				*storage_lock = Some((Arc::clone(&new_storage), new_config));
+				new_storage
+					.check_connectivity()
+					.await
+					.map_err(|_err| {
 						InsightError::new(
 							InsightErrorKind::Internal,
-							anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
+							anyhow::anyhow!("Failed to connect to Neo4j after initialization").into(),
 						)
-					})?);
-				*storage_lock = Some((Arc::clone(&new_storage), new_config));
+					})?;
+
 				new_storage
 			},
 		};

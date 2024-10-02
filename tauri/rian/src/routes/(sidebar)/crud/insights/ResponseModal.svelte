@@ -34,8 +34,10 @@
 			on:keydown={handleKeyDown}
 		>
 			<h2 id="modalHeading">{isError ? 'Error' : 'Success'}</h2>
-			<p id="modalDescription">{message}</p>
-			<button on:click={closeModal}>Close</button>
+			<p id="modalDescription">{message.replace(/['"]+/g, '')}</p>
+			<div class="button-container">
+				<button on:click={closeModal} class="btn close-btn">Close</button>
+			</div>
 		</div>
 	</div>
 {/if}
@@ -59,13 +61,35 @@
 		border-radius: 5px;
 		max-width: 80%;
 		outline: none;
+		box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 	}
 
 	h2 {
 		margin-top: 0;
+		font-size: 1.5rem;
+	}
+	p {
+		font-size: 1rem;
 	}
 
-	button {
-		margin-top: 10px;
+	.button-container {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 20px;
 	}
+
+	.btn {
+		padding: 10px 20px;
+		border: none;
+		border-radius: 5px;
+		font-size: 1rem;
+		cursor: pointer;
+	}
+
+	.close-btn {
+		background-color: #f44336;
+		color: white;
+		margin-right: 10px;
+	}
+
 </style>

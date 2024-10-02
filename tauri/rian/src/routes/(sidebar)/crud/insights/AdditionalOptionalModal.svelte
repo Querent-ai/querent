@@ -43,43 +43,43 @@
 			},
 			{} as { [key: string]: string }
 		);
-		if (!insightInfo.conversational) {
-			formData['semantic_pipeline_id'] = '';
-			formData['query'] = '';
-		}
+		
 	}
 	let additionalOptionsEntries: [string, CustomInsightOption][];
 
 	$: if (show) {
+		additionalOptionsEntries = [];
 		initializeFormData();
 
 		additionalOptionsEntries = Object.entries(insightInfo.additionalOptions);
 
 		if (insightInfo.id == 'querent.insights.graph_builder.gbv1') {
-			const semanticPipelineIdOption: CustomInsightOption = {
-				id: 'semantic_pipeline_id',
-				label: 'Semantic Pipeline ID',
-				tooltip: 'Enter the pipeline ID',
-				value: {
-					type: 'string',
-					value: '',
-					hidden: false
-				}
-			};
-
-			const queryOption: CustomInsightOption = {
-				id: 'query',
-				label: 'Query',
-				tooltip: 'Enter your query',
-				value: {
-					type: 'string',
-					value: '',
-					hidden: false
-				}
-			};
-
-			additionalOptionsEntries.push(['semantic_pipeline_id', semanticPipelineIdOption]);
-			additionalOptionsEntries.push(['query', queryOption]);
+			if (!additionalOptionsEntries.some(([key]) => key === 'semantic_pipeline_id')) {
+				const semanticPipelineIdOption: CustomInsightOption = {
+					id: 'semantic_pipeline_id',
+					label: 'Semantic Pipeline ID',
+					tooltip: 'Enter the pipeline ID',
+					value: {
+						type: 'string',
+						value: '',
+						hidden: false
+					}
+				};
+				additionalOptionsEntries.push(['semantic_pipeline_id', semanticPipelineIdOption]);
+			}
+			if (!additionalOptionsEntries.some(([key]) => key === 'query')) {
+				const queryOption: CustomInsightOption = {
+					id: 'query',
+					label: 'Query',
+					tooltip: 'Enter your query',
+					value: {
+						type: 'string',
+						value: '',
+						hidden: false
+					}
+				};
+				additionalOptionsEntries.push(['query', queryOption]);
+			}
 		}
 	}
 
