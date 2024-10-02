@@ -251,9 +251,8 @@ pub async fn start_pipeline(
 
 	// Extract and handle the model parameter
 	let (model_string, model_type) = match request.model.and_then(Model::from_i32) {
-		Some(Model::English) => {
-			("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string())
-		},
+		Some(Model::English) =>
+			("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()),
 		Some(Model::Geology) => ("botryan96/GeoBERT".to_string(), "Bert".to_string()),
 		_ => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()), // Default to option 1
 	};
@@ -472,7 +471,7 @@ async fn ingest_token_ws(
 	let (_tx, mut rx) = socket.split();
 	while let Some(result) = rx.next().await {
 		match result {
-			Ok(msg) => {
+			Ok(msg) =>
 				if msg.is_text() {
 					if let Ok(text) = msg.to_str() {
 						if let Ok(tokens_vec) = serde_json::from_str::<Vec<IngestedTokens>>(text) {
@@ -493,8 +492,7 @@ async fn ingest_token_ws(
 					}
 				} else {
 					warn!("Received non-text message: {:?}", msg);
-				}
-			},
+				},
 			Err(e) => {
 				error!("Error receiving message: {:?}", e);
 				break;
