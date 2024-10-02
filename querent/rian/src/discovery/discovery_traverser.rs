@@ -72,12 +72,10 @@ impl Actor for DiscoveryTraverse {
 	type ObservableState = ();
 
 	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
-		let embedding_model = TextEmbedding::try_new(InitOptions {
-			model_name: EmbeddingModel::AllMiniLML6V2,
-			show_download_progress: true,
-			cache_dir: get_querent_data_path(),
-			..Default::default()
-		})?;
+		let model_details = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
+			.with_cache_dir(get_querent_data_path())
+			.with_show_download_progress(true);
+		let embedding_model = TextEmbedding::try_new(model_details)?;
 
 		self.embedding_model = Some(embedding_model);
 		Ok(())

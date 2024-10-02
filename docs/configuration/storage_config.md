@@ -30,31 +30,6 @@ storage_configs:
       url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
 ```
 
-### Milvus Configuration
-
-Milvus is used for vector storage. The configuration allows you to specify the connection details to the Milvus server.
-
-| Property      | Description                           | Example Value                                             |
-|---------------|---------------------------------------|-----------------------------------------------------------|
-| `name`        | Name of the Milvus configuration      | `semantic_milvus_db`                                      |
-| `storage_type`| Type of storage used                  | `vector`                                                  |
-| `config.url`  | Connection URL to the Milvus server   | `http://localhost:19530`                                  |
-| `config.username` | Username for Milvus server (if required) |                                                           |
-| `config.password` | Password for Milvus server (if required) |                                                           |
-
-Example:
-
-```yaml
-storage_configs:
-  milvus:
-    name: semantic_milvus_db
-    storage_type: vector
-    config:
-      url: http://localhost:19530
-      username: ""
-      password: ""
-```
-
 ### Neo4j Configuration
 
 Neo4j is used for graph storage. You can configure the connection details to your Neo4j database.
@@ -84,7 +59,7 @@ storage_configs:
 
 ### Example Configuration
 
-Here is an example of a full storage configuration including PostgreSQL, Milvus, and Neo4j:
+Here is an example of a full storage configuration including PostgreSQL, and Neo4j:
 
 ```yaml
 storage_configs:
@@ -93,13 +68,6 @@ storage_configs:
     storage_type: index
     config:
       url: postgres://querent:querent@localhost/querent_test?sslmode=prefer
-  milvus:
-    name: semantic_milvus_db
-    storage_type: vector
-    config:
-      url: http://localhost:19530
-      username: ""
-      password: ""
   neo4j:
     name: semantic_neo4j_db
     storage_type: graph

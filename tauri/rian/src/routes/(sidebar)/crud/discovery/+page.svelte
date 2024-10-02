@@ -4,13 +4,14 @@
 		discoveryApiResponseStore,
 		discoverylist,
 		discoveryPageNumber,
+		discoveryQuery,
 		discoverySessionId,
 		firstDiscovery,
 		type DiscoveryDataPageList
 	} from '../../../../stores/appState';
 	import { get, writable } from 'svelte/store';
 	import { onMount, tick } from 'svelte';
-	import { commands, type DiscoveryResponse } from '../../../../service/bindings';
+	import { commands } from '../../../../service/bindings';
 	import Modal from '../sources/add/Modal.svelte';
 	import LoadingModal from './LoadingModal.svelte';
 
@@ -24,8 +25,6 @@
 		top_pairs: string[];
 	}[];
 	const isLoading = writable(false);
-
-	$: firstDiscoveryRequest = get(firstDiscovery);
 
 	$: categories = $discoveryApiResponseStore.length > 0 ? $discoveryApiResponseStore : [];
 
@@ -146,6 +145,7 @@
 			}
 		}
 
+		discoveryQuery.set(inputValue);
 		query = inputValue;
 		inputValue = '';
 
@@ -157,6 +157,7 @@
 			if (res.status == 'ok') {
 				if (res.data.insights.length === 0) {
 					console.log('No results found');
+					categories = [];
 					return;
 				}
 				let discoveryData: DiscoveryDataPageList = {
@@ -371,6 +372,12 @@
 					>
 					<button type="button" class="nav-link next" on:click={handleNext}>Next</button>
 				</div>
+			</div>
+
+			<div class="discovery-query">
+				{#if $discoveryQuery != ''}
+					{$discoveryQuery}
+				{/if}
 			</div>
 
 			<div class="cards-grid">
@@ -803,5 +810,22 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
+	}
+
+	.discovery-query {
+		padding: 15px;
+		font-size: 20px;
+		border: 2px solid transparent;
+		border-radius: 5px;
+		margin-bottom: 20px;
+		line-height: 1.4;
+		letter-spacing: 0.5px;
+		transition: all 0.3s ease;
+	}
+
+	.discovery-query:hover {
+		background-color: #f8f9fa;
+		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+		border-color: transparent;
 	}
 </style>

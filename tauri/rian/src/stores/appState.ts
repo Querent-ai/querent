@@ -108,6 +108,7 @@ export const isLicenseVerified = writable(false);
 export const statsDataTime = writable<number[]>([]);
 export const statsDataTotalEvents = writable<number[]>([]);
 export const googleDriveRefreshToken = writable<string>('');
+export const discoveryQuery = writable<string>('');
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);

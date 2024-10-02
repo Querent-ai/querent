@@ -17,7 +17,7 @@ use proto::{
 		DeleteCollectorRequest, DeleteCollectorResponse, DropBoxCollectorConfig,
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
-		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, MilvusConfig, Neo4jConfig,
+		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, Neo4jConfig,
 		NewsCollectorConfig, NotionConfig, OneDriveConfig, PipelineMetadata, PipelineRequestInfo,
 		PipelineRequestInfoList, PipelinesMetadata, PostgresConfig, S3CollectorConfig,
 		SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
@@ -75,7 +75,6 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		StorageConfig,
 		StorageType,
 		PostgresConfig,
-		MilvusConfig,
 		Neo4jConfig,
 		FixedEntities,
 		SampleEntities,
@@ -252,8 +251,9 @@ pub async fn start_pipeline(
 
 	// Extract and handle the model parameter
 	let (model_string, model_type) = match request.model.and_then(Model::from_i32) {
-		Some(Model::English) =>
-			("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()),
+		Some(Model::English) => {
+			("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string())
+		},
 		Some(Model::Geology) => ("botryan96/GeoBERT".to_string(), "Bert".to_string()),
 		_ => ("Davlan/xlm-roberta-base-wikiann-ner".to_string(), "Roberta".to_string()), // Default to option 1
 	};
@@ -317,14 +317,11 @@ pub async fn start_pipeline(
 	let embedder =
 		Arc::new(BertLLM::new(options).map_err(|e| PipelineErrors::UnknownError(e.to_string()))?);
 
-	// Initialize the embedding model
-	let embedding_model = TextEmbedding::try_new(InitOptions {
-		model_name: EmbeddingModel::AllMiniLML6V2,
-		show_download_progress: true,
-		cache_dir: get_querent_data_path(),
-		..Default::default()
-	})
-	.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
+	let model_details: InitOptions = InitOptions::new(EmbeddingModel::AllMiniLML6V2)
+		.with_cache_dir(get_querent_data_path())
+		.with_show_download_progress(true);
+	let embedding_model = TextEmbedding::try_new(model_details)
+		.map_err(|e| PipelineErrors::UnknownError(e.to_string()))?;
 
 	let engine = Arc::new(AttentionTensorsEngine::new(
 		embedder,
@@ -475,7 +472,7 @@ async fn ingest_token_ws(
 	let (_tx, mut rx) = socket.split();
 	while let Some(result) = rx.next().await {
 		match result {
-			Ok(msg) =>
+			Ok(msg) => {
 				if msg.is_text() {
 					if let Ok(text) = msg.to_str() {
 						if let Ok(tokens_vec) = serde_json::from_str::<Vec<IngestedTokens>>(text) {
@@ -496,7 +493,8 @@ async fn ingest_token_ws(
 					}
 				} else {
 					warn!("Received non-text message: {:?}", msg);
-				},
+				}
+			},
 			Err(e) => {
 				error!("Error receiving message: {:?}", e);
 				break;

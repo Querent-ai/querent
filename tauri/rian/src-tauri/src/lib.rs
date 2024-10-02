@@ -156,7 +156,8 @@ pub fn run(node_config: NodeConfig) {
     let _psql = PG_EMBED.lock().take().unwrap();
     let url = _psql.settings().url(DB_NAME);
     info!("Postgres started at: {}", url);
-    let app = tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())

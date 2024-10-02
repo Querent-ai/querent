@@ -39,7 +39,7 @@ dyn-clone = "1.0.10"
 enum-iterator = "1.4"
 env_logger = "0.10"
 fail = "0.5"
-fastembed = {git = "https://github.com/saraswatpuneet/fastembed-rs.git", branch = "main" }
+fastembed = { git = "https://github.com/Anush008/fastembed-rs", branch = "main" }
 flume = "0.11"
 fnv = "1"
 futures = "0.3"
@@ -198,7 +198,6 @@ ingestors = { version = "1.0.2", path = "./ingestors" }
 engines = { version = "1.0.2", path = "./engines" }
 llms = { version = "1.0.2", path = "./llms" }
 insights = { version = "1.0.2", path = "./insights" }
-milvus-sdk-rust = "0.1.0"
 neo4rs = "0.7.0"
 diesel-async = { version = "0.5.0", features = ["bb8", "postgres", "async-connection-wrapper"] }
 tokio-postgres = "0.7.10"
@@ -271,11 +270,12 @@ tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta", branch =
 specta-typescript = "=0.0.7"
 specta-jsdoc = "=0.0.7"
 lazy_static = "1.5.0"
-postgresql_embedded = "0.16.3"
+postgresql_embedded = { version = "0.16.3", default-features = false, features = ["theseus", "rustls-tls", "bundled"] }
 postgresql_extensions = "0.16.3"
 rustls-native-certs = "0.8.0"
 sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
 notion = "0.6.0"
+openssl-sys = { version = "0.9.93", features = ["vendored"] }
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates

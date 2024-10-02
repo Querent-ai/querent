@@ -18,9 +18,15 @@ runs:
     - name: Install protoc
       run: brew install protobuf
       shell: bash
-    - name: Install pq and postgres
+    - name: Install libpq and postgresql16
+      run: |
+        brew install --skip-post-install postgresql@16 libpq
+        brew link --force --overwrite postgresql@16
+        echo "export PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> ~/.bash_profile
       shell: bash
-      run: brew install postgresql@16 libpq
+    - name: Export PQ_LIB_DIR="$(brew --prefix libpq)/lib"
+      run: echo "PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> $GITHUB_ENV
+      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
@@ -44,13 +50,15 @@ runs:
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
     - name: Build binary
-      run: cargo build --release  --target ${{ matrix.target }} --features "license-check","openssl-support" --bin rian
+      run: cargo build --release  --target ${{ matrix.target }} --features "license-check","openssl-support","bundled" --bin rian
       shell: bash
       working-directory: ./querent
       env:
         QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
         QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
         QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
+        POSTGRESQL_VERSION: 16
+        GITHUB_TOKEN: ${{ inputs.token }}
     - name: Bundle archive
       run: |
         make archive BINARY_FILE=target/${{ inputs.target }}/release/rian \

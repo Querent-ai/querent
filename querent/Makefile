@@ -44,8 +44,8 @@ format-check:
 
 .PHONY: build, build-without-license-check
 build:
-	@echo "Running Cargo build..."
-	@cargo build --release --features "license-check","openssl-support" --bin rian
+	@echo "Running Cargo build with full features..."
+	@cargo build --release --features "license-check","openssl-support","bundled" --bin rian
 
 build-without-license-check:
 	@echo "Running Cargo build..."
