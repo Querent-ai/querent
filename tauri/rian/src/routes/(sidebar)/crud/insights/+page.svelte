@@ -5,9 +5,7 @@
 		CustomInsightOption,
 		InsightAnalystRequest,
 		InsightInfo,
-
 		InsightQuery
-
 	} from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import ChatModal from './ChatModal.svelte';
@@ -18,6 +16,7 @@
 	import { messagesList, insightSessionId } from '../../../../stores/appState';
 	import { writable } from 'svelte/store';
 	import LoadingModal from './LoadingModal.svelte';
+	import ResponseModal from './ResponseModal.svelte';
 
 	let runningInsightId: string;
 
@@ -81,6 +80,10 @@
 	}
 
 	const isLoading = writable(false);
+
+	let responseModalMessage = '';
+	let isResponseError = false;
+	let isResponseModalOpen = false;
 	async function triggerGraphBuilder(insight: InsightInfo) {
 		try {
 			let additional_options: { [x: string]: string } = {};
@@ -119,16 +122,22 @@
 				console.log('Insight triggered successfully');
 				let session_id = res.data.session_id;
 				let request: InsightQuery = {
-                        session_id: session_id,
-                        query: query
-                    };
+					session_id: session_id,
+					query: query
+				};
 				let response = await commands.promptInsightAnalyst(request);
 				if (response.status == 'ok') {
-				console.log('Response', response.data);
-				console.log('Insight ran successfully');
-			} else {
-				console.error('Insight not running successfully');
-			}
+					responseModalMessage = response.data.response;
+					isResponseError = false;
+
+					console.log('Response', response.data);
+					console.log('Insight ran successfully');
+				} else {
+					responseModalMessage = response.error;
+					isResponseError = true;
+					console.error('Insight not running successfully');
+				}
+				isResponseModalOpen = true;
 			} else {
 				console.error('Insight not triggered successfully');
 			}
@@ -224,6 +233,12 @@
 			{#if $isLoading}
 				<LoadingModal message="Please wait while we get your data...." />
 			{/if}
+
+			<ResponseModal
+				message={responseModalMessage}
+				isError={isResponseError}
+				bind:isOpen={isResponseModalOpen}
+			/>
 		</div>
 	</div>
 </main>
