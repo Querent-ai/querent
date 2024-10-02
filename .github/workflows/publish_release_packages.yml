@@ -15,6 +15,7 @@ on:
 
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
+  POSTGRES_VERSION: 16
 jobs:
   build-tauri-rian-ui:
     permissions:
