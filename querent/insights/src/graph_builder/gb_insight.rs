@@ -94,10 +94,10 @@ impl GBV1 {
 				version: "0.0.1-dev".to_string(),
 				author: "Querent AI".to_string(),
 				license: "BSL-1.0".to_string(),
-				iconify_icon: "solar:text-field-focus-broken".to_string(),
+				iconify_icon: "ph:graph-duotone".to_string(),
 				additional_options,
 				conversational: false,
-				premium: true,
+				premium: false,
 			},
 		}
 	}

@@ -216,7 +216,7 @@ impl InsightRunner for GraphBuilderRunner {
 							log::error!("Failed to fetch discovered data: {:?}", err);
 						},
 					}
-					return Ok(InsightOutput { data: Value::String("".to_string()) });
+					return Ok(InsightOutput { data: Value::String("Successfully inserted fabric data in Neo4j".to_string()) });
 				}
 			}
 		}
