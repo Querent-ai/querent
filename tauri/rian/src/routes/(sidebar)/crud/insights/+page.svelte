@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { Breadcrumb, BreadcrumbItem, Heading } from 'flowbite-svelte';
 	import MetaTag from '../../../utils/MetaTag.svelte';
-	import type { CustomInsightOption, InsightInfo } from '../../../../service/bindings';
+	import type {
+		CustomInsightOption,
+		InsightAnalystRequest,
+		InsightInfo
+	} from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import ChatModal from './ChatModal.svelte';
 	import { commands } from '../../../../service/bindings';
@@ -9,6 +13,8 @@
 	import Modal from '../sources/add/Modal.svelte';
 	import AdditionalOptionalModal from './AdditionalOptionalModal.svelte';
 	import { messagesList, insightSessionId } from '../../../../stores/appState';
+	import { writable } from 'svelte/store';
+	import LoadingModal from './LoadingModal.svelte';
 
 	let runningInsightId: string;
 
@@ -71,9 +77,60 @@
 		}
 	}
 
+	const isLoading = writable(false);
+	async function triggerGraphBuilder(insight: InsightInfo) {
+		try {
+			let additional_options: { [x: string]: string } = {};
+			let discovery_session_id: string = '';
+			let semantic_pipeline_id: string = '';
+			let query: string = '';
+
+			if (insight?.additionalOptions) {
+				for (const key in insight.additionalOptions) {
+					if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
+						if (insight.additionalOptions[key].value.type === 'string') {
+							if (key == 'discovery_session_id') {
+								discovery_session_id = insight.additionalOptions[key].value.value;
+							} else if (key == 'semantic_pipeline_id') {
+								semantic_pipeline_id = insight.additionalOptions[key].value.value;
+							} else if (key == 'query') {
+								query = insight.additionalOptions[key].value.value;
+							} else {
+								additional_options[key] = insight.additionalOptions[key].value
+									.value as unknown as string;
+							}
+						}
+					}
+				}
+			}
+			let request: InsightAnalystRequest = {
+				id: insight.id,
+				discovery_session_id: discovery_session_id,
+				semantic_pipeline_id: semantic_pipeline_id,
+				additional_options: additional_options
+			};
+			isLoading.set(true);
+
+			let res = await commands.triggerInsightAnalyst(request);
+			if (res.status == 'ok') {
+				console.log('Insight triggered successfully');
+			} else {
+				console.error('Insight not triggered successfully');
+			}
+		} catch (e) {
+			console.error('Got error as ', e);
+		} finally {
+			isLoading.set(false);
+		}
+	}
+
 	function handleSubmitOtions(event: CustomEvent<{ [key: string]: CustomInsightOption }>) {
-		selectedInsightForChat.additionalOptions = event.detail;
-		showChatModal = true;
+		if (selectedInsightForChat.id == 'querent.insights.graph_builder.gbv1') {
+			triggerGraphBuilder(selectedInsightForChat);
+		} else {
+			selectedInsightForChat.additionalOptions = event.detail;
+			showChatModal = true;
+		}
 	}
 
 	function handleCloseAdditionalOptions() {
@@ -146,6 +203,10 @@
 					on:submit={handleSubmitOtions}
 					on:close={handleCloseAdditionalOptions}
 				/>
+			{/if}
+
+			{#if $isLoading}
+				<LoadingModal message="Please wait while we get your data...." />
 			{/if}
 		</div>
 	</div>

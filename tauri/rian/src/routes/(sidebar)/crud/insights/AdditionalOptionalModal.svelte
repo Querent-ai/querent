@@ -2,8 +2,8 @@
 	import { createEventDispatcher, onMount } from 'svelte';
 	import type {
 		InsightInfo,
-		InsightCustomOptionValue,
-		CustomInsightOption
+		CustomInsightOption,
+		InsightCustomOptionValue
 	} from '../../../../service/bindings';
 
 	export let insightInfo: InsightInfo;
@@ -43,10 +43,57 @@
 			},
 			{} as { [key: string]: string }
 		);
+		if (!insightInfo.conversational) {
+			formData['discovery_session_id'] = '';
+			formData['semantic_pipeline_id'] = '';
+			formData['query'] = '';
+		}
 	}
+	let additionalOptionsEntries: [string, CustomInsightOption][];
 
 	$: if (show) {
 		initializeFormData();
+
+		additionalOptionsEntries = Object.entries(insightInfo.additionalOptions);
+
+		if (insightInfo.id == 'querent.insights.graph_builder.gbv1') {
+			const semanticPipelineIdOption: CustomInsightOption = {
+				id: 'semantic_pipeline_id',
+				label: 'Semantic Pipeline ID',
+				tooltip: 'Enter the pipeline ID',
+				value: {
+					type: 'string',
+					value: '',
+					hidden: false
+				}
+			};
+
+			const queryOption: CustomInsightOption = {
+				id: 'query',
+				label: 'Query',
+				tooltip: 'Enter your query',
+				value: {
+					type: 'string',
+					value: '',
+					hidden: false
+				}
+			};
+
+			const discoverySessionIdOption: CustomInsightOption = {
+				id: 'discovery_session_id',
+				label: 'Discovery Session',
+				tooltip: 'Enter your discovery session',
+				value: {
+					type: 'string',
+					value: '',
+					hidden: false
+				}
+			};
+
+			additionalOptionsEntries.push(['semantic_pipeline_id', semanticPipelineIdOption]);
+			additionalOptionsEntries.push(['query', queryOption]);
+			additionalOptionsEntries.push(['discovery_session_id', discoverySessionIdOption]);
+		}
 	}
 
 	onMount(() => {
@@ -63,7 +110,7 @@
 			</div>
 			<div class="modal-body">
 				<form on:submit|preventDefault={submitForm}>
-					{#each Object.entries(insightInfo.additionalOptions) as [key, option]}
+					{#each additionalOptionsEntries as [key, option]}
 						<div class="form-group">
 							<label for={key}>{key}</label>
 							<input
