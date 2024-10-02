@@ -50,26 +50,23 @@ impl InsightRunner for GraphBuilderRunner {
 		};
 		let mut storage_lock = NEO4J_STORAGE.lock().await;
 		let neo4j_storage = match &*storage_lock {
-			Some((existing_storage, existing_config)) if existing_config == &new_config => {
-				Arc::clone(existing_storage)
-			},
+			Some((existing_storage, existing_config)) if existing_config == &new_config =>
+				Arc::clone(existing_storage),
 			_ => {
-				let new_storage = Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
-					InsightError::new(
-						InsightErrorKind::Internal,
-						anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
-					)
-				})?);
-				*storage_lock = Some((Arc::clone(&new_storage), new_config));
-				new_storage
-					.check_connectivity()
-					.await
-					.map_err(|_err| {
+				let new_storage =
+					Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
 						InsightError::new(
 							InsightErrorKind::Internal,
-							anyhow::anyhow!("Failed to connect to Neo4j after initialization").into(),
+							anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
 						)
-					})?;
+					})?);
+				*storage_lock = Some((Arc::clone(&new_storage), new_config));
+				new_storage.check_connectivity().await.map_err(|_err| {
+					InsightError::new(
+						InsightErrorKind::Internal,
+						anyhow::anyhow!("Failed to connect to Neo4j after initialization").into(),
+					)
+				})?;
 
 				new_storage
 			},
