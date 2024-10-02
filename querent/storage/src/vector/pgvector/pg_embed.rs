@@ -234,7 +234,6 @@ impl FabricStorage for PGEmbed {
 		offset: i64,
 		top_pairs_embeddings: &Vec<Vec<f32>>,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		println!("This is the collection_id 222------{:?}", collection_id);
 		let mut conn = self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),

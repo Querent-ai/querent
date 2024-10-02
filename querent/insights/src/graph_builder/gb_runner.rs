@@ -8,7 +8,6 @@ use common::{EventType, SemanticKnowledgePayload};
 use fastembed::TextEmbedding;
 use futures::{pin_mut, Stream, StreamExt};
 use lazy_static::lazy_static;
-use neo4rs::Graph;
 use proto::{Neo4jConfig, StorageType};
 use serde_json::Value;
 use std::{
@@ -52,7 +51,6 @@ impl InsightRunner for GraphBuilderRunner {
 		};
 
 		let mut storage_lock = NEO4J_STORAGE.lock().await;
-		// Check if a storage exists and if the config matches
 		let neo4j_storage = match &*storage_lock {
 			Some((existing_storage, existing_config)) if existing_config == &new_config =>
 				Arc::clone(existing_storage),
@@ -68,7 +66,6 @@ impl InsightRunner for GraphBuilderRunner {
 				new_storage
 			},
 		};
-		println!("Reached outside -----------------");
 		let query = input.data.get("query").and_then(Value::as_str);
 		let query = match query {
 			Some(q) => q,

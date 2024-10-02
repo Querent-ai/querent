@@ -359,56 +359,56 @@ impl InsightRunner for XAIRunner {
 							}
 
 							let mut fetched_results = Vec::new();
-					let mut _total_fetched = 0;
-					let search_results = storage
-						.similarity_search_l2(
-							self.config.discovery_session_id.to_string(),
-							query.to_string(),
-							self.config.semantic_pipeline_id.to_string(),
-							query_embedding,
-							100,
-							0,
-							&vec![],
-						)
-						.await;
+							let mut _total_fetched = 0;
+							let search_results = storage
+								.similarity_search_l2(
+									self.config.discovery_session_id.to_string(),
+									query.to_string(),
+									self.config.semantic_pipeline_id.to_string(),
+									query_embedding,
+									100,
+									0,
+									&vec![],
+								)
+								.await;
 
-					match search_results {
-						Ok(results) => {
-							if results.is_empty() {
-								break;
-							}
-							_total_fetched += results.len() as i64;
-							fetched_results.extend(results.clone());
-							let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
-								HashMap::new();
-							let mut ordered_sentences: Vec<String> = Vec::new();
+							match search_results {
+								Ok(results) => {
+									if results.is_empty() {
+										break;
+									}
+									_total_fetched += results.len() as i64;
+									fetched_results.extend(results.clone());
+									let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
+										HashMap::new();
+									let mut ordered_sentences: Vec<String> = Vec::new();
 
-							for document in &results {
-								let tag = format!(
-									"{}-{}",
-									document.subject.replace('_', " "),
-									document.object.replace('_', " "),
-								);
-								if let Some((existing_tags, total_strength)) =
-									combined_results.get_mut(&document.sentence)
-								{
-									existing_tags.insert(tag);
-									*total_strength += document.score;
-								} else {
-									let mut tags_set = HashSet::new();
-									tags_set.insert(tag);
-									combined_results.insert(
-										document.sentence.clone(),
-										(tags_set, document.score),
-									);
-									ordered_sentences.push(document.sentence.clone());
-								}
-							}
+									for document in &results {
+										let tag = format!(
+											"{}-{}",
+											document.subject.replace('_', " "),
+											document.object.replace('_', " "),
+										);
+										if let Some((existing_tags, total_strength)) =
+											combined_results.get_mut(&document.sentence)
+										{
+											existing_tags.insert(tag);
+											*total_strength += document.score;
+										} else {
+											let mut tags_set = HashSet::new();
+											tags_set.insert(tag);
+											combined_results.insert(
+												document.sentence.clone(),
+												(tags_set, document.score),
+											);
+											ordered_sentences.push(document.sentence.clone());
+										}
+									}
 
-							for sentence in ordered_sentences {
-								if documents.len() >= 10 {
-									break;
-								}
+								for sentence in ordered_sentences {
+									if documents.len() >= 10 {
+										break;
+									}
 
 								if unique_sentences.insert(sentence.clone()) {
 									if let Some((tags_set, total_strength)) =

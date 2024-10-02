@@ -129,7 +129,6 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 				)));
 			},
 		};
-		println!("This is the collection_id 3333------{:?}", self.discovery_agent_params);
 		let message_set: HashSet<_> = message.top_pairs.iter().collect();
 		let current_set: HashSet<_> = self.current_top_pairs.iter().collect();
 		if message.query != self.current_query || message_set != current_set {

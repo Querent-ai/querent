@@ -11,13 +11,8 @@ pub async fn insert_discovered_knowledge_async(
 ) -> Result<(), ActorExitStatus> {
 	let upsert_result = storage.insert_discovered_knowledge(&storage_items).await;
 	match upsert_result {
-		Ok(()) => {
-			// Increment counters if insertion is successful
-			// Note: Access to self.counters would require synchronization if used here
-			Ok(())
-		},
+		Ok(()) => Ok(()),
 		Err(e) => {
-			// Handle error if insertion fails
 			log::error!("Error while inserting discovered knowledge: {:?}", e);
 			Err(ActorExitStatus::Failure(Arc::new(anyhow::anyhow!(
 				"Error while inserting discovered knowledge"
