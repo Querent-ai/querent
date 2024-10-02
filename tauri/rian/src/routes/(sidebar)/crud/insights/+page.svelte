@@ -4,7 +4,10 @@
 	import type {
 		CustomInsightOption,
 		InsightAnalystRequest,
-		InsightInfo
+		InsightInfo,
+
+		InsightQuery
+
 	} from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import ChatModal from './ChatModal.svelte';
@@ -114,6 +117,18 @@
 			let res = await commands.triggerInsightAnalyst(request);
 			if (res.status == 'ok') {
 				console.log('Insight triggered successfully');
+				let session_id = res.data.session_id;
+				let request: InsightQuery = {
+                        session_id: session_id,
+                        query: query
+                    };
+				let response = await commands.promptInsightAnalyst(request);
+				if (response.status == 'ok') {
+				console.log('Response', response.data);
+				console.log('Insight ran successfully');
+			} else {
+				console.error('Insight not running successfully');
+			}
 			} else {
 				console.error('Insight not triggered successfully');
 			}
@@ -124,9 +139,10 @@
 		}
 	}
 
-	function handleSubmitOtions(event: CustomEvent<{ [key: string]: CustomInsightOption }>) {
+	async function handleSubmitOtions(event: CustomEvent<{ [key: string]: CustomInsightOption }>) {
 		if (selectedInsightForChat.id == 'querent.insights.graph_builder.gbv1') {
-			triggerGraphBuilder(selectedInsightForChat);
+			selectedInsightForChat.additionalOptions = event.detail;
+			await triggerGraphBuilder(selectedInsightForChat);
 		} else {
 			selectedInsightForChat.additionalOptions = event.detail;
 			showChatModal = true;
