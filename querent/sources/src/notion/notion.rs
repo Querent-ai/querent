@@ -167,7 +167,7 @@ impl NotionSource {
 
 	pub async fn get_data(&self, notion_api: NotionApi) -> Result<(String, String), SourceError> {
 		match self.query_type.as_str() {
-			"database" => {
+			"Database" => {
 				let database_id = DatabaseId::from_str(&self.query_id).map_err(|err| {
 					SourceError::new(
 						SourceErrorKind::Io,
@@ -189,7 +189,8 @@ impl NotionSource {
 
 				Ok((title, data))
 			},
-			"page" => {
+			"Page" => {
+				println!("PAge id is {:?}", self.query_id);
 				let page_id = PageId::from_str(&self.query_id).map_err(|err| {
 					SourceError::new(
 						SourceErrorKind::Io,
@@ -203,6 +204,8 @@ impl NotionSource {
 						anyhow::anyhow!("Error while getting the page: {:?}", err).into(),
 					)
 				})?;
+
+				println!("Page properties are {:?}", page.properties);
 
 				let data = format_page(&page.properties);
 
@@ -397,6 +400,8 @@ impl Source for NotionSource {
 			},
 		}
 
+		println!("Data is {:?}", data.clone());
+
 		let doc_source = Some("notion://".to_string());
 		let data_len = data.len();
 		let collected_bytes = CollectedBytes::new(
@@ -414,5 +419,63 @@ impl Source for NotionSource {
 		};
 
 		Ok(Box::pin(stream))
+	}
+}
+
+#[cfg(test)]
+mod tests {
+
+	use std::{collections::HashSet, env};
+
+	use dotenv::dotenv;
+	use futures::StreamExt;
+
+	use super::*;
+
+	#[tokio::test]
+	async fn test_notion_collector() {
+		dotenv().ok();
+		let notion_config = NotionConfig {
+			api_key: env::var("NOTION_API_KEY")
+				.map_err(|e| e.to_string())
+				.unwrap_or("".to_string()),
+			query_type: 0,
+			query_id: env::var("NOTION_PAGE_ID")
+				.map_err(|e| e.to_string())
+				.unwrap_or("".to_string()),
+			id: "NS1".to_string(),
+		};
+
+		let notion_api_client = NotionSource::new(notion_config).await.unwrap();
+
+		let connectivity = notion_api_client.check_connectivity().await;
+		assert!(
+			connectivity.is_ok(),
+			"Failed to connect to news API {:?}",
+			connectivity.err().unwrap()
+		);
+
+		let result = notion_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut count_files: HashSet<String> = HashSet::new();
+				while let Some(item) = stream.next().await {
+					match item {
+						Ok(collected_bytes) =>
+							if let Some(pathbuf) = collected_bytes.file {
+								if let Some(str_path) = pathbuf.to_str() {
+									count_files.insert(str_path.to_string());
+								}
+							},
+						Err(_) => panic!("Expected successful data collection"),
+					}
+				}
+				println!("Files are --- {:?}", count_files);
+			},
+			Err(e) => {
+				eprintln!("Failed to get stream: {:?}", e);
+			},
+		}
 	}
 }

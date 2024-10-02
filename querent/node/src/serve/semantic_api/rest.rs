@@ -18,7 +18,7 @@ use proto::{
 		EmailCollectorConfig, EmptyGetPipelinesMetadata, FileCollectorConfig, FixedEntities,
 		GcsCollectorConfig, GithubCollectorConfig, GoogleDriveCollectorConfig, IndexingStatistics,
 		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, MilvusConfig, Neo4jConfig,
-		NewsCollectorConfig, OneDriveConfig, PipelineMetadata, PipelineRequestInfo,
+		NewsCollectorConfig, NotionConfig, OneDriveConfig, PipelineMetadata, PipelineRequestInfo,
 		PipelineRequestInfoList, PipelinesMetadata, PostgresConfig, S3CollectorConfig,
 		SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse, SendIngestedTokens,
 		SlackCollectorConfig, StorageConfig, StorageType,
@@ -89,6 +89,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		ListCollectorConfig,
 		PipelineRequestInfoList,
 		PipelineRequestInfo,
+		NotionConfig,
 	))
 )]
 pub struct SemanticApi;
