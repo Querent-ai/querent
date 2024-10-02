@@ -20,11 +20,11 @@ checksum = "8b5ace29ee3216de37c0546865ad08edef58b0f9e76838ed8959a84a990e58c5"
 
 [[package]]
 name = "actors"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
- "common 1.0.2",
+ "common 1.0.3",
  "criterion",
  "flume",
  "futures",
@@ -2115,7 +2115,7 @@ checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
 name = "cluster"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2125,7 +2125,7 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
- "common 1.0.2",
+ "common 1.0.3",
  "console-subscriber",
  "deadpool 0.10.0",
  "dialoguer",
@@ -2216,7 +2216,7 @@ dependencies = [
 
 [[package]]
 name = "codegen"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "futures",
@@ -2280,7 +2280,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -3506,7 +3506,7 @@ dependencies = [
 
 [[package]]
 name = "engines"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -3526,7 +3526,7 @@ dependencies = [
  "candle-nn",
  "candle-transformers",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "crossbeam-channel",
  "csv",
  "deadpool 0.10.0",
@@ -5385,7 +5385,7 @@ dependencies = [
 
 [[package]]
 name = "ingestors"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -5402,7 +5402,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "derive-getters",
@@ -5462,7 +5462,7 @@ dependencies = [
 
 [[package]]
 name = "insights"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -5479,7 +5479,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -5991,7 +5991,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "llms"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -6013,7 +6013,7 @@ dependencies = [
  "candle-transformers",
  "chrono",
  "clap",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -6665,7 +6665,7 @@ checksum = "43794a0ace135be66a25d3ae77d41b91615fb68ae937f904090203e81f755b65"
 
 [[package]]
 name = "node"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -6677,7 +6677,7 @@ dependencies = [
  "clap",
  "cluster",
  "colored",
- "common 1.0.2",
+ "common 1.0.3",
  "console-subscriber",
  "dialoguer",
  "dirs",
@@ -8542,7 +8542,7 @@ dependencies = [
 
 [[package]]
 name = "proto"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -8551,7 +8551,7 @@ dependencies = [
  "bytesize",
  "bytestring",
  "codegen",
- "common 1.0.2",
+ "common 1.0.3",
  "dyn-clone",
  "futures",
  "glob",
@@ -9303,7 +9303,7 @@ dependencies = [
 
 [[package]]
 name = "rian-core"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -9313,7 +9313,7 @@ dependencies = [
  "base64 0.21.7",
  "chrono",
  "cluster",
- "common 1.0.2",
+ "common 1.0.3",
  "crossbeam-channel",
  "csv",
  "engines",
@@ -10414,7 +10414,7 @@ dependencies = [
 
 [[package]]
 name = "sources"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -10430,7 +10430,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
@@ -11180,13 +11180,13 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "diesel",
