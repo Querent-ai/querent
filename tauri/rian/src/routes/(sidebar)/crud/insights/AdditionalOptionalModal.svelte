@@ -44,7 +44,6 @@
 			{} as { [key: string]: string }
 		);
 		if (!insightInfo.conversational) {
-			formData['discovery_session_id'] = '';
 			formData['semantic_pipeline_id'] = '';
 			formData['query'] = '';
 		}
@@ -79,20 +78,8 @@
 				}
 			};
 
-			const discoverySessionIdOption: CustomInsightOption = {
-				id: 'discovery_session_id',
-				label: 'Discovery Session',
-				tooltip: 'Enter your discovery session',
-				value: {
-					type: 'string',
-					value: '',
-					hidden: false
-				}
-			};
-
 			additionalOptionsEntries.push(['semantic_pipeline_id', semanticPipelineIdOption]);
 			additionalOptionsEntries.push(['query', queryOption]);
-			additionalOptionsEntries.push(['discovery_session_id', discoverySessionIdOption]);
 		}
 	}
 

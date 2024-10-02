@@ -87,7 +87,6 @@
 	async function triggerGraphBuilder(insight: InsightInfo) {
 		try {
 			let additional_options: { [x: string]: string } = {};
-			let discovery_session_id: string = '';
 			let semantic_pipeline_id: string = '';
 			let query: string = '';
 
@@ -95,9 +94,7 @@
 				for (const key in insight.additionalOptions) {
 					if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
 						if (insight.additionalOptions[key].value.type === 'string') {
-							if (key == 'discovery_session_id') {
-								discovery_session_id = insight.additionalOptions[key].value.value;
-							} else if (key == 'semantic_pipeline_id') {
+							if (key == 'semantic_pipeline_id') {
 								semantic_pipeline_id = insight.additionalOptions[key].value.value;
 							} else if (key == 'query') {
 								query = insight.additionalOptions[key].value.value;
@@ -111,7 +108,7 @@
 			}
 			let request: InsightAnalystRequest = {
 				id: insight.id,
-				discovery_session_id: discovery_session_id,
+				discovery_session_id: '',
 				semantic_pipeline_id: semantic_pipeline_id,
 				additional_options: additional_options
 			};
