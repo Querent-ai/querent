@@ -879,7 +879,7 @@ mod tests {
 				document_source: "source_1".to_string(),
 				sentence: "Sample sentence 1.".to_string(),
 				event_id: "event_1".to_string(),
-				collection_id: Some("".to_string()),
+				collection_id: Some("123".to_string()),
 				image_id: Some("".to_string()),
 				object_type: "".to_string(),
 				source_id: "".to_string(),
@@ -892,7 +892,7 @@ mod tests {
 				document_source: "source_2".to_string(),
 				sentence: "Sample sentence 2.".to_string(),
 				event_id: "event_2".to_string(),
-				collection_id: Some("".to_string()),
+				collection_id: Some("123".to_string()),
 				image_id: Some("".to_string()),
 				object_type: "".to_string(),
 				source_id: "".to_string(),
@@ -901,21 +901,22 @@ mod tests {
 		];
 		for semantic in insert_semantics {
 			sql_query(
-            "INSERT INTO semantic_knowledge (document_id, subject, object, document_source, sentence, event_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO semantic_knowledge (document_id, subject, object, document_source, sentence, event_id, collection_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind::<Text, _>(semantic.document_id)
         .bind::<Text, _>(semantic.subject)
         .bind::<Text, _>(semantic.object)
         .bind::<Text, _>(semantic.document_source)
         .bind::<Text, _>(semantic.sentence)
-        .bind::<Text, _>(semantic.event_id)
+		.bind::<Text, _>(semantic.event_id)
+        .bind::<Text, _>(semantic.collection_id.unwrap_or("".to_string()))
         .execute(conn)
         .await
         .expect("Failed to insert semantic knowledge.");
 		}
 		let session_id = "test_session".to_string();
-		let query = "test_query".to_string();
-		let collection_id = "test_collection".to_string();
+		let query = "test_query ?".to_string();
+		let collection_id = "123".to_string();
 		let payload = vec![1.0, 2.0, 3.0];
 		let max_results = 10;
 		let offset = 0;
