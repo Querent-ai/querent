@@ -38,9 +38,25 @@ pub fn format_properties(properties: &HashMap<String, PropertyConfiguration>) ->
 			PropertyConfiguration::Title { .. } => "Title",
 			PropertyConfiguration::Text { .. } => "Text",
 			PropertyConfiguration::Number { .. } => "Number",
-			PropertyConfiguration::Select { .. } => "Select",
+			PropertyConfiguration::Select { select, id: _ } => &{
+				let options = select
+					.options
+					.iter()
+					.map(|opt| format!("{} ({:?})", opt.name, opt.color))
+					.collect::<Vec<String>>()
+					.join(", ");
+				format!("Select [{}]", options)
+			},
 			PropertyConfiguration::Status { .. } => "Status",
-			PropertyConfiguration::MultiSelect { .. } => "MultiSelect",
+			PropertyConfiguration::MultiSelect { multi_select, id: _ } => &{
+				let options = multi_select
+					.options
+					.iter()
+					.map(|opt| format!("{} ({:?})", opt.name, opt.color))
+					.collect::<Vec<String>>()
+					.join(", ");
+				format!("[{}]", options)
+			},
 			PropertyConfiguration::Date { .. } => "Date",
 			PropertyConfiguration::People { .. } => "People",
 			PropertyConfiguration::Files { .. } => "Files",
@@ -190,7 +206,6 @@ impl NotionSource {
 				Ok((title, data))
 			},
 			"Page" => {
-				println!("PAge id is {:?}", self.query_id);
 				let page_id = PageId::from_str(&self.query_id).map_err(|err| {
 					SourceError::new(
 						SourceErrorKind::Io,
@@ -204,8 +219,6 @@ impl NotionSource {
 						anyhow::anyhow!("Error while getting the page: {:?}", err).into(),
 					)
 				})?;
-
-				println!("Page properties are {:?}", page.properties);
 
 				let data = format_page(&page.properties);
 
@@ -399,8 +412,6 @@ impl Source for NotionSource {
 				));
 			},
 		}
-
-		println!("Data is {:?}", data.clone());
 
 		let doc_source = Some("notion://".to_string());
 		let data_len = data.len();
