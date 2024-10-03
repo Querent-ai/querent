@@ -1,6 +1,6 @@
 [package]
 name = "rian"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -53,6 +53,7 @@ diesel-async = { version = "0.5.0", features = ["bb8", "postgres", "async-connec
 anyhow = "1"
 deadpool = { version = "0.10.0", features = ["rt_tokio_1"] }
 lazy_static = "1.5.0"
+pq-sys = { version = "0.6.0", features = ["bundled"] }
 
 # Querent AI dependencies
 node = { path = "../../../querent/node" }
@@ -81,6 +82,7 @@ openssl-support = []
 license-check = []
 bundled = [
   "postgresql_embedded/bundled",
+  "pq-sys/bundled",
 ]
 default = ["openssl-support", "license-check", "bundled"]
 [patch.crates-io]
