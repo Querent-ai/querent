@@ -53,7 +53,7 @@ diesel-async = { version = "0.5.0", features = ["bb8", "postgres", "async-connec
 anyhow = "1"
 deadpool = { version = "0.10.0", features = ["rt_tokio_1"] }
 lazy_static = "1.5.0"
-pq-sys = { version = "0.6.0", features = ["bundled"] }
+pq-sys = { version = "0.6.3", features = ["bundled"] }
 
 # Querent AI dependencies
 node = { path = "../../../querent/node" }
