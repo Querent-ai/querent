@@ -20,11 +20,11 @@ checksum = "8b5ace29ee3216de37c0546865ad08edef58b0f9e76838ed8959a84a990e58c5"
 
 [[package]]
 name = "actors"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
- "common 1.0.2",
+ "common 1.0.3",
  "flume",
  "futures",
  "once_cell",
@@ -2283,7 +2283,7 @@ dependencies = [
 
 [[package]]
 name = "cluster"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2293,7 +2293,7 @@ dependencies = [
  "chrono",
  "clap",
  "colored",
- "common 1.0.2",
+ "common 1.0.3",
  "deadpool 0.10.0",
  "dialoguer",
  "diesel",
@@ -2410,7 +2410,7 @@ dependencies = [
 
 [[package]]
 name = "codegen"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "heck 0.4.1",
@@ -2472,7 +2472,7 @@ dependencies = [
 
 [[package]]
 name = "common"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-speed-limit",
@@ -3722,7 +3722,7 @@ checksum = "a3d8a32ae18130a3c84dd492d4215c3d913c3b07c6b63c2eb3eb7ff1101ab7bf"
 
 [[package]]
 name = "engines"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -3742,7 +3742,7 @@ dependencies = [
  "candle-nn",
  "candle-transformers",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "crossbeam-channel",
  "csv",
  "deadpool 0.10.0",
@@ -5675,7 +5675,7 @@ dependencies = [
 
 [[package]]
 name = "ingestors"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -5692,7 +5692,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "derive-getters",
@@ -5752,7 +5752,7 @@ dependencies = [
 
 [[package]]
 name = "insights"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -5769,7 +5769,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -6301,7 +6301,7 @@ checksum = "78b3ae25bc7c8c38cec158d1f2757ee79e9b3740fbc7ccf0e59e4b08d793fa89"
 
 [[package]]
 name = "llms"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -6323,7 +6323,7 @@ dependencies = [
  "candle-transformers",
  "chrono",
  "clap",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -6990,7 +6990,7 @@ checksum = "43794a0ace135be66a25d3ae77d41b91615fb68ae937f904090203e81f755b65"
 
 [[package]]
 name = "node"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -7002,7 +7002,7 @@ dependencies = [
  "clap",
  "cluster",
  "colored",
- "common 1.0.2",
+ "common 1.0.3",
  "dialoguer",
  "dirs 5.0.1",
  "engines",
@@ -7025,6 +7025,7 @@ dependencies = [
  "opentelemetry 0.20.0",
  "opentelemetry-otlp",
  "postgresql_embedded",
+ "pq-sys",
  "proto",
  "regex",
  "reqwest 0.12.7",
@@ -8640,11 +8641,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "pq-src"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28fbf44fbf1d3e50d0ca0c6e6253f65d1bf01bb004a6ea553efb32e7081948c7"
+dependencies = [
+ "cc",
+ "openssl-sys",
+]
+
+[[package]]
 name = "pq-sys"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6cc05d7ea95200187117196eee9edd0644424911821aeb28a18ce60ea0b8793"
 dependencies = [
+ "pq-src",
  "vcpkg",
 ]
 
@@ -8869,7 +8881,7 @@ dependencies = [
 
 [[package]]
 name = "proto"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -8878,7 +8890,7 @@ dependencies = [
  "bytesize",
  "bytestring",
  "codegen",
- "common 1.0.2",
+ "common 1.0.3",
  "dyn-clone",
  "glob",
  "http 0.2.12",
@@ -9670,11 +9682,11 @@ dependencies = [
 
 [[package]]
 name = "rian"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "cocoa 0.25.0",
- "common 1.0.2",
+ "common 1.0.3",
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
@@ -9689,6 +9701,7 @@ dependencies = [
  "parking_lot 0.12.3",
  "postgresql_embedded",
  "postgresql_extensions",
+ "pq-sys",
  "proto",
  "serde",
  "serde_json",
@@ -9721,7 +9734,7 @@ dependencies = [
 
 [[package]]
 name = "rian-core"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "actors",
  "anyhow",
@@ -9731,7 +9744,7 @@ dependencies = [
  "base64 0.21.7",
  "chrono",
  "cluster",
- "common 1.0.2",
+ "common 1.0.3",
  "crossbeam-channel",
  "csv",
  "engines",
@@ -10842,7 +10855,7 @@ dependencies = [
 
 [[package]]
 name = "sources"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -10858,7 +10871,7 @@ dependencies = [
  "bytes",
  "bytesize",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "deadpool 0.10.0",
  "diesel",
  "diesel-async",
@@ -11609,13 +11622,13 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "storage"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
  "anyhow",
  "async-trait",
  "bincode",
  "chrono",
- "common 1.0.2",
+ "common 1.0.3",
  "csv",
  "deadpool 0.10.0",
  "diesel",
@@ -11631,6 +11644,7 @@ dependencies = [
  "pgvector",
  "postgresql_embedded",
  "postgresql_extensions",
+ "pq-sys",
  "proto",
  "redb",
  "rmp-serde",
