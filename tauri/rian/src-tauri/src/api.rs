@@ -9,11 +9,18 @@ use crate::{
     UpdateResult, QUERENT_SERVICES_ONCE, RUNNING_DISCOVERY_SESSION_ID, RUNNING_INSIGHTS_SESSIONS,
     RUNNING_PIPELINE_ID, UPDATE_RESULT,
 };
-use dotenv::dotenv;
 use node::ApiKeyPayload;
 use serde_urlencoded;
-use std::env;
 use tiny_http::{Header, Response, Server};
+
+use lazy_static::lazy_static;
+lazy_static! {
+	static ref DRIVE_CLIENT_ID: &'static str = "4402204563-bmfpspke6cl23j2975hd7dkuf2v4ii3n.apps.googleusercontent.com";
+}
+
+lazy_static! {
+	static ref DRIVE_CLIENT_SECRET: &'static str = "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";
+}
 
 #[tauri::command]
 #[specta::specta]
@@ -365,10 +372,9 @@ pub async fn prompt_insight_analyst(
 #[tauri::command]
 #[specta::specta]
 pub fn get_drive_credentials() -> Result<(String, String), String> {
-    dotenv().ok();
 
-    let drive_client_id = env::var("DRIVE_CLIENT_ID").map_err(|e| e.to_string())?;
-    let drive_client_secret = env::var("DRIVE_CLIENT_SECRET").map_err(|e| e.to_string())?;
+    let drive_client_id: String = DRIVE_CLIENT_ID.to_string();
+    let drive_client_secret: String = DRIVE_CLIENT_SECRET.to_string();
 
     Ok((drive_client_id, drive_client_secret))
 }
