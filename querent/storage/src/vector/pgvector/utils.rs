@@ -3,7 +3,10 @@ use crate::{
 	StorageResult,
 };
 use common::DocumentPayload;
-use diesel::{sql_types::BigInt, ExpressionMethods, QueryDsl};
+use diesel::{
+	sql_types::{BigInt, Nullable},
+	ExpressionMethods, QueryDsl,
+};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use pgvector::{Vector, VectorExpressionMethods};
 use std::{
@@ -11,6 +14,7 @@ use std::{
 	sync::Arc,
 };
 use tracing::error;
+
 /// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
 	let mut unique_entries = HashSet::new();
@@ -391,6 +395,30 @@ struct SemanticResult {
 	sentence: String,
 	#[diesel(sql_type = Text)]
 	collection_id: String,
+}
+
+#[derive(QueryableByName, Debug)]
+pub struct FilteredSemanticKnowledge {
+	#[diesel(sql_type = Text)]
+	pub subject: String,
+	#[diesel(sql_type = Text)]
+	pub subject_type: String,
+	#[diesel(sql_type = Text)]
+	pub object: String,
+	#[diesel(sql_type = Text)]
+	pub object_type: String,
+	#[diesel(sql_type = Text)]
+	pub sentence: String,
+	#[diesel(sql_type = Nullable<Text>)]
+	pub image_id: Option<String>,
+	#[diesel(sql_type = Text)]
+	pub event_id: String,
+	#[diesel(sql_type = Text)]
+	pub source_id: String,
+	#[diesel(sql_type = Text)]
+	pub document_source: String,
+	#[diesel(sql_type = Text)]
+	pub document_id: String,
 }
 
 pub async fn fetch_documents_for_embedding_pgembed(

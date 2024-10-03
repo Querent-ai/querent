@@ -87,13 +87,15 @@ impl InsightRunner for GraphBuilderRunner {
 			)
 		})?;
 		let mut discovery_session_id = String::new();
-		let embeddings = embedding_model.embed(vec![query.to_string()], None)?;
-		let query_embedding = &embeddings[0];
 		let mut unique_sentences: HashSet<String> = HashSet::new();
+		let mut neo4j_payload: Vec<(String, String, Option<String>, SemanticKnowledgePayload)> =
+			Vec::new();
 		for (event_type, storages) in self.config.event_storages.iter() {
 			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
 					if !query.is_empty() {
+						let embeddings = embedding_model.embed(vec![query.to_string()], None)?;
+						let query_embedding = &embeddings[0];
 						let mut fetched_results = Vec::new();
 						let mut _total_fetched = 0;
 
@@ -130,6 +132,7 @@ impl InsightRunner for GraphBuilderRunner {
 										document.object.replace('_', " "),
 									);
 									if unique_sentences.insert(document.sentence.clone()) {
+										println!("I am here ------");
 										let mut tags_set = HashSet::new();
 										tags_set.insert(tag);
 										combined_results.insert(
@@ -155,79 +158,128 @@ impl InsightRunner for GraphBuilderRunner {
 							storage.clone(),
 							fetched_results,
 						));
-					}
-					match storage
-						.get_discovered_data(
-							if !discovery_session_id.is_empty() {
-								discovery_session_id
-							} else {
-								self.config.discovery_session_id.to_string()
+						match storage
+							.get_discovered_data(
+								if !discovery_session_id.is_empty() {
+									discovery_session_id.clone()
+								} else {
+									self.config.discovery_session_id.to_string()
+								},
+								self.config.semantic_pipeline_id.to_string(),
+							)
+							.await
+						{
+							Ok(discovered_data) =>
+								for knowledge in discovered_data {
+									println!("This is the knowledge ----{:?}", knowledge);
+									let semantic_payload = SemanticKnowledgePayload {
+										subject: knowledge.subject,
+										object: knowledge.object,
+										predicate: knowledge
+											.sentence
+											.split_whitespace()
+											.take(5)
+											.collect::<Vec<&str>>()
+											.join(" "),
+										sentence: knowledge.sentence,
+										subject_type: "Entity".to_string(),
+										object_type: "Entity".to_string(),
+										predicate_type: "relationship".to_string(),
+										blob: Some("".to_string()),
+										image_id: Some("".to_string()),
+										event_id: "".to_string(),
+										source_id: "".to_string(),
+									};
+
+									neo4j_payload.push((
+										knowledge.doc_id,
+										knowledge.doc_source,
+										Some("".to_string()),
+										semantic_payload,
+									));
+								},
+							Err(err) => {
+								log::error!("Failed to fetch discovered data: {:?}", err);
 							},
-							self.config.semantic_pipeline_id.to_string(),
-						)
-						.await
-					{
-						Ok(discovered_data) => {
-							let mut neo4j_payload: Vec<(
-								String,
-								String,
-								Option<String>,
-								SemanticKnowledgePayload,
-							)> = Vec::new();
-							for knowledge in discovered_data {
-								let semantic_payload = SemanticKnowledgePayload {
-									subject: knowledge.subject,
-									object: knowledge.object,
-									predicate: knowledge
-										.sentence
-										.split_whitespace()
-										.take(5)
-										.collect::<Vec<&str>>()
-										.join(" "),
-									sentence: knowledge.sentence,
-									subject_type: "Entity".to_string(),
-									object_type: "Entity".to_string(),
-									predicate_type: "relationship".to_string(),
-									blob: Some("".to_string()),
-									image_id: Some("".to_string()),
-									event_id: "".to_string(),
-									source_id: "".to_string(),
-								};
+						}
+					} else if !self.config.semantic_pipeline_id.to_string().is_empty() {
+						match storage
+							.get_semanticknowledge_data(&self.config.semantic_pipeline_id)
+							.await
+						{
+							Ok(discovered_data) => {
+								for knowledge in discovered_data {
+									let semantic_payload = SemanticKnowledgePayload {
+										subject: knowledge.subject,
+										object: knowledge.object,
+										predicate: knowledge
+											.sentence
+											.split_whitespace()
+											.take(5)
+											.collect::<Vec<&str>>()
+											.join(" "),
+										sentence: knowledge.sentence,
+										subject_type: knowledge.subject_type,
+										object_type: knowledge.object_type,
+										predicate_type: "relationship".to_string(),
+										blob: Some("".to_string()),
+										image_id: Some(
+											knowledge
+												.image_id
+												.clone()
+												.unwrap_or_else(|| "".to_string()),
+										),
+										event_id: knowledge.event_id,
+										source_id: knowledge.source_id.to_string(),
+									};
 
-								neo4j_payload.push((
-									knowledge.doc_id,
-									knowledge.doc_source,
-									None,
-									semantic_payload,
-								));
-							}
-
-							if !neo4j_payload.is_empty() {
-								match neo4j_storage
-									.insert_graph(session_id.to_string(), &neo4j_payload)
-									.await
-								{
-									Ok(_) => {
-										log::info!(
-											"Successfully inserted discovered knowledge into Neo4j"
-										);
-									},
-									Err(err) => {
-										log::error!("Failed to insert discovered knowledge into Neo4j: {:?}", err);
-									},
+									neo4j_payload.push((
+										knowledge.document_id.clone(),
+										knowledge.document_source.to_string(),
+										knowledge.image_id.clone(),
+										semantic_payload,
+									));
 								}
-							}
-						},
-						Err(err) => {
-							log::error!("Failed to fetch discovered data: {:?}", err);
-						},
+
+								if !neo4j_payload.is_empty() {
+									match neo4j_storage
+										.insert_graph(session_id.to_string(), &neo4j_payload)
+										.await
+									{
+										Ok(_) => {
+											log::info!("Successfully inserted discovered knowledge into Neo4j");
+										},
+										Err(err) => {
+											log::error!("Failed to insert discovered knowledge into Neo4j: {:?}", err);
+										},
+									}
+								}
+							},
+							Err(err) => {
+								log::error!("Failed to fetch discovered data: {:?}", err);
+							},
+						}
 					}
-					return Ok(InsightOutput {
-						data: Value::String(
-							"Successfully inserted fabric data in Neo4j".to_string(),
-						),
-					});
+					if !neo4j_payload.is_empty() {
+						match neo4j_storage
+							.insert_graph(session_id.to_string(), &neo4j_payload)
+							.await
+						{
+							Ok(_) => {
+								log::info!("Successfully inserted discovered knowledge into Neo4j");
+							},
+							Err(err) => {
+								log::error!(
+									"Failed to insert discovered knowledge into Neo4j: {:?}",
+									err
+								);
+							},
+						}
+					}
 				}
+				return Ok(InsightOutput {
+					data: Value::String("Successfully inserted fabric data in Neo4j".to_string()),
+				});
 			}
 		}
 

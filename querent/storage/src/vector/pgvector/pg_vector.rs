@@ -21,7 +21,7 @@ use proto::semantics::PostgresConfig;
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
 
-use super::fetch_documents_for_embedding;
+use super::{fetch_documents_for_embedding, FilteredSemanticKnowledge};
 
 pub struct PGVector {
 	pub pool: ActualDbPool,
@@ -642,6 +642,34 @@ impl FabricAccessor for PGVector {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
+		Ok(results)
+	}
+
+	async fn get_semanticknowledge_data(
+		&self,
+		collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
+		println!("Start 11111");
+		let query = format!(
+			"SELECT subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id
+			FROM semantic_knowledge 
+			WHERE collection_id = $1"
+		);
+
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		println!("Start 1111122");
+		let results: Vec<FilteredSemanticKnowledge> = diesel::sql_query(query)
+			.bind::<Text, _>(collection_id)
+			.load::<FilteredSemanticKnowledge>(&mut conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		println!("Start 133333");
 		Ok(results)
 	}
 }

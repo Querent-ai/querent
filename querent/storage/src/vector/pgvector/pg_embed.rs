@@ -1,10 +1,9 @@
 use crate::{
 	enable_extension, models::*, postgres_index::QuerySuggestion, semantic_knowledge,
 	utils::traverse_node, ActualDbPool, DieselError, FabricAccessor, FabricStorage,
-	SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
+	FilteredSemanticKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind,
+	StorageResult, POOL_TIMEOUT,
 };
-use diesel_migrations::MigrationHarness;
-
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
@@ -16,7 +15,7 @@ use diesel_async::{
 	pg::AsyncPgConnection, pooled_connection::AsyncDieselConnectionManager,
 	scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl,
 };
-use diesel_migrations::{embed_migrations, EmbeddedMigrations};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use postgresql_embedded::Result;
 use std::{collections::HashSet, sync::Arc, time::Duration};
 use tracing::error;
@@ -689,6 +688,33 @@ impl FabricAccessor for PGEmbed {
 			.collect();
 
 		Ok(discovered_knowledge)
+	}
+
+	async fn get_semanticknowledge_data(
+		&self,
+		collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
+		let query = format!(
+			"SELECT subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id
+			FROM semantic_knowledge 
+			WHERE collection_id = $1"
+		);
+
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		let results: Vec<FilteredSemanticKnowledge> = diesel::sql_query(query)
+			.bind::<Text, _>(collection_id)
+			.load::<FilteredSemanticKnowledge>(&mut conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		Ok(results)
 	}
 }
 
