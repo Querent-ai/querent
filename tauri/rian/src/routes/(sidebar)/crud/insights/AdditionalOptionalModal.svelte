@@ -66,19 +66,6 @@
 				};
 				additionalOptionsEntries.push(['semantic_pipeline_id', semanticPipelineIdOption]);
 			}
-			if (!additionalOptionsEntries.some(([key]) => key === 'query')) {
-				const queryOption: CustomInsightOption = {
-					id: 'query',
-					label: 'Query',
-					tooltip: 'Enter your query',
-					value: {
-						type: 'string',
-						value: '',
-						hidden: false
-					}
-				};
-				additionalOptionsEntries.push(['query', queryOption]);
-			}
 		}
 	}
 
