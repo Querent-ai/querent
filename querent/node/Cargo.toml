@@ -1,6 +1,6 @@
 [package]
 name = "node"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -80,6 +80,7 @@ log = { workspace = true }
 rustls = { workspace = true }
 dirs = { workspace = true }
 postgresql_embedded = { workspace = true }
+pq-sys = { workspace = true , features = ["bundled"]}
 
 [build-dependencies]
 time = { workspace = true }
@@ -96,4 +97,5 @@ console = ["console-subscriber"]
 license-check = []
 bundled = [
   "postgresql_embedded/bundled",
+  "pq-sys/bundled",
 ]
