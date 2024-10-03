@@ -115,7 +115,7 @@ insightSessionId.subscribe(($insightSessionId) => {
 });
 
 googleDriveRefreshToken.subscribe(($googleDriveRefreshToken) => {
-	saveToLocalStorage('googleDriveRefreshToken', $googleDriveRefreshToken)
+	saveToLocalStorage('googleDriveRefreshToken', $googleDriveRefreshToken);
 });
 
 messagesList.subscribe(($messagesList) => {
