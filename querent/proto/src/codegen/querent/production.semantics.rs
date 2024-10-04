@@ -83,14 +83,14 @@ pub struct ListCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct SemanticPipelineRequest {
-    #[prost(string, repeated, tag = "1")]
-    pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-    #[prost(message, optional, tag = "2")]
-    pub fixed_entities: ::core::option::Option<FixedEntities>,
-    #[prost(message, optional, tag = "3")]
-    pub sample_entities: ::core::option::Option<SampleEntities>,
-    #[prost(enumeration = "Model", optional, tag = "4")]
-    pub model: ::core::option::Option<i32>,
+	#[prost(string, repeated, tag = "1")]
+	pub collectors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+	#[prost(message, optional, tag = "2")]
+	pub fixed_entities: ::core::option::Option<FixedEntities>,
+	#[prost(message, optional, tag = "3")]
+	pub sample_entities: ::core::option::Option<SampleEntities>,
+	#[prost(enumeration = "Model", optional, tag = "4")]
+	pub model: ::core::option::Option<i32>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -152,32 +152,32 @@ pub struct SendIngestedTokens {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct IndexingStatistics {
-    #[prost(uint32, tag = "1")]
-    pub total_docs: u32,
-    #[prost(uint32, tag = "2")]
-    pub total_events: u32,
-    #[prost(uint32, tag = "3")]
-    pub total_events_processed: u32,
-    #[prost(uint32, tag = "4")]
-    pub total_events_received: u32,
-    #[prost(uint32, tag = "5")]
-    pub total_events_sent: u32,
-    #[prost(uint32, tag = "6")]
-    pub total_batches: u32,
-    #[prost(uint32, tag = "7")]
-    pub total_sentences: u32,
-    #[prost(uint32, tag = "8")]
-    pub total_subjects: u32,
-    #[prost(uint32, tag = "9")]
-    pub total_predicates: u32,
-    #[prost(uint32, tag = "10")]
-    pub total_objects: u32,
-    #[prost(uint32, tag = "11")]
-    pub total_graph_events: u32,
-    #[prost(uint32, tag = "12")]
-    pub total_vector_events: u32,
-    #[prost(uint32, tag = "13")]
-    pub total_data_processed_size: u32,
+	#[prost(uint32, tag = "1")]
+	pub total_docs: u32,
+	#[prost(uint32, tag = "2")]
+	pub total_events: u32,
+	#[prost(uint32, tag = "3")]
+	pub total_events_processed: u32,
+	#[prost(uint32, tag = "4")]
+	pub total_events_received: u32,
+	#[prost(uint32, tag = "5")]
+	pub total_events_sent: u32,
+	#[prost(uint32, tag = "6")]
+	pub total_batches: u32,
+	#[prost(uint32, tag = "7")]
+	pub total_sentences: u32,
+	#[prost(uint32, tag = "8")]
+	pub total_subjects: u32,
+	#[prost(uint32, tag = "9")]
+	pub total_predicates: u32,
+	#[prost(uint32, tag = "10")]
+	pub total_objects: u32,
+	#[prost(uint32, tag = "11")]
+	pub total_graph_events: u32,
+	#[prost(uint32, tag = "12")]
+	pub total_vector_events: u32,
+	#[prost(uint32, tag = "13")]
+	pub total_data_processed_size: u32,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -209,9 +209,9 @@ pub struct CollectorConfig {
 	#[prost(string, tag = "1")]
 	pub name: ::prost::alloc::string::String,
 	#[prost(
-        oneof = "collector_config::Backend",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13"
-    )]
+		oneof = "collector_config::Backend",
+		tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14"
+	)]
 	pub backend: ::core::option::Option<Backend>,
 }
 /// Nested message and enum types in `CollectorConfig`.
@@ -245,7 +245,9 @@ pub mod collector_config {
 		#[prost(message, tag = "12")]
 		Files(FileCollectorConfig),
 		#[prost(message, tag = "13")]
-        Onedrive(OneDriveConfig),
+		Onedrive(OneDriveConfig),
+		#[prost(message, tag = "14")]
+		Notion(NotionConfig),
 	}
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
@@ -363,21 +365,21 @@ pub struct JiraCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct GoogleDriveCollectorConfig {
-    /// Client ID of the Google Drive collector.
-    #[prost(string, tag = "1")]
-    pub drive_client_id: ::prost::alloc::string::String,
-    /// Client secret of the Google Drive collector.
-    #[prost(string, tag = "2")]
-    pub drive_client_secret: ::prost::alloc::string::String,
-    /// Refresh token of the Google Drive collector.
-    #[prost(string, tag = "3")]
-    pub drive_refresh_token: ::prost::alloc::string::String,
-    /// Folder to crawl of the Google Drive collector.
-    #[prost(string, tag = "4")]
-    pub folder_to_crawl: ::prost::alloc::string::String,
-    /// Id for the collector
-    #[prost(string, tag = "5")]
-    pub id: ::prost::alloc::string::String,
+	/// Client ID of the Google Drive collector.
+	#[prost(string, tag = "1")]
+	pub drive_client_id: ::prost::alloc::string::String,
+	/// Client secret of the Google Drive collector.
+	#[prost(string, tag = "2")]
+	pub drive_client_secret: ::prost::alloc::string::String,
+	/// Refresh token of the Google Drive collector.
+	#[prost(string, tag = "3")]
+	pub drive_refresh_token: ::prost::alloc::string::String,
+	/// Folder to crawl of the Google Drive collector.
+	#[prost(string, tag = "4")]
+	pub folder_to_crawl: ::prost::alloc::string::String,
+	/// Id for the collector
+	#[prost(string, tag = "5")]
+	pub id: ::prost::alloc::string::String,
 }
 /// EmailCollectorConfig is a message to hold configuration for an Email collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -462,9 +464,9 @@ pub struct SlackCollectorConfig {
 	/// Includive of the Slack collector.
 	#[prost(bool, tag = "5")]
 	pub includive: bool,
-    /// Limit of the Slack collector
-    #[prost(int32, tag = "6")]
-    pub limit: i32,
+	/// Limit of the Slack collector
+	#[prost(int32, tag = "6")]
+	pub limit: i32,
 	/// Id for the collector
 	#[prost(string, tag = "7")]
 	pub id: ::prost::alloc::string::String,
@@ -475,64 +477,64 @@ pub struct SlackCollectorConfig {
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct NewsCollectorConfig {
 	/// API key of the News collector.
-    #[prost(string, tag = "1")]
-    pub api_key: ::prost::alloc::string::String,
-    /// Query of the News collector.
-    #[prost(string, tag = "2")]
-    pub query: ::prost::alloc::string::String,
-    /// Query type of the News collector.
-    #[prost(enumeration = "QueryType", tag = "3")]
-    pub query_type: i32,
-    /// Comma separated sources of the news representing news sources or blogs
-    #[prost(string, optional, tag = "4")]
-    pub sources: ::core::option::Option<::prost::alloc::string::String>,
-    /// From date of the News collector.
-    #[prost(string, optional, tag = "5")]
-    pub from_date: ::core::option::Option<::prost::alloc::string::String>,
-    /// To date of the News collector.
-    #[prost(string, optional, tag = "6")]
-    pub to_date: ::core::option::Option<::prost::alloc::string::String>,
-    /// Language of the News collector.
-    #[prost(string, optional, tag = "7")]
-    pub language: ::core::option::Option<::prost::alloc::string::String>,
-    /// Sort by for the News Collector
-    #[prost(enumeration = "SortBy", optional, tag = "8")]
-    pub sort_by: ::core::option::Option<i32>,
-    /// Page Size of the News Response
-    #[prost(int32, optional, tag = "9")]
-    pub page_size: ::core::option::Option<i32>,
-    /// Page number of the News Response
-    #[prost(int32, optional, tag = "10")]
-    pub page: ::core::option::Option<i32>,
-    /// Comma-seperated string of Domains of the News Collector
-    #[prost(string, optional, tag = "11")]
-    pub domains: ::core::option::Option<::prost::alloc::string::String>,
-    /// Id for the collector
-    #[prost(string, tag = "12")]
-    pub id: ::prost::alloc::string::String,
+	#[prost(string, tag = "1")]
+	pub api_key: ::prost::alloc::string::String,
+	/// Query of the News collector.
+	#[prost(string, tag = "2")]
+	pub query: ::prost::alloc::string::String,
+	/// Query type of the News collector.
+	#[prost(enumeration = "QueryType", tag = "3")]
+	pub query_type: i32,
+	/// Comma separated sources of the news representing news sources or blogs
+	#[prost(string, optional, tag = "4")]
+	pub sources: ::core::option::Option<::prost::alloc::string::String>,
+	/// From date of the News collector.
+	#[prost(string, optional, tag = "5")]
+	pub from_date: ::core::option::Option<::prost::alloc::string::String>,
+	/// To date of the News collector.
+	#[prost(string, optional, tag = "6")]
+	pub to_date: ::core::option::Option<::prost::alloc::string::String>,
+	/// Language of the News collector.
+	#[prost(string, optional, tag = "7")]
+	pub language: ::core::option::Option<::prost::alloc::string::String>,
+	/// Sort by for the News Collector
+	#[prost(enumeration = "SortBy", optional, tag = "8")]
+	pub sort_by: ::core::option::Option<i32>,
+	/// Page Size of the News Response
+	#[prost(int32, optional, tag = "9")]
+	pub page_size: ::core::option::Option<i32>,
+	/// Page number of the News Response
+	#[prost(int32, optional, tag = "10")]
+	pub page: ::core::option::Option<i32>,
+	/// Comma-seperated string of Domains of the News Collector
+	#[prost(string, optional, tag = "11")]
+	pub domains: ::core::option::Option<::prost::alloc::string::String>,
+	/// Id for the collector
+	#[prost(string, tag = "12")]
+	pub id: ::prost::alloc::string::String,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct OneDriveConfig {
-    /// Client ID of the app
-    #[prost(string, tag = "1")]
-    pub client_id: ::prost::alloc::string::String,
-    /// Client secret of the app
-    #[prost(string, tag = "2")]
-    pub client_secret: ::prost::alloc::string::String,
-    /// Redirect URI
-    #[prost(string, tag = "3")]
-    pub redirect_uri: ::prost::alloc::string::String,
-    /// Refresh token of the app
-    #[prost(string, tag = "4")]
-    pub refresh_token: ::prost::alloc::string::String,
-    /// / Folder path of the app
-    #[prost(string, tag = "5")]
-    pub folder_path: ::prost::alloc::string::String,
-    /// / Id for the collector
-    #[prost(string, tag = "6")]
-    pub id: ::prost::alloc::string::String,
+	/// Client ID of the app
+	#[prost(string, tag = "1")]
+	pub client_id: ::prost::alloc::string::String,
+	/// Client secret of the app
+	#[prost(string, tag = "2")]
+	pub client_secret: ::prost::alloc::string::String,
+	/// Redirect URI
+	#[prost(string, tag = "3")]
+	pub redirect_uri: ::prost::alloc::string::String,
+	/// Refresh token of the app
+	#[prost(string, tag = "4")]
+	pub refresh_token: ::prost::alloc::string::String,
+	/// / Folder path of the app
+	#[prost(string, tag = "5")]
+	pub folder_path: ::prost::alloc::string::String,
+	/// / Id for the collector
+	#[prost(string, tag = "6")]
+	pub id: ::prost::alloc::string::String,
 }
 /// StorageConfig is a message to hold configuration for a storage.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -593,6 +595,24 @@ pub struct Neo4jConfig {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
+pub struct NotionConfig {
+	/// API key of the notion
+	#[prost(string, tag = "1")]
+	pub api_key: ::prost::alloc::string::String,
+	/// Type of query to notion API
+	#[prost(enumeration = "QueryTypeNotion", tag = "2")]
+	pub query_type: i32,
+	/// Query id to the notion API/ either page id or database id
+	#[prost(string, tag = "3")]
+	pub query_id: ::prost::alloc::string::String,
+	/// / Id for the collector
+	#[prost(string, tag = "4")]
+	pub id: ::prost::alloc::string::String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -629,59 +649,87 @@ use common::tower::RpcName;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum QueryType {
-    Everything = 0,
-    TopHeadlines = 1,
+	Everything = 0,
+	TopHeadlines = 1,
 }
 impl QueryType {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            QueryType::Everything => "Everything",
-            QueryType::TopHeadlines => "TopHeadlines",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "Everything" => Some(Self::Everything),
-            "TopHeadlines" => Some(Self::TopHeadlines),
-            _ => None,
-        }
-    }
+	/// String value of the enum field names used in the ProtoBuf definition.
+	///
+	/// The values are not transformed in any way and thus are considered stable
+	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
+	pub fn as_str_name(&self) -> &'static str {
+		match self {
+			QueryType::Everything => "Everything",
+			QueryType::TopHeadlines => "TopHeadlines",
+		}
+	}
+	/// Creates an enum from field names used in the ProtoBuf definition.
+	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+		match value {
+			"Everything" => Some(Self::Everything),
+			"TopHeadlines" => Some(Self::TopHeadlines),
+			_ => None,
+		}
+	}
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum SortBy {
-    Relevancy = 0,
-    Popularity = 1,
-    PublishedAt = 2,
+	Relevancy = 0,
+	Popularity = 1,
+	PublishedAt = 2,
 }
 impl SortBy {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            SortBy::Relevancy => "Relevancy",
-            SortBy::Popularity => "Popularity",
-            SortBy::PublishedAt => "PublishedAt",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "Relevancy" => Some(Self::Relevancy),
-            "Popularity" => Some(Self::Popularity),
-            "PublishedAt" => Some(Self::PublishedAt),
-            _ => None,
-        }
-    }
+	/// String value of the enum field names used in the ProtoBuf definition.
+	///
+	/// The values are not transformed in any way and thus are considered stable
+	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
+	pub fn as_str_name(&self) -> &'static str {
+		match self {
+			SortBy::Relevancy => "Relevancy",
+			SortBy::Popularity => "Popularity",
+			SortBy::PublishedAt => "PublishedAt",
+		}
+	}
+	/// Creates an enum from field names used in the ProtoBuf definition.
+	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+		match value {
+			"Relevancy" => Some(Self::Relevancy),
+			"Popularity" => Some(Self::Popularity),
+			"PublishedAt" => Some(Self::PublishedAt),
+			_ => None,
+		}
+	}
+}
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum QueryTypeNotion {
+	Page = 0,
+	Database = 1,
+}
+impl QueryTypeNotion {
+	/// String value of the enum field names used in the ProtoBuf definition.
+	///
+	/// The values are not transformed in any way and thus are considered stable
+	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
+	pub fn as_str_name(&self) -> &'static str {
+		match self {
+			QueryTypeNotion::Page => "Page",
+			QueryTypeNotion::Database => "Database",
+		}
+	}
+	/// Creates an enum from field names used in the ProtoBuf definition.
+	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+		match value {
+			"Page" => Some(Self::Page),
+			"Database" => Some(Self::Database),
+			_ => None,
+		}
+	}
 }
 /// BEGIN
 #[allow(unused_imports)]
@@ -2394,11 +2442,11 @@ where
 		self.call(request).await
 	}
 	async fn list_pipeline_info(
-        &mut self,
-        request: EmptyList,
-    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
-        self.call(request).await
-    }
+		&mut self,
+		request: EmptyList,
+	) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
+		self.call(request).await
+	}
 }
 #[derive(Debug, Clone)]
 pub struct SemanticsServiceGrpcClientAdapter<T> {
@@ -2532,15 +2580,15 @@ where
 			.map_err(crate::error::grpc_status_to_service_error)
 	}
 	async fn list_pipeline_info(
-        &mut self,
-        request: EmptyList,
-    ) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
-        self.inner
-            .list_pipeline_info(request)
-            .await
-            .map(|response| response.into_inner())
-            .map_err(crate::error::grpc_status_to_service_error)
-    }
+		&mut self,
+		request: EmptyList,
+	) -> crate::semantics::SemanticsResult<PipelineRequestInfoList> {
+		self.inner
+			.list_pipeline_info(request)
+			.await
+			.map(|response| response.into_inner())
+			.map_err(crate::error::grpc_status_to_service_error)
+	}
 }
 #[derive(Debug)]
 pub struct SemanticsServiceGrpcServerAdapter {
@@ -2667,16 +2715,16 @@ impl semantics_service_grpc_server::SemanticsServiceGrpc for SemanticsServiceGrp
 			.map_err(crate::error::grpc_error_to_grpc_status)
 	}
 	async fn list_pipeline_info(
-        &self,
-        request: tonic::Request<EmptyList>,
-    ) -> Result<tonic::Response<PipelineRequestInfoList>, tonic::Status> {
-        self.inner
-            .clone()
-            .list_pipeline_info(request.into_inner())
-            .await
-            .map(tonic::Response::new)
-            .map_err(crate::error::grpc_error_to_grpc_status)
-    }
+		&self,
+		request: tonic::Request<EmptyList>,
+	) -> Result<tonic::Response<PipelineRequestInfoList>, tonic::Status> {
+		self.inner
+			.clone()
+			.list_pipeline_info(request.into_inner())
+			.await
+			.map(tonic::Response::new)
+			.map_err(crate::error::grpc_error_to_grpc_status)
+	}
 }
 /// Generated client implementations.
 pub mod semantics_service_grpc_client {
@@ -2765,7 +2813,8 @@ pub mod semantics_service_grpc_client {
 		pub async fn start_pipeline(
 			&mut self,
 			request: impl tonic::IntoRequest<super::SemanticPipelineRequest>,
-		) -> std::result::Result<tonic::Response<super::SemanticPipelineResponse>, tonic::Status> {
+		) -> std::result::Result<tonic::Response<super::SemanticPipelineResponse>, tonic::Status>
+		{
 			self.inner.ready().await.map_err(|e| {
 				tonic::Status::new(
 					tonic::Code::Unknown,
@@ -2955,35 +3004,24 @@ pub mod semantics_service_grpc_client {
 			self.inner.unary(req, path, codec).await
 		}
 		pub async fn list_pipeline_info(
-            &mut self,
-            request: impl tonic::IntoRequest<super::EmptyList>,
-        ) -> std::result::Result<
-            tonic::Response<super::PipelineRequestInfoList>,
-            tonic::Status,
-        > {
-            self.inner
-                .ready()
-                .await
-                .map_err(|e| {
-                    tonic::Status::new(
-                        tonic::Code::Unknown,
-                        format!("Service was not ready: {}", e.into()),
-                    )
-                })?;
-            let codec = tonic::codec::ProstCodec::default();
-            let path = http::uri::PathAndQuery::from_static(
-                "/querent.semantics.SemanticsService/ListPipelineInfo",
-            );
-            let mut req = request.into_request();
-            req.extensions_mut()
-                .insert(
-                    GrpcMethod::new(
-                        "querent.semantics.SemanticsService",
-                        "ListPipelineInfo",
-                    ),
-                );
-            self.inner.unary(req, path, codec).await
-        }
+			&mut self,
+			request: impl tonic::IntoRequest<super::EmptyList>,
+		) -> std::result::Result<tonic::Response<super::PipelineRequestInfoList>, tonic::Status> {
+			self.inner.ready().await.map_err(|e| {
+				tonic::Status::new(
+					tonic::Code::Unknown,
+					format!("Service was not ready: {}", e.into()),
+				)
+			})?;
+			let codec = tonic::codec::ProstCodec::default();
+			let path = http::uri::PathAndQuery::from_static(
+				"/querent.semantics.SemanticsService/ListPipelineInfo",
+			);
+			let mut req = request.into_request();
+			req.extensions_mut()
+				.insert(GrpcMethod::new("querent.semantics.SemanticsService", "ListPipelineInfo"));
+			self.inner.unary(req, path, codec).await
+		}
 	}
 }
 /// Generated server implementations.
@@ -3034,12 +3072,9 @@ pub mod semantics_service_grpc_server {
 			request: tonic::Request<super::ListCollectorRequest>,
 		) -> std::result::Result<tonic::Response<super::ListCollectorConfig>, tonic::Status>;
 		async fn list_pipeline_info(
-            &self,
-            request: tonic::Request<super::EmptyList>,
-        ) -> std::result::Result<
-            tonic::Response<super::PipelineRequestInfoList>,
-            tonic::Status,
-        >;
+			&self,
+			request: tonic::Request<super::EmptyList>,
+		) -> std::result::Result<tonic::Response<super::PipelineRequestInfoList>, tonic::Status>;
 	}
 	#[derive(Debug)]
 	pub struct SemanticsServiceGrpcServer<T: SemanticsServiceGrpc> {
@@ -3518,50 +3553,44 @@ pub mod semantics_service_grpc_server {
 					Box::pin(fut)
 				},
 				"/querent.semantics.SemanticsService/ListPipelineInfo" => {
-                    #[allow(non_camel_case_types)]
-                    struct ListPipelineInfoSvc<T: SemanticsServiceGrpc>(pub Arc<T>);
-                    impl<
-                        T: SemanticsServiceGrpc,
-                    > tonic::server::UnaryService<super::EmptyList>
-                    for ListPipelineInfoSvc<T> {
-                        type Response = super::PipelineRequestInfoList;
-                        type Future = BoxFuture<
-                            tonic::Response<Self::Response>,
-                            tonic::Status,
-                        >;
-                        fn call(
-                            &mut self,
-                            request: tonic::Request<super::EmptyList>,
-                        ) -> Self::Future {
-                            let inner = Arc::clone(&self.0);
-                            let fut = async move {
-                                (*inner).list_pipeline_info(request).await
-                            };
-                            Box::pin(fut)
-                        }
-                    }
-                    let accept_compression_encodings = self.accept_compression_encodings;
-                    let send_compression_encodings = self.send_compression_encodings;
-                    let max_decoding_message_size = self.max_decoding_message_size;
-                    let max_encoding_message_size = self.max_encoding_message_size;
-                    let inner = self.inner.clone();
-                    let fut = async move {
-                        let inner = inner.0;
-                        let method = ListPipelineInfoSvc(inner);
-                        let codec = tonic::codec::ProstCodec::default();
-                        let mut grpc = tonic::server::Grpc::new(codec)
-                            .apply_compression_config(
-                                accept_compression_encodings,
-                                send_compression_encodings,
-                            )
-                            .apply_max_message_size_config(
-                                max_decoding_message_size,
-                                max_encoding_message_size,
-                            );
-                        let res = grpc.unary(method, req).await;
-                        Ok(res)
-                    };
-                    Box::pin(fut)
+					#[allow(non_camel_case_types)]
+					struct ListPipelineInfoSvc<T: SemanticsServiceGrpc>(pub Arc<T>);
+					impl<T: SemanticsServiceGrpc> tonic::server::UnaryService<super::EmptyList>
+						for ListPipelineInfoSvc<T>
+					{
+						type Response = super::PipelineRequestInfoList;
+						type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
+						fn call(
+							&mut self,
+							request: tonic::Request<super::EmptyList>,
+						) -> Self::Future {
+							let inner = Arc::clone(&self.0);
+							let fut = async move { (*inner).list_pipeline_info(request).await };
+							Box::pin(fut)
+						}
+					}
+					let accept_compression_encodings = self.accept_compression_encodings;
+					let send_compression_encodings = self.send_compression_encodings;
+					let max_decoding_message_size = self.max_decoding_message_size;
+					let max_encoding_message_size = self.max_encoding_message_size;
+					let inner = self.inner.clone();
+					let fut = async move {
+						let inner = inner.0;
+						let method = ListPipelineInfoSvc(inner);
+						let codec = tonic::codec::ProstCodec::default();
+						let mut grpc = tonic::server::Grpc::new(codec)
+							.apply_compression_config(
+								accept_compression_encodings,
+								send_compression_encodings,
+							)
+							.apply_max_message_size_config(
+								max_decoding_message_size,
+								max_encoding_message_size,
+							);
+						let res = grpc.unary(method, req).await;
+						Ok(res)
+					};
+					Box::pin(fut)
 				},
 				_ => Box::pin(async move {
 					Ok(http::Response::builder()

@@ -235,7 +235,7 @@ pub struct CollectorConfig {
     pub name: ::prost::alloc::string::String,
     #[prost(
         oneof = "collector_config::Backend",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14"
     )]
     pub backend: ::core::option::Option<collector_config::Backend>,
 }
@@ -271,6 +271,8 @@ pub mod collector_config {
         Files(super::FileCollectorConfig),
         #[prost(message, tag = "13")]
         Onedrive(super::OneDriveConfig),
+        #[prost(message, tag = "14")]
+        Notion(super::NotionConfig),
     }
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
@@ -573,6 +575,24 @@ pub struct OneDriveConfig {
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct NotionConfig {
+    /// API key of the notion
+    #[prost(string, tag = "1")]
+    pub api_key: ::prost::alloc::string::String,
+    /// Type of query to notion API
+    #[prost(enumeration = "QueryTypeNotion", tag = "2")]
+    pub query_type: i32,
+    /// Query id to the notion API/ either page id or database id
+    #[prost(string, tag = "3")]
+    pub query_id: ::prost::alloc::string::String,
+    /// / Id for the collector
+    #[prost(string, tag = "4")]
+    pub id: ::prost::alloc::string::String,
+}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -660,6 +680,35 @@ impl SortBy {
             "Relevancy" => Some(Self::Relevancy),
             "Popularity" => Some(Self::Popularity),
             "PublishedAt" => Some(Self::PublishedAt),
+            _ => None,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum QueryTypeNotion {
+    Page = 0,
+    Database = 1,
+}
+impl QueryTypeNotion {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            QueryTypeNotion::Page => "Page",
+            QueryTypeNotion::Database => "Database",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "Page" => Some(Self::Page),
+            "Database" => Some(Self::Database),
             _ => None,
         }
     }

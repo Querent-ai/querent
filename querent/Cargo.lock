@@ -6757,6 +6757,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
 
 [[package]]
+name = "notion"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bc9ff831e0b2ab522d99a55effa5e142516fdedc42d0078a589f5022039c72d"
+dependencies = [
+ "chrono",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "nu-ansi-term"
 version = "0.46.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10431,6 +10446,7 @@ dependencies = [
  "md5",
  "native-tls",
  "neo4rs",
+ "notion",
  "oauth2",
  "once_cell",
  "onedrive-api",
