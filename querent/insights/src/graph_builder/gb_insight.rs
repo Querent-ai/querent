@@ -88,7 +88,7 @@ impl GBV1 {
 			info: InsightInfo {
 				id: "querent.insights.graph_builder.gbv1".to_string(),
 				name: "Querent Graph Builder".to_string(),
-				description: "Graph Builder leverages generative models to perform directed traversals in a data fabric, enabling users to create graphs from the data fabric and store them in a Neo4j instance.".to_string(),
+				description: "Graph Builder enables users to create interactive graphs from a data fabric and store them in a Neo4j instance.".to_string(),
 				version: "0.0.1-dev".to_string(),
 				author: "Querent AI".to_string(),
 				license: "BSL-1.0".to_string(),
