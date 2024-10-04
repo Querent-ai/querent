@@ -110,7 +110,7 @@ jobs:
       - name: Download and setup libonnxruntime
         run: |
           mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-arm64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
           echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
@@ -163,7 +163,7 @@ jobs:
       - name: Download and setup libonnxruntime
         run: |
           mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-linux-x64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
           echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
@@ -231,6 +231,9 @@ jobs:
           # Persist environment variables to GitHub Actions environment
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_STRATEGY=$env:ORT_STRATEGY"
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_LIB_LOCATION=$env:ORT_LIB_LOCATION"
+      - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - run: vcpkg integrate install
+      - run: vcpkg install openssl:x64-windows-static-md  
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4

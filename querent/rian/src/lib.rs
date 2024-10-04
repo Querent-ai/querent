@@ -164,6 +164,27 @@ pub async fn create_dynamic_sources(
 				}
 			},
 
+			Some(proto::semantics::Backend::Notion(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
+				match sources::notion::notion::NotionSource::new(config.clone()).await {
+					Ok(notion_source) => {
+						sources.push(Arc::new(notion_source) as Arc<dyn sources::Source>);
+					},
+					Err(e) => {
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+							"Failed to initialize notion source: {:?} ",
+							e
+						)));
+					},
+				}
+			},
 			Some(proto::semantics::Backend::Email(config)) => {
 				#[cfg(feature = "license-check")]
 				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {

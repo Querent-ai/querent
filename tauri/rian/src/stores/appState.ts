@@ -88,7 +88,7 @@ export const describeStats = writable<IndexingStatistics>({
 
 const initialMessagesList: MessageType[] = getFromLocalStorage('messagesList', []);
 const initialInsightSessionId: string = getFromLocalStorage('insightSessionId', '');
-const initialDriveCode: string = getFromLocalStorage('googleDriveCode', '');
+const initialDriveCode: string = getFromLocalStorage('googleDriveRefreshToken', '');
 
 export const dataSources = writable<CollectorConfig[]>([]);
 export const pipelineState = writable<PipelineState>(initialStatePipeline);
@@ -107,11 +107,15 @@ export const insightSessionId = writable<string>(initialInsightSessionId);
 export const isLicenseVerified = writable(false);
 export const statsDataTime = writable<number[]>([]);
 export const statsDataTotalEvents = writable<number[]>([]);
-export const googleDriveRefreshToken = writable<string>('');
+export const googleDriveRefreshToken = writable<string>(initialDriveCode);
 export const discoveryQuery = writable<string>('');
 
 insightSessionId.subscribe(($insightSessionId) => {
 	saveToLocalStorage('insightSessionId', $insightSessionId);
+});
+
+googleDriveRefreshToken.subscribe(($googleDriveRefreshToken) => {
+	saveToLocalStorage('googleDriveRefreshToken', $googleDriveRefreshToken);
 });
 
 messagesList.subscribe(($messagesList) => {

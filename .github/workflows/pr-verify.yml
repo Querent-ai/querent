@@ -100,6 +100,8 @@ jobs:
       NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
       IMAP_USERNAME: ${{secrets.IMAP_USERNAME}}
       IMAP_PASSWORD: ${{secrets.IMAP_PASSWORD}}
+      NOTION_API_KEY: ${{secrets.NOTION_API_KEY}}
+      NOTION_PAGE_ID: ${{secrets.NOTION_PAGE_ID}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

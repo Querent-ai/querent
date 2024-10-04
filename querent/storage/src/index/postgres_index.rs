@@ -1,4 +1,6 @@
-use crate::{DiscoveredKnowledge, FabricAccessor, FabricStorage, Storage};
+use crate::{
+	DiscoveredKnowledge, FabricAccessor, FabricStorage, FilteredSemanticKnowledge, Storage,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel_async::{
@@ -188,7 +190,8 @@ impl FabricAccessor for PostgresStorage {
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,
-		_session_id: String,
+		_discovery_session_id: String,
+		_pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
 	}
@@ -217,6 +220,14 @@ impl FabricAccessor for PostgresStorage {
 		_max_results: i32,
 		_offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
+		Ok(vec![])
+	}
+
+	/// Get data from semantic Knowledge table
+	async fn get_semanticknowledge_data(
+		&self,
+		_collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
 		Ok(vec![])
 	}
 }

@@ -150,6 +150,7 @@ message CollectorConfig {
     NewsCollectorConfig news = 11;
     FileCollectorConfig files = 12;
     OneDriveConfig onedrive = 13;
+    NotionConfig notion = 14;
   }
 }
 
@@ -352,4 +353,20 @@ message OneDriveConfig {
   string folder_path = 5;
   /// Id for the collector
   string id = 6;
+}
+
+enum QueryTypeNotion {
+  Page=0;
+  Database=1;
+}
+
+message NotionConfig {
+  // API key of the notion
+  string api_key = 1;
+  // Type of query to notion API
+  QueryTypeNotion query_type = 2;
+  // Query id to the notion API/ either page id or database id
+  string query_id = 3;
+  /// Id for the collector
+  string id = 4;
 }

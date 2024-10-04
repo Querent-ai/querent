@@ -3,13 +3,14 @@ use std::{
 	sync::Arc,
 };
 
+use crate::{
+	postgres_index::QuerySuggestion, utils::FilteredSemanticKnowledge, DiscoveredKnowledge,
+};
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-use crate::{postgres_index::QuerySuggestion, DiscoveredKnowledge};
 
 pub const RIAN_API_KEY: &str = "RIAN_API_KEY";
 
@@ -160,7 +161,8 @@ pub trait FabricAccessor: Send + Sync + 'static {
 	/// Get discovered data based on session_id
 	async fn get_discovered_data(
 		&self,
-		session_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>>;
 
 	/// Get metadata if applicable
@@ -168,6 +170,12 @@ pub trait FabricAccessor: Send + Sync + 'static {
 		&self,
 		filtered_pairs: &[(String, String)],
 	) -> StorageResult<Vec<(String, String, String, String, String, String, String, f32)>>;
+
+	/// Get data from semantic Knowledge table
+	async fn get_semanticknowledge_data(
+		&self,
+		collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>>;
 }
 
 impl Debug for dyn FabricAccessor {
