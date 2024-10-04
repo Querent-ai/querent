@@ -153,7 +153,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		postgresql.settings(),
 		"tensor-chord",
 		"pgvecto.rs",
-		&VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+		&VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?,

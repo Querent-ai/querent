@@ -270,7 +270,7 @@ tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta", branch =
 specta-typescript = "=0.0.7"
 specta-jsdoc = "=0.0.7"
 lazy_static = "1.5.0"
-postgresql_embedded = { version = "0.16.3", default-features = false, features = ["theseus", "rustls-tls"] }
+postgresql_embedded = { version = "0.16.3", default-features = false, features = ["theseus", "rustls-tls", "bundled"] }
 postgresql_extensions = "0.16.3"
 rustls-native-certs = "0.8.0"
 sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }

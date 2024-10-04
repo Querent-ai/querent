@@ -367,7 +367,7 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
         &postgresql_settings,
         "tensor-chord",
         "pgvecto.rs",
-        &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+        &VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
         })?,
