@@ -5484,6 +5484,7 @@ dependencies = [
  "home",
  "hyper 0.14.30",
  "hyper-rustls 0.24.2",
+ "lazy_static",
  "llms",
  "log 0.4.22",
  "md5",

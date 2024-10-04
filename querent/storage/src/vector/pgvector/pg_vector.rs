@@ -21,7 +21,7 @@ use proto::semantics::PostgresConfig;
 use std::{collections::HashSet, sync::Arc};
 use tracing::error;
 
-use super::fetch_documents_for_embedding;
+use super::{fetch_documents_for_embedding, FilteredSemanticKnowledge};
 
 pub struct PGVector {
 	pub pool: ActualDbPool,
@@ -544,9 +544,9 @@ impl FabricAccessor for PGVector {
 
 	async fn get_discovered_data(
 		&self,
-		session_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		// Ok(vec![])
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
@@ -554,7 +554,7 @@ impl FabricAccessor for PGVector {
 		let results = conn
 			.transaction::<_, diesel::result::Error, _>(|conn| {
 				async move {
-					let query_result = discovered_knowledge::dsl::discovered_knowledge
+					let mut query = discovered_knowledge::dsl::discovered_knowledge
 						.select((
 							discovered_knowledge::dsl::doc_id,
 							discovered_knowledge::dsl::doc_source,
@@ -568,7 +568,17 @@ impl FabricAccessor for PGVector {
 							discovered_knowledge::dsl::query_embedding,
 							discovered_knowledge::dsl::collection_id,
 						))
-						.filter(discovered_knowledge::dsl::session_id.eq(&session_id))
+						.into_boxed();
+					if !discovery_session_id.is_empty() {
+						query = query
+							.filter(discovered_knowledge::dsl::session_id.eq(&discovery_session_id))
+					}
+					if !pipeline_id.is_empty() {
+						query =
+							query.filter(discovered_knowledge::dsl::collection_id.eq(&pipeline_id));
+					}
+
+					let query_result = query
 						.load::<(
 							String,
 							String,
@@ -632,6 +642,31 @@ impl FabricAccessor for PGVector {
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
 
+		Ok(results)
+	}
+
+	async fn get_semanticknowledge_data(
+		&self,
+		collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
+		let query = format!(
+			"SELECT subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id
+			FROM semantic_knowledge 
+			WHERE collection_id = $1"
+		);
+
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let results: Vec<FilteredSemanticKnowledge> = diesel::sql_query(query)
+			.bind::<Text, _>(collection_id)
+			.load::<FilteredSemanticKnowledge>(&mut conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
 		Ok(results)
 	}
 }

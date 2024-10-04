@@ -96,120 +96,96 @@ impl InsightRunner for XAIRunner {
 
 					let mut fetched_results = Vec::new();
 					let mut _total_fetched = 0;
-					while documents.len() < 10 {
-						let documents_len = documents.len();
+					let search_results = storage
+						.similarity_search_l2(
+							self.config.discovery_session_id.to_string(),
+							query.to_string(),
+							self.config.semantic_pipeline_id.to_string(),
+							query_embedding,
+							100,
+							0,
+							&vec![],
+						)
+						.await;
 
-						let search_results = storage
-							.similarity_search_l2(
-								self.config.discovery_session_id.to_string(),
-								query.to_string(),
-								self.config.semantic_pipeline_id.to_string(),
-								query_embedding,
-								10,
-								0,
-								&vec![],
-							)
-							.await;
+					match search_results {
+						Ok(results) => {
+							if results.is_empty() {
+								break;
+							}
+							_total_fetched += results.len() as i64;
+							fetched_results.extend(results.clone());
+							let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
+								HashMap::new();
+							let mut ordered_sentences: Vec<String> = Vec::new();
 
-						match search_results {
-							Ok(results) => {
-								if results.is_empty() {
+							for document in &results {
+								let tag = format!(
+									"{}-{}",
+									document.subject.replace('_', " "),
+									document.object.replace('_', " "),
+								);
+								if let Some((existing_tags, total_strength)) =
+									combined_results.get_mut(&document.sentence)
+								{
+									existing_tags.insert(tag);
+									*total_strength += document.score;
+								} else {
+									let mut tags_set = HashSet::new();
+									tags_set.insert(tag);
+									combined_results.insert(
+										document.sentence.clone(),
+										(tags_set, document.score),
+									);
+									ordered_sentences.push(document.sentence.clone());
+								}
+							}
+
+							for sentence in ordered_sentences {
+								if documents.len() >= 10 {
 									break;
 								}
-								_total_fetched += results.len() as i64;
-								fetched_results.extend(results.clone());
-								let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
-									HashMap::new();
-								let mut ordered_sentences: Vec<String> = Vec::new();
 
-								for document in &results {
-									let tag = format!(
-										"{}-{}",
-										document.subject.replace('_', " "),
-										document.object.replace('_', " "),
-									);
-									if let Some((existing_tags, total_strength)) =
-										combined_results.get_mut(&document.sentence)
+								if unique_sentences.insert(sentence.clone()) {
+									if let Some((tags_set, total_strength)) =
+										combined_results.get(&sentence)
 									{
-										existing_tags.insert(tag);
-										*total_strength += document.score;
-									} else {
-										let mut tags_set = HashSet::new();
-										tags_set.insert(tag);
-										combined_results.insert(
-											document.sentence.clone(),
-											(tags_set, document.score),
-										);
-										ordered_sentences.push(document.sentence.clone());
-									}
-								}
-
-								for sentence in ordered_sentences {
-									if documents.len() >= 10 {
-										let index = match results
-											.iter()
-											.position(|doc| doc.sentence == sentence)
+										let formatted_tags = tags_set
+											.clone()
+											.into_iter()
+											.collect::<Vec<_>>()
+											.join(", ");
+										if let Some(source) =
+											results.iter().find(|doc| doc.sentence == sentence)
 										{
-											Some(idx) => idx,
-											None => {
-												tracing::error!(
-													"Unable to find sentence in results: {}",
-													sentence
-												);
-												continue;
-											},
-										};
-										_total_fetched -= results.len() as i64 - index as i64;
-										break;
-									}
+											let formatted_document = proto::discovery::Insight {
+												document: source.doc_id.clone(),
+												source: source.doc_source.clone(),
+												relationship_strength: total_strength.to_string(),
+												sentence,
+												tags: formatted_tags,
+												top_pairs: vec![],
+											};
 
-									if unique_sentences.insert(sentence.clone()) {
-										if let Some((tags_set, total_strength)) =
-											combined_results.get(&sentence)
-										{
-											let formatted_tags = tags_set
-												.clone()
-												.into_iter()
-												.collect::<Vec<_>>()
-												.join(", ");
-											if let Some(source) =
-												results.iter().find(|doc| doc.sentence == sentence)
-											{
-												let formatted_document =
-													proto::discovery::Insight {
-														document: source.doc_id.clone(),
-														source: source.doc_source.clone(),
-														relationship_strength: total_strength
-															.to_string(),
-														sentence,
-														tags: formatted_tags,
-														top_pairs: vec![],
-													};
-
-												documents.push(formatted_document);
-											} else {
-												tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
-											}
+											documents.push(formatted_document);
 										} else {
-											tracing::error!(
-												"Unable to process insights in Retriever: {}",
-												sentence
-											);
+											tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
 										}
 									} else {
-										break;
+										tracing::error!(
+											"Unable to process insights in Retriever: {}",
+											sentence
+										);
 									}
+								} else {
+									break;
 								}
-							},
-							Err(e) => {
-								log::error!("Failed to search for similar documents: {}", e);
-								break;
-							},
-						}
-
-						if documents_len == documents.len() {
+							}
+						},
+						Err(e) => {
+							log::error!("Failed to search for similar documents: {}", e);
 							break;
-						}
+						},
 					}
 
 					let unfiltered_results = extract_sentences(&fetched_results).join("\n");
@@ -384,97 +360,99 @@ impl InsightRunner for XAIRunner {
 
 							let mut fetched_results = Vec::new();
 							let mut _total_fetched = 0;
+							let search_results = storage
+								.similarity_search_l2(
+									self.config.discovery_session_id.to_string(),
+									query.to_string(),
+									self.config.semantic_pipeline_id.to_string(),
+									query_embedding,
+									100,
+									0,
+									&vec![],
+								)
+								.await;
 
-							while documents.len() < 10 {
-								let documents_len = documents.len();
-
-								let search_results = storage
-									.similarity_search_l2(
-										self.config.discovery_session_id.to_string(),
-										query.to_string(),
-										self.config.semantic_pipeline_id.to_string(),
-										query_embedding,
-										10,
-										0,
-										&vec![],
-									)
-									.await;
-
-								match search_results {
-									Ok(results) => {
-										if results.is_empty() {
-											break;
-										}
-										_total_fetched += results.len() as i64;
-										fetched_results.extend(results.clone());
-										let mut combined_results: HashMap<String, (HashSet<String>, f32)> = HashMap::new();
-										let mut ordered_sentences: Vec<String> = Vec::new();
-
-										for document in &results {
-											let tag = format!(
-												"{}-{}",
-												document.subject.replace('_', " "),
-												document.object.replace('_', " "),
-											);
-											if let Some((existing_tags, total_strength)) = combined_results.get_mut(&document.sentence) {
-												existing_tags.insert(tag);
-												*total_strength += document.score;
-											} else {
-												let mut tags_set = HashSet::new();
-												tags_set.insert(tag);
-												combined_results.insert(document.sentence.clone(), (tags_set, document.score));
-												ordered_sentences.push(document.sentence.clone());
-											}
-										}
-
-										for sentence in ordered_sentences {
-											if documents.len() >= 10 {
-												let index = match results.iter().position(|doc| doc.sentence == sentence) {
-													Some(idx) => idx,
-													None => {
-														tracing::error!("Unable to find sentence in results: {}", sentence);
-														continue;
-													}
-												};
-												_total_fetched -= results.len() as i64 - index as i64;
-												break;
-											}
-
-											if unique_sentences.insert(sentence.clone()) {
-												if let Some((tags_set, total_strength)) = combined_results.get(&sentence) {
-													let formatted_tags = tags_set.clone().into_iter().collect::<Vec<_>>().join(", ");
-													if let Some(source) = results.iter().find(|doc| doc.sentence == sentence) {
-														let formatted_document = proto::discovery::Insight {
-															document: source.doc_id.clone(),
-															source: source.doc_source.clone(),
-															relationship_strength: total_strength.to_string(),
-															sentence,
-															tags: formatted_tags,
-															top_pairs: vec![],
-														};
-
-														documents.push(formatted_document);
-													} else {
-														tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
-													}
-												} else {
-													tracing::error!("Unable to process insights in Retriever: {}", sentence);
-												}
-											} else {
-												break;
-											}
-										}
-									}
-									Err(e) => {
-										log::error!("Failed to search for similar documents: {}", e);
+							match search_results {
+								Ok(results) => {
+									if results.is_empty() {
 										break;
 									}
-								}
+									_total_fetched += results.len() as i64;
+									fetched_results.extend(results.clone());
+									let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
+										HashMap::new();
+									let mut ordered_sentences: Vec<String> = Vec::new();
 
-								if documents_len == documents.len() {
+									for document in &results {
+										let tag = format!(
+											"{}-{}",
+											document.subject.replace('_', " "),
+											document.object.replace('_', " "),
+										);
+										if let Some((existing_tags, total_strength)) =
+											combined_results.get_mut(&document.sentence)
+										{
+											existing_tags.insert(tag);
+											*total_strength += document.score;
+										} else {
+											let mut tags_set = HashSet::new();
+											tags_set.insert(tag);
+											combined_results.insert(
+												document.sentence.clone(),
+												(tags_set, document.score),
+											);
+											ordered_sentences.push(document.sentence.clone());
+										}
+									}
+
+								for sentence in ordered_sentences {
+									if documents.len() >= 10 {
+										break;
+									}
+
+								if unique_sentences.insert(sentence.clone()) {
+									if let Some((tags_set, total_strength)) =
+										combined_results.get(&sentence)
+									{
+										let formatted_tags = tags_set
+											.clone()
+											.into_iter()
+											.collect::<Vec<_>>()
+											.join(", ");
+										if let Some(source) =
+											results.iter().find(|doc| doc.sentence == sentence)
+										{
+											let formatted_document =
+												proto::discovery::Insight {
+													document: source.doc_id.clone(),
+													source: source.doc_source.clone(),
+													relationship_strength: total_strength
+														.to_string(),
+													sentence,
+													tags: formatted_tags,
+													top_pairs: vec![],
+												};
+
+											documents.push(formatted_document);
+										} else {
+											tracing::error!("Unable to find source document for sentence in Retriever: {}", sentence);
+										}
+									} else {
+										tracing::error!(
+											"Unable to process insights in Retriever: {}",
+											sentence
+										);
+									}
+								} else {
 									break;
 								}
 							}
+						},
+						Err(e) => {
+							log::error!("Failed to search for similar documents: {}", e);
+							break;
+						},
+					}
 
 							let unfiltered_results = extract_sentences(&fetched_results).join("\n");
 							let _unfiltered_prompt = format!(

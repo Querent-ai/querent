@@ -15,6 +15,8 @@ pub mod cross_document_summarization;
 pub use cross_document_summarization::*;
 pub mod report_generation;
 pub use report_generation::*;
+pub mod graph_builder;
+pub use graph_builder::*;
 
 pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 	vec![
@@ -32,6 +34,8 @@ pub async fn all_insights_info_available() -> Vec<InsightInfo> {
 		cds_insight::CDSV1::new().info().await,
 		// Report Generation: Report Generation
 		report_generation_insight::RGV1::new().info().await,
+		// Graph Builder: Graph Builder
+		gb_insight::GBV1::new().info().await,
 	]
 }
 
@@ -66,6 +70,10 @@ pub async fn get_insight_runner_by_id(insight_id: &str) -> Option<Arc<dyn Insigh
 		},
 		"querent.insights.x_ai.ollama" => {
 			let insight = xplainable_ollama::XAIOllama::new();
+			Some(Arc::new(insight))
+		},
+		"querent.insights.graph_builder.gbv1" => {
+			let insight = gb_insight::GBV1::new();
 			Some(Arc::new(insight))
 		},
 		_ => None,
