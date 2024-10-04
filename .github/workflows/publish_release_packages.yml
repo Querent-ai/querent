@@ -17,7 +17,7 @@ on:
       - main
 env:
   INPUT_RELEASE_VERSION: v1.0.3
-  POSTGRESQL_VERSION: 16
+  POSTGRESQL_VERSION: 16.4.0
 jobs:
   build-tauri-rian-ui:
     permissions:
