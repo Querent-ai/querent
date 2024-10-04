@@ -57,6 +57,12 @@
 	h2 {
 		margin-top: 0;
 		color: #e74c3c;
+		text-align: center;
+	}
+
+	#error-message {
+		text-align: left;
+		margin-bottom: 20px;
 	}
 
 	.button-group {
@@ -66,7 +72,6 @@
 	}
 
 	button {
-		margin-left: 10px;
 		padding: 8px 16px;
 		border: none;
 		border-radius: 4px;
@@ -77,7 +82,7 @@
 
 	.close-btn {
 		background-color: #007bff;
-		color: black;
+		color: white;
 	}
 
 	.close-btn:hover,

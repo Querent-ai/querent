@@ -21,8 +21,6 @@
 	let insightList: InsightInfo[];
 
 	onMount(async () => {
-		errorMessage = 'Demo error';
-		showErrorModal = true;
 		try {
 			let res = await commands.listAvailableInsights();
 			if (res.status == 'ok') {
