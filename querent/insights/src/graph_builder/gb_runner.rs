@@ -27,6 +27,7 @@ pub struct GraphBuilderRunner {
 	pub neo4j_username: String,
 	pub neo4j_password: String,
 	pub neo4j_database: String,
+	pub neo4j_storage: Option<Arc<Neo4jStorage>>,
 }
 
 #[async_trait]
@@ -48,11 +49,9 @@ impl InsightRunner for GraphBuilderRunner {
 			fetch_size: 100,
 			max_connection_pool_size: 5,
 		};
-		let mut storage_lock = NEO4J_STORAGE.lock().await;
-		let neo4j_storage = match &*storage_lock {
-			Some((existing_storage, existing_config)) if existing_config == &new_config =>
-				Arc::clone(existing_storage),
-			_ => {
+		let neo4j_storage = match &self.neo4j_storage {
+			Some(storage) => Arc::clone(storage),
+			None => {
 				let new_storage =
 					Arc::new(Neo4jStorage::new(new_config.clone()).await.map_err(|_err| {
 						InsightError::new(
@@ -60,14 +59,13 @@ impl InsightRunner for GraphBuilderRunner {
 							anyhow::anyhow!("Failed to initialize Neo4j Storage").into(),
 						)
 					})?);
-				*storage_lock = Some((Arc::clone(&new_storage), new_config));
+
 				new_storage.check_connectivity().await.map_err(|_err| {
 					InsightError::new(
 						InsightErrorKind::Internal,
 						anyhow::anyhow!("Failed to connect to Neo4j after initialization").into(),
 					)
 				})?;
-
 				new_storage
 			},
 		};
@@ -132,7 +130,6 @@ impl InsightRunner for GraphBuilderRunner {
 										document.object.replace('_', " "),
 									);
 									if unique_sentences.insert(document.sentence.clone()) {
-										println!("I am here ------");
 										let mut tags_set = HashSet::new();
 										tags_set.insert(tag);
 										combined_results.insert(
@@ -171,7 +168,6 @@ impl InsightRunner for GraphBuilderRunner {
 						{
 							Ok(discovered_data) =>
 								for knowledge in discovered_data {
-									println!("This is the knowledge ----{:?}", knowledge);
 									let semantic_payload = SemanticKnowledgePayload {
 										subject: knowledge.subject,
 										object: knowledge.object,

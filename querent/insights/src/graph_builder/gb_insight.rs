@@ -185,6 +185,7 @@ impl Insight for GBV1 {
 			.with_show_download_progress(true);
 		let embedding_model = TextEmbedding::try_new(model_details)
 			.map_err(|e| InsightError::new(InsightErrorKind::Internal, e.into()))?;
+
 		let graph_builder_runner = GraphBuilderRunner {
 			config: config.clone(),
 			embedding_model: Some(embedding_model),
@@ -192,6 +193,7 @@ impl Insight for GBV1 {
 			neo4j_username,
 			neo4j_password,
 			neo4j_database,
+			neo4j_storage: None,
 		};
 		Ok(Arc::new(graph_builder_runner))
 	}

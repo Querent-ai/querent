@@ -27,12 +27,12 @@
 				'Code Graph Fabric is a software analysis engine that constructs interconnected representations of codebases, enabling deep insights and intelligent navigation across complex software systems.'
 		},
 		{
-			name: 'TimeSeries',
+			name: 'Temporal',
 			form: null,
 			icon: TimeSeriesFabric,
-			description: 'Time Series Fabric',
+			description: 'Temporal Graph Fabric',
 			tooltip:
-				'Time Series Fabric is a data processing engine that weaves temporal patterns into a rich, interconnected network for advanced forecasting and trend analysis.'
+				'Temporal Graph Fabric is a data processing engine that weaves temporal patterns into a rich, interconnected network for advanced forecasting and trend analysis.'
 		}
 	];
 

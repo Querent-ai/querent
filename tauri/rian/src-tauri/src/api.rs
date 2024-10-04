@@ -15,11 +15,12 @@ use tiny_http::{Header, Response, Server};
 
 use lazy_static::lazy_static;
 lazy_static! {
-	static ref DRIVE_CLIENT_ID: &'static str = "4402204563-bmfpspke6cl23j2975hd7dkuf2v4ii3n.apps.googleusercontent.com";
+    static ref DRIVE_CLIENT_ID: &'static str =
+        "400694410965-n2p8mud6m9sh1bso14r5hp7o6m4lnfug.apps.googleusercontent.com";
 }
 
 lazy_static! {
-	static ref DRIVE_CLIENT_SECRET: &'static str = "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";
+    static ref DRIVE_CLIENT_SECRET: &'static str = "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";
 }
 
 #[tauri::command]
@@ -372,7 +373,6 @@ pub async fn prompt_insight_analyst(
 #[tauri::command]
 #[specta::specta]
 pub fn get_drive_credentials() -> Result<(String, String), String> {
-
     let drive_client_id: String = DRIVE_CLIENT_ID.to_string();
     let drive_client_secret: String = DRIVE_CLIENT_SECRET.to_string();
 
