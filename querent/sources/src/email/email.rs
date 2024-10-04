@@ -57,36 +57,79 @@ impl EmailSource {
 		})
 	}
 
-	fn extract_attachment(&self, email_content: &str) -> Option<(String, Vec<u8>)> {
-		if let Some(attachment_section) =
-			email_content.split("Content-Type: application/pdf").nth(1)
-		{
-			let filename = attachment_section
-				.lines()
-				.find(|line| line.contains("filename="))
-				.and_then(|line| line.split("filename=").nth(1))
-				.map(|s| s.trim_matches('"').to_string())?;
+	fn extract_attachments(&self, email_content: &str) -> Vec<(String, Vec<u8>)> {
+		let content_types = [
+			"application/pdf",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+			"text/html",
+			"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+			"image/jpeg",
+			"image/png",
+		];
 
-			let base64_content = attachment_section
-				.split("\r\n\r\n")
-				.nth(1)?
-				.lines()
-				.collect::<Vec<&str>>()
-				.join("")
-				.chars()
-				.filter(|c| c.is_ascii_alphanumeric() || *c == '+' || *c == '/' || *c == '=')
-				.collect::<String>();
+		let mut attachments = Vec::new();
 
-			match BASE64.decode(&base64_content) {
-				Ok(decoded) => Some((filename, decoded)),
-				Err(e) => {
-					eprintln!("Base64 decoding error: {}", e);
-					None
-				},
+		// Extract the boundary string
+		let boundary = email_content
+			.lines()
+			.find(|line| line.starts_with("Content-Type: multipart"))
+			.and_then(|line| line.split("boundary=").nth(1))
+			.map(|b| b.trim_matches(|c: char| c == '"' || c.is_whitespace()));
+
+		if let Some(boundary) = boundary {
+			// Split the email content into MIME parts using the extracted boundary
+			let parts: Vec<&str> = email_content.split(&format!("--{}", boundary)).collect();
+
+			for part in parts {
+				// Check if this part contains an attachment
+				if part.contains("Content-Disposition: attachment") {
+					let mut filename = String::new();
+					let mut content_type = String::new();
+					let mut base64_content = String::new();
+
+					// Extract filename and content type
+					for line in part.lines() {
+						if line.contains("filename=") {
+							filename = line
+								.split("filename=")
+								.nth(1)
+								.unwrap_or("")
+								.trim_matches(|c: char| c == '"' || c.is_whitespace())
+								.to_string();
+						} else if line.starts_with("Content-Type:") {
+							content_type = line.split(":").nth(1).unwrap_or("").trim().to_string();
+						}
+					}
+
+					// Extract base64 content
+					if let Some(base64_section) = part.split("\r\n\r\n").nth(1) {
+						base64_content = base64_section
+							.lines()
+							.filter(|line| !line.starts_with("--"))
+							.collect::<Vec<&str>>()
+							.join("")
+							.chars()
+							.filter(|c| {
+								c.is_ascii_alphanumeric() || *c == '+' || *c == '/' || *c == '='
+							})
+							.collect();
+					}
+
+					// Check if the content type is in our list
+					if content_types.iter().any(|&ct| content_type.starts_with(ct)) {
+						if let Ok(decoded) = BASE64.decode(&base64_content) {
+							attachments.push((filename, decoded));
+						} else {
+							eprintln!("Base64 decoding error for file: {}", filename);
+						}
+					}
+				}
 			}
 		} else {
-			None
+			eprintln!("Could not find multipart boundary in email content");
 		}
+
+		attachments
 	}
 }
 
@@ -215,7 +258,8 @@ impl Source for EmailSource {
 					.unwrap_or("");
 				let combined_text = format!("{}, {}", subject, main_text);
 
-				if let Some((filename, content)) = self.extract_attachment(&email_content) {
+				for attachment in self.extract_attachments(&email_content) {
+					let (filename, content) = attachment;
 					let file_extension = Path::new(&filename)
 						.extension()
 						.and_then(|ext| ext.to_str())
@@ -272,7 +316,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_email_collector() {
 		dotenv().ok();
-		// Configure the GCS collector config with a mock credential
+		// Configure the Email collector config with a mock credential
 		let email_config = EmailCollectorConfig {
 			imap_server: "imap.gmail.com".to_string(),
 			imap_port: 993,
