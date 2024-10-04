@@ -78,9 +78,8 @@ impl IngestorError {
 impl From<io::Error> for IngestorError {
 	fn from(err: io::Error) -> IngestorError {
 		match err.kind() {
-			io::ErrorKind::NotFound => {
-				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into()))
-			},
+			io::ErrorKind::NotFound =>
+				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into())),
 			_ => IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 		}
 	}
