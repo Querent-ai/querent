@@ -4,6 +4,12 @@
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
 	import { commands } from '../../service/bindings';
+	import ErrorModal from './ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	import TopPairs from './TopPairs.svelte';
 	import {
@@ -136,7 +142,8 @@
 				throw new Error(`Unexpected response status: ${response.status}`);
 			}
 		} catch (error) {
-			console.error('Error fetching pipeline data:', error);
+			errorMessage = 'Error fetching pipeline data:  ' + error;
+			showErrorModal = true;
 		}
 	}
 </script>
@@ -161,3 +168,7 @@
 		</div>
 	</div>
 </div>
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}

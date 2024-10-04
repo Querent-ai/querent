@@ -3,6 +3,12 @@
 	import { commands, type IndexingStatistics } from '../../service/bindings';
 	import { onDestroy, onMount } from 'svelte';
 	import { describeStats } from '../../stores/appState';
+	import ErrorModal from './ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let selectedPipeline: string;
 	let runningPipelines: string[] = [];
@@ -23,8 +29,8 @@
 				fetchPipelineData(selectedPipeline);
 			}
 		} catch (error) {
-			console.error('Error fetching running pipelines:', error);
-			alert(`Failed to fetch running pipelines: ${error.message || error}`);
+			errorMessage = 'Error fetching running pipelines: ' + error;
+			showErrorModal = true;
 		}
 	});
 
@@ -59,10 +65,12 @@
 				describeStats.set(products);
 				productsArray = convertStatsToArray(products);
 			} else {
-				throw new Error(`Unexpected response status: ${response.status}`);
+				errorMessage = 'Error fetching pipeline data:' + response.error;
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Error fetching pipeline data:', error);
+			errorMessage = 'Error fetching pipeline data:' + error;
+			showErrorModal = true;
 		}
 	}
 
@@ -131,3 +139,7 @@
 		class="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700 sm:pt-6"
 	></div>
 </Card>
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}

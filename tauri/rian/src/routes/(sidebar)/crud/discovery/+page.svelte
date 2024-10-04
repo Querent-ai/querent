@@ -14,6 +14,12 @@
 	import { commands } from '../../../../service/bindings';
 	import Modal from '../sources/add/Modal.svelte';
 	import LoadingModal from './LoadingModal.svelte';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let categoriesDropdown: string[] | null;
 	let currentCategory: {
@@ -73,10 +79,12 @@
 						discoveryApiResponseStore.set(insights);
 					}
 				} else {
-					console.error('Unable to start discovery session', res.error);
+					errorMessage = 'Unable to start discovery session' + res.error;
+					showErrorModal = true;
 				}
 			} catch (error) {
-				console.error('Error starting discovery session:', error);
+				errorMessage = 'Error starting discovery session: ' + error;
+				showErrorModal = true;
 			} finally {
 				isLoading.set(false);
 			}
@@ -123,10 +131,12 @@
 					discoveryApiResponseStore.set(insights);
 				}
 			} else {
-				console.error('Error while sending API request', res.error);
+				(errorMessage = 'Error while sending API request  '), res.error;
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Error while toggling category:', error);
+			(errorMessage = 'Error while toggling category:  '), error;
+			showErrorModal = true;
 		} finally {
 			isLoading.set(false);
 			selectedCategories = [];
@@ -174,10 +184,14 @@
 					discoveryApiResponseStore.set(insights);
 				}
 			} else {
-				console.error('Error while sending the request', res.error);
+				(errorMessage = 'Error while sending the request  '), res.error;
+				isLoading.set(false);
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Error while performing search:', error);
+			(errorMessage = 'Error while performing search:  '), error;
+			isLoading.set(false);
+			showErrorModal = true;
 		} finally {
 			isLoading.set(false);
 		}
@@ -228,10 +242,14 @@
 					discoveryApiResponseStore.set(insights);
 				}
 			} else {
-				console.error('Error while sending the request', res.error);
+				errorMessage = 'Error while sending the request' + res.error;
+				isLoading.set(false);
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Error while fetching next page:', error);
+			errorMessage = 'Error while fetching next page:' + error;
+			isLoading.set(false);
+			showErrorModal = true;
 		} finally {
 			isLoading.set(false);
 		}
@@ -423,6 +441,10 @@
 	<Modal bind:show={showModal} message={modalMessage} />
 	{#if $isLoading}
 		<LoadingModal message="Please wait while we get your data...." />
+	{/if}
+
+	{#if showErrorModal}
+		<ErrorModal {errorMessage} closeModal={closeErrorModal} />
 	{/if}
 </main>
 

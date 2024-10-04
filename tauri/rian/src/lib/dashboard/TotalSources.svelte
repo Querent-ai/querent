@@ -3,6 +3,12 @@
 	import * as d3 from 'd3';
 	import { dataSources } from '../../stores/appState';
 	import { commands } from '../../service/bindings';
+	import ErrorModal from './ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let drive_sources = [];
 	let file_sources = [];
@@ -20,7 +26,8 @@
 				(source) => source.backend !== null && 'files' in source.backend
 			);
 		} catch (error) {
-			console.error('Error fetching data sources:', error);
+			errorMessage = 'Error fetching data sources:' + error;
+			showErrorModal = true;
 			alert(`Failed to fetch data sources: ${error.message || error}`);
 		}
 	});
@@ -109,6 +116,10 @@
 		}
 	});
 </script>
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}
 
 <svg bind:this={svg}></svg>
 

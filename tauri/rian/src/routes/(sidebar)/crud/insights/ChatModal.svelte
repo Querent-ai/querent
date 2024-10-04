@@ -5,6 +5,12 @@
 	import { commands, type InsightQuery } from '../../../../service/bindings';
 	import { insightSessionId, isLoadingInsight, messagesList } from '../../../../stores/appState';
 	import { get } from 'svelte/store';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	export let show = false;
 	export let insight: InsightInfo | null = null;
@@ -69,11 +75,13 @@
 					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
 				} else {
-					console.log('Error while starting insights:', res.error);
+					errorMessage = 'Error while starting insights:' + res.error;
+					showErrorModal = true;
 				}
 			}
 		} catch (error) {
-			console.error('Unexpected error while initializing chat:', error);
+			errorMessage = 'Unexpected error while initializing chat:' + error;
+			showErrorModal = true;
 		} finally {
 			isLoadingInsight.set(false);
 		}
@@ -107,7 +115,9 @@
 				}, 100);
 				inputMessage = '';
 			} catch (error) {
-				console.error('Unexpected error while sending message:', error);
+				errorMessage = 'Unexpected error while sending message:' + error;
+				isLoadingInsight.set(false);
+				showErrorModal = true;
 			} finally {
 				isLoadingInsight.set(false);
 			}
@@ -170,6 +180,10 @@
 		<Button type="submit">Send</Button>
 	</form>
 </Modal>
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}
 
 <style>
 	:global(.modal-content > button[type='button']) {

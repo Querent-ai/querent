@@ -9,21 +9,31 @@
 	import Modal from '../sources/add/Modal.svelte';
 	import AdditionalOptionalModal from './AdditionalOptionalModal.svelte';
 	import { messagesList, insightSessionId } from '../../../../stores/appState';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let runningInsightId: string;
 
 	let insightList: InsightInfo[];
 
 	onMount(async () => {
+		errorMessage = 'Demo error';
+		showErrorModal = true;
 		try {
 			let res = await commands.listAvailableInsights();
 			if (res.status == 'ok') {
 				insightList = res.data;
 			} else {
-				console.error('Error fetching insights:', res.error);
+				errorMessage = 'Error fetching insights:' + res.error;
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Unexpected error fetching insights:', error);
+			errorMessage = 'Unexpected error fetching insights:' + error;
+			showErrorModal = true;
 		}
 	});
 
@@ -33,13 +43,15 @@
 		try {
 			let res = await commands.stopInsightAnalyst(runningInsightId);
 			if (res.status == 'error') {
-				console.error('Error while stopping the Insight:', res.error);
+				errorMessage = 'Error while stopping the Insight:' + res.error;
+				showErrorModal = true;
 			}
 
 			insightSessionId.set('');
 			messagesList.set([]);
 		} catch (error) {
-			console.error('Unexpected error stopping the Insight:', error);
+			errorMessage = 'Unexpected error stopping the Insight:' + error;
+			showErrorModal = true;
 			messagesList.set([]);
 		}
 	}
@@ -149,6 +161,10 @@
 			{/if}
 		</div>
 	</div>
+
+	{#if showErrorModal}
+		<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+	{/if}
 </main>
 
 <style>

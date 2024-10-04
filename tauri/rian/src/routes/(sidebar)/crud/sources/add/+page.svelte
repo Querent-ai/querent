@@ -29,6 +29,12 @@
 	import { open } from '@tauri-apps/plugin-shell';
 
 	import { commands } from '../../../../../service/bindings';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	async function get_drive_client_secrets() {
 		const result = await commands.getDriveCredentials();
@@ -55,7 +61,8 @@
 				setIsVisible();
 			}
 		} catch (error) {
-			console.log('Error starting the OAuth server  ', error);
+			errorMessage = 'Error getting the token  ' + error;
+			showErrorModal = true;
 		}
 	}
 
@@ -99,7 +106,7 @@
 		if (!response.ok) {
 			console.error('HTTP error! status:', response.status);
 			console.log('Error response body:', await response.text());
-			return;
+			throw response.text();
 		}
 		const data = await response.json();
 		googleDriveRefreshToken.set(data.refresh_token);
@@ -269,3 +276,7 @@
 		<Modal bind:show={showModal} message={modalMessage} />
 	</div>
 </main>
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}

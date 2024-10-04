@@ -16,6 +16,12 @@
 	import { commands, type SemanticPipelineRequest } from '../../../../service/bindings';
 	import { onMount } from 'svelte';
 	import { writable } from 'svelte/store';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	interface SemanticPipelineData {
 		collectors: string[];
@@ -75,7 +81,8 @@
 				});
 			}
 		} catch (error) {
-			console.error('Error loading pipelines:', error);
+			errorMessage = 'Error loading pipelines:' + error;
+			showErrorModal = true;
 		}
 	});
 
@@ -83,7 +90,8 @@
 		try {
 			let res = await commands.stopAgnFabric(pipelineId);
 			if (res.status == 'error') {
-				console.error('Error while stopping the pipeline:', res.error);
+				errorMessage = 'Error while stopping the pipeline:' + res.error;
+				showErrorModal = true;
 				return;
 			}
 			pipelines_list.update((list) =>
@@ -92,7 +100,8 @@
 				)
 			);
 		} catch (error) {
-			console.error('Unexpected error while stopping the pipeline:', error);
+			errorMessage = 'Unexpected error while stopping the pipeline: ' + error;
+			showErrorModal = true;
 		}
 	}
 
@@ -200,6 +209,9 @@
 		</TableBody>
 	</Table>
 </main>
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}
 
 <style>
 	.bubble-container {

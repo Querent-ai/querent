@@ -22,10 +22,15 @@
 		commands,
 		type Backend,
 		type ListCollectorConfig,
-		type DeleteCollectorRequest,
-		type CollectorConfig
+		type DeleteCollectorRequest
 	} from '../../../../service/bindings';
 	import { onMount } from 'svelte';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	function navigateToAddNewSource() {
 		goto('/crud/sources/add');
@@ -86,8 +91,8 @@
 				$dataSources = sources.config;
 			}
 		} catch (error) {
-			console.error('Error deleting source:', error);
-			alert('Failed to delete source. Please try again.');
+			errorMessage = 'Error deleting source:' + error;
+			showErrorModal = true;
 		}
 	}
 
@@ -98,8 +103,8 @@
 				$dataSources = sources.config;
 			}
 		} catch (error) {
-			console.error('Error fetching sources:', error);
-			alert('Failed to load sources. Please try again.');
+			errorMessage = 'Error fetching sources:' + error;
+			showErrorModal = true;
 		}
 	});
 </script>
@@ -156,3 +161,7 @@
 		</TableBody>
 	</Table>
 </main>
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+{/if}
