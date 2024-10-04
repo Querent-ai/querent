@@ -126,9 +126,6 @@
 				if (response.status == 'ok') {
 					responseModalMessage = response.data.response;
 					isResponseError = false;
-
-					console.log('Response', response.data);
-					console.log('Insight ran successfully');
 				} else {
 					responseModalMessage = response.error;
 					isResponseError = true;

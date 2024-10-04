@@ -649,7 +649,6 @@ impl FabricAccessor for PGVector {
 		&self,
 		collection_id: &str,
 	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
-		println!("Start 11111");
 		let query = format!(
 			"SELECT subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id
 			FROM semantic_knowledge 
@@ -660,7 +659,6 @@ impl FabricAccessor for PGVector {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-		println!("Start 1111122");
 		let results: Vec<FilteredSemanticKnowledge> = diesel::sql_query(query)
 			.bind::<Text, _>(collection_id)
 			.load::<FilteredSemanticKnowledge>(&mut conn)
@@ -669,7 +667,6 @@ impl FabricAccessor for PGVector {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
 			})?;
-		println!("Start 133333");
 		Ok(results)
 	}
 }

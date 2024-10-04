@@ -1136,4 +1136,65 @@ mod tests {
 			},
 		}
 	}
+
+	#[tokio::test]
+	async fn test_get_semanticknowledge_data() {
+		let db_path = PathBuf::from("/tmp/test_get_semanticknowledge_data");
+		let res = start_postgres_embedded(db_path.clone()).await;
+		assert!(res.is_ok(), "Failed to start embedded postgres: {:?}", res);
+		let (_postgres, database_url) = res.unwrap();
+		let embed = PGEmbed::new(database_url).await.unwrap();
+		let conn = &mut embed.pool.get().await.unwrap();
+		let test_data = vec![
+			(
+				"subject1",
+				"type1",
+				"object1",
+				"type1",
+				"sentence1",
+				"image1",
+				"event1",
+				"source1",
+				"doc_source1",
+				"doc_id1",
+			),
+			(
+				"subject2",
+				"type2",
+				"object2",
+				"type2",
+				"sentence2",
+				"image2",
+				"event2",
+				"source2",
+				"doc_source2",
+				"doc_id2",
+			),
+		];
+		for data in test_data {
+			diesel::sql_query(
+                "INSERT INTO semantic_knowledge (subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id, collection_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+            )
+            .bind::<Text, _>(data.0)
+            .bind::<Text, _>(data.1)
+            .bind::<Text, _>(data.2)
+            .bind::<Text, _>(data.3)
+            .bind::<Text, _>(data.4)
+            .bind::<Text, _>(data.5)
+            .bind::<Text, _>(data.6)
+            .bind::<Text, _>(data.7)
+            .bind::<Text, _>(data.8)
+            .bind::<Text, _>(data.9)
+            .bind::<Text, _>("test_collection")
+            .execute(conn)
+            .await
+            .expect("Failed to insert test data");
+		}
+		let results = embed
+			.get_semanticknowledge_data("test_collection")
+			.await
+			.expect("Failed to retrieve semantic knowledge data");
+		assert!(results.len() >= 1, "Expected at least 1 record");
+	}
 }
