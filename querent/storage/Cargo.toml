@@ -50,7 +50,6 @@ pq-sys = { workspace = true , features = ["bundled"]}
 
 [features]
 bundled = [
-  "postgresql_embedded/bundled",
   "pq-sys/bundled",
 ]
 default = ["bundled"]

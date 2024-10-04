@@ -146,7 +146,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 	settings.password_file = password_dir.join(passwword_file_name);
 	let mut postgresql = PostgreSQL::new(settings);
 	postgresql.setup().await.map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
+		kind: StorageErrorKind::DatabaseInit,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 	postgresql_extensions::install(
@@ -160,7 +160,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 	)
 	.await
 	.map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
+		kind: StorageErrorKind::DatabaseExtension,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 	postgresql.start().await.map_err(|e| StorageError {

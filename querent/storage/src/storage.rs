@@ -46,6 +46,10 @@ pub enum StorageErrorKind {
 	IndexCreation,
 	/// Serialization error.
 	Serialization,
+	/// DatabaseInit error.
+	DatabaseInit,
+	/// DatabaseExtension error.
+	DatabaseExtension,
 }
 
 /// Generic StorageError.
