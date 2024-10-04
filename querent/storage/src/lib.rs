@@ -13,6 +13,8 @@ pub mod index;
 pub use index::*;
 pub mod secret;
 pub use secret::*;
+pub mod repository;
+pub use repository::*;
 pub mod metastore;
 use diesel::result::{Error as DieselError, Error::QueryBuilderError};
 pub use metastore::*;
@@ -149,6 +151,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::DatabaseInit,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
+	#[cfg(not(target_os = "windows"))]
 	postgresql_extensions::install(
 		postgresql.settings(),
 		"tensor-chord",
@@ -163,6 +166,38 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::DatabaseExtension,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
+
+	// Install windows archive using querent-ai repository
+	#[cfg(target_os = "windows")]
+	{
+		postgresql_extensions::repository::registry::register(
+			"querent-ai",
+			Box::new(crate::repository::QuerentAI::new),
+		)
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let _ = crate::repository::QuerentAI::initialize().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		postgresql_extensions::install(
+			postgresql.settings(),
+			"querent-ai",
+			"pgvecto.win",
+			&VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?,
+		)
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::DatabaseExtension,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	}
+
 	postgresql.start().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),

@@ -363,6 +363,7 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
 
     // Install PostgreSQL extensions synchronously
     let postgresql_settings = postgresql.settings().clone();
+    #[cfg(not(target_os = "windows"))]
     postgresql_extensions::blocking::install(
         &postgresql_settings,
         "tensor-chord",
@@ -377,6 +378,35 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
         source: Arc::new(anyhow::Error::from(e)),
     })?;
 
+    // Install windows archive using querent-ai repository
+    #[cfg(target_os = "windows")]
+    {
+        postgresql_extensions::repository::registry::register(
+            "querent-ai",
+            Box::new(storage::QuerentAI::new),
+        )
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+        let _ = QuerentAI::initialize().map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+        postgresql_extensions::blocking::install(
+            postgresql.settings(),
+            "querent-ai",
+            "pgvecto.win",
+            &VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
+                kind: StorageErrorKind::Internal,
+                source: Arc::new(anyhow::Error::from(e)),
+            })?,
+        )
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::DatabaseExtension,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+    }
     // Start PostgreSQL server synchronously
     // Check if PostgreSQL is already running; stop it if it is.
     if is_postgres_running(&data_dir) {

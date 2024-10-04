@@ -41,12 +41,15 @@ serde_json = { workspace = true }
 itertools = { workspace = true }
 postgresql_embedded = { workspace = true }
 postgresql_extensions = { workspace = true }
+postgresql_archive = { workspace = true }
 diesel_migrations = { workspace = true }
 rustls-native-certs = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio"] }
 once_cell = { workspace = true }
 lazy_static = { workspace = true }
 pq-sys = { workspace = true }
+regex = { workspace = true }
+semver = "1.0.23"
 
 [features]
 bundled = [
