@@ -359,6 +359,9 @@ const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));
 
 async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
 	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
+	#[cfg(not(target_os = "windows"))]
 	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vectors").await?;
+	#[cfg(target_os = "windows")]
+	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
 	Ok(())
 }
