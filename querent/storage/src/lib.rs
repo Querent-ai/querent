@@ -146,14 +146,16 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 	settings.password_file = password_dir.join(passwword_file_name);
 	let mut postgresql = PostgreSQL::new(settings);
 	postgresql.setup().await.map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
+		kind: StorageErrorKind::DatabaseInit,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
+	// Install PostgreSQL extensions synchronously
+	let postgresql_settings = postgresql.settings().clone();
 	postgresql_extensions::install(
-		postgresql.settings(),
-		"tensor-chord",
-		"pgvecto.rs",
-		&VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+		&postgresql_settings,
+		"portal-corp",
+		"pgvector_compiled",
+		&VersionReq::parse("=0.16.19").map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?,
@@ -163,6 +165,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
+
 	postgresql.start().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
@@ -204,20 +207,29 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	// pg vector says to configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+	// pg vector says to configue shared_preload_libraries = 'vector.so' in postgresql.conf
 	// and restart the server
 	let conn = &mut pool.get().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-	diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+	#[cfg(not(target_os = "windows"))]
+	diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.so'")
 		.execute(conn)
 		.await
 		.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+	#[cfg(target_os = "windows")]
+	diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.dll'")
+		.execute(conn)
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vector")
 		.execute(conn)
 		.await
 		.map_err(|e| StorageError {
@@ -331,6 +343,6 @@ const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));
 
 async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
 	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
-	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vectors").await?;
+	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
 	Ok(())
 }

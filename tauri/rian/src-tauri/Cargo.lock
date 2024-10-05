@@ -1602,8 +1602,8 @@ version = "2.1.0"
 source = "git+https://github.com/saraswatpuneet/rust-bip39?branch=master#b100bf3e22891498cb6e0b1c53fd629dab7b34de"
 dependencies = [
  "bitcoin_hashes",
- "rand 0.8.5",
- "rand_core 0.6.4",
+ "rand 0.7.3",
+ "rand_core 0.5.1",
  "serde",
  "unicode-normalization",
 ]
@@ -7110,6 +7110,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "notion"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bc9ff831e0b2ab522d99a55effa5e142516fdedc42d0078a589f5022039c72d"
+dependencies = [
+ "chrono",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "ntapi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10899,6 +10914,7 @@ dependencies = [
  "md5",
  "native-tls",
  "neo4rs",
+ "notion",
  "oauth2",
  "once_cell",
  "onedrive-api",
@@ -11016,7 +11032,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -11059,7 +11075,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -11080,7 +11096,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -11179,7 +11195,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -11211,7 +11227,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "Inflector",
  "expander",
@@ -11250,7 +11266,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 
 [[package]]
 name = "sp-storage"
@@ -11268,7 +11284,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -11292,7 +11308,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -11340,7 +11356,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#8614dc0e055d06de4a3774ac1da0a422b33f34e2"
+source = "git+https://github.com/paritytech/polkadot-sdk#a4abcbdd89952f188ee6418da152d6bfe26e55b4"
 dependencies = [
  "anyhow",
  "impl-trait-for-tuples",
@@ -11643,14 +11659,17 @@ dependencies = [
  "neo4rs",
  "once_cell",
  "pgvector",
+ "postgresql_archive",
  "postgresql_embedded",
  "postgresql_extensions",
  "pq-sys",
  "proto",
  "redb",
+ "regex",
  "rmp-serde",
  "rustls 0.23.13",
  "rustls-native-certs 0.8.0",
+ "semver",
  "serde",
  "serde_json",
  "sqlx",
@@ -13321,7 +13340,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.7.3",
  "static_assertions",
 ]
 
