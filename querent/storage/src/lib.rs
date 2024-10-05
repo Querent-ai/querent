@@ -212,7 +212,16 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
+	#[cfg(not(target_os = "windows"))]
 	diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+		.execute(conn)
+		.await
+		.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+	#[cfg(target_os = "windows")]
+	diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.dll'")
 		.execute(conn)
 		.await
 		.map_err(|e| StorageError {
