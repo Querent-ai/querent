@@ -154,7 +154,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		postgresql.settings(),
 		"portal-corp",
 		"pgvector_compiled",
-		&VersionReq::parse("=0.16.12").map_err(|e| StorageError {
+		&VersionReq::parse("=0.16.19").map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?,
