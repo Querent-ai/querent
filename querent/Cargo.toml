@@ -257,8 +257,8 @@ ollama-rs = { version = "0.2.0", features = [
     "stream",
     "chat-history",
 ] }
-sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
-sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2", features = ["std"] }
+sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2"}
+sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.2"}
 typed-builder = "0.18.1"
 derive_builder = "0.20.0"
 derive-getters = "0.3.0"
