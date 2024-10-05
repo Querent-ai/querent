@@ -3,7 +3,10 @@ use crate::{
 	StorageResult,
 };
 use common::DocumentPayload;
-use diesel::{sql_types::BigInt, ExpressionMethods, QueryDsl};
+use diesel::{
+	sql_types::{BigInt, Nullable},
+	ExpressionMethods, QueryDsl,
+};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use pgvector::{Vector, VectorExpressionMethods};
 use std::{
@@ -11,6 +14,7 @@ use std::{
 	sync::Arc,
 };
 use tracing::error;
+
 /// Function to get top k entries based on cosine distance and return unique pairs
 pub fn get_top_k_pairs(payloads: Vec<DocumentPayload>, k: usize) -> Vec<(String, String)> {
 	let mut unique_entries = HashSet::new();
@@ -290,22 +294,37 @@ pub async fn fetch_documents_for_embedding(
 		Ok(result) => {
 			let mut results = Vec::new();
 			for (_embeddings, score, event_id, other_cosine_distance) in result {
-				let query_result_semantic = semantic_knowledge::dsl::semantic_knowledge
+				let mut query_semantic = semantic_knowledge::dsl::semantic_knowledge
 					.select((
 						semantic_knowledge::dsl::document_id,
 						semantic_knowledge::dsl::subject,
 						semantic_knowledge::dsl::object,
 						semantic_knowledge::dsl::document_source,
 						semantic_knowledge::dsl::sentence,
+						semantic_knowledge::dsl::collection_id,
 					))
 					.filter(semantic_knowledge::dsl::event_id.eq(event_id))
+					.into_boxed();
+				if !collection_id.is_empty() {
+					query_semantic = query_semantic
+						.filter(semantic_knowledge::dsl::collection_id.eq(collection_id));
+				}
+				let query_result_semantic = query_semantic
 					.offset(0)
-					.load::<(String, String, String, String, String)>(conn)
+					.load::<(String, String, String, String, String, Option<String>)>(conn)
 					.await;
 
 				match query_result_semantic {
 					Ok(result_semantic) => {
-						for (doc_id, subject, object, document_store, sentence) in result_semantic {
+						for (
+							doc_id,
+							subject,
+							object,
+							document_store,
+							sentence,
+							collection_id_semantic,
+						) in result_semantic
+						{
 							let mut doc_payload = DocumentPayload::default();
 							doc_payload.doc_id = doc_id.clone();
 							doc_payload.subject = subject.clone();
@@ -317,7 +336,8 @@ pub async fn fetch_documents_for_embedding(
 							doc_payload.session_id = Some(session_id.clone());
 							doc_payload.query_embedding = Some(payload.clone());
 							doc_payload.query = Some(query.clone());
-							doc_payload.collection_id = collection_id.clone();
+							doc_payload.collection_id =
+								collection_id_semantic.unwrap_or("".to_string()).to_string();
 							results.push(doc_payload);
 						}
 					},
@@ -373,6 +393,32 @@ struct SemanticResult {
 	document_source: String,
 	#[diesel(sql_type = Text)]
 	sentence: String,
+	#[diesel(sql_type = Text)]
+	collection_id: String,
+}
+
+#[derive(QueryableByName, Debug)]
+pub struct FilteredSemanticKnowledge {
+	#[diesel(sql_type = Text)]
+	pub subject: String,
+	#[diesel(sql_type = Text)]
+	pub subject_type: String,
+	#[diesel(sql_type = Text)]
+	pub object: String,
+	#[diesel(sql_type = Text)]
+	pub object_type: String,
+	#[diesel(sql_type = Text)]
+	pub sentence: String,
+	#[diesel(sql_type = Nullable<Text>)]
+	pub image_id: Option<String>,
+	#[diesel(sql_type = Text)]
+	pub event_id: String,
+	#[diesel(sql_type = Text)]
+	pub source_id: String,
+	#[diesel(sql_type = Text)]
+	pub document_source: String,
+	#[diesel(sql_type = Text)]
+	pub document_id: String,
 }
 
 pub async fn fetch_documents_for_embedding_pgembed(
@@ -387,7 +433,6 @@ pub async fn fetch_documents_for_embedding_pgembed(
 ) -> StorageResult<Vec<DocumentPayload>> {
 	let target_vector =
 		format!("'{}'", serde_json::to_string(embedding).expect("Failed to format embeddings"));
-
 	let query_result = sql_query(&format!(
 		r#"
             SELECT array_to_string(embeddings::real[], ',') AS embeddings, 
@@ -395,7 +440,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
                    event_id, 
                    (embeddings <=> {})::FLOAT8 AS similarity 
             FROM embedded_knowledge
-            WHERE (embeddings <=> {})::FLOAT8 < 0.3
+            WHERE (embeddings <=> {})::FLOAT8 < 0.5
             ORDER BY similarity ASC
             LIMIT $1
             OFFSET $2
@@ -411,16 +456,18 @@ pub async fn fetch_documents_for_embedding_pgembed(
 		Ok(results) => {
 			let mut payload_results = Vec::new();
 			for EmbeddingResult { embeddings: _, score, event_id, similarity } in results {
-				let query_result_semantic = sql_query(
-					r#"
-                    SELECT document_id, subject, object, document_source, sentence
+				let semantic_query_string = r#"
+                    SELECT document_id, subject, object, document_source, sentence, collection_id
                     FROM semantic_knowledge
-                    WHERE event_id = $1
-                    "#,
-				)
-				.bind::<Text, _>(&event_id)
-				.load::<SemanticResult>(conn)
-				.await;
+                    WHERE event_id = $1 
+                      AND (COALESCE($2, '') = '' OR collection_id = $2)
+                    "#;
+
+				let semantic_query = diesel::sql_query(semantic_query_string)
+					.bind::<Text, _>(&event_id)
+					.bind::<Text, _>(collection_id);
+
+				let query_result_semantic = semantic_query.load::<SemanticResult>(conn).await;
 
 				match query_result_semantic {
 					Ok(result_semantic) => {
@@ -430,6 +477,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
 							object,
 							document_source,
 							sentence,
+							collection_id,
 						} in result_semantic
 						{
 							let mut doc_payload = DocumentPayload::default();

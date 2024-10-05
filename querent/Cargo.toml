@@ -275,6 +275,7 @@ postgresql_extensions = "0.16.3"
 postgresql_archive = "0.16.3"
 rustls-native-certs = "0.8.0"
 sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
+notion = "0.6.0"
 openssl-sys = { version = "0.9.93", features = ["vendored"] }
 pq-sys ={ version = "0.6.3", features = ["bundled"] }
 
