@@ -7110,6 +7110,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "notion"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bc9ff831e0b2ab522d99a55effa5e142516fdedc42d0078a589f5022039c72d"
+dependencies = [
+ "chrono",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "ntapi"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10899,6 +10914,7 @@ dependencies = [
  "md5",
  "native-tls",
  "neo4rs",
+ "notion",
  "oauth2",
  "once_cell",
  "onedrive-api",

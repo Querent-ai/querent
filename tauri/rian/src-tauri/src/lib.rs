@@ -363,6 +363,21 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
 
     // Install PostgreSQL extensions synchronously
     let postgresql_settings = postgresql.settings().clone();
+    #[cfg(not(target_os = "windows"))]
+    postgresql_extensions::blocking::install(
+        &postgresql_settings,
+        "tensor-chord",
+        "pgvecto.rs",
+        &VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?,
+    )
+    .map_err(|e| StorageError {
+        kind: StorageErrorKind::Internal,
+        source: Arc::new(anyhow::Error::from(e)),
+    })?;
+    #[cfg(target_os = "windows")]
     postgresql_extensions::blocking::install(
         &postgresql_settings,
         "portal-corp",
@@ -444,7 +459,7 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
         source: Arc::new(anyhow::Error::from(e)),
     })?;
     #[cfg(not(target_os = "windows"))]
-    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.so'")
+    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
         .execute(conn)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,

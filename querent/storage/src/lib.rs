@@ -149,9 +149,26 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 		kind: StorageErrorKind::DatabaseInit,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-
+	// Install PostgreSQL extensions synchronously
+	let postgresql_settings = postgresql.settings().clone();
+	#[cfg(not(target_os = "windows"))]
 	postgresql_extensions::install(
-		postgresql.settings(),
+		&postgresql_settings,
+		"tensor-chord",
+		"pgvecto.rs",
+		&VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?,
+	)
+	.await
+	.map_err(|e| StorageError {
+		kind: StorageErrorKind::Internal,
+		source: Arc::new(anyhow::Error::from(e)),
+	})?;
+	#[cfg(target_os = "windows")]
+	postgresql_extensions::install(
+		&postgresql_settings,
 		"portal-corp",
 		"pgvector_compiled",
 		&VersionReq::parse("=0.16.19").map_err(|e| StorageError {
@@ -161,7 +178,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 	)
 	.await
 	.map_err(|e| StorageError {
-		kind: StorageErrorKind::DatabaseExtension,
+		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
 
