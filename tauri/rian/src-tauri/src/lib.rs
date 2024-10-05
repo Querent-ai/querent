@@ -366,20 +366,6 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     #[cfg(not(target_os = "windows"))]
     postgresql_extensions::blocking::install(
         &postgresql_settings,
-        "tensor-chord",
-        "pgvecto.rs",
-        &VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
-            kind: StorageErrorKind::Internal,
-            source: Arc::new(anyhow::Error::from(e)),
-        })?,
-    )
-    .map_err(|e| StorageError {
-        kind: StorageErrorKind::Internal,
-        source: Arc::new(anyhow::Error::from(e)),
-    })?;
-    #[cfg(target_os = "windows")]
-    postgresql_extensions::blocking::install(
-        &postgresql_settings,
         "portal-corp",
         "pgvector_compiled",
         &VersionReq::parse("=0.16.19").map_err(|e| StorageError {
@@ -452,14 +438,14 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
             source: Arc::new(anyhow::Error::from(e)),
         })?;
 
-    // Configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+    // Configue shared_preload_libraries = 'vector.so' in postgresql.conf
     // and restart the server
     let conn = &mut pool.get().map_err(|e| StorageError {
         kind: StorageErrorKind::Internal,
         source: Arc::new(anyhow::Error::from(e)),
     })?;
     #[cfg(not(target_os = "windows"))]
-    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.so'")
         .execute(conn)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
@@ -472,7 +458,7 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
         })?;
-    diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+    diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vector")
         .execute(conn)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,

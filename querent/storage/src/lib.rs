@@ -151,22 +151,6 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 	})?;
 	// Install PostgreSQL extensions synchronously
 	let postgresql_settings = postgresql.settings().clone();
-	#[cfg(not(target_os = "windows"))]
-	postgresql_extensions::install(
-		&postgresql_settings,
-		"tensor-chord",
-		"pgvecto.rs",
-		&VersionReq::parse("=0.4.0-alpha.2").map_err(|e| StorageError {
-			kind: StorageErrorKind::Internal,
-			source: Arc::new(anyhow::Error::from(e)),
-		})?,
-	)
-	.await
-	.map_err(|e| StorageError {
-		kind: StorageErrorKind::Internal,
-		source: Arc::new(anyhow::Error::from(e)),
-	})?;
-	#[cfg(target_os = "windows")]
 	postgresql_extensions::install(
 		&postgresql_settings,
 		"portal-corp",
@@ -223,7 +207,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	// pg vector says to configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+	// pg vector says to configue shared_preload_libraries = 'vector.so' in postgresql.conf
 	// and restart the server
 	let conn = &mut pool.get().await.map_err(|e| StorageError {
 		kind: StorageErrorKind::Internal,
@@ -245,7 +229,7 @@ pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, Strin
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-	diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+	diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vector")
 		.execute(conn)
 		.await
 		.map_err(|e| StorageError {
@@ -359,9 +343,6 @@ const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));
 
 async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
 	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
-	#[cfg(not(target_os = "windows"))]
-	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vectors").await?;
-	#[cfg(target_os = "windows")]
 	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
 	Ok(())
 }
