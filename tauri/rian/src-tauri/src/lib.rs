@@ -444,7 +444,7 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
         source: Arc::new(anyhow::Error::from(e)),
     })?;
     #[cfg(not(target_os = "windows"))]
-    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.so'")
         .execute(conn)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
