@@ -24,7 +24,6 @@
 	import LoadingModal from './LoadingModal.svelte';
 	import ResponseModal from './ResponseModal.svelte';
 
-
 	let runningInsightId: string;
 	let insightList: InsightInfo[];
 
