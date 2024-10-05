@@ -1,10 +1,9 @@
 use crate::{
 	enable_extension, models::*, postgres_index::QuerySuggestion, semantic_knowledge,
 	utils::traverse_node, ActualDbPool, DieselError, FabricAccessor, FabricStorage,
-	SemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult, POOL_TIMEOUT,
+	FilteredSemanticKnowledge, SemanticKnowledge, Storage, StorageError, StorageErrorKind,
+	StorageResult, POOL_TIMEOUT,
 };
-use diesel_migrations::MigrationHarness;
-
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use diesel::{
@@ -16,7 +15,7 @@ use diesel_async::{
 	pg::AsyncPgConnection, pooled_connection::AsyncDieselConnectionManager,
 	scoped_futures::ScopedFutureExt, AsyncConnection, RunQueryDsl,
 };
-use diesel_migrations::{embed_migrations, EmbeddedMigrations};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use postgresql_embedded::Result;
 use std::{collections::HashSet, sync::Arc, time::Duration};
 use tracing::error;
@@ -643,19 +642,24 @@ impl FabricAccessor for PGEmbed {
 
 	async fn get_discovered_data(
 		&self,
-		session_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		let conn = &mut self.pool.get().await.map_err(|e| StorageError {
 			kind: StorageErrorKind::Internal,
 			source: Arc::new(anyhow::Error::from(e)),
 		})?;
-		let query = format!(
+		let mut query = String::from(
 			"SELECT doc_id, doc_source, sentence, subject, object, cosine_distance, session_id, score, query, 
 			array_to_string(query_embedding::real[], ',') as query_embedding, collection_id
-			 FROM discovered_knowledge
-			 WHERE session_id = '{}'",
-			session_id
+			FROM discovered_knowledge WHERE 1 = 1"
 		);
+		if !discovery_session_id.is_empty() {
+			query.push_str(&format!(" AND session_id = '{}'", discovery_session_id));
+		}
+		if !pipeline_id.is_empty() {
+			query.push_str(&format!(" AND collection_id = '{}'", pipeline_id));
+		}
 		let results: Vec<DiscoveredKnowledgeRaw> = match diesel::sql_query(query).load(conn).await {
 			Ok(res) => res,
 			Err(e) => {
@@ -684,6 +688,33 @@ impl FabricAccessor for PGEmbed {
 			.collect();
 
 		Ok(discovered_knowledge)
+	}
+
+	async fn get_semanticknowledge_data(
+		&self,
+		collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
+		let query = format!(
+			"SELECT subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id
+			FROM semantic_knowledge 
+			WHERE collection_id = $1"
+		);
+
+		let mut conn = self.pool.get().await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+
+		let results: Vec<FilteredSemanticKnowledge> = diesel::sql_query(query)
+			.bind::<Text, _>(collection_id)
+			.load::<FilteredSemanticKnowledge>(&mut conn)
+			.await
+			.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		Ok(results)
 	}
 }
 
@@ -874,7 +905,7 @@ mod tests {
 				document_source: "source_1".to_string(),
 				sentence: "Sample sentence 1.".to_string(),
 				event_id: "event_1".to_string(),
-				collection_id: Some("".to_string()),
+				collection_id: Some("123".to_string()),
 				image_id: Some("".to_string()),
 				object_type: "".to_string(),
 				source_id: "".to_string(),
@@ -887,7 +918,7 @@ mod tests {
 				document_source: "source_2".to_string(),
 				sentence: "Sample sentence 2.".to_string(),
 				event_id: "event_2".to_string(),
-				collection_id: Some("".to_string()),
+				collection_id: Some("123".to_string()),
 				image_id: Some("".to_string()),
 				object_type: "".to_string(),
 				source_id: "".to_string(),
@@ -896,25 +927,25 @@ mod tests {
 		];
 		for semantic in insert_semantics {
 			sql_query(
-            "INSERT INTO semantic_knowledge (document_id, subject, object, document_source, sentence, event_id) VALUES ($1, $2, $3, $4, $5, $6)",
+            "INSERT INTO semantic_knowledge (document_id, subject, object, document_source, sentence, event_id, collection_id) VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind::<Text, _>(semantic.document_id)
         .bind::<Text, _>(semantic.subject)
         .bind::<Text, _>(semantic.object)
         .bind::<Text, _>(semantic.document_source)
         .bind::<Text, _>(semantic.sentence)
-        .bind::<Text, _>(semantic.event_id)
+		.bind::<Text, _>(semantic.event_id)
+        .bind::<Text, _>(semantic.collection_id.unwrap_or("".to_string()))
         .execute(conn)
         .await
         .expect("Failed to insert semantic knowledge.");
 		}
 		let session_id = "test_session".to_string();
-		let query = "test_query".to_string();
-		let collection_id = "test_collection".to_string();
+		let query = "test_query ?".to_string();
+		let collection_id = "123".to_string();
 		let payload = vec![1.0, 2.0, 3.0];
 		let max_results = 10;
 		let offset = 0;
-		// let top_pairs_embeddings = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
 		let top_pairs_embeddings = vec![];
 		let search_results = embed
 			.similarity_search_l2(
@@ -1092,7 +1123,7 @@ mod tests {
 			},
 		}
 		let session_id = "session_1".to_string();
-		match embed.get_discovered_data(session_id.clone()).await {
+		match embed.get_discovered_data(session_id.clone(), "".to_string()).await {
 			Ok(fetched_data) => {
 				println!(
 					"Fetched data successfully using `get_discovered_data`: {:?}",
@@ -1104,5 +1135,66 @@ mod tests {
 				return;
 			},
 		}
+	}
+
+	#[tokio::test]
+	async fn test_get_semanticknowledge_data() {
+		let db_path = PathBuf::from("/tmp/test_get_semanticknowledge_data");
+		let res = start_postgres_embedded(db_path.clone()).await;
+		assert!(res.is_ok(), "Failed to start embedded postgres: {:?}", res);
+		let (_postgres, database_url) = res.unwrap();
+		let embed = PGEmbed::new(database_url).await.unwrap();
+		let conn = &mut embed.pool.get().await.unwrap();
+		let test_data = vec![
+			(
+				"subject1",
+				"type1",
+				"object1",
+				"type1",
+				"sentence1",
+				"image1",
+				"event1",
+				"source1",
+				"doc_source1",
+				"doc_id1",
+			),
+			(
+				"subject2",
+				"type2",
+				"object2",
+				"type2",
+				"sentence2",
+				"image2",
+				"event2",
+				"source2",
+				"doc_source2",
+				"doc_id2",
+			),
+		];
+		for data in test_data {
+			diesel::sql_query(
+                "INSERT INTO semantic_knowledge (subject, subject_type, object, object_type, sentence, image_id, event_id, source_id, document_source, document_id, collection_id)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+            )
+            .bind::<Text, _>(data.0)
+            .bind::<Text, _>(data.1)
+            .bind::<Text, _>(data.2)
+            .bind::<Text, _>(data.3)
+            .bind::<Text, _>(data.4)
+            .bind::<Text, _>(data.5)
+            .bind::<Text, _>(data.6)
+            .bind::<Text, _>(data.7)
+            .bind::<Text, _>(data.8)
+            .bind::<Text, _>(data.9)
+            .bind::<Text, _>("test_collection")
+            .execute(conn)
+            .await
+            .expect("Failed to insert test data");
+		}
+		let results = embed
+			.get_semanticknowledge_data("test_collection")
+			.await
+			.expect("Failed to retrieve semantic knowledge data");
+		assert!(results.len() >= 1, "Expected at least 1 record");
 	}
 }

@@ -75,8 +75,6 @@
 			addDataSource(collector_config);
 			commands.setCollectors([collector_config]);
 
-			googleDriveRefreshToken.set('');
-
 			goto('/crud/sources');
 		} else {
 			errorMessage = 'Please fill in all required fields.';

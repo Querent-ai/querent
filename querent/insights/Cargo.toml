@@ -75,3 +75,4 @@ zip = { workspace = true }
 specta-typescript  = { workspace = true }
 tauri-specta = { workspace = true }
 specta = { workspace = true }
+lazy_static = { workspace = true }
