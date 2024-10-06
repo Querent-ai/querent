@@ -363,7 +363,6 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
 
     // Install PostgreSQL extensions synchronously
     let postgresql_settings = postgresql.settings().clone();
-    #[cfg(not(target_os = "windows"))]
     postgresql_extensions::blocking::install(
         &postgresql_settings,
         "portal-corp",
