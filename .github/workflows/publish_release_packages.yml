@@ -51,7 +51,7 @@ jobs:
       - name: Download and setup libonnxruntime
         run: |
           mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+          curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-osx-x86_64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
           echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
@@ -109,7 +109,7 @@ jobs:
       - name: Download and setup libonnxruntime
         run: |
           mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-arm64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+          curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-osx-arm64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
           echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
@@ -162,7 +162,7 @@ jobs:
       - name: Download and setup libonnxruntime
         run: |
           mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-linux-x64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
+          curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-linux-x64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
           export ORT_STRATEGY=system
           export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
           echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
@@ -222,7 +222,7 @@ jobs:
           $tmp_dir = New-TemporaryFile
           $tmp_dir_path = [System.IO.Path]::GetDirectoryName($tmp_dir.FullName)
           # Download the onnxruntime static library zip file
-          Invoke-WebRequest -Uri "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-win-x64-static_lib-1.16.3.zip" -OutFile (Join-Path $tmp_dir_path "onnxruntime.zip")
+          Invoke-WebRequest -Uri "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-win-x64-static_lib-1.19.2.zip -OutFile (Join-Path $tmp_dir_path "onnxruntime.zip")
           # Unzip the downloaded file directly into the temporary path
           Expand-Archive -Path (Join-Path $tmp_dir_path "onnxruntime.zip") -DestinationPath $tmp_dir_path          # Set environment variables for ORT strategy and library location
           $env:ORT_STRATEGY = "system"
