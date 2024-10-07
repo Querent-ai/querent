@@ -67,15 +67,21 @@ fn sanitize_text(input: &str) -> String {
 
 /// Splits the provided text into a vector of sentences.
 pub fn split_into_sentences(text: &str) -> Vec<String> {
-	UnicodeSegmentation::split_sentence_bounds(text)
-		.map(|sentence| sentence.trim().to_string())
-		.filter(|s| !s.is_empty())
-		.collect()
+	println!("This is the text-----{:?}", text);
+    let repeated_pattern = Regex::new(r"[_\.\-]{3,}").unwrap();
+    UnicodeSegmentation::split_sentence_bounds(text)
+        .map(|sentence| sentence.trim())
+        .filter(|s| !s.is_empty())
+        .map(|s| repeated_pattern.replace_all(s, "").to_string())
+        .filter(|s| !s.is_empty()) 
+        .map(String::from)
+        .collect()
 }
 
 /// Splits the provided text into chunks based on the maximum token length.
 pub fn split_into_chunks(max_tokens: usize, tokens: &str) -> Vec<String> {
 	let sentences = split_into_sentences(tokens);
+	println!("These are the sentences-----{:?}", sentences);
 	let mut chunks = Vec::new();
 	let mut current_chunk = String::new();
 	let mut current_length = 0;

@@ -24,7 +24,7 @@ use crate::{
 use tokio::sync::mpsc::Receiver;
 
 /// Engine implementation for processing tokens using attention tensors and LLMs.
-pub struct AttentionTensorsEngine {
+pub struct TemoralEngine {
 	/// The main large language model (LLM) used by the engine.
 	pub llm: Arc<dyn LLM>,
 	/// List of entity names.
@@ -37,8 +37,8 @@ pub struct AttentionTensorsEngine {
 	ner_llm: Option<Arc<dyn LLM>>,
 }
 
-impl AttentionTensorsEngine {
-	/// Creates a new `AttentionTensorsEngine` with the specified components.
+impl TemoralEngine {
+	/// Creates a new `TemoralEngine` with the specified components.
 	///
 	/// # Arguments
 	///
@@ -50,7 +50,7 @@ impl AttentionTensorsEngine {
 	///
 	/// # Returns
 	///
-	/// A new instance of `AttentionTensorsEngine`.
+	/// A new instance of `TemoralEngine`.
 	pub fn new(
 		llm: Arc<dyn LLM>,
 		entities: Vec<String>,
@@ -63,7 +63,7 @@ impl AttentionTensorsEngine {
 }
 
 #[async_trait]
-impl Engine for AttentionTensorsEngine {
+impl Engine for TemoralEngine {
 	/// Processes ingested tokens and generates events based on attention tensors and entity relations.
 	///
 	/// # Arguments
@@ -124,7 +124,6 @@ impl Engine for AttentionTensorsEngine {
 					let mut classified_sentences = Vec::new();
 					if let Some(ref ner_llm) = self.ner_llm {
 						for chunk in &all_chunks {
-							println!("this is the chunk for ner-----{:?}", chunk);
 							let tokenized_chunk = ner_llm.tokenize(chunk).await.map_err(|e| EngineError::from(e))?;
 							tokenized_chunks_ner.push(tokenized_chunk);
 						}
@@ -135,9 +134,7 @@ impl Engine for AttentionTensorsEngine {
 						let mut classification_results = Vec::new();
 						for input in &model_inputs {
 							let classification_result = ner_llm.token_classification(input.clone(), None).await.map_err(|e| EngineError::from(e))?;
-							println!("Classification results------{:?}", classification_result);
 							classification_results.push(classification_result);
-							
 						}
 						for (chunk, classification) in all_chunks.iter().zip(classification_results.iter()) {
 							let filtered_entities: Vec<(String, String)> = classification.iter().filter(|(_, label)| label != "O").cloned().collect();
@@ -434,8 +431,8 @@ impl Engine for AttentionTensorsEngine {
 // 		})
 // 		.unwrap();
 
-// 		// Create an instance of AttentionTensorsEngine
-// 		let engine = AttentionTensorsEngine::new(
+// 		// Create an instance of TemoralEngine
+// 		let engine = TemoralEngine::new(
 // 			embedder,
 // 			entities,
 // 			vec![
@@ -452,7 +449,7 @@ impl Engine for AttentionTensorsEngine {
 // 		);
 
 // 		// Create an instance of Attention Tensor without fixed entities
-// 		// let engine = AttentionTensorsEngine::new(embedder, vec![]);
+// 		// let engine = TemoralEngine::new(embedder, vec![]);
 
 // 		// Wrap the receiver in a tokio_stream::wrappers::ReceiverStream to convert it into a Stream
 // 		let receiver_stream = ReceiverStream::new(receiver);
