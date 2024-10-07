@@ -12,10 +12,10 @@ on:
       release-version:
         description: "Release version (v#.#.#[-rc#])"
         required: true
-
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
-  POSTGRESQL_VERSION: 16
+  POSTGRESQL_VERSION: 16.4.0
+  PQ_LIB_STATIC: 1
 jobs:
   build-tauri-rian-ui:
     permissions:
@@ -41,173 +41,174 @@ jobs:
         with:
           name: tauri-rian
           path: tauri/rian/build
-  build-macos-binaries-x86_64:
-    needs: [build-tauri-rian-ui]
-    name: Build ${{ matrix.target }}
-    runs-on: macos-12
-    strategy:
-      matrix:
-        target: [x86_64-apple-darwin]
-    steps:
-      - name: Download and setup libonnxruntime
-        run: |
-          mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-x86_64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
-          export ORT_STRATEGY=system
-          export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
-          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
-          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: tauri/rian
-      - uses: ./.github/actions/cargo-build-macos-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-      - name: Tauri info
-        run: cargo tauri info
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tauriScript: cargo tauri
-          projectPath: ./tauri/rian
-          args: -- --profile release --features license-check,openssl-support,bundled
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tauri-rian-bundle-macos-12-x86_64
-          path: |
-            tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
-            tauri/rian/src-tauri/target/release/bundle/**/*.dmg
-            tauri/rian/src-tauri/target/release/bundle/**/*.deb
-            tauri/rian/src-tauri/target/release/bundle/**/*.rpm
-            tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
-            tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
-            tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
-            tauri/rian/src-tauri/target/release/bundle/**/*.sig
-  build-macos-binaries-aarch64:
-    needs: [build-tauri-rian-ui]
-    name: Build ${{ matrix.target }}
-    runs-on: macos-14
-    strategy:
-      matrix:
-        target: [aarch64-apple-darwin]
-    steps:
-      - name: Download and setup libonnxruntime
-        run: |
-          mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-osx-arm64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
-          export ORT_STRATEGY=system
-          export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
-          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
-          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: tauri/rian
-      - uses: ./.github/actions/cargo-build-macos-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-      - name: Tauri info
-        run: cargo tauri info
-      - name: Build Tauri App (macOS aarch64)
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support,bundled
-          tauriScript: cargo tauri
-          projectPath: ./tauri/rian
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tauri-rian-bundle-macos-14-aarch64
-          path: |
-            tauri/rian/src-tauri/target/*/release/bundle/**/*.dmg
-            tauri/rian/src-tauri/target/*/release/bundle/macos/*.tar.gz
-            tauri/rian/src-tauri/target/*/release/bundle/**/*.sig
-  build-linux-binaries:
-    needs: [build-tauri-rian-ui]
-    strategy:
-      matrix:
-        target: [x86_64-unknown-linux-gnu]
-    name: Build ${{ matrix.target }}
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Download and setup libonnxruntime
-        run: |
-          mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-linux-x64-static_lib-1.16.3.tgz" | tar -xz -C /tmp/onnxruntime/
-          export ORT_STRATEGY=system
-          export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
-          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
-          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
-      - uses: actions/checkout@v4
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: "https://registry.npmjs.org"
-      - name: Install pnpm
-        run: npm install -g pnpm
-      - name: Install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
-        working-directory: tauri/rian
-      - uses: ./.github/actions/cross-build-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
-      - name: Build Tauri App
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with:
-          tauriScript: cargo tauri
-          projectPath: ./tauri/rian
-          args: -- --profile release --features license-check,openssl-support,bundled
-      - uses: actions/upload-artifact@v4
-        with:
-          name: tauri-rian-bundle-ubuntu-22.04-x86_64
-          path: |
-            tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
-            tauri/rian/src-tauri/target/release/bundle/**/*.dmg
-            tauri/rian/src-tauri/target/release/bundle/**/*.deb
-            tauri/rian/src-tauri/target/release/bundle/**/*.rpm
-            tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
-            tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
-            tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
-            tauri/rian/src-tauri/target/release/bundle/**/*.sig
+  # build-macos-binaries-x86_64:
+  #   needs: [build-tauri-rian-ui]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: macos-12
+  #   strategy:
+  #     matrix:
+  #       target: [x86_64-apple-darwin]
+  #   steps:
+  #     - name: Download and setup libonnxruntime
+  #       run: |
+  #         mkdir /tmp/onnxruntime
+  #         curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-osx-x86_64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
+  #         export ORT_STRATEGY=system
+  #         export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
+  #         echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+  #         echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
+  #     - uses: actions/checkout@v4
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         registry-url: "https://registry.npmjs.org"
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --no-frozen-lockfile
+  #       working-directory: tauri/rian
+  #     - uses: ./.github/actions/cargo-build-macos-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install Cargo Tauri for info
+  #       run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+  #     - name: Tauri info
+  #       run: cargo tauri info
+  #     - name: Build Tauri App
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #       with:
+  #         tauriScript: cargo tauri
+  #         projectPath: ./tauri/rian
+  #         args: -- --profile release --features license-check,openssl-support,bundled
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tauri-rian-bundle-macos-12-x86_64
+  #         path: |
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.dmg
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.deb
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.rpm
+  #           tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
+  #           tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
+  #           tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.sig
+  # build-macos-binaries-aarch64:
+  #   needs: [build-tauri-rian-ui]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: macos-14
+  #   strategy:
+  #     matrix:
+  #       target: [aarch64-apple-darwin]
+  #   steps:
+  #     - name: Download and setup libonnxruntime
+  #       run: |
+  #         mkdir /tmp/onnxruntime
+  #         curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-osx-arm64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
+  #         export ORT_STRATEGY=system
+  #         export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
+  #         echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+  #         echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
+  #     - uses: actions/checkout@v4
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         registry-url: "https://registry.npmjs.org"
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --no-frozen-lockfile
+  #       working-directory: tauri/rian
+  #     - uses: ./.github/actions/cargo-build-macos-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install Cargo Tauri for info
+  #       run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+  #     - name: Tauri info
+  #       run: cargo tauri info
+  #     - name: Build Tauri App (macOS aarch64)
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #       with:
+  #         args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support,bundled
+  #         tauriScript: cargo tauri
+  #         projectPath: ./tauri/rian
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tauri-rian-bundle-macos-14-aarch64
+  #         path: |
+  #           tauri/rian/src-tauri/target/*/release/bundle/**/*.dmg
+  #           tauri/rian/src-tauri/target/*/release/bundle/macos/*.tar.gz
+  #           tauri/rian/src-tauri/target/*/release/bundle/**/*.sig
+  # build-linux-binaries:
+  #   needs: [build-tauri-rian-ui]
+  #   strategy:
+  #     matrix:
+  #       target: [x86_64-unknown-linux-gnu]
+  #   name: Build ${{ matrix.target }}
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - name: Download and setup libonnxruntime
+  #       run: |
+  #         mkdir /tmp/onnxruntime
+  #         curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-linux-x64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
+  #         export ORT_STRATEGY=system
+  #         export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
+  #         echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
+  #         echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
+  #     - uses: actions/checkout@v4
+  #     - name: Install Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
+  #         registry-url: "https://registry.npmjs.org"
+  #     - name: Install pnpm
+  #       run: npm install -g pnpm
+  #     - name: Install frontend dependencies
+  #       run: pnpm install --no-frozen-lockfile
+  #       working-directory: tauri/rian
+  #     - uses: ./.github/actions/cross-build-binary
+  #       with:
+  #         target: ${{ matrix.target }}
+  #         version: ${{ env.INPUT_RELEASE_VERSION }}
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #     - name: Install Cargo Tauri for info
+  #       run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+  #     - name: Build Tauri App
+  #       uses: tauri-apps/tauri-action@v0
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+  #       with:
+  #         tauriScript: cargo tauri
+  #         projectPath: ./tauri/rian
+  #         args: -- --profile release --features license-check,openssl-support,bundled
+  #     - uses: actions/upload-artifact@v4
+  #       with:
+  #         name: tauri-rian-bundle-ubuntu-22.04-x86_64
+  #         path: |
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.AppImage
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.dmg
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.deb
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.rpm
+  #           tauri/rian/src-tauri/target/release/bundle/**/msi/*.msi
+  #           tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
+  #           tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
+  #           tauri/rian/src-tauri/target/release/bundle/**/*.sig
+
   build-windows-binaries:
     needs: [build-tauri-rian-ui]
     strategy:
@@ -223,7 +224,7 @@ jobs:
           $tmp_dir = New-TemporaryFile
           $tmp_dir_path = [System.IO.Path]::GetDirectoryName($tmp_dir.FullName)
           # Download the onnxruntime static library zip file
-          Invoke-WebRequest -Uri "https://github.com/surrealdb/onnxruntime-build/releases/download/v1.16.3/onnxruntime-win-x64-static_lib-1.16.3.zip" -OutFile (Join-Path $tmp_dir_path "onnxruntime.zip")
+          Invoke-WebRequest -Uri "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-win-x64-static_lib-1.19.2.zip" -OutFile (Join-Path $tmp_dir_path "onnxruntime.zip")
           # Unzip the downloaded file directly into the temporary path
           Expand-Archive -Path (Join-Path $tmp_dir_path "onnxruntime.zip") -DestinationPath $tmp_dir_path          # Set environment variables for ORT strategy and library location
           $env:ORT_STRATEGY = "system"
@@ -233,7 +234,7 @@ jobs:
           Add-Content -Path $env:GITHUB_ENV -Value "ORT_LIB_LOCATION=$env:ORT_LIB_LOCATION"
       - run: echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV -Append
       - run: vcpkg integrate install
-      - run: vcpkg install openssl:x64-windows-static-md  
+      - run: vcpkg install openssl:x64-windows-static-md
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4

@@ -80,7 +80,7 @@ log = { workspace = true }
 rustls = { workspace = true }
 dirs = { workspace = true }
 postgresql_embedded = { workspace = true }
-pq-sys = { workspace = true , features = ["bundled"]}
+pq-sys = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
