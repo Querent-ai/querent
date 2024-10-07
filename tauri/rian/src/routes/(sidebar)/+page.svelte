@@ -6,6 +6,8 @@
 	import LicenseKeyModal from './LicenseKeyModal.svelte';
 	import { onMount } from 'svelte';
 	import { isLicenseVerified } from '../../stores/appState';
+	import { Window } from '@tauri-apps/api/window';
+	import { Webview } from '@tauri-apps/api/webview';
 	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
 	let showErrorModal = false;
 	let errorMessage = '';
@@ -28,9 +30,18 @@
 			res = await commands.hasRianLicenseKey();
 			isLicenseVerified.set(res);
 		} catch (error) {
-			errorMessage = 'Error checking license key:' + error;
-			showErrorModal = true;
-			alert(`Failed to check license key: ${error}`);
+			const message = encodeURIComponent((error as any).toString());
+			const urlWithMessage = `http://localhost:5173/error?error=${message}`;
+
+			const appWindow = new Window('error-window');
+
+			const webview = new Webview(appWindow, 'error-window', {
+				url: urlWithMessage,
+				x: 0,
+				y: 0,
+				height: 100,
+				width: 100
+			});
 		}
 	});
 
