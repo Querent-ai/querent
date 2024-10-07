@@ -29,7 +29,6 @@
 			// call the function with sentences and take from filters
 			let sentences = discoveryResponse[1].sentence;
 			connections = parseData(currentCategory[0].top_pairs, sentences);
-			console.log('Connections are    ', connections);
 		} else {
 			// take from first response
 			if (discoveryResponse.length > 0) {

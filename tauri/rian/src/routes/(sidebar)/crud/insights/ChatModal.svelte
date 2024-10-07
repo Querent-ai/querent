@@ -110,7 +110,8 @@
 
 						messagesList.update((list) => [...list, { text: text, isUser: false }]);
 					} else {
-						console.log('Error while processing the insight query:', res.error);
+						errorMessage = 'Error while processing the insight query: ' + res.error;
+						showErrorModal = true;
 					}
 				}, 100);
 				inputMessage = '';
