@@ -54,6 +54,7 @@ anyhow = "1"
 deadpool = { version = "0.10.0", features = ["rt_tokio_1"] }
 lazy_static = "1.5.0"
 pq-sys = { version = "0.6.3", features = ["bundled"] }
+openssl-sys = { version = "0.9.93", features = ["vendored"] }
 
 # Querent AI dependencies
 node = { path = "../../../querent/node" }
