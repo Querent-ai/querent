@@ -7,7 +7,7 @@ license = "BSL-1.1"
 description = "Data Sources for Querent AI"
 repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
-documentation = "https:/querent.xyz/docs/"
+documentation = "https://docs.querent.xyz"
 
 [dependencies]
 common = { workspace = true }

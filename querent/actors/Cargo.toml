@@ -7,7 +7,7 @@ license = "BSL-1.1"
 description = "The Asynchronous Data Dynamo and Graph Neural Network Catalyst"
 repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
-documentation = "https:/querent.xyz/docs/"
+documentation = "https://docs.querent.xyz"
 
 [dependencies]
 anyhow = { workspace = true }

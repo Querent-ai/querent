@@ -7,7 +7,7 @@ license = "BSL-1.1"
 description = "R!AN: Realtime Information Aggregation Network"
 repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
-documentation = "https:/querent.xyz/docs/"
+documentation = "https://docs.querent.xyz"
 
 [lib]
 name = "app_lib"

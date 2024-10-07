@@ -7,7 +7,7 @@ license = "BSL-1.1"
 description = "cluster for Querent AI inspired by quickwit-cluster"
 repository = "https://github.com/querent-ai/querent"
 homepage = "https://querent.xyz/"
-documentation = "https:/querent.xyz/docs/"
+documentation = "https://docs.querent.xyz"
 
 [dependencies]
 anyhow = { workspace = true }
