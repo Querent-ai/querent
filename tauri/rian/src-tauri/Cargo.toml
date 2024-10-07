@@ -53,8 +53,7 @@ diesel-async = { version = "0.5.0", features = ["bb8", "postgres", "async-connec
 anyhow = "1"
 deadpool = { version = "0.10.0", features = ["rt_tokio_1"] }
 lazy_static = "1.5.0"
-pq-sys = { version = "0.6.3", features = ["bundled"] }
-openssl-sys = { version = "0.9.93", features = ["vendored"] }
+pq-sys = { version = "0.6.3", features = ["bundled_without_openssl"] }
 
 # Querent AI dependencies
 node = { path = "../../../querent/node" }
@@ -83,7 +82,7 @@ openssl-support = []
 license-check = []
 bundled = [
   "postgresql_embedded/bundled",
-  "pq-sys/bundled",
+  "pq-sys/bundled_without_openssl",
 ]
 default = ["openssl-support", "license-check", "bundled"]
 [patch.crates-io]

@@ -54,6 +54,6 @@ semver = "1.0.23"
 [features]
 bundled = [
   "postgresql_embedded/bundled",
-  "pq-sys/bundled",
+  "pq-sys/bundled_without_openssl",
 ]
 default = ["bundled"]

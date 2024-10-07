@@ -8249,7 +8249,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "28fbf44fbf1d3e50d0ca0c6e6253f65d1bf01bb004a6ea553efb32e7081948c7"
 dependencies = [
  "cc",
- "openssl-sys",
 ]
 
 [[package]]
