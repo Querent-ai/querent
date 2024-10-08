@@ -27,6 +27,14 @@ pub fn split_sentences(sentences: &[String]) -> Vec<Vec<String>> {
 	sentences.chunks(10).map(|chunk| chunk.to_vec()).collect()
 }
 
+/// Function for computing cosine similarity.
+pub fn cosine_similarity(vec1: &Vec<f32>, vec2: &Vec<f32>) -> f32 {
+	let dot_product: f32 = vec1.iter().zip(vec2.iter()).map(|(a, b)| a * b).sum();
+	let magnitude1: f32 = vec1.iter().map(|v| v * v).sum::<f32>().sqrt();
+	let magnitude2: f32 = vec2.iter().map(|v| v * v).sum::<f32>().sqrt();
+	dot_product / (magnitude1 * magnitude2)
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;

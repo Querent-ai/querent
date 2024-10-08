@@ -440,7 +440,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
                    event_id, 
                    (embeddings <=> {})::FLOAT8 AS similarity 
             FROM embedded_knowledge
-            WHERE (embeddings <=> {})::FLOAT8 < 0.3
+            WHERE (embeddings <=> {})::FLOAT8 < 0.5
             ORDER BY similarity ASC
             LIMIT $1
             OFFSET $2

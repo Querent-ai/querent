@@ -1,6 +1,6 @@
 use crate::{
-	extract_sentences, prompts::get_suggestions_prompt, InsightConfig, InsightError,
-	InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
+	cosine_similarity, extract_sentences, prompts::get_suggestions_prompt, InsightConfig,
+	InsightError, InsightErrorKind, InsightInput, InsightOutput, InsightResult, InsightRunner,
 };
 use async_stream::stream;
 use async_trait::async_trait;
@@ -103,6 +103,25 @@ impl InsightRunner for XAIRunner {
 								self.config.semantic_pipeline_id.clone(),
 							)
 							.await
+							.map(|results: Vec<DiscoveredKnowledge>| {
+								results
+									.into_iter()
+									.filter_map(|discovered| {
+										let sentence_embedding = embedding_model
+											.embed(vec![discovered.sentence.clone()], None)
+											.ok()?
+											.get(0)?
+											.clone();
+										let similarity =
+											cosine_similarity(&sentence_embedding, query_embedding);
+										if similarity >= 0.5 {
+											Some(discovered)
+										} else {
+											None
+										}
+									})
+									.collect::<Vec<DiscoveredKnowledge>>()
+							})
 					} else {
 						storage
 							.similarity_search_l2(
