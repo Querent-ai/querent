@@ -80,7 +80,6 @@ log = { workspace = true }
 rustls = { workspace = true }
 dirs = { workspace = true }
 postgresql_embedded = { workspace = true }
-pq-sys = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
@@ -95,7 +94,3 @@ default = ["openssl-support"]
 testsuite = []
 console = ["console-subscriber"]
 license-check = []
-bundled = [
-  "postgresql_embedded/bundled",
-  "pq-sys/bundled_without_openssl",
-]

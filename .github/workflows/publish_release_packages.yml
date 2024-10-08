@@ -88,7 +88,7 @@ jobs:
   #       with:
   #         tauriScript: cargo tauri
   #         projectPath: ./tauri/rian
-  #         args: -- --profile release --features license-check,openssl-support,bundled
+  #         args: -- --profile release --features license-check,openssl-support
   #     - uses: actions/upload-artifact@v4
   #       with:
   #         name: tauri-rian-bundle-macos-12-x86_64
@@ -144,7 +144,7 @@ jobs:
   #         TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
   #         TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
   #       with:
-  #         args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support,bundled
+  #         args: --target aarch64-apple-darwin -- --profile release --features license-check,openssl-support
   #         tauriScript: cargo tauri
   #         projectPath: ./tauri/rian
   #     - uses: actions/upload-artifact@v4
@@ -197,7 +197,7 @@ jobs:
   #       with:
   #         tauriScript: cargo tauri
   #         projectPath: ./tauri/rian
-  #         args: -- --profile release --features license-check,openssl-support,bundled
+  #         args: -- --profile release --features license-check,openssl-support
   #     - uses: actions/upload-artifact@v4
   #       with:
   #         name: tauri-rian-bundle-ubuntu-22.04-x86_64
@@ -246,7 +246,7 @@ jobs:
         with:
           tauriScript: cargo tauri
           projectPath: ./tauri/rian
-          args: -- --profile release --features license-check,openssl-support,bundled
+          args: -- --profile release --features license-check,openssl-support
       - uses: actions/upload-artifact@v4
         with:
           name: tauri-rian-bundle-windows-2022-x86_64
