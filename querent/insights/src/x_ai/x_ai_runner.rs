@@ -394,8 +394,30 @@ impl InsightRunner for XAIRunner {
 							let mut _total_fetched = 0;
 							let search_results = if !self.config.discovery_session_id.is_empty() {
 								storage
-									.get_discovered_data(self.config.discovery_session_id.clone(), self.config.semantic_pipeline_id.clone())
-									.await
+							.get_discovered_data(
+								self.config.discovery_session_id.clone(),
+								self.config.semantic_pipeline_id.clone(),
+							)
+							.await
+							.map(|results: Vec<DiscoveredKnowledge>| {
+								results
+									.into_iter()
+									.filter_map(|discovered| {
+										let sentence_embedding = embedding_model
+											.embed(vec![discovered.sentence.clone()], None)
+											.ok()?
+											.get(0)?
+											.clone();
+										let similarity =
+											cosine_similarity(&sentence_embedding, query_embedding);
+										if similarity >= 0.5 {
+											Some(discovered)
+										} else {
+											None
+										}
+									})
+									.collect::<Vec<DiscoveredKnowledge>>()
+							})
 							} else {
 								storage
 									.similarity_search_l2(
