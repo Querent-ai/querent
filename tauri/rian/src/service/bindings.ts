@@ -197,7 +197,8 @@ export type Backend =
 	| { slack: SlackCollectorConfig }
 	| { news: NewsCollectorConfig }
 	| { files: FileCollectorConfig }
-	| { onedrive: OneDriveConfig };
+	| { onedrive: OneDriveConfig }
+	| { notion: NotionConfig };
 export type CheckUpdateEvent = null;
 export type CheckUpdateResultEvent = UpdateResult;
 /**
@@ -652,6 +653,24 @@ export type NewsCollectorConfig = {
 	domains: string | null;
 	/**
 	 * Id for the collector
+	 */
+	id: string;
+};
+export type NotionConfig = {
+	/**
+	 * API key of the notion
+	 */
+	api_key: string;
+	/**
+	 * Type of query to notion API
+	 */
+	query_type: number;
+	/**
+	 * Query id to the notion API/ either page id or database id
+	 */
+	query_id: string;
+	/**
+	 * / Id for the collector
 	 */
 	id: string;
 };

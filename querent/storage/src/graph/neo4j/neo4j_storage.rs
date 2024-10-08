@@ -1,13 +1,12 @@
 use crate::{
-	postgres_index::QuerySuggestion, DiscoveredKnowledge, FabricAccessor, FabricStorage, Storage,
-	StorageError, StorageErrorKind, StorageResult,
+	postgres_index::QuerySuggestion, DiscoveredKnowledge, FabricAccessor, FabricStorage,
+	FilteredSemanticKnowledge, Storage, StorageError, StorageErrorKind, StorageResult,
 };
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use neo4rs::*;
 use proto::semantics::Neo4jConfig;
 use std::sync::Arc;
-
 pub struct Neo4jStorage {
 	pub graph: Arc<Graph>,
 	pub config: Config,
@@ -30,7 +29,6 @@ impl Neo4jStorage {
 					source: Arc::new(anyhow::Error::from(err)),
 				}
 			})?;
-
 		let graph = Graph::connect(config.clone()).await;
 		match graph {
 			Ok(graph) => Ok(Neo4jStorage { graph: Arc::new(graph), config }),
@@ -198,7 +196,8 @@ impl FabricAccessor for Neo4jStorage {
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,
-		_session_id: String,
+		_discovery_session_id: String,
+		_pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
 		Ok(vec![])
 	}
@@ -210,6 +209,14 @@ impl FabricAccessor for Neo4jStorage {
 	) -> StorageResult<Vec<QuerySuggestion>> {
 		// Return an empty vector
 		Ok(Vec::new())
+	}
+
+	/// Get data from semantic Knowledge table
+	async fn get_semanticknowledge_data(
+		&self,
+		_collection_id: &str,
+	) -> StorageResult<Vec<FilteredSemanticKnowledge>> {
+		Ok(vec![])
 	}
 }
 impl Storage for Neo4jStorage {}

@@ -3632,7 +3632,8 @@ dependencies = [
 [[package]]
 name = "esaxx-rs"
 version = "0.1.10"
-source = "git+https://github.com/Querent-ai/esaxx-rs#d3ff9c0e88db97c6f9763594b7c279c89c3accac"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d817e038c30374a4bcb22f94d0a8a0e216958d4c3dcde369b1439fec4bdda6e6"
 dependencies = [
  "cc",
 ]
@@ -5484,6 +5485,7 @@ dependencies = [
  "home",
  "hyper 0.14.30",
  "hyper-rustls 0.24.2",
+ "lazy_static",
  "llms",
  "log 0.4.22",
  "md5",
@@ -6754,6 +6756,21 @@ name = "noop_proc_macro"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0676bb32a98c1a483ce53e500a81ad9c3d5b3f7c920c28c24e9cb0980d0b5bc8"
+
+[[package]]
+name = "notion"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9bc9ff831e0b2ab522d99a55effa5e142516fdedc42d0078a589f5022039c72d"
+dependencies = [
+ "chrono",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "nu-ansi-term"
@@ -10430,6 +10447,7 @@ dependencies = [
  "md5",
  "native-tls",
  "neo4rs",
+ "notion",
  "oauth2",
  "once_cell",
  "onedrive-api",
@@ -11173,14 +11191,17 @@ dependencies = [
  "neo4rs",
  "once_cell",
  "pgvector",
+ "postgresql_archive",
  "postgresql_embedded",
  "postgresql_extensions",
  "pq-sys",
  "proto",
  "redb",
+ "regex",
  "rmp-serde",
  "rustls 0.23.13",
  "rustls-native-certs 0.8.0",
+ "semver",
  "serde",
  "serde_json",
  "sqlx",
