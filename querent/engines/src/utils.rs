@@ -67,9 +67,19 @@ fn sanitize_text(input: &str) -> String {
 
 /// Splits the provided text into a vector of sentences.
 pub fn split_into_sentences(text: &str) -> Vec<String> {
+	let repeated_pattern = match Regex::new(r"[^a-zA-Z0-9]{5,}") {
+		Ok(re) => re,
+		Err(e) => {
+			eprintln!("Error creating regex: {}. Using default pattern.", e);
+			Regex::new(r"\.{5,}").expect("Default regex should never fail")
+		},
+	};
 	UnicodeSegmentation::split_sentence_bounds(text)
-		.map(|sentence| sentence.trim().to_string())
+		.map(|sentence| sentence.trim())
 		.filter(|s| !s.is_empty())
+		.map(|s| repeated_pattern.replace_all(s, " ").to_string())
+		.filter(|s| !s.is_empty())
+		.map(String::from)
 		.collect()
 }
 

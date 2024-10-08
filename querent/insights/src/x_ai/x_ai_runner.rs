@@ -4,7 +4,7 @@ use crate::{
 };
 use async_stream::stream;
 use async_trait::async_trait;
-use common::EventType;
+use common::{DocumentPayload, EventType};
 use fastembed::TextEmbedding;
 use futures::{pin_mut, Stream, StreamExt};
 use llms::{Message, LLM};
@@ -14,6 +14,7 @@ use std::{
 	pin::Pin,
 	sync::{Arc, RwLock},
 };
+use storage::DiscoveredKnowledge;
 
 use super::prompts::get_final_prompt;
 
@@ -93,21 +94,34 @@ impl InsightRunner for XAIRunner {
 							),
 						});
 					}
-
 					let mut fetched_results = Vec::new();
 					let mut _total_fetched = 0;
-					let search_results = storage
-						.similarity_search_l2(
-							self.config.discovery_session_id.to_string(),
-							query.to_string(),
-							self.config.semantic_pipeline_id.to_string(),
-							query_embedding,
-							100,
-							0,
-							&vec![],
-						)
-						.await;
-
+					let search_results = if !self.config.discovery_session_id.is_empty() {
+						storage
+							.get_discovered_data(
+								self.config.discovery_session_id.clone(),
+								self.config.semantic_pipeline_id.clone(),
+							)
+							.await
+					} else {
+						storage
+							.similarity_search_l2(
+								self.config.discovery_session_id.to_string(),
+								query.to_string(),
+								self.config.semantic_pipeline_id.to_string(),
+								query_embedding,
+								100,
+								0,
+								&vec![],
+							)
+							.await
+							.map(|results: Vec<DocumentPayload>| {
+								results
+									.into_iter()
+									.map(DiscoveredKnowledge::from_document_payload)
+									.collect::<Vec<DiscoveredKnowledge>>()
+							})
+					};
 					match search_results {
 						Ok(results) => {
 							if results.is_empty() {
@@ -129,13 +143,13 @@ impl InsightRunner for XAIRunner {
 									combined_results.get_mut(&document.sentence)
 								{
 									existing_tags.insert(tag);
-									*total_strength += document.score;
+									*total_strength += document.score.unwrap_or(0.0) as f32;
 								} else {
 									let mut tags_set = HashSet::new();
 									tags_set.insert(tag);
 									combined_results.insert(
 										document.sentence.clone(),
-										(tags_set, document.score),
+										(tags_set, document.score.unwrap_or(0.0) as f32),
 									);
 									ordered_sentences.push(document.sentence.clone());
 								}
@@ -357,21 +371,31 @@ impl InsightRunner for XAIRunner {
 								});
 								continue;
 							}
-
 							let mut fetched_results = Vec::new();
 							let mut _total_fetched = 0;
-							let search_results = storage
-								.similarity_search_l2(
-									self.config.discovery_session_id.to_string(),
-									query.to_string(),
-									self.config.semantic_pipeline_id.to_string(),
-									query_embedding,
-									100,
-									0,
-									&vec![],
-								)
-								.await;
-
+							let search_results = if !self.config.discovery_session_id.is_empty() {
+								storage
+									.get_discovered_data(self.config.discovery_session_id.clone(), self.config.semantic_pipeline_id.clone())
+									.await
+							} else {
+								storage
+									.similarity_search_l2(
+										self.config.discovery_session_id.to_string(),
+										query.to_string(),
+										self.config.semantic_pipeline_id.to_string(),
+										query_embedding,
+										100,
+										0,
+										&vec![],
+									)
+									.await
+									.map(|results: Vec<DocumentPayload>| {
+										results
+											.into_iter()
+											.map(DiscoveredKnowledge::from_document_payload)
+											.collect::<Vec<DiscoveredKnowledge>>()
+									})
+							};
 							match search_results {
 								Ok(results) => {
 									if results.is_empty() {
@@ -393,13 +417,13 @@ impl InsightRunner for XAIRunner {
 											combined_results.get_mut(&document.sentence)
 										{
 											existing_tags.insert(tag);
-											*total_strength += document.score;
+											*total_strength += document.score.unwrap_or(0.0) as f32;
 										} else {
 											let mut tags_set = HashSet::new();
 											tags_set.insert(tag);
 											combined_results.insert(
 												document.sentence.clone(),
-												(tags_set, document.score),
+												(tags_set, document.score.unwrap_or(0.0) as f32),
 											);
 											ordered_sentences.push(document.sentence.clone());
 										}

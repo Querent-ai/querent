@@ -1,5 +1,5 @@
-use common::DocumentPayload;
 use std::collections::HashMap;
+use storage::DiscoveredKnowledge;
 
 /// Function to get unique contexts
 pub fn unique_sentences(
@@ -8,20 +8,17 @@ pub fn unique_sentences(
 	let mut unique_sentences_map = HashMap::new();
 
 	for (_, _, entity1, entity2, _, sentence, _, _) in discovered_knowledge {
-		// Insert into HashMap only if the sentence is not already present
 		unique_sentences_map.entry(sentence).or_insert_with(|| {
 			format!("Entities: {} and {}, Sentence: {}", entity1, entity2, sentence)
 		});
 	}
-
-	// Collect only the values from the map, which are the formatted strings
 	let unique_sentences = unique_sentences_map.values().cloned().collect();
 	let count = unique_sentences_map.len();
 	(unique_sentences, count)
 }
 
 /// Function to extract sentences from documents
-pub fn extract_sentences(documents: &Vec<DocumentPayload>) -> Vec<&str> {
+pub fn extract_sentences(documents: &Vec<DiscoveredKnowledge>) -> Vec<&str> {
 	documents.iter().map(|doc| doc.sentence.as_str()).collect()
 }
 

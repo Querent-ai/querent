@@ -440,7 +440,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
                    event_id, 
                    (embeddings <=> {})::FLOAT8 AS similarity 
             FROM embedded_knowledge
-            WHERE (embeddings <=> {})::FLOAT8 < 0.5
+            WHERE (embeddings <=> {})::FLOAT8 < 0.3
             ORDER BY similarity ASC
             LIMIT $1
             OFFSET $2
@@ -462,7 +462,7 @@ pub async fn fetch_documents_for_embedding_pgembed(
                     WHERE event_id = $1 
                       AND (COALESCE($2, '') = '' OR collection_id = $2)
                     "#;
-
+				println!("This is the collection id -----{:?}", collection_id);
 				let semantic_query = diesel::sql_query(semantic_query_string)
 					.bind::<Text, _>(&event_id)
 					.bind::<Text, _>(collection_id);
