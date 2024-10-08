@@ -24,7 +24,7 @@ use diesel_async::{
 		deadpool::{Object as PooledConnection, Pool},
 		AsyncDieselConnectionManager,
 	},
-	RunQueryDsl, SimpleAsyncConnection,
+	RunQueryDsl,
 };
 use std::{
 	ops::{Deref, DerefMut},
@@ -106,24 +106,24 @@ pub async fn create_storages(
 
 pub async fn create_default_storage(
 	path: PathBuf,
-	database_url: String,
+	_database_url: String,
 ) -> anyhow::Result<Arc<dyn Storage>> {
-	if database_url.is_empty() {
-		let surreal_db = SurrealDB::new(path).await.map_err(|err| {
-			log::error!("Surreal client creation failed: {:?}", err);
-			err
-		})?;
-		let _ = surreal_db.check_connectivity().await;
-		let surreal_db = Arc::new(surreal_db);
-		return Ok(surreal_db);
-	}
-	let embedded_db = PGEmbed::new(database_url).await.map_err(|err| {
-		log::error!("embedded_db client creation failed: {:?}", err);
+	let surreal_db = SurrealDB::new(path).await.map_err(|err| {
+		log::error!("Surreal client creation failed: {:?}", err);
 		err
 	})?;
-	let _ = embedded_db.check_connectivity().await;
-	let embedded_db = Arc::new(embedded_db);
-	Ok(embedded_db)
+	let _ = surreal_db.check_connectivity().await;
+	let surreal_db = Arc::new(surreal_db);
+	return Ok(surreal_db);
+
+	// FUTURE WORK: Uncomment/Implement the following code to enable embedded postgres
+	// let embedded_db = PGEmbed::new(database_url).await.map_err(|err| {
+	// 	log::error!("embedded_db client creation failed: {:?}", err);
+	// 	err
+	// })?;
+	// let _ = embedded_db.check_connectivity().await;
+	// let embedded_db = Arc::new(embedded_db);
+	// Ok(embedded_db)
 }
 
 pub async fn start_postgres_embedded(path: PathBuf) -> Result<(PostgreSQL, String), StorageError> {
@@ -353,8 +353,8 @@ pub const SITEMAP_LIMIT: i64 = 50000;
 pub const SITEMAP_DAYS: i64 = 31;
 const POOL_TIMEOUT: Option<Duration> = Some(Duration::from_secs(50));
 
-async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
-	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
-	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
-	Ok(())
-}
+// async fn enable_extension(pool: &ActualDbPool) -> Result<(), DieselError> {
+// 	let mut conn = pool.get().await.map_err(|e| QueryBuilderError(e.into()))?;
+// 	conn.batch_execute("CREATE EXTENSION IF NOT EXISTS vector").await?;
+// 	Ok(())
+// }

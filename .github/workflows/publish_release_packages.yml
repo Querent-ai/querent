@@ -49,14 +49,6 @@ jobs:
       matrix:
         target: [x86_64-apple-darwin]
     steps:
-      - name: Download and setup libonnxruntime
-        run: |
-          mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-osx-x86_64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
-          export ORT_STRATEGY=system
-          export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
-          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
-          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -107,14 +99,6 @@ jobs:
       matrix:
         target: [aarch64-apple-darwin]
     steps:
-      - name: Download and setup libonnxruntime
-        run: |
-          mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-osx-arm64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
-          export ORT_STRATEGY=system
-          export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
-          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
-          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
@@ -160,14 +144,6 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ubuntu-22.04
     steps:
-      - name: Download and setup libonnxruntime
-        run: |
-          mkdir /tmp/onnxruntime
-          curl -sSL "https://github.com/supertone-inc/onnxruntime-build/releases/download/v1.19.2/onnxruntime-linux-x64-static_lib-1.19.2.tgz" | tar -xz -C /tmp/onnxruntime/
-          export ORT_STRATEGY=system
-          export ORT_LIB_LOCATION=/tmp/onnxruntime/lib
-          echo "ORT_STRATEGY=$ORT_STRATEGY" >> $GITHUB_ENV
-          echo "ORT_LIB_LOCATION=$ORT_LIB_LOCATION" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - name: Install Node.js
         uses: actions/setup-node@v4
