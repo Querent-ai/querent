@@ -19,6 +19,7 @@ runs:
       run: brew install protobuf
       shell: bash
     - run: brew install postgresql@16.4.0 libpq && brew link --force libpq
+      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y

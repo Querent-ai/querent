@@ -35,6 +35,7 @@ runs:
       run: choco install protoc
       shell: bash
     - run: choco install postgresql --version=16.4.0 -y
+      shell: bash
     - name: Install nasm
       uses: ilammy/setup-nasm@321e6ed62a1fc77024a3bd853deb33645e8b22c4
     - name: Retrieve and export commit date, hash, and tags
