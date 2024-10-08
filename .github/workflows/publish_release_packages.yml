@@ -230,11 +230,11 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --no-frozen-lockfile
         working-directory: tauri/rian
-      - uses: ./.github/actions/cargo-build-windows-binary
-        with:
-          target: ${{ matrix.target }}
-          version: ${{ env.INPUT_RELEASE_VERSION }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+      # - uses: ./.github/actions/cargo-build-windows-binary
+      #   with:
+      #     target: ${{ matrix.target }}
+      #     version: ${{ env.INPUT_RELEASE_VERSION }}
+      #     token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
         run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
       - name: Build Tauri App
