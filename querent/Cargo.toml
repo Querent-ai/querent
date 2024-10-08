@@ -278,6 +278,7 @@ sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
 notion = "0.6.0"
 openssl-sys = { version = "0.9.93", features = ["vendored"] }
 pq-sys ={ version = "0.6.3", features = ["bundled"] }
+surrealdb = { version = "1.5.4", features = ["kv-rocksdb"] }
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates

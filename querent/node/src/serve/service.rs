@@ -71,8 +71,12 @@ pub async fn serve_quester(
 	let secret_store = create_secret_store(querent_data_path.clone().to_path_buf()).await?;
 	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
 
-	let (event_storages, index_storages) =
-		create_storages(&node_config.storage_configs.0, database_url.clone()).await?;
+	let (event_storages, index_storages) = create_storages(
+		&node_config.storage_configs.0,
+		database_url.clone(),
+		querent_data_path.clone(),
+	)
+	.await?;
 
 	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);
@@ -233,8 +237,12 @@ pub async fn serve_quester_without_servers(
 	let secret_store = create_secret_store(querent_data_path.clone().to_path_buf()).await?;
 	let metadata_store = create_metadata_store(querent_data_path.clone().to_path_buf()).await?;
 
-	let (event_storages, index_storages) =
-		create_storages(&node_config.storage_configs.0, embedded_database_url.clone()).await?;
+	let (event_storages, index_storages) = create_storages(
+		&node_config.storage_configs.0,
+		embedded_database_url.clone(),
+		querent_data_path.clone(),
+	)
+	.await?;
 
 	info!("Serving Querent RIAN Node 🚀");
 	info!("Node ID: {}", node_config.node_id);
