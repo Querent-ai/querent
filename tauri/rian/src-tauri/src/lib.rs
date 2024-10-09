@@ -270,12 +270,12 @@ pub fn run(node_config: NodeConfig) {
         _ => {}
     });
 
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _psql = PG_EMBED.lock().take().unwrap();
-        _psql.stop().expect("Failed to stop embedded Postgres");
-        drop(_psql);
-    }
+    // #[cfg(not(target_os = "windows"))]
+    // {
+    //     let _psql = PG_EMBED.lock().take().unwrap();
+    //     _psql.stop().expect("Failed to stop embedded Postgres");
+    //     drop(_psql);
+    // }
 }
 
 fn schedule_update_checks(app_handle: AppHandle) {
