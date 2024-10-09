@@ -98,8 +98,9 @@ jobs:
       AWS_ACCESS_KEY: ${{secrets.AWS_ACCESS_KEY}}
       AWS_SECRET_KEY: ${{secrets.AWS_SECRET_KEY}}
       NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+      IMAP_USERNAME: ${{secrets.IMAP_USERNAME}}
+      IMAP_PASSWORD: ${{secrets.IMAP_PASSWORD}}
       NOTION_API_KEY: ${{secrets.NOTION_API_KEY}}
-      NOTION_DATABASE_ID: ${{secrets.NOTION_DATABASE_ID}}
       NOTION_PAGE_ID: ${{secrets.NOTION_PAGE_ID}}
     steps:
       - name: Checkout code
