@@ -33,7 +33,10 @@
 			const message = encodeURIComponent((error as any).toString());
 			const urlWithMessage = `http://localhost:5173/error?error=${message}`;
 
-			const appWindow = new Window('error-window');
+			const appWindow = new Window('error-window', {
+				height: 250,
+				width: 500
+			});
 
 			const webview = new Webview(appWindow, 'error-window', {
 				url: urlWithMessage,
