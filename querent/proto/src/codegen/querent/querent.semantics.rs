@@ -493,17 +493,20 @@ pub struct SlackCollectorConfig {
     /// Cursor of the Slack collector.
     #[prost(string, tag = "3")]
     pub cursor: ::prost::alloc::string::String,
-    /// Include all metadata of the Slack collector.
-    #[prost(bool, tag = "4")]
-    pub include_all_metadata: bool,
-    /// Includive of the Slack collector.
+    /// Specify the beginning of the time range for messages
+    #[prost(string, tag = "4")]
+    pub oldest: ::prost::alloc::string::String,
+    /// Inclusive of the Slack collector.
     #[prost(bool, tag = "5")]
-    pub includive: bool,
+    pub inclusive: bool,
     /// Limit of the Slack collector
     #[prost(int32, tag = "6")]
     pub limit: i32,
-    /// Id for the collector
+    /// Specify the end of the time range for messages
     #[prost(string, tag = "7")]
+    pub latest: ::prost::alloc::string::String,
+    /// Id for the collector
+    #[prost(string, tag = "8")]
     pub id: ::prost::alloc::string::String,
 }
 /// NewsCollectorConfig is a message to hold configuration for a News collector.

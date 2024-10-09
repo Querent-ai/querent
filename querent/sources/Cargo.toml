@@ -67,3 +67,5 @@ onedrive-api = {workspace = true}
 reqwest = {workspace = true}
 dotenv = {workspace = true}
 notion = {workspace = true}
+slack-morphism = { workspace = true }
+hyper-util = { workspace = true }

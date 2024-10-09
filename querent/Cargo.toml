@@ -60,7 +60,7 @@ hyper = { version = "0.14", features = [
   "stream",
   "tcp",
 ] }
-hyper-rustls = { version = "0.24", features = ["http1", "http2"] }
+hyper-rustls = { version = "0.27", features = ["http1", "http2"] }
 indexmap = { version = "2.1.0", features = ["serde"] }
 indicatif = "0.17.3"
 itertools = "0.12"
@@ -278,6 +278,8 @@ sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
 notion = "0.6.0"
 openssl-sys = { version = "0.9.93", features = ["vendored"] }
 pq-sys ={ version = "0.6.3", features = ["bundled"] }
+slack-morphism = { version = "2.5.0", features = ["hyper"] }
+hyper-util = "0.1.9"
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates
