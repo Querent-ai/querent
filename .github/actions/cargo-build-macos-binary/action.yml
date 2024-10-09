@@ -40,23 +40,23 @@ runs:
         echo "QUERENT_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
-    - name: Build binary
-      run: cargo build --release  --target ${{ matrix.target }} --features "license-check","openssl-support","bundled" --bin rian
-      shell: bash
-      working-directory: ./querent
-      env:
-        QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
-        QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
-        QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
-        GITHUB_TOKEN: ${{ inputs.token }}
-    - name: Bundle archive
-      run: |
-        make archive BINARY_FILE=target/${{ inputs.target }}/release/rian \
-          BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
-      shell: bash
-      working-directory: ./querent
-    - name: Save binary archive for three days
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ env.ASSET_FULL_NAME }}.tar.gz
-        path: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
+    # - name: Build binary
+    #   run: cargo build --release  --target ${{ matrix.target }} --features "license-check","openssl-support" --bin rian
+    #   shell: bash
+    #   working-directory: ./querent
+    #   env:
+    #     QUERENT_COMMIT_DATE: ${{ env.QUERENT_COMMIT_DATE }}
+    #     QUERENT_COMMIT_HASH: ${{ env.QUERENT_COMMIT_HASH }}
+    #     QUERENT_COMMIT_TAGS: ${{ env.QUERENT_COMMIT_TAGS }}
+    #     GITHUB_TOKEN: ${{ inputs.token }}
+    # - name: Bundle archive
+    #   run: |
+    #     make archive BINARY_FILE=target/${{ inputs.target }}/release/rian \
+    #       BINARY_VERSION=${{ inputs.version }} ARCHIVE_NAME=${{ env.ASSET_FULL_NAME }}
+    #   shell: bash
+    #   working-directory: ./querent
+    # - name: Save binary archive for three days
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     name: ${{ env.ASSET_FULL_NAME }}.tar.gz
+    #     path: ./querent/${{ env.ASSET_FULL_NAME }}.tar.gz
