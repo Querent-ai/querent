@@ -8769,6 +8769,7 @@ dependencies = [
  "bytes",
  "diesel",
  "postgres-types",
+ "serde",
 ]
 
 [[package]]

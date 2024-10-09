@@ -378,10 +378,44 @@ impl FabricAccessor for SurrealDB {
 	/// Get discovered knowledge
 	async fn get_discovered_data(
 		&self,
-		_session_id: String,
-		_pipeline_id: String,
+		discovery_session_id: String,
+		pipeline_id: String,
 	) -> StorageResult<Vec<DiscoveredKnowledge>> {
-		Ok(vec![])
+		let mut query = String::from(
+			"SELECT doc_id, doc_source, sentence, subject, object, cosine_distance, session_id, score, query, 
+			query_embedding, collection_id
+			FROM discovered_knowledge WHERE 1 = 1"
+		);
+		if !discovery_session_id.is_empty() {
+			query.push_str(&format!(" AND session_id = '{}'", discovery_session_id));
+		}
+		if !pipeline_id.is_empty() {
+			query.push_str(&format!(" AND collection_id = '{}'", pipeline_id));
+		}
+		let mut response: Response = self.db.query(query).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let results = response.take::<Vec<DiscoveredKnowledge>>(0).map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		Ok(results
+			.into_iter()
+			.map(|item| DiscoveredKnowledge {
+				doc_id: item.doc_id,
+				doc_source: item.doc_source,
+				sentence: item.sentence,
+				subject: item.subject,
+				object: item.object,
+				cosine_distance: item.cosine_distance,
+				session_id: item.session_id,
+				score: item.score,
+				query: item.query,
+				query_embedding: item.query_embedding,
+				collection_id: item.collection_id,
+			})
+			.collect())
 	}
 
 	async fn get_semanticknowledge_data(

@@ -37,11 +37,10 @@ pub async fn fetch_documents_for_embedding(
 		kind: StorageErrorKind::Internal,
 		source: Arc::new(anyhow::Error::from(e)),
 	})?;
-
 	let mut results: Vec<DocumentPayload> = Vec::new();
 	for query_result in query_results {
 		let query_string_semantic = format!(
-			"SELECT document_id, subject, object, document_source, sentence 
+			"SELECT document_id, subject, object, document_source, sentence, subject_type, object_type
             FROM semantic_knowledge 
             WHERE event_id = '{}' ",
 			query_result.event_id.clone()
