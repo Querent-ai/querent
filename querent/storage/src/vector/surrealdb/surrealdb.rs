@@ -12,6 +12,7 @@ use crate::{
 use anyhow::Error;
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
+use pgvector::Vector;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use surrealdb::{
@@ -95,6 +96,7 @@ pub struct DiscoveredKnowledgeSurrealDb {
 	pub query: Option<String>,
 	pub session_id: Option<String>,
 	pub score: Option<f64>,
+	pub collection_id: Option<String>,
 }
 
 impl DiscoveredKnowledgeSurrealDb {
@@ -110,6 +112,7 @@ impl DiscoveredKnowledgeSurrealDb {
 			query: payload.query,
 			session_id: payload.session_id,
 			score: Some(payload.score as f64),
+			collection_id: Some(payload.collection_id),
 		}
 	}
 }
@@ -412,7 +415,7 @@ impl FabricAccessor for SurrealDB {
 				session_id: item.session_id,
 				score: item.score,
 				query: item.query,
-				query_embedding: item.query_embedding,
+				query_embedding: item.query_embedding.map(Vector::from),
 				collection_id: item.collection_id,
 			})
 			.collect())

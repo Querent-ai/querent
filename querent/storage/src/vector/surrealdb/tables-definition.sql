@@ -40,6 +40,7 @@ DEFINE FIELD query_embedding ON TABLE discovered_knowledge TYPE option<array<flo
 DEFINE FIELD query ON TABLE discovered_knowledge TYPE option<string>;
 DEFINE FIELD session_id ON TABLE discovered_knowledge TYPE option<string>;
 DEFINE FIELD score ON TABLE discovered_knowledge TYPE option<float>;
+DEFINE FIELD collection_id ON TABLE discovered_knowledge TYPE option<string>;
 
 
 DEFINE TABLE insight_knowledge SCHEMAFULL;

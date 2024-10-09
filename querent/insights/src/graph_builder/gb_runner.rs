@@ -91,70 +91,77 @@ impl InsightRunner for GraphBuilderRunner {
 		for (event_type, storages) in self.config.event_storages.iter() {
 			if *event_type == EventType::Vector {
 				for storage in storages.iter() {
-					if !query.is_empty() {
-						let embeddings = embedding_model.embed(vec![query.to_string()], None)?;
-						let query_embedding = &embeddings[0];
-						let mut fetched_results = Vec::new();
-						let mut _total_fetched = 0;
+					if !query.is_empty() || !self.config.discovery_session_id.is_empty() {
+						if !query.is_empty() {
+							let embeddings =
+								embedding_model.embed(vec![query.to_string()], None)?;
+							let query_embedding = &embeddings[0];
+							let mut fetched_results = Vec::new();
+							let mut _total_fetched = 0;
 
-						let search_results = storage
-							.similarity_search_l2(
-								self.config.discovery_session_id.to_string(),
-								query.to_string(),
-								self.config.semantic_pipeline_id.to_string(),
-								query_embedding,
-								100,
-								0,
-								&vec![],
-							)
-							.await;
+							let search_results = storage
+								.similarity_search_l2(
+									self.config.discovery_session_id.to_string(),
+									query.to_string(),
+									self.config.semantic_pipeline_id.to_string(),
+									query_embedding,
+									100,
+									0,
+									&vec![],
+								)
+								.await;
 
-						match search_results {
-							Ok(results) => {
-								if results.is_empty() {
-									return Ok(InsightOutput {
-										data: Value::String("No results found".to_string()),
-									});
-								}
-								_total_fetched += results.len() as i64;
-								let mut combined_results: HashMap<String, (HashSet<String>, f32)> =
-									HashMap::new();
-								if let Some(first_result) = results.first() {
-									discovery_session_id =
-										first_result.session_id.clone().unwrap_or("".to_string());
-								}
-								for document in &results {
-									let tag = format!(
-										"{}-{}",
-										document.subject.replace('_', " "),
-										document.object.replace('_', " "),
-									);
-									if unique_sentences.insert(document.sentence.clone()) {
-										let mut tags_set = HashSet::new();
-										tags_set.insert(tag);
-										combined_results.insert(
-											document.sentence.to_string(),
-											(tags_set, document.score),
-										);
-
-										fetched_results.push(document.clone());
-									} else {
-										tracing::info!(
-											"Duplicate found, skipping sentence: {}",
-											document.sentence
-										);
+							match search_results {
+								Ok(results) => {
+									if results.is_empty() {
+										return Ok(InsightOutput {
+											data: Value::String("No results found".to_string()),
+										});
 									}
-								}
-							},
-							Err(e) => {
-								log::error!("Failed to search for similar documents: {}", e);
-								break;
-							},
+									_total_fetched += results.len() as i64;
+									let mut combined_results: HashMap<
+										String,
+										(HashSet<String>, f32),
+									> = HashMap::new();
+									if let Some(first_result) = results.first() {
+										discovery_session_id = first_result
+											.session_id
+											.clone()
+											.unwrap_or("".to_string());
+									}
+									for document in &results {
+										let tag = format!(
+											"{}-{}",
+											document.subject.replace('_', " "),
+											document.object.replace('_', " "),
+										);
+										if unique_sentences.insert(document.sentence.clone()) {
+											let mut tags_set = HashSet::new();
+											tags_set.insert(tag);
+											combined_results.insert(
+												document.sentence.to_string(),
+												(tags_set, document.score),
+											);
+
+											fetched_results.push(document.clone());
+										} else {
+											tracing::info!(
+												"Duplicate found, skipping sentence: {}",
+												document.sentence
+											);
+										}
+									}
+								},
+								Err(e) => {
+									log::error!("Failed to search for similar documents: {}", e);
+									break;
+								},
+							}
+							tokio::spawn(insert_discovered_knowledge_async(
+								storage.clone(),
+								fetched_results,
+							));
 						}
-						tokio::spawn(insert_discovered_knowledge_async(
-							storage.clone(),
-							fetched_results,
-						));
 						match storage
 							.get_discovered_data(
 								if !discovery_session_id.is_empty() {
