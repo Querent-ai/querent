@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [x86_64-apple-darwin, aarch64-apple-darwin, 'x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc.exe'] # bring back 'x86_64-pc-windows-msvc.exe'
+        target: [x86_64-unknown-linux-gnu] # aarch64-apple-darwin, 'x86_64-apple-darwin', 'x86_64-pc-windows-msvc.exe''
     steps:
       - name: Get the latest workflow run
         id: get_workflow_run

@@ -6,7 +6,7 @@ use api::{
     set_rian_license_key, start_agn_fabric, start_oauth_server, stop_agn_fabric,
     stop_insight_analyst, trigger_insight_analyst,
 };
-use common::{get_querent_data_path, TerimateSignal};
+use common::TerimateSignal;
 use diesel::prelude::*;
 use diesel::r2d2;
 use log::{error, info};
@@ -146,16 +146,24 @@ pub fn run(node_config: NodeConfig) {
             )
             .expect("Failed to export JSDoc bindings");
     }
-    // Start embedded querent services
-    let querent_data_path = get_querent_data_path();
-    start_postgres_sync(querent_data_path.clone()).expect("Failed to start embedded Postgres");
-    if PG_EMBED.lock().is_none() {
-        error!("Failed to start embedded Postgres");
-        return;
-    }
-    let _psql = PG_EMBED.lock().take().unwrap();
-    let url = _psql.settings().url(DB_NAME);
-    info!("Postgres started at: {}", url);
+    // FUTURE WORK: Embedded Postgres/ Open source lightweigth database
+    // Or design our own db systems
+
+    // // Start embedded querent services
+    // let mut _url = None;
+    // // if not windows start embedded postgres
+    // #[cfg(not(target_os = "windows"))]
+    // {
+    //     let querent_data_path = get_querent_data_path();
+    //     start_postgres_sync(querent_data_path.clone()).expect("Failed to start embedded Postgres");
+    //     if PG_EMBED.lock().is_none() {
+    //         error!("Failed to start embedded Postgres");
+    //         return;
+    //     }
+    //     let _psql = PG_EMBED.lock().take().unwrap();
+    //     _url = Some(_psql.settings().url(DB_NAME));
+    //     info!("Postgres started at: {}", _url.clone().unwrap_or_default());
+    // }
     #[allow(unused_mut)]
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_http::init())
@@ -190,7 +198,7 @@ pub fn run(node_config: NodeConfig) {
             tauri::async_runtime::spawn(start_querent_services(
                 node_config.clone(),
                 sig_clone,
-                Some(url),
+                None,
             ));
             if !query_accessibility_permissions() {
                 if let Some(window) = app.get_webview_window("rian") {
@@ -262,8 +270,12 @@ pub fn run(node_config: NodeConfig) {
         _ => {}
     });
 
-    _psql.stop().expect("Failed to stop embedded Postgres");
-    drop(_psql);
+    // #[cfg(not(target_os = "windows"))]
+    // {
+    //     let _psql = PG_EMBED.lock().take().unwrap();
+    //     _psql.stop().expect("Failed to stop embedded Postgres");
+    //     drop(_psql);
+    // }
 }
 
 fn schedule_update_checks(app_handle: AppHandle) {
@@ -365,9 +377,9 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
     let postgresql_settings = postgresql.settings().clone();
     postgresql_extensions::blocking::install(
         &postgresql_settings,
-        "tensor-chord",
-        "pgvecto.rs",
-        &VersionReq::parse("=0.3.0").map_err(|e| StorageError {
+        "portal-corp",
+        "pgvector_compiled",
+        &VersionReq::parse("=0.16.19").map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
         })?,
@@ -376,7 +388,6 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
         kind: StorageErrorKind::Internal,
         source: Arc::new(anyhow::Error::from(e)),
     })?;
-
     // Start PostgreSQL server synchronously
     // Check if PostgreSQL is already running; stop it if it is.
     if is_postgres_running(&data_dir) {
@@ -438,19 +449,27 @@ pub fn start_postgres_sync(path: PathBuf) -> Result<(), StorageError> {
             source: Arc::new(anyhow::Error::from(e)),
         })?;
 
-    // Configue shared_preload_libraries = 'vectors.so' in postgresql.conf
+    // Configue shared_preload_libraries = 'vector.so' in postgresql.conf
     // and restart the server
     let conn = &mut pool.get().map_err(|e| StorageError {
         kind: StorageErrorKind::Internal,
         source: Arc::new(anyhow::Error::from(e)),
     })?;
-    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vectors.so'")
+    #[cfg(not(target_os = "windows"))]
+    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.so'")
         .execute(conn)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
             source: Arc::new(anyhow::Error::from(e)),
         })?;
-    diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vectors")
+    #[cfg(target_os = "windows")]
+    diesel::sql_query("ALTER SYSTEM SET shared_preload_libraries = 'vector.dll'")
+        .execute(conn)
+        .map_err(|e| StorageError {
+            kind: StorageErrorKind::Internal,
+            source: Arc::new(anyhow::Error::from(e)),
+        })?;
+    diesel::sql_query("ALTER SYSTEM SET search_path = '$user', public, vector")
         .execute(conn)
         .map_err(|e| StorageError {
             kind: StorageErrorKind::Internal,
