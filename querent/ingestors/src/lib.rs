@@ -5,6 +5,7 @@ pub mod code;
 pub mod csv;
 pub mod doc;
 pub mod docx;
+pub mod email;
 pub mod html;
 pub mod image;
 pub mod json;

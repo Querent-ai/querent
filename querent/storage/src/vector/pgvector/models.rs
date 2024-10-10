@@ -1,4 +1,6 @@
 use common::DocumentPayload;
+use serde::Deserialize;
+
 use diesel::{
 	sql_types::{Double, Nullable, Text},
 	table, Insertable, Queryable, QueryableByName, Selectable,
@@ -20,7 +22,7 @@ pub struct InsightKnowledge {
 	pub response: Option<String>,
 }
 
-#[derive(Queryable, Insertable, Selectable, Debug, Clone, QueryableByName)]
+#[derive(Queryable, Insertable, Selectable, Debug, Clone, Deserialize)]
 #[diesel(table_name = discovered_knowledge)]
 pub struct DiscoveredKnowledge {
 	pub doc_id: String,
