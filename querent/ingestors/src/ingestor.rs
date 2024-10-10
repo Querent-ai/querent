@@ -9,11 +9,11 @@ use thiserror::Error;
 
 use crate::{
 	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor,
-	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
-	json::json::JsonIngestor, news::news::NewsIngestor, notion::notion::NotionIngestor,
-	odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor, pptx::pptx::PptxIngestor,
-	slack::slack::SlackIngestor, txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor,
-	xml::xml::XmlIngestor,
+	docx::docx::DocxIngestor, email::email::EmailIngestor, html::html::HtmlIngestor,
+	image::image::ImageIngestor, json::json::JsonIngestor, news::news::NewsIngestor,
+	notion::notion::NotionIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor,
+	pptx::pptx::PptxIngestor, slack::slack::SlackIngestor, txt::txt::TxtIngestor,
+	xlsx::xlsx::XlsxIngestor, xml::xml::XmlIngestor,
 };
 use tracing::info;
 
@@ -216,6 +216,7 @@ pub async fn resolve_ingestor_with_extension(
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
 		"news" => Ok(Arc::new(NewsIngestor::new())),
+		"email" => Ok(Arc::new(EmailIngestor::new())),
 		"slack" => Ok(Arc::new(SlackIngestor::new())),
 		"notion" => Ok(Arc::new(NotionIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),

@@ -2,7 +2,7 @@ use std::{
 	io::{self, Cursor},
 	net::TcpStream,
 	ops::Range,
-	path::Path,
+	path::{Path, PathBuf},
 	pin::Pin,
 	sync::Arc,
 };
@@ -10,6 +10,7 @@ use std::{
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 use async_trait::async_trait;
 
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use common::CollectedBytes;
 use futures::stream::{self, Stream, StreamExt};
 use imap::Session;
@@ -54,6 +55,81 @@ impl EmailSource {
 			imap_session: Arc::new(Mutex::new(imap_session)),
 			source_id: config.id.clone(),
 		})
+	}
+
+	fn extract_attachments(&self, email_content: &str) -> Vec<(String, Vec<u8>)> {
+		let content_types = [
+			"application/pdf",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+			"text/html",
+			"application/vnd.openxmlformats-officedocument.presentationml.presentation",
+			"image/jpeg",
+			"image/png",
+		];
+
+		let mut attachments = Vec::new();
+
+		// Extract the boundary string
+		let boundary = email_content
+			.lines()
+			.find(|line| line.starts_with("Content-Type: multipart"))
+			.and_then(|line| line.split("boundary=").nth(1))
+			.map(|b| b.trim_matches(|c: char| c == '"' || c.is_whitespace()));
+
+		if let Some(boundary) = boundary {
+			// Split the email content into MIME parts using the extracted boundary
+			let parts: Vec<&str> = email_content.split(&format!("--{}", boundary)).collect();
+
+			for part in parts {
+				// Check if this part contains an attachment
+				if part.contains("Content-Disposition: attachment") {
+					let mut filename = String::new();
+					let mut content_type = String::new();
+					let mut base64_content = String::new();
+
+					// Extract filename and content type
+					for line in part.lines() {
+						if line.contains("filename=") {
+							filename = line
+								.split("filename=")
+								.nth(1)
+								.unwrap_or("")
+								.trim_matches(|c: char| c == '"' || c.is_whitespace())
+								.to_string();
+						} else if line.starts_with("Content-Type:") {
+							content_type = line.split(":").nth(1).unwrap_or("").trim().to_string();
+						}
+					}
+
+					// Extract base64 content
+					if let Some(base64_section) = part.split("\r\n\r\n").nth(1) {
+						base64_content = base64_section
+							.lines()
+							.filter(|line| !line.starts_with("--"))
+							.collect::<Vec<&str>>()
+							.join("")
+							.chars()
+							.filter(|c| {
+								c.is_ascii_alphanumeric() || *c == '+' || *c == '/' || *c == '='
+							})
+							.collect();
+					}
+
+					// Check if the content type is in our list
+					if content_types.iter().any(|&ct| content_type.starts_with(ct)) {
+						if let Ok(decoded) = BASE64.decode(&base64_content) {
+							attachments.push((filename, decoded));
+						} else {
+							eprintln!("Base64 decoding error for file: {}", filename);
+						}
+					}
+				}
+			}
+		} else {
+			eprintln!("Could not find multipart boundary in email content");
+		}
+
+		attachments
 	}
 }
 
@@ -161,12 +237,54 @@ impl Source for EmailSource {
 		let mut collected_messages = Vec::new();
 		for fetch in fetches.into_iter() {
 			if let Some(body) = fetch.body() {
+				let email_content = String::from_utf8(body.to_vec()).expect("Invalid UTF-8");
+
+				let message_id = email_content
+					.split("Message-ID: <")
+					.nth(1)
+					.and_then(|s| s.split('>').next())
+					.and_then(|s| s.split('@').next())
+					.unwrap_or("");
+
+				let subject = email_content
+					.lines()
+					.find(|line| line.starts_with("Subject:"))
+					.map(|line| line.trim_start_matches("Subject:").trim())
+					.unwrap_or("");
+				let main_text = email_content
+					.split("Content-Type: text/plain; charset=\"UTF-8\"\r\n\r\n")
+					.nth(1)
+					.and_then(|s| s.split("\r\n\r\n--").next())
+					.unwrap_or("");
+				let combined_text = format!("{}, {}", subject, main_text);
+
+				for attachment in self.extract_attachments(&email_content) {
+					let (filename, content) = attachment;
+					let file_extension = Path::new(&filename)
+						.extension()
+						.and_then(|ext| ext.to_str())
+						.map(|ext| ext.to_string())
+						.unwrap_or_else(|| String::new());
+
+					let cursor = Cursor::new(content.to_vec());
+					collected_messages.push(CollectedBytes {
+						data: Some(Box::pin(cursor)),
+						file: Some(PathBuf::from(filename.clone())),
+						source_id: self.source_id.clone(),
+						eof: true,
+						doc_source: Some(format!("email://{}", filename)),
+						extension: Some(file_extension),
+						size: Some(content.len()),
+						_owned_permit: None,
+					});
+				}
+
 				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-				let cursor = Cursor::new(fetch.body().to_owned().unwrap_or_default().to_vec());
+				let cursor = Cursor::new(combined_text.as_bytes().to_vec());
 				collected_messages.push(CollectedBytes {
 					source_id: self.source_id.clone(),
 					data: Some(Box::pin(cursor)),
-					file: None,
+					file: Some(PathBuf::from(format!("{}.email", message_id))),
 					eof: true,
 					doc_source: Some("email://unknown_sender".to_string()),
 					extension: Some("txt".to_string()),
@@ -184,5 +302,52 @@ impl Source for EmailSource {
 		let stream = Box::pin(stream::iter(message_streams).flatten());
 
 		Ok(stream)
+	}
+}
+
+#[cfg(test)]
+mod tests {
+
+	use std::{collections::HashSet, env};
+
+	use super::*;
+	use dotenv::dotenv;
+
+	#[tokio::test]
+	async fn test_email_collector() {
+		dotenv().ok();
+		// Configure the Email collector config with a mock credential
+		let email_config = EmailCollectorConfig {
+			imap_server: "imap.gmail.com".to_string(),
+			imap_port: 993,
+			imap_username: env::var("IMAP_USERNAME").unwrap_or_else(|_| "".to_string()),
+			imap_password: env::var("IMAP_PASSWORD").unwrap_or_else(|_| "".to_string()),
+			imap_folder: "[Gmail]/Drafts".to_string(),
+			id: "Email-source-id".to_string(),
+		};
+
+		let email_source = EmailSource::new(email_config).await.unwrap();
+
+		assert!(
+			email_source.check_connectivity().await.is_ok(),
+			"Failed to connect to email source"
+		);
+
+		let result = email_source.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(_) => panic!("Expected successful data collection"),
+			}
+		}
+		println!("Files are --- {:?}", count_files);
 	}
 }
