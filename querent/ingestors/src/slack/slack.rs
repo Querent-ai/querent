@@ -11,19 +11,19 @@ use crate::{
 	IngestorResult,
 };
 
-// Define the NotionIngestor
-pub struct NotionIngestor {
+// Define the SlackIngestor
+pub struct SlackIngestor {
 	processors: Vec<Arc<dyn AsyncProcessor>>,
 }
 
-impl NotionIngestor {
+impl SlackIngestor {
 	pub fn new() -> Self {
 		Self { processors: Vec::new() }
 	}
 }
 
 #[async_trait]
-impl BaseIngestor for NotionIngestor {
+impl BaseIngestor for SlackIngestor {
 	fn set_processors(&mut self, processors: Vec<Arc<dyn AsyncProcessor>>) {
 		self.processors = processors;
 	}

@@ -17,7 +17,7 @@ use slack_morphism::{
 	api::SlackApiConversationsHistoryRequest, prelude::SlackClientHyperConnector, SlackApiToken,
 	SlackApiTokenValue, SlackChannelId, SlackClient, SlackClientMessageId, SlackCursorId, SlackTs,
 };
-use tokio::io::AsyncRead;
+use tokio::io::{AsyncRead, BufReader};
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
@@ -65,42 +65,14 @@ impl Source for SlackApiClient {
 	}
 
 	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
-		Ok(Vec::new())
-	}
-
-	async fn get_slice_stream(
-		&self,
-		_path: &Path,
-		_range: Range<usize>,
-	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		Ok(Box::new(string_to_async_read("".to_string())))
-	}
-
-	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
-		Ok(Vec::new())
-	}
-
-	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
-		Ok(2 as u64)
-	}
-
-	async fn copy_to(&self, _path: &Path, _output: &mut dyn SendableAsync) -> SourceResult<()> {
-		Ok(())
-	}
-
-	async fn poll_data(
-		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let session = self.client.open_session(&self.token);
 		let channel_id: SlackChannelId = SlackChannelId::new(self.channel.clone());
 		let mut cursor: Option<SlackCursorId> =
 			Some(SlackCursorId::new(self.cursor.clone().unwrap_or("".to_string())));
 		let latest: SlackTs = SlackTs::new(self.latest.clone().unwrap_or("".to_string()));
 		let oldest: SlackTs = SlackTs::new(self.oldest.clone().unwrap_or("".to_string()));
-		let mut all_messages: VecDeque<String> = VecDeque::new();
-		let mut all_messages_id: VecDeque<String> = VecDeque::new();
+		let mut all_messages = String::new();
 
-		println!("Reached here atleast ");
 		loop {
 			let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
 				channel: Some(channel_id.clone()),
@@ -116,7 +88,227 @@ impl Source for SlackApiClient {
 					anyhow::anyhow!("Error while getting the messages: {:?}", err).into(),
 				)
 			})?;
-			println!("Text is {:?}", message_response.has_more);
+
+			for messages in message_response.messages {
+				all_messages.push_str(&messages.content.text.unwrap_or("".to_string()));
+			}
+
+			if !message_response.has_more.unwrap_or(false) {
+				break;
+			}
+
+			cursor = message_response.response_metadata.unwrap().next_cursor;
+
+			if cursor.is_none() {
+				break;
+			}
+		}
+
+		Ok(all_messages.into())
+	}
+
+	async fn get_slice_stream(
+		&self,
+		_path: &Path,
+		_range: Range<usize>,
+	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
+		let session = self.client.open_session(&self.token);
+		let channel_id: SlackChannelId = SlackChannelId::new(self.channel.clone());
+		let mut cursor: Option<SlackCursorId> =
+			Some(SlackCursorId::new(self.cursor.clone().unwrap_or("".to_string())));
+		let latest: SlackTs = SlackTs::new(self.latest.clone().unwrap_or("".to_string()));
+		let oldest: SlackTs = SlackTs::new(self.oldest.clone().unwrap_or("".to_string()));
+		let mut all_messages = String::new();
+
+		loop {
+			let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
+				channel: Some(channel_id.clone()),
+				cursor: cursor.clone(),
+				latest: Some(latest.clone()),
+				limit: Some(self.limit.unwrap_or(100 as u16)),
+				oldest: Some(oldest.clone()),
+				inclusive: Some(self.inclusive.unwrap_or(true)),
+			};
+			let message_response = session.conversations_history(&req).await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while getting the messages: {:?}", err).into(),
+				)
+			})?;
+
+			for messages in message_response.messages {
+				all_messages.push_str(&messages.content.text.unwrap_or("".to_string()));
+			}
+
+			if !message_response.has_more.unwrap_or(false) {
+				break;
+			}
+
+			cursor = message_response.response_metadata.unwrap().next_cursor;
+
+			if cursor.is_none() {
+				break;
+			}
+		}
+		Ok(Box::new(string_to_async_read(all_messages)))
+	}
+
+	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
+		let session = self.client.open_session(&self.token);
+		let channel_id: SlackChannelId = SlackChannelId::new(self.channel.clone());
+		let mut cursor: Option<SlackCursorId> =
+			Some(SlackCursorId::new(self.cursor.clone().unwrap_or("".to_string())));
+		let latest: SlackTs = SlackTs::new(self.latest.clone().unwrap_or("".to_string()));
+		let oldest: SlackTs = SlackTs::new(self.oldest.clone().unwrap_or("".to_string()));
+		let mut all_messages = String::new();
+
+		loop {
+			let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
+				channel: Some(channel_id.clone()),
+				cursor: cursor.clone(),
+				latest: Some(latest.clone()),
+				limit: Some(self.limit.unwrap_or(100 as u16)),
+				oldest: Some(oldest.clone()),
+				inclusive: Some(self.inclusive.unwrap_or(true)),
+			};
+			let message_response = session.conversations_history(&req).await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while getting the messages: {:?}", err).into(),
+				)
+			})?;
+
+			for messages in message_response.messages {
+				all_messages.push_str(&messages.content.text.unwrap_or("".to_string()));
+			}
+
+			if !message_response.has_more.unwrap_or(false) {
+				break;
+			}
+
+			cursor = message_response.response_metadata.unwrap().next_cursor;
+
+			if cursor.is_none() {
+				break;
+			}
+		}
+		Ok(all_messages.into())
+	}
+
+	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
+		let session = self.client.open_session(&self.token);
+		let channel_id: SlackChannelId = SlackChannelId::new(self.channel.clone());
+		let mut cursor: Option<SlackCursorId> =
+			Some(SlackCursorId::new(self.cursor.clone().unwrap_or("".to_string())));
+		let latest: SlackTs = SlackTs::new(self.latest.clone().unwrap_or("".to_string()));
+		let oldest: SlackTs = SlackTs::new(self.oldest.clone().unwrap_or("".to_string()));
+		let mut all_messages = String::new();
+
+		loop {
+			let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
+				channel: Some(channel_id.clone()),
+				cursor: cursor.clone(),
+				latest: Some(latest.clone()),
+				limit: Some(self.limit.unwrap_or(100 as u16)),
+				oldest: Some(oldest.clone()),
+				inclusive: Some(self.inclusive.unwrap_or(true)),
+			};
+			let message_response = session.conversations_history(&req).await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while getting the messages: {:?}", err).into(),
+				)
+			})?;
+
+			for messages in message_response.messages {
+				all_messages.push_str(&messages.content.text.unwrap_or("".to_string()));
+			}
+
+			if !message_response.has_more.unwrap_or(false) {
+				break;
+			}
+
+			cursor = message_response.response_metadata.unwrap().next_cursor;
+
+			if cursor.is_none() {
+				break;
+			}
+		}
+		Ok(all_messages.len() as u64)
+	}
+
+	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
+		let session = self.client.open_session(&self.token);
+		let channel_id: SlackChannelId = SlackChannelId::new(self.channel.clone());
+		let mut cursor: Option<SlackCursorId> =
+			Some(SlackCursorId::new(self.cursor.clone().unwrap_or("".to_string())));
+		let latest: SlackTs = SlackTs::new(self.latest.clone().unwrap_or("".to_string()));
+		let oldest: SlackTs = SlackTs::new(self.oldest.clone().unwrap_or("".to_string()));
+		let mut all_messages = String::new();
+
+		loop {
+			let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
+				channel: Some(channel_id.clone()),
+				cursor: cursor.clone(),
+				latest: Some(latest.clone()),
+				limit: Some(self.limit.unwrap_or(100 as u16)),
+				oldest: Some(oldest.clone()),
+				inclusive: Some(self.inclusive.unwrap_or(true)),
+			};
+			let message_response = session.conversations_history(&req).await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while getting the messages: {:?}", err).into(),
+				)
+			})?;
+
+			for messages in message_response.messages {
+				all_messages.push_str(&messages.content.text.unwrap_or("".to_string()));
+			}
+
+			if !message_response.has_more.unwrap_or(false) {
+				break;
+			}
+
+			cursor = message_response.response_metadata.unwrap().next_cursor;
+
+			if cursor.is_none() {
+				break;
+			}
+		}
+
+		let mut body_stream_reader = BufReader::new(all_messages.as_bytes());
+		tokio::io::copy_buf(&mut body_stream_reader, output).await?;
+		Ok(())
+	}
+
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+		let session = self.client.open_session(&self.token);
+		let channel_id: SlackChannelId = SlackChannelId::new(self.channel.clone());
+		let mut cursor: Option<SlackCursorId> =
+			Some(SlackCursorId::new(self.cursor.clone().unwrap_or("".to_string())));
+		let latest: SlackTs = SlackTs::new(self.latest.clone().unwrap_or("".to_string()));
+		let oldest: SlackTs = SlackTs::new(self.oldest.clone().unwrap_or("".to_string()));
+		let mut all_messages: VecDeque<String> = VecDeque::new();
+		let mut all_messages_id: VecDeque<String> = VecDeque::new();
+
+		loop {
+			let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
+				channel: Some(channel_id.clone()),
+				cursor: cursor.clone(),
+				latest: Some(latest.clone()),
+				limit: Some(self.limit.unwrap_or(100 as u16)),
+				oldest: Some(oldest.clone()),
+				inclusive: Some(self.inclusive.unwrap_or(true)),
+			};
+			let message_response = session.conversations_history(&req).await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while getting the messages: {:?}", err).into(),
+				)
+			})?;
 
 			for messages in message_response.messages {
 				all_messages.extend(messages.content.text);
@@ -169,7 +361,7 @@ impl Source for SlackApiClient {
 #[cfg(test)]
 mod tests {
 
-	use std::collections::HashSet;
+	use std::{collections::HashSet, env};
 
 	use dotenv::dotenv;
 	use futures::StreamExt;
@@ -184,8 +376,12 @@ mod tests {
 			.install_default()
 			.expect("Failed to install rustls crypto provider");
 		let slack_config = SlackCollectorConfig {
-			access_token: "xoxb-6075931365250-7852915850802-NL0Z9ApsWwhV9sogoAyBQcfR".to_string(),
-			channel_name: "C061TBSDHB9".to_string(),
+			access_token: env::var("SLACK_API_TOKEN")
+				.map_err(|e| e.to_string())
+				.unwrap_or("".to_string()),
+			channel_name: env::var("SLACK_CHANNEL_NAME")
+				.map_err(|e| e.to_string())
+				.unwrap_or("".to_string()),
 			cursor: None,
 			oldest: None,
 			latest: None,
@@ -210,13 +406,12 @@ mod tests {
 				let mut count_files: HashSet<String> = HashSet::new();
 				while let Some(item) = stream.next().await {
 					match item {
-						Ok(collected_bytes) => {
+						Ok(collected_bytes) =>
 							if let Some(pathbuf) = collected_bytes.file {
 								if let Some(str_path) = pathbuf.to_str() {
 									count_files.insert(str_path.to_string());
 								}
-							}
-						},
+							},
 						Err(_) => panic!("Expected successful data collection"),
 					}
 				}

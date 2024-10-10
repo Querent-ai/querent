@@ -12,7 +12,8 @@ use crate::{
 	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
 	json::json::JsonIngestor, news::news::NewsIngestor, notion::notion::NotionIngestor,
 	odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor, pptx::pptx::PptxIngestor,
-	txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor, xml::xml::XmlIngestor,
+	slack::slack::SlackIngestor, txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor,
+	xml::xml::XmlIngestor,
 };
 use tracing::info;
 
@@ -215,6 +216,7 @@ pub async fn resolve_ingestor_with_extension(
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
 		"news" => Ok(Arc::new(NewsIngestor::new())),
+		"slack" => Ok(Arc::new(SlackIngestor::new())),
 		"notion" => Ok(Arc::new(NotionIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 		// _ => Err(IngestorError::new(

@@ -185,6 +185,28 @@ pub async fn create_dynamic_sources(
 					},
 				}
 			},
+
+			Some(proto::semantics::Backend::Slack(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
+				match sources::slack::slack::SlackApiClient::new(config.clone()).await {
+					Ok(slack_source) => {
+						sources.push(Arc::new(slack_source) as Arc<dyn sources::Source>);
+					},
+					Err(e) => {
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+							"Failed to initialize slack source: {:?} ",
+							e
+						)));
+					},
+				}
+			},
 			Some(proto::semantics::Backend::Email(config)) => {
 				#[cfg(feature = "license-check")]
 				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {

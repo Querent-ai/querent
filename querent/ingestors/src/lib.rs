@@ -14,6 +14,7 @@ pub mod odp;
 pub mod pdf;
 pub mod pptx;
 pub mod processors;
+pub mod slack;
 pub mod txt;
 pub mod xlsx;
 pub mod xml;
