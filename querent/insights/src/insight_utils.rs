@@ -1,5 +1,5 @@
-use common::DocumentPayload;
 use std::collections::HashMap;
+use storage::DiscoveredKnowledge;
 
 /// Function to get unique contexts
 pub fn unique_sentences(
@@ -8,26 +8,31 @@ pub fn unique_sentences(
 	let mut unique_sentences_map = HashMap::new();
 
 	for (_, _, entity1, entity2, _, sentence, _, _) in discovered_knowledge {
-		// Insert into HashMap only if the sentence is not already present
 		unique_sentences_map.entry(sentence).or_insert_with(|| {
 			format!("Entities: {} and {}, Sentence: {}", entity1, entity2, sentence)
 		});
 	}
-
-	// Collect only the values from the map, which are the formatted strings
 	let unique_sentences = unique_sentences_map.values().cloned().collect();
 	let count = unique_sentences_map.len();
 	(unique_sentences, count)
 }
 
 /// Function to extract sentences from documents
-pub fn extract_sentences(documents: &Vec<DocumentPayload>) -> Vec<&str> {
+pub fn extract_sentences(documents: &Vec<DiscoveredKnowledge>) -> Vec<&str> {
 	documents.iter().map(|doc| doc.sentence.as_str()).collect()
 }
 
 /// Function to split a group of sentences into sets of 10 sentences each
 pub fn split_sentences(sentences: &[String]) -> Vec<Vec<String>> {
 	sentences.chunks(10).map(|chunk| chunk.to_vec()).collect()
+}
+
+/// Function for computing cosine similarity.
+pub fn cosine_similarity(vec1: &Vec<f32>, vec2: &Vec<f32>) -> f32 {
+	let dot_product: f32 = vec1.iter().zip(vec2.iter()).map(|(a, b)| a * b).sum();
+	let magnitude1: f32 = vec1.iter().map(|v| v * v).sum::<f32>().sqrt();
+	let magnitude2: f32 = vec2.iter().map(|v| v * v).sum::<f32>().sqrt();
+	dot_product / (magnitude1 * magnitude2)
 }
 
 #[cfg(test)]
