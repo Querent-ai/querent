@@ -7,16 +7,15 @@
 	import { get } from 'svelte/store';
 
 	export let show = false;
-	export let insight: InsightInfo | null = null;
+	export let insight: InsightInfo ;
 	export let insightsId: string | null = null;
 	let sessionId: string;
+	let responseMessage = '';
 
 	let loadingStatus: boolean;
 	$: {
 		loadingStatus = $isLoadingInsight;
 	}
-
-	let messages: { text: string; isUser: boolean }[] = [];
 	let inputMessage = '';
 
 	let icon: string;
@@ -33,9 +32,10 @@
 			if (insightsId && insightsId !== '') {
 				sessionId = $insightSessionId;
 			} else {
+				responseMessage = '';
 				let additional_options: { [x: string]: string } = {};
 			let semantic_pipeline_id: string = '';
-			let query: string = '';
+			// let query: string = '';
 
 			if (insight?.additionalOptions) {
 				for (const key in insight.additionalOptions) {
@@ -58,8 +58,8 @@
 				semantic_pipeline_id: semantic_pipeline_id,
 				additional_options: additional_options
 			};
-			isLoading.set(true);
-
+			isLoadingInsight.set(true);
+			console.log("This is the query-------", request);
 			let res = await commands.triggerInsightAnalyst(request);
 				if (res.status == 'ok') {
 					insightSessionId.set(res.data.session_id);
@@ -69,54 +69,46 @@
 				}
 			}
 		} catch (error) {
-			console.error('Unexpected error while initializing chat:', error);
+			console.error('Unexpected error while initializing Graph Builder Insight:', error);
 		} finally {
 			isLoadingInsight.set(false);
 		}
 	}
 
 	async function sendMessage() {
-		if (inputMessage.trim()) {
-			messages = [...messages, { text: inputMessage, isUser: true }];
-			messagesList.update((list) => [...list, { text: inputMessage, isUser: true }]);
-
-			let query = inputMessage;
+		console.log("This is the query-------", inputMessage);
 			try {
-				setTimeout(async () => {
-					let request: InsightQuery = {
-						session_id: sessionId,
-						query: query
-					};
 					isLoadingInsight.set(true);
+					let request: InsightQuery = {
+					session_id: sessionId,
+					query: inputMessage,
+					};
 					let res = await commands.promptInsightAnalyst(request);
 					if (res.status == 'ok') {
-						let text = res.data.response
-							.replace(/\\n|\n/g, ' ')
-							.replace(/\s+/g, ' ')
-							.trim();
-						messages = [...messages, { text: text, isUser: false }];
-
-						messagesList.update((list) => [...list, { text: text, isUser: false }]);
+						console.log("This is the query-------", res.data);
+						responseMessage = res.data.response.replace(/\\n|\n/g, ' ').trim();
 					} else {
 						console.log('Error while processing the insight query:', res.error);
-					}
-				}, 100);
-				inputMessage = '';
+						responseMessage = formatErrorMessage(res.error);
+					}				
 			} catch (error) {
 				console.error('Unexpected error while sending message:', error);
 			} finally {
+				inputMessage = '';
 				isLoadingInsight.set(false);
 			}
-		}
 	}
 
 	function closeModal() {
 		show = false;
 	}
 
-	function formatMessageText(text: string) {
-		return text.replace(/\n/g, '<br>');
-	}
+	function formatErrorMessage(error: string): string {
+    if (error.includes('Received empty response')) {
+        return 'No data was returned from the insight. Please check your input and try again.';
+    }
+    return 'An error occurred while processing your request: ' + error;
+}
 
 	function handleKeyDown(event: { key: string; shiftKey: boolean; preventDefault: () => void }) {
 		if (event.key === 'Enter' && !event.shiftKey) {
@@ -127,86 +119,72 @@
 </script>
 
 <Modal bind:open={show} size="xl" class="w-full" autoclose={false} on:close={closeModal}>
-	<div class="mb-4 flex items-center justify-between">
+	<div class="modal-header mb-4 flex items-center justify-between">
 		<h3 class="text-xl font-medium text-gray-900 dark:text-white">
-			{insight ? insight.name : 'Chat'}
+			{insight ? insight.name : 'Query'}
 		</h3>
 	</div>
-	<div class="mb-4 h-96 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
-		{#if messages.length === 0}
-			<div class="flex h-full items-center justify-center">
-				<div class="flex items-center">
-					<Icon {icon} style="width: 48px; height: 48px;" />
-					<p class="ml-4">{description}</p>
-				</div>
+	<div class="modal-body">
+		<form on:submit|preventDefault={sendMessage} class="flex">
+			<textarea
+				placeholder="Enter your query or context..."
+				class="search-input"
+				id="searchInput"
+				bind:value={inputMessage}
+				on:keydown={handleKeyDown}
+			></textarea>
+			{#if loadingStatus}
+				<div class="loader mr-2"></div>
+			{/if}
+			<Button type="submit">Send</Button>
+		</form>
+		{#if responseMessage}
+			<div class="response mt-4 p-4 bg-white rounded-lg shadow">
+				<h4 class="text-lg font-semibold mb-2">Response:</h4>
+				<p class="text-gray-700 dark:text-white">{responseMessage}</p>
 			</div>
-		{:else}
-			{#each messages as message}
-				<div class={`mb-2 ${message.isUser ? 'text-right' : 'text-left'}`}>
-					<span
-						class={`inline-block rounded-lg p-2 ${message.isUser ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-600 dark:text-white'}`}
-					>
-						{@html formatMessageText(message.text)}
-					</span>
-				</div>
-			{/each}
 		{/if}
 	</div>
-	<form on:submit|preventDefault={sendMessage} class="flex">
-		<textarea
-			placeholder="Search..."
-			class="search-input"
-			id="searchInput"
-			bind:value={inputMessage}
-			on:keydown={handleKeyDown}
-		/>
-		{#if loadingStatus}
-			<div class="loader mr-2"></div>
-		{/if}
-		<Button type="submit">Send</Button>
-	</form>
 </Modal>
 
 <style>
 	:global(.modal-content > button[type='button']) {
 		display: none !important;
 	}
+
+	.modal-body {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+	}
 	.search-input {
 		flex-grow: 1;
 		min-height: 40px;
 		max-height: 120px;
 		padding: 10px;
-		border: 1px solid black;
+		border: 1px solid #ddd;
 		background: transparent;
-		outline: none;
-		padding: 5px;
-		resize: none;
-		overflow-y: auto;
-		margin-right: 50px;
-		font-family: inherit;
-		font-size: inherit;
-		line-height: 1.5;
-		overflow-y: hidden;
-		border-radius: 20px;
+		border-radius: 10px;
+		box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+		transition: border-color 0.3s ease, box-shadow 0.3s ease;
+		margin-right: 10px;
 	}
 
 	.search-input:focus {
-		outline: none;
-		box-shadow: none;
-		overflow-y: auto;
-	}
-	.flex.h-full.items-center.justify-center {
-		height: 100%;
+		border-color: #3498db;
+		box-shadow: 0px 2px 8px rgba(52, 152, 219, 0.4);
 	}
 
-	.flex.h-full.items-center.justify-center .flex.items-center {
-		max-width: 80%;
-		position: relative;
+	.modal-header {
+		background-color: #f9f9f9;
+		border-bottom: 1px solid #ddd;
+		padding: 1rem;
+		border-top-left-radius: 10px;
+		border-top-right-radius: 10px;
 	}
 
-	.flex.h-full.items-center.justify-center p {
-		margin-left: 1rem;
-	}
 	.loader {
 		border: 2px solid #f3f3f3;
 		border-top: 2px solid #3498db;
@@ -214,9 +192,6 @@
 		width: 20px;
 		height: 20px;
 		animation: spin 1s linear infinite;
-		position: absolute;
-		right: 100px;
-		bottom: 45px;
 	}
 
 	@keyframes spin {
@@ -226,5 +201,12 @@
 		100% {
 			transform: rotate(360deg);
 		}
+	}
+
+	.response {
+		background-color: #ffffff;
+		color: #333;
+		border-radius: 8px;
+		box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 	}
 </style>

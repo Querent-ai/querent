@@ -9,6 +9,7 @@
 	} from '../../../../service/bindings';
 	import Icon from '@iconify/svelte';
 	import ChatModal from './ChatModal.svelte';
+	import GBModal from './GBModal.svelte';
 	import { commands } from '../../../../service/bindings';
 	import { onMount } from 'svelte';
 	import Modal from '../sources/add/Modal.svelte';
@@ -53,7 +54,11 @@
 	}
 
 	async function continueRunningInsight() {
-		showChatModal = true;
+		if (selectedInsightForChat.id == 'querent.insights.graph_builder.gbv1') {
+			showGBModal = true;
+		} else {
+			showChatModal = true;
+		}
 	}
 
 	let showAdditionalOptionModal = false;
@@ -62,6 +67,7 @@
 	let modalMessage = '';
 
 	let showChatModal = false;
+	let showGBModal = false;
 	let selectedInsightForChat: InsightInfo;
 
 	function selectInsight(insight: InsightInfo) {
@@ -84,69 +90,11 @@
 	let responseModalMessage = '';
 	let isResponseError = false;
 	let isResponseModalOpen = false;
-	async function triggerGraphBuilder(insight: InsightInfo) {
-		try {
-			let additional_options: { [x: string]: string } = {};
-			let semantic_pipeline_id: string = '';
-			let query: string = '';
-
-			if (insight?.additionalOptions) {
-				for (const key in insight.additionalOptions) {
-					if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
-						if (insight.additionalOptions[key].value.type === 'string') {
-							if (key == 'semantic_pipeline_id') {
-								semantic_pipeline_id = insight.additionalOptions[key].value.value;
-							} 
-							// else if (key == 'query') {
-							// 	query = insight.additionalOptions[key].value.value; }
-							else {
-								additional_options[key] = insight.additionalOptions[key].value
-									.value as unknown as string;
-							}
-						}
-					}
-				}
-			}
-			let request: InsightAnalystRequest = {
-				id: insight.id,
-				discovery_session_id: '',
-				semantic_pipeline_id: semantic_pipeline_id,
-				additional_options: additional_options
-			};
-			isLoading.set(true);
-
-			let res = await commands.triggerInsightAnalyst(request);
-			if (res.status == 'ok') {
-				console.log('Insight triggered successfully');
-				let session_id = res.data.session_id;
-				let request: InsightQuery = {
-					session_id: session_id,
-					query: query
-				};
-				// let response = await commands.promptInsightAnalyst(request);
-				// if (response.status == 'ok') {
-				// 	responseModalMessage = response.data.response;
-				// 	isResponseError = false;
-				// } else {
-				// 	responseModalMessage = response.error;
-				// 	isResponseError = true;
-				// 	console.error('Insight not running successfully');
-				// }
-				// isResponseModalOpen = true;
-			} else {
-				console.error('Insight not triggered successfully');
-			}
-		} catch (e) {
-			console.error('Got error as ', e);
-		} finally {
-			isLoading.set(false);
-		}
-	}
 
 	async function handleSubmitOtions(event: CustomEvent<{ [key: string]: CustomInsightOption }>) {
 		if (selectedInsightForChat.id == 'querent.insights.graph_builder.gbv1') {
 			selectedInsightForChat.additionalOptions = event.detail;
-			await triggerGraphBuilder(selectedInsightForChat);
+			showGBModal = true;
 		} else {
 			selectedInsightForChat.additionalOptions = event.detail;
 			showChatModal = true;
@@ -211,6 +159,11 @@
 
 			<ChatModal
 				bind:show={showChatModal}
+				insight={selectedInsightForChat}
+				insightsId={runningInsightId}
+			/>
+			<GBModal
+				bind:show={showGBModal}
 				insight={selectedInsightForChat}
 				insightsId={runningInsightId}
 			/>
