@@ -290,15 +290,15 @@ message SlackCollectorConfig {
   // Channel name of the Slack collector.
   string channel_name = 2;
   // Cursor of the Slack collector.
-  string cursor = 3;
+  optional string cursor = 3;
   // Specify the beginning of the time range for messages
-  string oldest = 4;
+  optional string oldest = 4;
   // Inclusive of the Slack collector.
-  bool inclusive = 5;
+  optional bool inclusive = 5;
   // Limit of the Slack collector
-  int32 limit = 6;
+  optional int32 limit = 6;
   // Specify the end of the time range for messages
-  string latest = 7;
+  optional string latest = 7;
   // Id for the collector
   string id = 8;
 }

@@ -456,20 +456,20 @@ pub struct SlackCollectorConfig {
 	#[prost(string, tag = "2")]
 	pub channel_name: ::prost::alloc::string::String,
 	/// Cursor of the Slack collector.
-	#[prost(string, tag = "3")]
-	pub cursor: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "3")]
+	pub cursor: ::core::option::Option<::prost::alloc::string::String>,
 	/// Specify the beginning of the time range for messages
-	#[prost(string, tag = "4")]
-	pub oldest: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "4")]
+	pub oldest: ::core::option::Option<::prost::alloc::string::String>,
 	/// Inclusive of the Slack collector.
-	#[prost(bool, tag = "5")]
-	pub inclusive: bool,
+	#[prost(bool, optional, tag = "5")]
+	pub inclusive: ::core::option::Option<bool>,
 	/// Limit of the Slack collector
-	#[prost(int32, tag = "6")]
-	pub limit: i32,
+	#[prost(int32, optional, tag = "6")]
+	pub limit: ::core::option::Option<i32>,
 	/// Specify the end of the time range for messages
-	#[prost(string, tag = "7")]
-	pub latest: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "7")]
+	pub latest: ::core::option::Option<::prost::alloc::string::String>,
 	/// Id for the collector
 	#[prost(string, tag = "8")]
 	pub id: ::prost::alloc::string::String,
