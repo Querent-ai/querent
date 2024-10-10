@@ -7,7 +7,7 @@
 	import { get } from 'svelte/store';
 
 	export let show = false;
-	export let insight: InsightInfo ;
+	export let insight: InsightInfo;
 	export let insightsId: string | null = null;
 	let sessionId: string;
 	let responseMessage = '';
@@ -34,33 +34,32 @@
 			} else {
 				responseMessage = '';
 				let additional_options: { [x: string]: string } = {};
-			let semantic_pipeline_id: string = '';
-			// let query: string = '';
+				let semantic_pipeline_id: string = '';
+				// let query: string = '';
 
-			if (insight?.additionalOptions) {
-				for (const key in insight.additionalOptions) {
-					if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
-						if (insight.additionalOptions[key].value.type === 'string') {
-							if (key == 'semantic_pipeline_id') {
-								semantic_pipeline_id = insight.additionalOptions[key].value.value;
-							}
-							else {
-								additional_options[key] = insight.additionalOptions[key].value
-									.value as unknown as string;
+				if (insight?.additionalOptions) {
+					for (const key in insight.additionalOptions) {
+						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
+							if (insight.additionalOptions[key].value.type === 'string') {
+								if (key == 'semantic_pipeline_id') {
+									semantic_pipeline_id = insight.additionalOptions[key].value.value;
+								} else {
+									additional_options[key] = insight.additionalOptions[key].value
+										.value as unknown as string;
+								}
 							}
 						}
 					}
 				}
-			}
-			let request: InsightAnalystRequest = {
-				id: insight.id,
-				discovery_session_id: '',
-				semantic_pipeline_id: semantic_pipeline_id,
-				additional_options: additional_options
-			};
-			isLoadingInsight.set(true);
-			console.log("This is the query-------", request);
-			let res = await commands.triggerInsightAnalyst(request);
+				let request: InsightAnalystRequest = {
+					id: insight.id,
+					discovery_session_id: '',
+					semantic_pipeline_id: semantic_pipeline_id,
+					additional_options: additional_options
+				};
+				isLoadingInsight.set(true);
+				console.log('This is the query-------', request);
+				let res = await commands.triggerInsightAnalyst(request);
 				if (res.status == 'ok') {
 					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
@@ -76,27 +75,27 @@
 	}
 
 	async function sendMessage() {
-		console.log("This is the query-------", inputMessage);
-			try {
-					isLoadingInsight.set(true);
-					let request: InsightQuery = {
-					session_id: sessionId,
-					query: inputMessage,
-					};
-					let res = await commands.promptInsightAnalyst(request);
-					if (res.status == 'ok') {
-						console.log("This is the query-------", res.data);
-						responseMessage = res.data.response.replace(/\\n|\n/g, ' ').trim();
-					} else {
-						console.log('Error while processing the insight query:', res.error);
-						responseMessage = formatErrorMessage(res.error);
-					}				
-			} catch (error) {
-				console.error('Unexpected error while sending message:', error);
-			} finally {
-				inputMessage = '';
-				isLoadingInsight.set(false);
+		console.log('This is the query-------', inputMessage);
+		try {
+			isLoadingInsight.set(true);
+			let request: InsightQuery = {
+				session_id: sessionId,
+				query: inputMessage
+			};
+			let res = await commands.promptInsightAnalyst(request);
+			if (res.status == 'ok') {
+				console.log('This is the query-------', res.data);
+				responseMessage = res.data.response.replace(/\\n|\n/g, ' ').trim();
+			} else {
+				console.log('Error while processing the insight query:', res.error);
+				responseMessage = formatErrorMessage(res.error);
 			}
+		} catch (error) {
+			console.error('Unexpected error while sending message:', error);
+		} finally {
+			inputMessage = '';
+			isLoadingInsight.set(false);
+		}
 	}
 
 	function closeModal() {
@@ -104,11 +103,11 @@
 	}
 
 	function formatErrorMessage(error: string): string {
-    if (error.includes('Received empty response')) {
-        return 'No data was returned from the insight. Please check your input and try again.';
-    }
-    return 'An error occurred while processing your request: ' + error;
-}
+		if (error.includes('Received empty response')) {
+			return 'No data was returned from the insight. Please check your input and try again.';
+		}
+		return 'An error occurred while processing your request: ' + error;
+	}
 
 	function handleKeyDown(event: { key: string; shiftKey: boolean; preventDefault: () => void }) {
 		if (event.key === 'Enter' && !event.shiftKey) {
@@ -139,8 +138,8 @@
 			<Button type="submit">Send</Button>
 		</form>
 		{#if responseMessage}
-			<div class="response mt-4 p-4 bg-white rounded-lg shadow">
-				<h4 class="text-lg font-semibold mb-2">Response:</h4>
+			<div class="response mt-4 rounded-lg bg-white p-4 shadow">
+				<h4 class="mb-2 text-lg font-semibold">Response:</h4>
 				<p class="text-gray-700 dark:text-white">{responseMessage}</p>
 			</div>
 		{/if}
@@ -153,11 +152,11 @@
 	}
 
 	.modal-body {
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 1rem;
-    background-color: #f9f9f9;
-    border-radius: 10px;
+		max-height: 200px;
+		overflow-y: auto;
+		padding: 1rem;
+		background-color: #f9f9f9;
+		border-radius: 10px;
 	}
 	.search-input {
 		flex-grow: 1;
@@ -168,7 +167,9 @@
 		background: transparent;
 		border-radius: 10px;
 		box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-		transition: border-color 0.3s ease, box-shadow 0.3s ease;
+		transition:
+			border-color 0.3s ease,
+			box-shadow 0.3s ease;
 		margin-right: 10px;
 	}
 
