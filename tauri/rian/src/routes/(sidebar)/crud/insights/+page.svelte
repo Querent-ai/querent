@@ -32,7 +32,6 @@
 		try {
 			const res = await commands.listAvailableInsights();
 			if (res.status === 'ok') {
-				// Separate free insights first for better grouping
 				insightList = res.data.sort((a, b) => (a.premium ? 1 : 0) - (b.premium ? 1 : 0));
 			} else {
 				console.error('Error fetching insights:', res.error);
@@ -68,12 +67,11 @@
 
 	function selectInsight(insight: InsightInfo) {
 		if (insight.premium) {
-			modalMessage =
-				'This feature is available only in Pro. Learn more about the features and pricing on our ';
+			modalMessage = 'This feature is available only in the Pro version.';
 			showModal = true;
 		} else {
 			if (runningInsightId) {
-				modalMessage = 'You already have a running insight';
+				modalMessage = 'You already have a running insight.';
 				showModal = true;
 				return;
 			}
@@ -158,9 +156,7 @@
 				insight={selectedInsightForChat}
 				insightsId={runningInsightId}
 			/>
-			<Modal bind:show={showModal}>
-				<p>{modalMessage}<a href="/pricing" class="text-blue-500 underline">Pricing Page</a>.</p>
-			</Modal>
+			<Modal bind:show={showModal} message={modalMessage} />
 
 			{#if selectedInsightForChat}
 				<AdditionalOptionalModal
@@ -224,7 +220,7 @@
 		display: flex;
 		align-items: center;
 		gap: 0.5rem;
-		line-height: 1.2; /* Ensures consistent line height */
+		line-height: 1.2;
 	}
 
 	.insight-badge.pro {
@@ -234,7 +230,7 @@
 		font-weight: 500;
 		background-color: #f97316;
 		color: white;
-		align-self: flex-start; /* Keeps the badge aligned properly */
+		align-self: flex-start;
 	}
 
 	.insight-description {
@@ -252,6 +248,15 @@
 		right: 30px;
 		display: flex;
 		gap: 10px;
+	}
+
+	.modal-close-button {
+		background: #007bff;
+		color: white;
+		padding: 0.5rem 1rem;
+		border-radius: 5px;
+		margin-top: 1rem;
+		cursor: pointer;
 	}
 
 	.stop-button,
