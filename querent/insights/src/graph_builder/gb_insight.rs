@@ -94,7 +94,7 @@ impl GBV1 {
 				license: "BSL-1.0".to_string(),
 				iconify_icon: "ph:graph-duotone".to_string(),
 				additional_options,
-				conversational: false,
+				conversational: true,
 				premium: false,
 			},
 		}

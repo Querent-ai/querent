@@ -96,9 +96,10 @@
 						if (insight.additionalOptions[key].value.type === 'string') {
 							if (key == 'semantic_pipeline_id') {
 								semantic_pipeline_id = insight.additionalOptions[key].value.value;
-							} else if (key == 'query') {
-								query = insight.additionalOptions[key].value.value;
-							} else {
+							} 
+							// else if (key == 'query') {
+							// 	query = insight.additionalOptions[key].value.value; }
+							else {
 								additional_options[key] = insight.additionalOptions[key].value
 									.value as unknown as string;
 							}
@@ -122,16 +123,16 @@
 					session_id: session_id,
 					query: query
 				};
-				let response = await commands.promptInsightAnalyst(request);
-				if (response.status == 'ok') {
-					responseModalMessage = response.data.response;
-					isResponseError = false;
-				} else {
-					responseModalMessage = response.error;
-					isResponseError = true;
-					console.error('Insight not running successfully');
-				}
-				isResponseModalOpen = true;
+				// let response = await commands.promptInsightAnalyst(request);
+				// if (response.status == 'ok') {
+				// 	responseModalMessage = response.data.response;
+				// 	isResponseError = false;
+				// } else {
+				// 	responseModalMessage = response.error;
+				// 	isResponseError = true;
+				// 	console.error('Insight not running successfully');
+				// }
+				// isResponseModalOpen = true;
 			} else {
 				console.error('Insight not triggered successfully');
 			}
