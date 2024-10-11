@@ -32,8 +32,8 @@ pub struct NewsApiClient {
 	domains: Option<String>,
 	exclude_domains: Option<String>,
 	search_in: Option<String>,
-    country: Option<String>,
-    category: Option<String>,
+	country: Option<String>,
+	category: Option<String>,
 }
 
 impl NewsApiClient {
@@ -56,7 +56,7 @@ impl NewsApiClient {
 			exclude_domains: config.exclude_domains.clone(),
 			search_in: config.search_in.clone(),
 			country: config.country.clone(),
-        	category: config.category.clone(),
+			category: config.category.clone(),
 		})
 	}
 
@@ -95,73 +95,70 @@ impl NewsApiClient {
 	}
 
 	pub async fn create_query(&self, page: u32) -> String {
-		let mut url = format!(
-			"https://newsapi.org/v2/{}?apiKey={}",
-			self.query_type, self.api_token
-		);
+		let mut url =
+			format!("https://newsapi.org/v2/{}?apiKey={}", self.query_type, self.api_token);
 
 		url.push_str(&format!("&q={}", self.query)); //Need to make it optional
-	
+
 		// Add pagination
 		url.push_str(&format!("&page={}", page));
 		if let Some(page_size) = self.page_size {
 			url.push_str(&format!("&pageSize={}", page_size));
 		}
-	
+
 		// Handle "everything" specific parameters
 		if self.query_type == "everything" {
 			if let Some(search_in) = &self.search_in {
 				url.push_str(&format!("&searchIn={}", search_in));
 			}
-	
+
 			if let Some(domains) = &self.domains {
 				url.push_str(&format!("&domains={}", domains));
 			}
-	
+
 			if let Some(exclude_domains) = &self.exclude_domains {
 				url.push_str(&format!("&excludeDomains={}", exclude_domains));
 			}
-	
+
 			if let Some(from) = &self.from {
 				url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
 			}
-	
+
 			if let Some(to) = &self.to {
 				url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
 			}
-	
+
 			if let Some(sort_by) = &self.sort_by {
 				url.push_str(&format!("&sortBy={}", sort_by));
 			}
 		}
-	
+
 		// Handle "top-headlines" specific parameters
 		if self.query_type == "top-headlines" {
 			if let Some(country) = &self.country {
 				url.push_str(&format!("&country={}", country));
 			}
-	
+
 			if let Some(category) = &self.category {
 				url.push_str(&format!("&category={}", category));
 			}
-	
+
 			if let Some(sources) = &self.sources {
 				url.push_str(&format!("&sources={}", sources));
 			}
-	
+
 			// Ensure no invalid combinations
 			if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
 				eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
 			}
 		}
-	
+
 		if let Some(language) = &self.language {
 			url.push_str(&format!("&language={}", language));
 		}
-	
+
 		url
 	}
-	
 
 	fn string_to_datetime(s: Option<String>) -> Option<DateTime<Utc>> {
 		s.and_then(|date_string| {
@@ -333,7 +330,7 @@ impl Source for NewsApiClient {
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let source_id = self.source_id.clone();
-		let page_size = self.page_size.unwrap_or(20); 
+		let page_size = self.page_size.unwrap_or(20);
 		let mut page = 1;
 		let self_cloned = self.clone();
 		let stream = stream! {
@@ -431,6 +428,8 @@ mod tests {
 			search_in: None,
 			page_size: Some(10),
 			domains: None,
+			country: None,
+			category: None,
 		};
 
 		let news_api_client = NewsApiClient::new(news_config).await.unwrap();

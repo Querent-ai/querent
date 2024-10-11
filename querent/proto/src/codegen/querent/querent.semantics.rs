@@ -551,6 +551,12 @@ pub struct NewsCollectorConfig {
     /// Page Size of the News Response
     #[prost(int32, optional, tag = "13")]
     pub page_size: ::core::option::Option<i32>,
+    /// The 2-letter ISO 3166-1 code of the country you want to get headlines for. Possible options: us. Note: you can't mix this param with the sources param.
+    #[prost(string, optional, tag = "14")]
+    pub country: ::core::option::Option<::prost::alloc::string::String>,
+    /// The category you want to get headlines for. Possible options: business, entertainment, general, health, science, sports, technology. Note: you can't mix this param with the sources param.
+    #[prost(string, optional, tag = "15")]
+    pub category: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
