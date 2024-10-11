@@ -330,14 +330,16 @@ message NewsCollectorConfig {
   optional string language = 7;
   // Sort by for the News Collector
   optional SortBy sort_by = 8;
-  // Page Size of the News Response
-  optional int32 page_size = 9;
-  // Page number of the News Response
-  optional int32 page = 10;
   // Comma-seperated string of Domains of the News Collector
-  optional string domains = 11;
+  optional string domains = 9;
   // Id for the collector
-  string id = 12;
+  string id = 10;
+   // A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+  optional string exclude_domains = 11;
+  // The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+  optional string search_in = 12;
+    // Page Size of the News Response
+  optional int32 page_size = 13;
 }
 
 message OneDriveConfig {

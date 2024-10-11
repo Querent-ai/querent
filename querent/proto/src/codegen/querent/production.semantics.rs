@@ -476,43 +476,47 @@ pub struct SlackCollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct NewsCollectorConfig {
-	/// API key of the News collector.
-	#[prost(string, tag = "1")]
-	pub api_key: ::prost::alloc::string::String,
-	/// Query of the News collector.
-	#[prost(string, tag = "2")]
-	pub query: ::prost::alloc::string::String,
-	/// Query type of the News collector.
-	#[prost(enumeration = "QueryType", tag = "3")]
-	pub query_type: i32,
-	/// Comma separated sources of the news representing news sources or blogs
-	#[prost(string, optional, tag = "4")]
-	pub sources: ::core::option::Option<::prost::alloc::string::String>,
-	/// From date of the News collector.
-	#[prost(string, optional, tag = "5")]
-	pub from_date: ::core::option::Option<::prost::alloc::string::String>,
-	/// To date of the News collector.
-	#[prost(string, optional, tag = "6")]
-	pub to_date: ::core::option::Option<::prost::alloc::string::String>,
-	/// Language of the News collector.
-	#[prost(string, optional, tag = "7")]
-	pub language: ::core::option::Option<::prost::alloc::string::String>,
-	/// Sort by for the News Collector
-	#[prost(enumeration = "SortBy", optional, tag = "8")]
-	pub sort_by: ::core::option::Option<i32>,
+    /// API key of the News collector.
+    #[prost(string, tag = "1")]
+    pub api_key: ::prost::alloc::string::String,
+    /// Query of the News collector.
+    #[prost(string, tag = "2")]
+    pub query: ::prost::alloc::string::String,
+    /// Query type of the News collector.
+    #[prost(enumeration = "QueryType", tag = "3")]
+    pub query_type: i32,
+    /// Comma separated sources of the news representing news sources or blogs
+    #[prost(string, optional, tag = "4")]
+    pub sources: ::core::option::Option<::prost::alloc::string::String>,
+    /// From date of the News collector.
+    #[prost(string, optional, tag = "5")]
+    pub from_date: ::core::option::Option<::prost::alloc::string::String>,
+    /// To date of the News collector.
+    #[prost(string, optional, tag = "6")]
+    pub to_date: ::core::option::Option<::prost::alloc::string::String>,
+    /// Language of the News collector.
+    #[prost(string, optional, tag = "7")]
+    pub language: ::core::option::Option<::prost::alloc::string::String>,
+    /// Sort by for the News Collector
+    #[prost(enumeration = "SortBy", optional, tag = "8")]
+    pub sort_by: ::core::option::Option<i32>,
+    /// Comma-seperated string of Domains of the News Collector
+    #[prost(string, optional, tag = "9")]
+    pub domains: ::core::option::Option<::prost::alloc::string::String>,
+    /// Id for the collector
+    #[prost(string, tag = "10")]
+    pub id: ::prost::alloc::string::String,
+    /// A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+    #[prost(string, optional, tag = "11")]
+    pub exclude_domains: ::core::option::Option<::prost::alloc::string::String>,
+    /// The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+    #[prost(string, optional, tag = "12")]
+    pub search_in: ::core::option::Option<::prost::alloc::string::String>,
 	/// Page Size of the News Response
-	#[prost(int32, optional, tag = "9")]
+	#[prost(int32, optional, tag = "13")]
 	pub page_size: ::core::option::Option<i32>,
-	/// Page number of the News Response
-	#[prost(int32, optional, tag = "10")]
-	pub page: ::core::option::Option<i32>,
-	/// Comma-seperated string of Domains of the News Collector
-	#[prost(string, optional, tag = "11")]
-	pub domains: ::core::option::Option<::prost::alloc::string::String>,
-	/// Id for the collector
-	#[prost(string, tag = "12")]
-	pub id: ::prost::alloc::string::String,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]

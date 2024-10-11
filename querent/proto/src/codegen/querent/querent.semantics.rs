@@ -536,18 +536,21 @@ pub struct NewsCollectorConfig {
     /// Sort by for the News Collector
     #[prost(enumeration = "SortBy", optional, tag = "8")]
     pub sort_by: ::core::option::Option<i32>,
-    /// Page Size of the News Response
-    #[prost(int32, optional, tag = "9")]
-    pub page_size: ::core::option::Option<i32>,
-    /// Page number of the News Response
-    #[prost(int32, optional, tag = "10")]
-    pub page: ::core::option::Option<i32>,
     /// Comma-seperated string of Domains of the News Collector
-    #[prost(string, optional, tag = "11")]
+    #[prost(string, optional, tag = "9")]
     pub domains: ::core::option::Option<::prost::alloc::string::String>,
     /// Id for the collector
-    #[prost(string, tag = "12")]
+    #[prost(string, tag = "10")]
     pub id: ::prost::alloc::string::String,
+    /// A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+    #[prost(string, optional, tag = "11")]
+    pub exclude_domains: ::core::option::Option<::prost::alloc::string::String>,
+    /// The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+    #[prost(string, optional, tag = "12")]
+    pub search_in: ::core::option::Option<::prost::alloc::string::String>,
+    /// Page Size of the News Response
+    #[prost(int32, optional, tag = "13")]
+    pub page_size: ::core::option::Option<i32>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
