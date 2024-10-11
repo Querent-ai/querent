@@ -38,8 +38,12 @@ pub struct NewsApiClient {
 
 impl NewsApiClient {
 	pub async fn new(config: NewsCollectorConfig) -> anyhow::Result<Self> {
+		println!("Dates-----{:?}", config.to_date);
+		println!("Dates-----{:?}", config.from_date);
 		let to_date = Self::string_to_datetime(config.to_date.clone());
 		let from_date = Self::string_to_datetime(config.from_date.clone());
+		println!("Dates-----{:?}", to_date);
+		println!("Dates-----{:?}", from_date);
 		Ok(NewsApiClient {
 			client: reqwest::Client::new(),
 			api_token: config.api_key.to_string(),
@@ -62,7 +66,7 @@ impl NewsApiClient {
 
 	pub async fn fetch_news(&self, page: u32) -> Result<NewsResponse, SourceError> {
 		let url = self.create_query(page).await;
-
+		println!("This is the url :m {:?}", url);
 		let response = self
 			.client
 			.get(&url)
@@ -94,20 +98,13 @@ impl NewsApiClient {
 		Ok(news_response)
 	}
 
-	pub async fn create_query(&self, page: u32) -> String {
-		let mut url =
-			format!("https://newsapi.org/v2/{}?apiKey={}", self.query_type, self.api_token);
+	pub async fn create_query(&self, page: u32) -> String {	
+		let mut url = "".to_string();
 
-		if let Some(query) = &self.query {
-			if !query.is_empty() {
-				url.push_str(&format!("&q={}", query));
-			}
-		}
-		url.push_str(&format!("&page={}", page));
-		if let Some(page_size) = self.page_size {
-			url.push_str(&format!("&pageSize={}", page_size));
-		}
-		if self.query_type == "everything" {
+		if self.query_type.to_lowercase() == "everything" {
+			url =
+			format!("https://newsapi.org/v2/{}?apiKey={}", "everything", self.api_token);
+			
 			if let Some(search_in) = &self.search_in {
 				url.push_str(&format!("&searchIn={}", search_in));
 			}
@@ -122,37 +119,50 @@ impl NewsApiClient {
 
 			if let Some(from) = &self.from {
 				url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
+				eprintln!("This is the url33 :m {:?}", url);
 			}
 
 			if let Some(to) = &self.to {
 				url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
+				eprintln!("This is the url44 :m {:?}", url);
 			}
 
 			if let Some(sort_by) = &self.sort_by {
 				url.push_str(&format!("&sortBy={}", sort_by));
 			}
+			println!("This is the url11 :m {:?}", url);
 		}
-		if self.query_type == "top-headlines" {
-			if let Some(country) = &self.country {
-				url.push_str(&format!("&country={}", country));
-			}
+		if self.query_type == "topheadlines" {
+			url =
+			format!("https://newsapi.org/v2/{}?apiKey={}", "top-headlines", self.api_token);
+				if let Some(country) = &self.country {
+					url.push_str(&format!("&country={}", country));
+				}
 
-			if let Some(category) = &self.category {
-				url.push_str(&format!("&category={}", category));
-			}
+				if let Some(category) = &self.category {
+					url.push_str(&format!("&category={}", category));
+				}
 
-			if let Some(sources) = &self.sources {
-				url.push_str(&format!("&sources={}", sources));
+				if let Some(sources) = &self.sources {
+					url.push_str(&format!("&sources={}", sources));
+				}
+				if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
+					eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
+				}
 			}
-			if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
-				eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
-			}
-		}
 
 		if let Some(language) = &self.language {
 			url.push_str(&format!("&language={}", language));
 		}
-
+		if let Some(query) = &self.query {
+			if !query.is_empty() {
+				url.push_str(&format!("&q={}", query));
+			}
+		}
+		url.push_str(&format!("&page={}", page));
+		if let Some(page_size) = self.page_size {
+			url.push_str(&format!("&pageSize={}", page_size));
+		}
 		url
 	}
 
@@ -161,12 +171,13 @@ impl NewsApiClient {
 			DateTime::parse_from_rfc3339(&date_string)
 				.map(|dt| dt.with_timezone(&Utc))
 				.or_else(|_| {
-					Err(NaiveDate::parse_from_str(&date_string, "%Y-%m-%d").ok().map(|nd| {
-						DateTime::<Utc>::from_naive_utc_and_offset(
-							nd.and_hms_opt(0, 0, 0).unwrap(),
-							Utc,
-						)
-					}))
+					NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
+						.map(|nd| {
+							DateTime::<Utc>::from_naive_utc_and_offset(
+								nd.and_hms_opt(0, 0, 0).unwrap(),
+								Utc,
+							)
+						})
 				})
 				.ok()
 		})
@@ -331,7 +342,7 @@ mod tests {
 			sort_by: None,
 			exclude_domains: None,
 			search_in: None,
-			page_size: Some(10),
+			page_size: Some(100),
 			domains: None,
 			country: None,
 			category: None,
@@ -345,6 +356,7 @@ mod tests {
 				let mut found_error = false;
 				while let Some(item) = stream.next().await {
 					if item.is_err() {
+						println!("This is the error ----{:?}", item.err());
 						found_error = true;
 						break;
 					}
@@ -375,7 +387,7 @@ mod tests {
 			sort_by: None,
 			exclude_domains: None,
 			search_in: None,
-			page_size: Some(10),
+			page_size: Some(100),
 			domains: None,
 			country: None,
 			category: None,
@@ -420,7 +432,7 @@ mod tests {
 			sort_by: None,
 			exclude_domains: None,
 			search_in: None,
-			page_size: Some(10),
+			page_size: Some(100),
 			domains: None,
 			country: None,
 			category: None,
@@ -473,7 +485,7 @@ mod tests {
 			sort_by: None,
 			exclude_domains: None,
 			search_in: None,
-			page_size: Some(1),
+			page_size: Some(100),
 			domains: None,
 			country: None,
 			category: None,
@@ -516,7 +528,7 @@ mod tests {
 			sort_by: Some(0),
 			exclude_domains: None,
 			search_in: None,
-			page_size: Some(10),
+			page_size: Some(100),
 			domains: None,
 			country: None,
 			category: None,
@@ -531,6 +543,10 @@ mod tests {
 				while let Some(item) = stream.next().await {
 					if item.is_ok() {
 						found_data = true;
+						break;
+					}
+					else if item.is_err() {
+						println!("Erroe {:?}", item.err());
 						break;
 					}
 				}

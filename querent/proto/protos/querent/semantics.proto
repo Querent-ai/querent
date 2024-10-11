@@ -302,14 +302,14 @@ message SlackCollectorConfig {
 }
 
 enum QueryType {
-  Everything = 0;
-  TopHeadlines = 1;
+  everything = 0;
+  topheadlines = 1;
 }
 
 enum SortBy {
-  Relevancy = 0;
-  Popularity = 1;
-  PublishedAt = 2;
+  relevancy = 0;
+  popularity = 1;
+  publishedAt = 2;
 }
 
 // NewsCollectorConfig is a message to hold configuration for a News collector.

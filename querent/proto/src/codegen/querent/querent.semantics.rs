@@ -639,7 +639,7 @@ impl Model {
 #[repr(i32)]
 pub enum QueryType {
     Everything = 0,
-    TopHeadlines = 1,
+    Topheadlines = 1,
 }
 impl QueryType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -648,15 +648,15 @@ impl QueryType {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            QueryType::Everything => "Everything",
-            QueryType::TopHeadlines => "TopHeadlines",
+            QueryType::Everything => "everything",
+            QueryType::Topheadlines => "topheadlines",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "Everything" => Some(Self::Everything),
-            "TopHeadlines" => Some(Self::TopHeadlines),
+            "everything" => Some(Self::Everything),
+            "topheadlines" => Some(Self::Topheadlines),
             _ => None,
         }
     }
@@ -678,17 +678,17 @@ impl SortBy {
     /// (if the ProtoBuf definition does not change) and safe for programmatic use.
     pub fn as_str_name(&self) -> &'static str {
         match self {
-            SortBy::Relevancy => "Relevancy",
-            SortBy::Popularity => "Popularity",
-            SortBy::PublishedAt => "PublishedAt",
+            SortBy::Relevancy => "relevancy",
+            SortBy::Popularity => "popularity",
+            SortBy::PublishedAt => "publishedAt",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
-            "Relevancy" => Some(Self::Relevancy),
-            "Popularity" => Some(Self::Popularity),
-            "PublishedAt" => Some(Self::PublishedAt),
+            "relevancy" => Some(Self::Relevancy),
+            "popularity" => Some(Self::Popularity),
+            "publishedAt" => Some(Self::PublishedAt),
             _ => None,
         }
     }
