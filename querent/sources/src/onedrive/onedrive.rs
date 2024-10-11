@@ -225,6 +225,7 @@ impl Source for OneDriveSource {
 							size: Some(size as usize),
 							source_id: source_id.clone(),
 							_owned_permit: None,
+							image_id: None,
 						});
 					}
 				}

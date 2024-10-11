@@ -69,6 +69,7 @@ impl BaseIngestor for EmailIngestor {
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id: None,
 			};
 
 			yield Ok(ingested_tokens);
@@ -80,6 +81,7 @@ impl BaseIngestor for EmailIngestor {
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 

@@ -36,6 +36,7 @@ impl BaseIngestor for ImageIngestor {
 			let mut file = String::new();
 			let mut doc_source = String::new();
 			let mut source_id = String::new();
+			let mut image_id: Option<String> = None;
 			for collected_bytes in all_collected_bytes {
 				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 					continue;
@@ -45,6 +46,9 @@ impl BaseIngestor for ImageIngestor {
 				}
 				if doc_source.is_empty() {
 					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				if image_id.is_some() {
+					image_id = collected_bytes.image_id.clone();
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
@@ -66,6 +70,7 @@ impl BaseIngestor for ImageIngestor {
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id,
 			};
 			yield Ok(ingested_tokens);
 
@@ -75,6 +80,7 @@ impl BaseIngestor for ImageIngestor {
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 
@@ -106,6 +112,7 @@ mod tests {
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
 			_owned_permit: None,
+			image_id: None,
 		};
 
 		// Create a TxtIngestor instance

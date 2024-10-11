@@ -276,6 +276,7 @@ impl Source for EmailSource {
 						extension: Some(file_extension),
 						size: Some(content.len()),
 						_owned_permit: None,
+						image_id: None,
 					});
 				}
 
@@ -290,6 +291,7 @@ impl Source for EmailSource {
 					extension: Some("txt".to_string()),
 					size: Some(body.len() as usize),
 					_owned_permit: None,
+					image_id: None,
 				});
 			}
 		}
