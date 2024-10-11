@@ -1,3 +1,4 @@
+use super::structs::NewsResponse;
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 use anyhow::Result;
 use async_stream::stream;
@@ -14,7 +15,6 @@ use std::{
 	pin::Pin,
 };
 use tokio::io::{AsyncRead, BufReader};
-use super::structs::NewsResponse;
 
 #[derive(Clone, Debug)]
 pub struct NewsApiClient {
@@ -26,12 +26,12 @@ pub struct NewsApiClient {
 	language: Option<String>,
 	sort_by: Option<String>,
 	from: Option<DateTime<Utc>>,
-    to: Option<DateTime<Utc>>,
+	to: Option<DateTime<Utc>>,
 	page_size: Option<u32>,
 	sources: Option<String>,
 	domains: Option<String>,
 	exclude_domains: Option<String>,
-    search_in: Option<String>,
+	search_in: Option<String>,
 }
 
 impl NewsApiClient {
@@ -52,7 +52,7 @@ impl NewsApiClient {
 			language: config.language.clone(),
 			page_size: config.page_size.map(|ps| ps as u32),
 			exclude_domains: config.exclude_domains.clone(),
-            search_in: config.search_in.clone(),
+			search_in: config.search_in.clone(),
 		})
 	}
 
@@ -70,35 +70,32 @@ impl NewsApiClient {
 					SourceErrorKind::Io,
 					anyhow::anyhow!("Error making the API request: {:?}", err).into(),
 				)
-			});
-			let news_response: NewsResponse = response.json::<NewsResponse>().await.map_err(|err| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Failed to parse JSON response: {:?}", err).into(),
-				)
 			})?;
-			if news_response.status != "ok" {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!(
-						news_response
-							.message
-							.unwrap_or_else(|| "Failed to fetch news".to_string())
-					),
-				));
-			}
-	
-			Ok(news_response)
+		let news_response: NewsResponse = response.json::<NewsResponse>().await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed to parse JSON response: {:?}", err).into(),
+			)
+		})?;
+		if news_response.status != "ok" {
+			return Err(SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!(news_response
+					.message
+					.unwrap_or_else(|| "Failed to fetch news".to_string()))
+				.into(),
+			));
 		}
 
+		Ok(news_response)
+	}
+
 	pub async fn create_query(&self, page: u32) -> String {
-		let mut url = format!(
-			"https://newsapi.org/v2/{}?&apiKey={}",
-			self.query_type, self.api_token
-		);
+		let mut url =
+			format!("https://newsapi.org/v2/{}?&apiKey={}", self.query_type, self.api_token);
 		if !self.query.is_empty() {
-            url.push_str(&format!("&q={}", self.query));
-        }
+			url.push_str(&format!("&q={}", self.query));
+		}
 
 		if let Some(language) = &self.language {
 			if !language.is_empty() {
@@ -121,12 +118,12 @@ impl NewsApiClient {
 		url.push_str(&format!("&page={}", page));
 
 		if let Some(from) = &self.from {
-            url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
-        }
+			url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
+		}
 
 		if let Some(to) = &self.to {
-            url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
-        }
+			url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
+		}
 
 		if let Some(sources) = &self.sources {
 			if !sources.is_empty() {
@@ -139,37 +136,39 @@ impl NewsApiClient {
 			}
 		}
 		if let Some(exclude_domains) = &self.exclude_domains {
-            if !exclude_domains.is_empty() {
-                url.push_str(&format!("&excludeDomains={}", exclude_domains));
-            }
-        }
+			if !exclude_domains.is_empty() {
+				url.push_str(&format!("&excludeDomains={}", exclude_domains));
+			}
+		}
 
-        if let Some(search_in) = &self.search_in {
-            if !search_in.is_empty() {
-                url.push_str(&format!("&searchIn={}", search_in));
-            }
-        }
+		if let Some(search_in) = &self.search_in {
+			if !search_in.is_empty() {
+				url.push_str(&format!("&searchIn={}", search_in));
+			}
+		}
 
 		url
 	}
 
 	fn string_to_datetime(s: Option<String>) -> Option<DateTime<Utc>> {
-        s.and_then(|date_string| {
-            DateTime::parse_from_rfc3339(&date_string)
-                .map(|dt| dt.with_timezone(&Utc))
-                .or_else(|_| {
-                    NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
-                        .ok()
-                        .map(|nd| DateTime::<Utc>::from_utc(nd.and_hms(0, 0, 0), Utc))
-                })
-                .ok()
-        })
-    }
-
-
-	fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
-		Cursor::new(description.into_bytes())
+		s.and_then(|date_string| {
+			DateTime::parse_from_rfc3339(&date_string)
+				.map(|dt| dt.with_timezone(&Utc))
+				.or_else(|_| {
+					Err(NaiveDate::parse_from_str(&date_string, "%Y-%m-%d").ok().map(|nd| {
+						DateTime::<Utc>::from_naive_utc_and_offset(
+							nd.and_hms_opt(0, 0, 0).unwrap(),
+							Utc,
+						)
+					}))
+				})
+				.ok()
+		})
 	}
+}
+
+fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
+	Cursor::new(description.into_bytes())
 }
 
 #[async_trait]
@@ -193,21 +192,19 @@ impl Source for NewsApiClient {
 				)
 			})?;
 
-			let news_response: NewsResponse = response.json::<NewsResponse>().await?;
+		let news_response: NewsResponse = response.json::<NewsResponse>().await?;
 
-			if news_response.status != "ok" {
-				return Err(anyhow::anyhow!(
-					news_response
-						.message
-						.unwrap_or_else(|| "Failed to set the connection for the News Source".to_string())
-				));
-			}
-	
-			Ok(())
+		if news_response.status != "ok" {
+			return Err(anyhow::anyhow!(news_response.message.unwrap_or_else(|| {
+				"Failed to set the connection for the News Source".to_string()
+			})));
 		}
 
+		Ok(())
+	}
+
 	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let news = self.fetch_news().await.map_err(|err| {
+		let news = self.fetch_news(1).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
@@ -233,7 +230,7 @@ impl Source for NewsApiClient {
 		_path: &Path,
 		_range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let news = self.fetch_news().await.map_err(|err| {
+		let news = self.fetch_news(1).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
@@ -254,7 +251,7 @@ impl Source for NewsApiClient {
 	}
 
 	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
-		let news = self.fetch_news().await.map_err(|err| {
+		let news = self.fetch_news(1).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
@@ -276,7 +273,7 @@ impl Source for NewsApiClient {
 	}
 
 	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
-		let news = self.fetch_news().await.map_err(|err| {
+		let news = self.fetch_news(1).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
@@ -297,7 +294,7 @@ impl Source for NewsApiClient {
 	}
 
 	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let news = self.fetch_news().await.map_err(|err| {
+		let news = self.fetch_news(1).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
@@ -332,71 +329,71 @@ impl Source for NewsApiClient {
 		// 	)
 		// })?;
 		let stream = stream! {
-            loop {
-                match self.fetch_news(page).await {
-                    Ok(news) => {
-                        if news.status == "ok" {
-                            if let Some(articles) = news.articles {
-                                if articles.is_empty() {
-                                    break;
-                                }
+			loop {
+				match self.fetch_news(page).await {
+					Ok(news) => {
+						if news.status == "ok" {
+							if let Some(articles) = news.articles {
+								if articles.is_empty() {
+									break;
+								}
 
-                                for individual_news in articles {
-                                    let file_name = individual_news.title
-                                        .clone()
-                                        .map_or(".news".to_string(), |title| format!("{}.news", title));
-                                    let file_name_path = Some(PathBuf::from(file_name));
+								for individual_news in articles {
+									let file_name = individual_news.title
+										.clone()
+										.map_or(".news".to_string(), |title| format!("{}.news", title));
+									let file_name_path = Some(PathBuf::from(file_name));
 
-                                    let data_str = serde_json::to_string_pretty(&individual_news)
-                                        .unwrap_or_else(|_| "".to_string());
-                                    let data_len = data_str.len();
+									let data_str = serde_json::to_string_pretty(&individual_news)
+										.unwrap_or_else(|_| "".to_string());
+									let data_len = data_str.len();
 
-                                    let doc_source = individual_news.source.name.clone();
+									let doc_source = individual_news.source.name.clone();
 
-                                    let collected_bytes = CollectedBytes::new(
-                                        file_name_path,
-                                        Some(Box::pin(string_to_async_read(data_str))),
-                                        true,
-                                        doc_source,
-                                        Some(data_len),
-                                        source_id.clone(),
-                                        None,
-                                    );
-                                    yield Ok(collected_bytes);
-                                }
+									let collected_bytes = CollectedBytes::new(
+										file_name_path,
+										Some(Box::pin(string_to_async_read(data_str))),
+										true,
+										doc_source,
+										Some(data_len),
+										source_id.clone(),
+										None,
+									);
+									yield Ok(collected_bytes);
+								}
 
-                                let total_results = news.total_results.unwrap_or(0);
-                                let total_pages = (total_results as f64 / page_size as f64).ceil() as u32;
-                                if page < total_pages {
-                                    page += 1;
-                                } else {
-                                    break;
-                                }
-                            } else {
-                                break;
-                            }
-                        } else {
-                            yield Err(SourceError::new(
-                                SourceErrorKind::Io,
-                                anyhow::anyhow!(
-                                    news
-                                        .message
-                                        .unwrap_or_else(|| "Failed to fetch news".to_string())
-                                ),
-                            ));
-                            break;
-                        }
-                    },
-                    Err(err) => {
-                        yield Err(err);
-                        break;
-                    }
-                }
-            }
-        };
+								let total_results = news.total_results.unwrap_or(0);
+								let total_pages = (total_results as f64 / page_size as f64).ceil() as u32;
+								if page < total_pages {
+									page += 1;
+								} else {
+									break;
+								}
+							} else {
+								break;
+							}
+						} else {
+							yield Err(SourceError::new(
+								SourceErrorKind::Io,
+								anyhow::anyhow!(
+									news
+										.message
+										.unwrap_or_else(|| "Failed to fetch news".to_string())
+								).into(),
+							));
+							break;
+						}
+					},
+					Err(err) => {
+						yield Err(err);
+						break;
+					}
+				}
+			}
+		};
 
-        Ok(Box::pin(stream))
-    }
+		Ok(Box::pin(stream))
+	}
 }
 
 #[cfg(test)]
@@ -422,7 +419,8 @@ mod tests {
 			to_date: None,
 			language: None,
 			sort_by: None,
-			page: None,
+			exclude_domains: None,
+			search_in: None,
 			page_size: Some(10),
 			domains: None,
 		};
@@ -443,12 +441,13 @@ mod tests {
 				let mut count_files: HashSet<String> = HashSet::new();
 				while let Some(item) = stream.next().await {
 					match item {
-						Ok(collected_bytes) =>
+						Ok(collected_bytes) => {
 							if let Some(pathbuf) = collected_bytes.file {
 								if let Some(str_path) = pathbuf.to_str() {
 									count_files.insert(str_path.to_string());
 								}
-							},
+							}
+						},
 						Err(_) => panic!("Expected successful data collection"),
 					}
 				}
