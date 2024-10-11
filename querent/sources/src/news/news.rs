@@ -32,6 +32,8 @@ pub struct NewsApiClient {
 	domains: Option<String>,
 	exclude_domains: Option<String>,
 	search_in: Option<String>,
+    country: Option<String>,
+    category: Option<String>,
 }
 
 impl NewsApiClient {
@@ -53,6 +55,8 @@ impl NewsApiClient {
 			page_size: config.page_size.map(|ps| ps as u32),
 			exclude_domains: config.exclude_domains.clone(),
 			search_in: config.search_in.clone(),
+			country: config.country.clone(),
+        	category: config.category.clone(),
 		})
 	}
 
@@ -91,64 +95,73 @@ impl NewsApiClient {
 	}
 
 	pub async fn create_query(&self, page: u32) -> String {
-		let mut url =
-			format!("https://newsapi.org/v2/{}?&apiKey={}", self.query_type, self.api_token);
-		if !self.query.is_empty() {
-			url.push_str(&format!("&q={}", self.query));
-		}
+		let mut url = format!(
+			"https://newsapi.org/v2/{}?apiKey={}",
+			self.query_type, self.api_token
+		);
 
-		if let Some(language) = &self.language {
-			if !language.is_empty() {
-				url.push_str(&format!("&language={}", language));
+		url.push_str(&format!("&q={}", self.query)); //Need to make it optional
+	
+		// Add pagination
+		url.push_str(&format!("&page={}", page));
+		if let Some(page_size) = self.page_size {
+			url.push_str(&format!("&pageSize={}", page_size));
+		}
+	
+		// Handle "everything" specific parameters
+		if self.query_type == "everything" {
+			if let Some(search_in) = &self.search_in {
+				url.push_str(&format!("&searchIn={}", search_in));
 			}
-		}
-
-		if let Some(sort_by) = &self.sort_by {
-			if !sort_by.is_empty() {
+	
+			if let Some(domains) = &self.domains {
+				url.push_str(&format!("&domains={}", domains));
+			}
+	
+			if let Some(exclude_domains) = &self.exclude_domains {
+				url.push_str(&format!("&excludeDomains={}", exclude_domains));
+			}
+	
+			if let Some(from) = &self.from {
+				url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
+			}
+	
+			if let Some(to) = &self.to {
+				url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
+			}
+	
+			if let Some(sort_by) = &self.sort_by {
 				url.push_str(&format!("&sortBy={}", sort_by));
 			}
 		}
-
-		if let Some(page_size) = self.page_size {
-			if page_size > 0 {
-				url.push_str(&format!("&pageSize={}", page_size));
+	
+		// Handle "top-headlines" specific parameters
+		if self.query_type == "top-headlines" {
+			if let Some(country) = &self.country {
+				url.push_str(&format!("&country={}", country));
 			}
-		}
-
-		url.push_str(&format!("&page={}", page));
-
-		if let Some(from) = &self.from {
-			url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
-		}
-
-		if let Some(to) = &self.to {
-			url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
-		}
-
-		if let Some(sources) = &self.sources {
-			if !sources.is_empty() {
+	
+			if let Some(category) = &self.category {
+				url.push_str(&format!("&category={}", category));
+			}
+	
+			if let Some(sources) = &self.sources {
 				url.push_str(&format!("&sources={}", sources));
 			}
-		}
-		if let Some(domains) = &self.domains {
-			if !domains.is_empty() {
-				url.push_str(&format!("&domains={}", domains));
+	
+			// Ensure no invalid combinations
+			if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
+				eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
 			}
 		}
-		if let Some(exclude_domains) = &self.exclude_domains {
-			if !exclude_domains.is_empty() {
-				url.push_str(&format!("&excludeDomains={}", exclude_domains));
-			}
+	
+		if let Some(language) = &self.language {
+			url.push_str(&format!("&language={}", language));
 		}
-
-		if let Some(search_in) = &self.search_in {
-			if !search_in.is_empty() {
-				url.push_str(&format!("&searchIn={}", search_in));
-			}
-		}
-
+	
 		url
 	}
+	
 
 	fn string_to_datetime(s: Option<String>) -> Option<DateTime<Utc>> {
 		s.and_then(|date_string| {
@@ -320,17 +333,12 @@ impl Source for NewsApiClient {
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let source_id = self.source_id.clone();
-		let page_size = self.page_size.unwrap_or(20); //Need to ask gpt
+		let page_size = self.page_size.unwrap_or(20); 
 		let mut page = 1;
-		// let news = self.fetch_news().await.map_err(|err| {
-		// 	SourceError::new(
-		// 		SourceErrorKind::Io,
-		// 		anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
-		// 	)
-		// })?;
+		let self_cloned = self.clone();
 		let stream = stream! {
 			loop {
-				match self.fetch_news(page).await {
+				match self_cloned.fetch_news(page).await {
 					Ok(news) => {
 						if news.status == "ok" {
 							if let Some(articles) = news.articles {
