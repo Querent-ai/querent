@@ -480,8 +480,8 @@ pub struct NewsCollectorConfig {
 	#[prost(string, tag = "1")]
 	pub api_key: ::prost::alloc::string::String,
 	/// Query of the News collector.
-	#[prost(string, tag = "2")]
-	pub query: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+    pub query: ::core::option::Option<::prost::alloc::string::String>,
 	/// Query type of the News collector.
 	#[prost(enumeration = "QueryType", tag = "3")]
 	pub query_type: i32,

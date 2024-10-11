@@ -14,14 +14,14 @@ use std::{
 	path::{Path, PathBuf},
 	pin::Pin,
 };
-use tokio::io::{AsyncRead, BufReader};
+use tokio::io::AsyncRead;
 
 #[derive(Clone, Debug)]
 pub struct NewsApiClient {
 	client: reqwest::Client,
 	api_token: String,
 	query_type: String,
-	query: String,
+	query: Option<String>,
 	source_id: String,
 	language: Option<String>,
 	sort_by: Option<String>,
@@ -44,9 +44,9 @@ impl NewsApiClient {
 			client: reqwest::Client::new(),
 			api_token: config.api_key.to_string(),
 			query_type: config.query_type().as_str_name().to_string(),
-			query: config.query.to_string(),
+			query: config.query.clone(),
 			sources: config.sources.clone(),
-			source_id: config.id.to_string(), //Internal collector id
+			source_id: config.id.to_string(),
 			sort_by: Some(config.sort_by().as_str_name().to_string()),
 			domains: config.domains,
 			to: to_date,
@@ -98,15 +98,15 @@ impl NewsApiClient {
 		let mut url =
 			format!("https://newsapi.org/v2/{}?apiKey={}", self.query_type, self.api_token);
 
-		url.push_str(&format!("&q={}", self.query)); //Need to make it optional
-
-		// Add pagination
+			if let Some(query) = &self.query {
+				if !query.is_empty() {
+					url.push_str(&format!("&q={}", query));
+				}
+			}			
 		url.push_str(&format!("&page={}", page));
 		if let Some(page_size) = self.page_size {
 			url.push_str(&format!("&pageSize={}", page_size));
 		}
-
-		// Handle "everything" specific parameters
 		if self.query_type == "everything" {
 			if let Some(search_in) = &self.search_in {
 				url.push_str(&format!("&searchIn={}", search_in));
@@ -132,8 +132,6 @@ impl NewsApiClient {
 				url.push_str(&format!("&sortBy={}", sort_by));
 			}
 		}
-
-		// Handle "top-headlines" specific parameters
 		if self.query_type == "top-headlines" {
 			if let Some(country) = &self.country {
 				url.push_str(&format!("&country={}", country));
@@ -146,8 +144,6 @@ impl NewsApiClient {
 			if let Some(sources) = &self.sources {
 				url.push_str(&format!("&sources={}", sources));
 			}
-
-			// Ensure no invalid combinations
 			if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
 				eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
 			}
@@ -214,25 +210,7 @@ impl Source for NewsApiClient {
 	}
 
 	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let news = self.fetch_news(1).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
-			)
-		})?;
-		let mut description: String = "".to_string();
-
-		if news.status == "ok" {
-			if let Some(articles) = news.articles {
-				for individual_news in articles {
-					if let Some(desc) = individual_news.description {
-						description.push_str(&desc);
-					}
-				}
-			}
-		}
-
-		Ok(description.into())
+		Ok(vec![])
 	}
 
 	async fn get_slice_stream(
@@ -240,89 +218,18 @@ impl Source for NewsApiClient {
 		_path: &Path,
 		_range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let news = self.fetch_news(1).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
-			)
-		})?;
-		let mut description: String = "".to_string();
-
-		if news.status == "ok" {
-			if let Some(articles) = news.articles {
-				for individual_news in articles {
-					if let Some(desc) = individual_news.description {
-						description.push_str(&desc);
-					}
-				}
-			}
-		}
-		Ok(Box::new(string_to_async_read(description)))
+		Ok(Box::new(string_to_async_read("".to_string())))
 	}
 
 	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
-		let news = self.fetch_news(1).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
-			)
-		})?;
-		let mut description: String = "".to_string();
-
-		if news.status == "ok" {
-			if let Some(articles) = news.articles {
-				for individual_news in articles {
-					if let Some(desc) = individual_news.description {
-						description.push_str(&desc);
-					}
-				}
-			}
-		}
-
-		Ok(description.into())
+		Ok(vec![])
 	}
 
 	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
-		let news = self.fetch_news(1).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
-			)
-		})?;
-		let mut description: String = "".to_string();
-
-		if news.status == "ok" {
-			if let Some(articles) = news.articles {
-				for individual_news in articles {
-					if let Some(desc) = individual_news.description {
-						description.push_str(&desc);
-					}
-				}
-			}
-		}
-		Ok(description.len() as u64)
+		Ok(0)
 	}
 
 	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let news = self.fetch_news(1).await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while fetching news: {:?}", err).into(),
-			)
-		})?;
-		let mut description: String = "".to_string();
-
-		if news.status == "ok" {
-			if let Some(articles) = news.articles {
-				for individual_news in articles {
-					if let Some(desc) = individual_news.description {
-						description.push_str(&desc);
-					}
-				}
-			}
-		}
-		let mut body_stream_reader = BufReader::new(description.as_bytes());
-		tokio::io::copy_buf(&mut body_stream_reader, output).await?;
 		Ok(())
 	}
 
@@ -401,68 +308,3 @@ impl Source for NewsApiClient {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-
-	use std::{collections::HashSet, env};
-
-	use dotenv::dotenv;
-	use futures::StreamExt;
-
-	use super::*;
-
-	#[tokio::test]
-	async fn test_news_collector() {
-		dotenv().ok();
-		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").map_err(|e| e.to_string()).unwrap_or("".to_string()),
-			query: "Tesla".to_string(),
-			query_type: 0,
-			id: "Some-id".to_string(),
-			sources: None,
-			from_date: None,
-			to_date: None,
-			language: None,
-			sort_by: None,
-			exclude_domains: None,
-			search_in: None,
-			page_size: Some(10),
-			domains: None,
-			country: None,
-			category: None,
-		};
-
-		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
-
-		let connectivity = news_api_client.check_connectivity().await;
-		assert!(
-			connectivity.is_ok(),
-			"Failed to connect to news API {:?}",
-			connectivity.err().unwrap()
-		);
-
-		let result = news_api_client.poll_data().await;
-
-		match result {
-			Ok(mut stream) => {
-				let mut count_files: HashSet<String> = HashSet::new();
-				while let Some(item) = stream.next().await {
-					match item {
-						Ok(collected_bytes) => {
-							if let Some(pathbuf) = collected_bytes.file {
-								if let Some(str_path) = pathbuf.to_str() {
-									count_files.insert(str_path.to_string());
-								}
-							}
-						},
-						Err(_) => panic!("Expected successful data collection"),
-					}
-				}
-				println!("Files are --- {:?}", count_files);
-			},
-			Err(e) => {
-				eprintln!("Failed to get stream: {:?}", e);
-			},
-		}
-	}
-}

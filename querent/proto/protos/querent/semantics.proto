@@ -317,7 +317,7 @@ message NewsCollectorConfig {
   // API key of the News collector.
   string api_key = 1;
   // Query of the News collector.
-  string query = 2;
+  optional string query = 2;
   // Query type of the News collector.
   QueryType query_type = 3;
   // Comma separated sources of the news representing news sources or blogs
