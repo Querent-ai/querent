@@ -98,11 +98,11 @@ impl NewsApiClient {
 		let mut url =
 			format!("https://newsapi.org/v2/{}?apiKey={}", self.query_type, self.api_token);
 
-			if let Some(query) = &self.query {
-				if !query.is_empty() {
-					url.push_str(&format!("&q={}", query));
-				}
-			}			
+		if let Some(query) = &self.query {
+			if !query.is_empty() {
+				url.push_str(&format!("&q={}", query));
+			}
+		}
 		url.push_str(&format!("&page={}", page));
 		if let Some(page_size) = self.page_size {
 			url.push_str(&format!("&pageSize={}", page_size));
@@ -229,7 +229,7 @@ impl Source for NewsApiClient {
 		Ok(0)
 	}
 
-	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
+	async fn copy_to(&self, _path: &Path, _output: &mut dyn SendableAsync) -> SourceResult<()> {
 		Ok(())
 	}
 
@@ -308,3 +308,287 @@ impl Source for NewsApiClient {
 	}
 }
 
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use dotenv::dotenv;
+	use futures::StreamExt;
+	use std::{collections::HashSet, env};
+
+	// Negative tests
+	#[tokio::test]
+	async fn test_invalid_api_key() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: "invalid_key".to_string(),
+			query: Some("Tesla".to_string()),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: None,
+			to_date: None,
+			language: None,
+			sort_by: None,
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(10),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut found_error = false;
+				while let Some(item) = stream.next().await {
+					if item.is_err() {
+						found_error = true;
+						break;
+					}
+				}
+				assert!(
+					found_error,
+					"Expected at least one error in the stream with an invalid API key"
+				);
+			},
+			Err(_) => {
+				assert!(false, "Expected a stream but encountered an error during stream creation")
+			},
+		}
+	}
+
+	#[tokio::test]
+	async fn test_empty_query() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			query: Some("".to_string()),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: None,
+			to_date: None,
+			language: None,
+			sort_by: None,
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(10),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut found_error = false;
+				while let Some(item) = stream.next().await {
+					if item.is_err() {
+						found_error = true;
+						break;
+					}
+				}
+				assert!(
+					found_error,
+					"Expected at least one error in the stream with an empty query"
+				);
+			},
+			Err(_) => {
+				assert!(false, "Expected a stream but encountered an error during stream creation")
+			},
+		}
+	}
+
+	// Special case tests
+	#[tokio::test]
+	async fn test_query_with_special_characters() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			query: Some("@!#$%^&*".to_string()),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: None,
+			to_date: None,
+			language: None,
+			sort_by: None,
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(10),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut found_error = false;
+				let mut found_data = false;
+				while let Some(item) = stream.next().await {
+					match item {
+						Ok(collected_bytes) => {
+							found_data = true;
+							println!("Collected bytes: {:?}", collected_bytes.file);
+						},
+						Err(err) => {
+							found_error = true;
+							println!("Found an error: {:?}", err);
+							break;
+						},
+					}
+				}
+
+				assert!(
+                found_error || !found_data,
+                "Expected an error or no data for a query with special characters, but got data"
+            );
+			},
+			Err(_) => {
+				assert!(false, "Expected a stream but encountered an error during stream creation");
+			},
+		}
+	}
+
+	#[tokio::test]
+	async fn test_query_with_future_dates() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			query: Some("Tesla".to_string()),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			from_date: Some("2100-01-01".to_string()),
+			to_date: Some("2100-12-31".to_string()),
+			sources: None,
+			language: None,
+			sort_by: None,
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(1),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut found_error = false;
+				while let Some(item) = stream.next().await {
+					if item.is_err() {
+						found_error = true;
+						println!("Erroe {:?}", item.err());
+						break;
+					}
+				}
+				assert!(found_error, "Expected at least one error in the stream with future dates");
+			},
+			Err(_) => {
+				assert!(false, "Expected a stream but encountered an error during stream creation")
+			},
+		}
+	}
+
+	// Happy path test
+	#[tokio::test]
+	async fn test_successful_news_fetch() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			query: Some("Technology".to_string()),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: None,
+			to_date: None,
+			language: Some("en".to_string()),
+			sort_by: Some(0),
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(10),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut found_data = false;
+				while let Some(item) = stream.next().await {
+					if item.is_ok() {
+						found_data = true;
+						break;
+					}
+				}
+				assert!(found_data, "Expected at least one successful data item in the stream");
+			},
+			Err(_) => {
+				assert!(false, "Expected a stream but encountered an error during stream creation")
+			},
+		}
+	}
+
+	// Multiple files test
+	#[tokio::test]
+	async fn test_multiple_news_pages() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			query: Some("Technology".to_string()),
+			query_type: 0,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: None,
+			to_date: None,
+			language: Some("en".to_string()),
+			sort_by: Some(0),
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(5),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut count = 0;
+				let mut file_names: HashSet<String> = HashSet::new();
+				while let Some(item) = stream.next().await {
+					if let Ok(collected_bytes) = item {
+						if let Some(file_path) = collected_bytes.file.clone() {
+							if let Some(path_str) = file_path.to_str() {
+								file_names.insert(path_str.to_string());
+							}
+						}
+						count += 1;
+					}
+				}
+
+				assert!(count > 0, "Expected multiple pages but got none");
+				assert!(!file_names.is_empty(), "Expected file names but found none");
+			},
+			Err(e) => {
+				println!("Error as {:?}", e.source);
+				assert!(false, "Expected a stream but encountered an error during stream creation")
+			},
+		}
+	}
+}
