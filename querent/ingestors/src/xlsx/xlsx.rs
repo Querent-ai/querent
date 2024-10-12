@@ -92,15 +92,6 @@ impl BaseIngestor for XlsxIngestor {
 
 						yield Ok(ingested_tokens);
 					}
-					yield Ok(IngestedTokens {
-						data: vec![],
-						file: file.clone(),
-						doc_source: doc_source.clone(),
-						is_token_stream: false,
-						source_id: source_id.clone(),
-						image_id: None,
-					})
-
 				},
 				Err(e) => {
 					eprintln!("Error parsing xlsx - {}", e);
@@ -168,6 +159,14 @@ impl BaseIngestor for XlsxIngestor {
 					}
 				}
 			}
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
+			})
 		};
 		let processed_stream =
 			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;

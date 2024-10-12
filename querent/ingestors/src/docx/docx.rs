@@ -105,7 +105,7 @@ impl BaseIngestor for DocxIngestor {
 				}
 			}
 
-			if xml_data.is_empty() {
+			if xml_data.is_empty() && images.is_empty() {
 				error!("No content.xml found in the archive or the file is empty");
 				return;
 			}
