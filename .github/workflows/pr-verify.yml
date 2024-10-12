@@ -50,6 +50,14 @@ jobs:
               - '**/*.rs'
               - '**/Cargo.toml'
               - 'e2e/**/*.{ts,json}'
+  checkout_code:
+    name: Checkout Repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
   setup:
     name: Setup dependencies and caching
@@ -81,7 +89,7 @@ jobs:
   verify:
     name: Check PR Commit
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [setup, changes, checkout_code]
     if: ${{ needs.changes.outputs.rust == 'true' }}
     steps:
       - name: Checkout code
