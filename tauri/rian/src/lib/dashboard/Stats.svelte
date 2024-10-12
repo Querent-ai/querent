@@ -96,7 +96,7 @@
 			{ label: 'Incoming Events', number: products.total_events_received },
 			{ label: 'Events Processed Successfully', number: products.total_events_processed },
 			{ label: 'Outgoing Events', number: products.total_events_sent },
-			{ label: 'Total Data Volume Processed', number: products.total_data_processed_size }
+			{ label: 'Total Data Volume Processed (mb)', number: products.total_data_processed_size }
 		];
 	}
 </script>
