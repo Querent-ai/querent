@@ -111,6 +111,7 @@ impl BaseIngestor for PdfIngestor {
 							match tokens {
 								Ok(tokens) =>
 									if !tokens.data.is_empty() {
+										// only yield good tokens
 										yield Ok(tokens);
 									},
 								Err(e) => {
@@ -319,7 +320,6 @@ mod tests {
 				Ok(tokens) =>
 					if !tokens.data.is_empty() {
 						if tokens.image_id.is_some() {
-							eprintln!("Image token found: {:?}", tokens);
 							is_image_found = true;
 						}
 						all_data.push(tokens.data);
