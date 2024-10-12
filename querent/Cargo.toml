@@ -277,6 +277,8 @@ rustls-native-certs = "0.8.0"
 sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
 notion = "0.6.0"
 surrealdb = { version = "1.5.4", features = ["kv-rocksdb"] }
+leptess = "0.14.0"
+image = "0.25.2"
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates

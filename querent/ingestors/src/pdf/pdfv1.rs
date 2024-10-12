@@ -144,8 +144,8 @@ struct PagePlainTextOutput {
 	inner: PlainTextOutput<OutputWrapper>,
 	pages: HashMap<u32, (String, HasImage)>,
 	images: HashMap<u32, Vec<u8>>,
-	images_ext: HashMap<u32, String>,
 	current_page: u32,
+	current_page_has_image: bool,
 	reader: Arc<Mutex<String>>,
 	document: Arc<lopdf::Document>,
 	inner_pages: BTreeMap<u32, (u32, u16)>,
@@ -177,10 +177,10 @@ impl PagePlainTextOutput {
 			document,
 			pages: HashMap::new(),
 			current_page: 0,
+			current_page_has_image: false,
 			reader: s,
 			inner: PlainTextOutput::new(OutputWrapper(writer)),
 			images: HashMap::new(),
-			images_ext: HashMap::new(),
 		}
 	}
 }
@@ -193,20 +193,14 @@ impl OutputDev for PagePlainTextOutput {
 		art_box: Option<(f64, f64, f64, f64)>,
 	) -> Result<(), OutputError> {
 		self.current_page = page_num;
-		self.images.clear();
+		self.current_page_has_image = false;
 		self.reader.lock().unwrap().clear(); // Ensure the buffer is clear at the start of each page
 		let page = self.inner_pages.get(&page_num).unwrap_or(&(0, 0));
 		let page_images = self.document.get_page_images(page.clone());
 		if let Ok(images) = page_images {
+			self.current_page_has_image = images.len() > 0;
 			for image in images {
-				let format = guess_format(&image.content.to_vec());
 				self.images.insert(image.id.0, image.content.to_vec());
-				let mut ext = "jpeg";
-				if let Ok(f) = format {
-					ext = f.to_mime_type();
-					ext = ext.split("/").last().unwrap_or("jpeg");
-				}
-				self.images_ext.insert(image.id.0, ext.to_string());
 			}
 		}
 		self.inner.begin_page(page_num, media_box, art_box)
@@ -214,10 +208,8 @@ impl OutputDev for PagePlainTextOutput {
 
 	fn end_page(&mut self) -> Result<(), OutputError> {
 		self.inner.end_page()?;
-
 		let buf = self.reader.lock().unwrap().clone();
-		self.pages
-			.insert(self.current_page, (buf, self.images.contains_key(&self.current_page)));
+		self.pages.insert(self.current_page, (buf, self.current_page_has_image));
 		self.reader.lock().unwrap().clear();
 
 		Ok(())
@@ -292,5 +284,52 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest PDF file");
+	}
+
+	#[tokio::test]
+	async fn test_pdf_ingestor_with_images() {
+		let included_bytes = include_bytes!("../../../../test_data/scanned.pdf");
+		let bytes = included_bytes.to_vec();
+
+		// Create a CollectedBytes instance
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("GeoExProQuerent.pdf").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pdf".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		// Create a TxtIngestor instance
+		let ingestor = PdfIngestor::new();
+
+		// Ingest the file
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		let mut is_image_found = false;
+		while let Some(tokens) = stream.next().await {
+			eprintln!("Tokens: {:?}", tokens);
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						if tokens.image_id.is_some() {
+							eprintln!("Image token found: {:?}", tokens);
+							is_image_found = true;
+						}
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest PDF file");
+		assert!(is_image_found, "Unable to ingest PDF file with images");
 	}
 }
