@@ -1,18 +1,24 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
+use image::guess_format;
 use tokio::io::AsyncReadExt as _;
 use tracing::error;
 
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use proto::semantics::IngestedTokens;
 use std::{
+	collections::HashMap,
 	io::{Cursor, Read},
+	path::PathBuf,
 	pin::Pin,
 	sync::Arc,
 };
 
-use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
+use crate::{
+	image::image::ImageIngestor, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
+	IngestorResult,
+};
 use xml::{reader::XmlEvent, EventReader};
 use zip::ZipArchive;
 
@@ -41,6 +47,7 @@ impl BaseIngestor for DocxIngestor {
 		let stream = stream! {
 			// collect all the bytes into a single buffer
 			let mut buffer = Vec::new();
+			let mut file_path = PathBuf::new();
 			let mut file = String::new();
 			let mut doc_source = String::new();
 			let mut source_id = String::new();
@@ -49,6 +56,7 @@ impl BaseIngestor for DocxIngestor {
 					continue;
 				}
 				if file.is_empty() {
+					file_path = collected_bytes.file.as_ref().unwrap().clone();
 					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
 				}
 				if doc_source.is_empty() {
@@ -71,6 +79,7 @@ impl BaseIngestor for DocxIngestor {
 			};
 
 			let mut xml_data = String::new();
+			let mut images: HashMap<String, Vec<u8>> = HashMap::new();
 			for i in 0..archive.len() {
 				let mut file = match archive.by_index(i) {
 					Ok(file) => file,
@@ -84,7 +93,15 @@ impl BaseIngestor for DocxIngestor {
 						error!("Failed to read XML data: {:?}", e);
 						return;
 					}
-					break;
+				}
+
+				if file.name().starts_with("word/media/") {
+					let mut buf = Vec::new();
+					if let Err(e) = file.read_to_end(&mut buf) {
+						error!("Failed to read image data: {:?}", e);
+						return;
+					}
+					images.insert(file.name().to_string(), buf);
 				}
 			}
 
@@ -94,7 +111,7 @@ impl BaseIngestor for DocxIngestor {
 			}
 
 			let parser = EventReader::from_str(&xml_data);
-			let mut txt = Vec::new();
+			let mut txt: Vec<String> = Vec::new();
 			let mut in_text = false;
 
 			for event in parser {
@@ -119,14 +136,54 @@ impl BaseIngestor for DocxIngestor {
 				}
 			}
 
-			yield Ok(IngestedTokens {
-				data: vec![txt.join("")],
-				file: file.clone(),
-				doc_source: doc_source.clone(),
-				is_token_stream: false,
-				source_id: source_id.clone(),
-				image_id: None,
-			})
+			for text in txt {
+				let ingested_tokens = IngestedTokens {
+					data: vec![text],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				};
+				yield Ok(ingested_tokens);
+			}
+
+			if !images.is_empty() {
+				for (name, img_data) in images {
+					let format = guess_format(&img_data);
+					let mut ext = "jpeg";
+					if let Ok(f) = format {
+						ext = f.to_mime_type();
+						ext = ext.split("/").last().unwrap_or("jpeg");
+					}
+					let collected_bytes = CollectedBytes {
+						data: Some(Box::pin(std::io::Cursor::new(img_data.clone()))),
+						file: Some(file_path.clone()),
+						doc_source: Some(doc_source.clone()),
+						eof: false,
+						extension: Some(ext.to_string()),
+						size: Some(img_data.len()),
+						source_id: source_id.clone(),
+						_owned_permit: None,
+						image_id: Some(name.to_string()),
+					};
+					let image_ingestor = ImageIngestor::new();
+					let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
+					let mut image_stream = Box::pin(image_stream);
+					while let Some(tokens) = image_stream.next().await {
+						match tokens {
+							Ok(tokens) =>
+								if !tokens.data.is_empty() {
+									// only yield good tokens
+									yield Ok(tokens);
+								},
+							Err(e) => {
+								eprintln!("Failed to get tokens: {:?}", e);
+							},
+						}
+					}
+				}
+			}
 		};
 
 		let processed_stream =
@@ -165,13 +222,16 @@ mod tests {
 
 		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
-
+		let mut found_image_data = false;
 		let mut stream = result_stream;
 		let mut all_data = Vec::new();
 		while let Some(tokens) = stream.next().await {
 			match tokens {
 				Ok(tokens) =>
 					if !tokens.data.is_empty() {
+						if tokens.image_id.is_some() {
+							found_image_data = true;
+						}
 						all_data.push(tokens.data);
 					},
 				Err(e) => {
@@ -180,5 +240,6 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest DOCX file");
+		assert!(found_image_data, "Unable to ingest image data");
 	}
 }
