@@ -87,7 +87,7 @@
 			{ label: 'Context Identified', number: products.total_sentences },
 			{ label: 'Connections Identified', number: products.total_predicates },
 			{ label: 'Metadata Interactions', number: products.total_graph_events },
-			{ label: 'Embeddings Interactions', number: products.total_vector_events },
+			{ label: 'Embedding Interactions', number: products.total_vector_events },
 
 			{ section: 'Document-Based Stats' },
 			{ label: 'Documents Ingested', number: products.total_docs },
