@@ -28,7 +28,6 @@
 		if (currentCategory.length > 0) {
 			let sentences = discoveryResponse[1].sentence;
 			connections = parseData(currentCategory[0].top_pairs, sentences);
-			console.log('Connections are    ', connections);
 		} else {
 			if (discoveryResponse.length > 0) {
 				connections = parseData(discoveryResponse[0].top_pairs, '');
@@ -48,6 +47,7 @@
 			nodes.add(target);
 			links.push({ source, target, type: 'top_pair' });
 		});
+
 		const regex = /'([^']+)'/g;
 		const extractedEntities = [];
 		let match;
@@ -63,11 +63,13 @@
 			sentenceNodes.add(target);
 			links.push({ source, target, type: 'sentence_pair' });
 		}
+
 		const nodesArray = Array.from(nodes).map((id) => ({
 			id,
 			degree: 0,
 			type: sentenceNodes.has(id) ? 'sentence_pair' : 'top_pair'
 		}));
+
 		links.forEach((link) => {
 			const sourceNode = nodesArray.find((node) => node.id === link.source);
 			const targetNode = nodesArray.find((node) => node.id === link.target);
@@ -149,11 +151,15 @@
 				.data(connections.nodes)
 				.enter()
 				.append('circle')
-				.attr('r', 15)
+				.attr('r', (d: { degree: number }) => Math.max(5, d.degree * 3))
 				.attr('fill', (d: { type: string; degree: any }) =>
 					d.type === 'top_pair' ? topPairColorScale(d.degree) : sentencePairColor
 				)
 				.call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended));
+
+			node
+				.append('title')
+				.text((d: { id: string; degree: number }) => `${d.id} (Degree: ${d.degree})`); // Tooltip
 
 			const text = svgElement
 				.append('g')
@@ -163,41 +169,49 @@
 				.append('text')
 				.attr('dy', 3)
 				.attr('x', 20)
-				.style('font-size', '14px')
+				.style('font-size', '12px')
+				.style('font-weight', 'bold')
+				.style('fill', '#333')
 				.text((d: { id: any }) => d.id);
+
 			const legend = svgElement
 				.append('g')
 				.attr('class', 'legend')
-				.attr('transform', `translate(${width - 150}, 20)`);
+				.attr('transform', `translate(${width - 200}, 20)`);
+
+			legend
+				.append('rect')
+				.attr('x', -80)
+				.attr('y', -10)
+				.attr('width', 280)
+				.attr('height', 100)
+				.attr('fill', 'white')
+				.attr('stroke', '#ccc')
+				.attr('stroke-width', 1)
+				.attr('rx', 10);
 
 			legend
 				.append('circle')
 				.attr('cx', -60)
 				.attr('cy', 10)
 				.attr('r', 10)
-				.attr(
-					'fill',
-					topPairColorScale(
-						d3.max(
-							connections.nodes.filter((d: { type: string }) => d.type === 'top_pair'),
-							(d: { degree: any }) => d.degree
-						)
-					)
-				);
+				.attr('fill', topPairColorScale(maxDegree));
 
 			legend
 				.append('text')
 				.attr('x', -40)
 				.attr('y', 15)
 				.text('Most Frequent Connections')
-				.style('font-size', '12px');
+				.style('font-size', '14px')
+				.style('font-weight', 'bold');
 
 			legend
 				.append('text')
 				.attr('x', -40)
 				.attr('y', 35)
 				.text('(Gradient by Centrality)')
-				.style('font-size', '10px');
+				.style('font-size', '12px')
+				.style('font-style', 'italic');
 
 			legend
 				.append('circle')
@@ -211,7 +225,8 @@
 				.attr('x', -40)
 				.attr('y', 65)
 				.text('Rare and Significant Connections')
-				.style('font-size', '12px');
+				.style('font-size', '14px')
+				.style('font-weight', 'bold');
 
 			simulation.on('tick', () => {
 				link

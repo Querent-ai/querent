@@ -81,10 +81,23 @@
 	});
 
 	function convertStatsToArray(products: IndexingStatistics) {
-		return Object.entries(products).map(([key, value]) => ({
-			label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-			number: value
-		}));
+		return [
+			{ section: 'Fabric-Based Stats' },
+			{ label: 'Nodes Identified', number: products.total_subjects + products.total_objects },
+			{ label: 'Context Identified', number: products.total_sentences },
+			{ label: 'Connections Identified', number: products.total_predicates },
+			{ label: 'Metadata Interactions', number: products.total_graph_events },
+			{ label: 'Embeddings Interactions', number: products.total_vector_events },
+
+			{ section: 'Document-Based Stats' },
+			{ label: 'Documents Ingested', number: products.total_docs },
+			{ label: 'Document Batches Processed', number: products.total_batches },
+			{ label: 'Data Events Logged', number: products.total_events },
+			{ label: 'Incoming Events', number: products.total_events_received },
+			{ label: 'Events Processed Successfully', number: products.total_events_processed },
+			{ label: 'Outgoing Events', number: products.total_events_sent },
+			{ label: 'Total Data Volume Processed', number: products.total_data_processed_size }
+		];
 	}
 </script>
 
@@ -100,12 +113,6 @@
 
 	<!-- Dropdown to select pipeline -->
 	<div class="mb-4">
-		<label
-			for="pipelineSelect"
-			class="mb-2 block text-sm font-medium text-gray-700 dark:text-white"
-		>
-			Select Pipeline
-		</label>
 		<select
 			id="pipelineSelect"
 			class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
@@ -122,16 +129,28 @@
 	</div>
 
 	<!-- Display stats in a grid layout -->
-	<div class="grid grid-cols-1 gap-2 md:grid-cols-2">
-		{#each productsArray as { label, number }}
-			<Card class="rounded-lg bg-gray-50 p-4 shadow-md dark:bg-gray-800">
-				<p class="font-medium text-gray-900 dark:text-white">
-					{label}
-				</p>
-				<p class="text-lg font-semibold text-gray-900 dark:text-white">
-					{number}
-				</p>
-			</Card>
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+		{#each productsArray as stat, index (index)}
+			{#if stat.section}
+				<!-- Section Header -->
+				<div class="col-span-full">
+					<h3 class="mb-2 text-lg font-semibold text-gray-700 dark:text-white">
+						{stat.section}
+					</h3>
+				</div>
+			{/if}
+
+			<!-- Stat Card -->
+			{#if !stat.section}
+				<Card class="rounded-lg bg-gray-50 pb-2 pl-3 pr-3 pt-2 shadow-md dark:bg-gray-800">
+					<p class="font-medium text-gray-900 dark:text-white">
+						{stat.label}
+					</p>
+					<p class="text-lg font-semibold text-gray-900 dark:text-white">
+						{stat.number}
+					</p>
+				</Card>
+			{/if}
 		{/each}
 	</div>
 </Card>
