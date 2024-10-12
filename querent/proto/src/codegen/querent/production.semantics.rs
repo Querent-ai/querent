@@ -481,7 +481,7 @@ pub struct NewsCollectorConfig {
 	pub api_key: ::prost::alloc::string::String,
 	/// Query of the News collector.
 	#[prost(string, optional, tag = "2")]
-    pub query: ::core::option::Option<::prost::alloc::string::String>,
+	pub query: ::core::option::Option<::prost::alloc::string::String>,
 	/// Query type of the News collector.
 	#[prost(enumeration = "QueryType", tag = "3")]
 	pub query_type: i32,
@@ -611,14 +611,11 @@ pub struct NotionConfig {
 	/// API key of the notion
 	#[prost(string, tag = "1")]
 	pub api_key: ::prost::alloc::string::String,
-	/// Type of query to notion API
-	#[prost(enumeration = "QueryTypeNotion", tag = "2")]
-	pub query_type: i32,
 	/// Query id to the notion API/ either page id or database id
-	#[prost(string, tag = "3")]
-	pub query_id: ::prost::alloc::string::String,
+	#[prost(string, tag = "2")]
+	pub page_id: ::prost::alloc::string::String,
 	/// / Id for the collector
-	#[prost(string, tag = "4")]
+	#[prost(string, tag = "3")]
 	pub id: ::prost::alloc::string::String,
 }
 
@@ -692,51 +689,23 @@ pub enum SortBy {
 	PublishedAt = 2,
 }
 impl SortBy {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            SortBy::Relevancy => "relevancy",
-            SortBy::Popularity => "popularity",
-            SortBy::PublishedAt => "publishedAt",
-        }
-}
-	/// Creates an enum from field names used in the ProtoBuf definition.
-	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-		match value {
-			"Relevancy" => Some(Self::Relevancy),
-			"Popularity" => Some(Self::Popularity),
-			"PublishedAt" => Some(Self::PublishedAt),
-			_ => None,
-		}
-	}
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "snake_case")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum QueryTypeNotion {
-	Page = 0,
-	Database = 1,
-}
-impl QueryTypeNotion {
 	/// String value of the enum field names used in the ProtoBuf definition.
 	///
 	/// The values are not transformed in any way and thus are considered stable
 	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
 	pub fn as_str_name(&self) -> &'static str {
 		match self {
-			QueryTypeNotion::Page => "Page",
-			QueryTypeNotion::Database => "Database",
+			SortBy::Relevancy => "relevancy",
+			SortBy::Popularity => "popularity",
+			SortBy::PublishedAt => "publishedAt",
 		}
 	}
 	/// Creates an enum from field names used in the ProtoBuf definition.
 	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
 		match value {
-			"Page" => Some(Self::Page),
-			"Database" => Some(Self::Database),
+			"Relevancy" => Some(Self::Relevancy),
+			"Popularity" => Some(Self::Popularity),
+			"PublishedAt" => Some(Self::PublishedAt),
 			_ => None,
 		}
 	}

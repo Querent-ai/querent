@@ -361,18 +361,12 @@ message OneDriveConfig {
   string id = 6;
 }
 
-enum QueryTypeNotion {
-  Page=0;
-  Database=1;
-}
 
 message NotionConfig {
   // API key of the notion
   string api_key = 1;
-  // Type of query to notion API
-  QueryTypeNotion query_type = 2;
   // Query id to the notion API/ either page id or database id
-  string query_id = 3;
+  string page_id = 2;
   /// Id for the collector
-  string id = 4;
+  string id = 3;
 }

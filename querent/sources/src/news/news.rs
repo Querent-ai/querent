@@ -38,12 +38,8 @@ pub struct NewsApiClient {
 
 impl NewsApiClient {
 	pub async fn new(config: NewsCollectorConfig) -> anyhow::Result<Self> {
-		println!("Dates-----{:?}", config.to_date);
-		println!("Dates-----{:?}", config.from_date);
 		let to_date = Self::string_to_datetime(config.to_date.clone());
 		let from_date = Self::string_to_datetime(config.from_date.clone());
-		println!("Dates-----{:?}", to_date);
-		println!("Dates-----{:?}", from_date);
 		Ok(NewsApiClient {
 			client: reqwest::Client::new(),
 			api_token: config.api_key.to_string(),
@@ -66,7 +62,6 @@ impl NewsApiClient {
 
 	pub async fn fetch_news(&self, page: u32) -> Result<NewsResponse, SourceError> {
 		let url = self.create_query(page).await;
-		println!("This is the url :m {:?}", url);
 		let response = self
 			.client
 			.get(&url)
@@ -98,13 +93,12 @@ impl NewsApiClient {
 		Ok(news_response)
 	}
 
-	pub async fn create_query(&self, page: u32) -> String {	
+	pub async fn create_query(&self, page: u32) -> String {
 		let mut url = "".to_string();
 
 		if self.query_type.to_lowercase() == "everything" {
-			url =
-			format!("https://newsapi.org/v2/{}?apiKey={}", "everything", self.api_token);
-			
+			url = format!("https://newsapi.org/v2/{}?apiKey={}", "everything", self.api_token);
+
 			if let Some(search_in) = &self.search_in {
 				url.push_str(&format!("&searchIn={}", search_in));
 			}
@@ -130,26 +124,24 @@ impl NewsApiClient {
 			if let Some(sort_by) = &self.sort_by {
 				url.push_str(&format!("&sortBy={}", sort_by));
 			}
-			println!("This is the url11 :m {:?}", url);
 		}
 		if self.query_type == "topheadlines" {
-			url =
-			format!("https://newsapi.org/v2/{}?apiKey={}", "top-headlines", self.api_token);
-				if let Some(country) = &self.country {
-					url.push_str(&format!("&country={}", country));
-				}
-
-				if let Some(category) = &self.category {
-					url.push_str(&format!("&category={}", category));
-				}
-
-				if let Some(sources) = &self.sources {
-					url.push_str(&format!("&sources={}", sources));
-				}
-				if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
-					eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
-				}
+			url = format!("https://newsapi.org/v2/{}?apiKey={}", "top-headlines", self.api_token);
+			if let Some(country) = &self.country {
+				url.push_str(&format!("&country={}", country));
 			}
+
+			if let Some(category) = &self.category {
+				url.push_str(&format!("&category={}", category));
+			}
+
+			if let Some(sources) = &self.sources {
+				url.push_str(&format!("&sources={}", sources));
+			}
+			if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
+				eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
+			}
+		}
 
 		if let Some(language) = &self.language {
 			url.push_str(&format!("&language={}", language));
@@ -171,13 +163,12 @@ impl NewsApiClient {
 			DateTime::parse_from_rfc3339(&date_string)
 				.map(|dt| dt.with_timezone(&Utc))
 				.or_else(|_| {
-					NaiveDate::parse_from_str(&date_string, "%Y-%m-%d")
-						.map(|nd| {
-							DateTime::<Utc>::from_naive_utc_and_offset(
-								nd.and_hms_opt(0, 0, 0).unwrap(),
-								Utc,
-							)
-						})
+					NaiveDate::parse_from_str(&date_string, "%Y-%m-%d").map(|nd| {
+						DateTime::<Utc>::from_naive_utc_and_offset(
+							nd.and_hms_opt(0, 0, 0).unwrap(),
+							Utc,
+						)
+					})
 				})
 				.ok()
 		})
@@ -356,7 +347,6 @@ mod tests {
 				let mut found_error = false;
 				while let Some(item) = stream.next().await {
 					if item.is_err() {
-						println!("This is the error ----{:?}", item.err());
 						found_error = true;
 						break;
 					}
@@ -447,13 +437,11 @@ mod tests {
 				let mut found_data = false;
 				while let Some(item) = stream.next().await {
 					match item {
-						Ok(collected_bytes) => {
+						Ok(_collected_bytes) => {
 							found_data = true;
-							println!("Collected bytes: {:?}", collected_bytes.file);
 						},
-						Err(err) => {
+						Err(_err) => {
 							found_error = true;
-							println!("Found an error: {:?}", err);
 							break;
 						},
 					}
@@ -500,7 +488,6 @@ mod tests {
 				while let Some(item) = stream.next().await {
 					if item.is_err() {
 						found_error = true;
-						println!("Erroe {:?}", item.err());
 						break;
 					}
 				}
@@ -544,9 +531,7 @@ mod tests {
 					if item.is_ok() {
 						found_data = true;
 						break;
-					}
-					else if item.is_err() {
-						println!("Erroe {:?}", item.err());
+					} else if item.is_err() {
 						break;
 					}
 				}
@@ -601,8 +586,7 @@ mod tests {
 				assert!(count > 0, "Expected multiple pages but got none");
 				assert!(!file_names.is_empty(), "Expected file names but found none");
 			},
-			Err(e) => {
-				println!("Error as {:?}", e.source);
+			Err(_e) => {
 				assert!(false, "Expected a stream but encountered an error during stream creation")
 			},
 		}
