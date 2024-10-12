@@ -4,7 +4,7 @@
 	import { discoveryApiResponseStore } from '../../../src/stores/appState';
 
 	let svg: SVGSVGElement;
-	let simulation: d3.Simulation<any, any>; // Declare the simulation variable here
+	let simulation: d3.Simulation<any, any>;
 	let top_pairs = [
 		'Sandstone - Shale',
 		'Cretaceous - Jurassic',
@@ -26,12 +26,10 @@
 
 		let currentCategory = discoveryResponse.filter((cat) => cat.tags === 'Filters');
 		if (currentCategory.length > 0) {
-			// call the function with sentences and take from filters
 			let sentences = discoveryResponse[1].sentence;
 			connections = parseData(currentCategory[0].top_pairs, sentences);
 			console.log('Connections are    ', connections);
 		} else {
-			// take from first response
 			if (discoveryResponse.length > 0) {
 				connections = parseData(discoveryResponse[0].top_pairs, '');
 			} else {
@@ -123,7 +121,7 @@
 			const sentencePairColor = '#ff7f0e';
 
 			simulation = d3
-				.forceSimulation(connections.nodes) // Assign the simulation here
+				.forceSimulation(connections.nodes)
 				.force(
 					'link',
 					d3
@@ -230,7 +228,4 @@
 	});
 </script>
 
-<h2 class="text-center text-[24px] font-semibold text-gray-900 dark:text-white">
-	{'Most Frequent Connections'}
-</h2>
 <svg bind:this={svg}></svg>

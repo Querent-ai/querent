@@ -16,6 +16,7 @@
 	$: selectedPipeline = $pipelineState?.id ? $pipelineState?.id : 'no_active_pipeline';
 
 	let chartInstance: Chart<'line', any[], unknown>;
+	let isLive = false;
 
 	onMount(() => {
 		const canvas = document.getElementById('myChart') as HTMLCanvasElement;
@@ -38,8 +39,8 @@
 				labels: $statsDataTime,
 				datasets: [
 					{
-						label: 'Total Events',
-						backgroundColor: 'rgb(255, 99, 132)',
+						label: '',
+						backgroundColor: 'rgb(255, 99, 132, 0.2)',
 						borderColor: 'rgb(255, 99, 132)',
 						fill: false,
 						data: $statsDataTotalEvents
@@ -77,8 +78,11 @@
 					duration: 0
 				},
 				plugins: {
+					legend: {
+						display: false
+					},
 					title: {
-						display: true,
+						display: false,
 						text: 'Total Events',
 						position: 'top',
 						align: 'center',
@@ -100,6 +104,7 @@
 	async function fetchPipelineData() {
 		try {
 			if (!selectedPipeline || selectedPipeline == 'no_active_pipeline') {
+				isLive = false;
 				return;
 			}
 			console.log('Pipeline start time initially ', $pipelineStartTime);
@@ -121,6 +126,8 @@
 					return yData.slice(-10);
 				});
 
+				isLive = totalEvents > 0;
+
 				chartInstance.data.labels = $statsDataTime;
 				chartInstance.data.datasets[0].data = $statsDataTotalEvents;
 
@@ -133,31 +140,72 @@
 				chartInstance.update();
 				console.log('Total events are ', totalEvents);
 			} else {
+				isLive = false;
 				throw new Error(`Unexpected response status: ${response.status}`);
 			}
 		} catch (error) {
+			isLive = false;
 			console.error('Error fetching pipeline data:', error);
 		}
 	}
 </script>
 
-<!-- <main class="relative h-full w-full overflow-y-auto bg-blue-500 bg-image"> -->
+<!-- Dashboard layout -->
 <div class="mt-px space-y-4">
-	<div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+	<div class="grid grid-cols-1 gap-2 lg:grid-cols-3">
+		<!-- Left side: Total Events and Most Frequent Connections -->
 		<div class="lg:col-span-2">
+			<!-- Card for Total Events -->
 			<Card class="min-h-[500px] min-w-[900px] rounded-lg shadow-lg">
 				<div class="space-y-4">
+					<h2 class="text-center text-[24px] font-semibold text-gray-900 dark:text-white">
+						{'Total Events'}
+						{#if isLive}
+							<span class="blinking-dot"></span>
+						{/if}
+					</h2>
 					<canvas id="myChart"></canvas>
 				</div>
 			</Card>
+
+			<!-- Card for Most Frequent Connections -->
 			<Card class="min-h-[500px] min-w-[900px] rounded-lg shadow-lg">
-				<TopPairs />
+				<div class="space-y-4">
+					<h2 class="text-center text-[24px] font-semibold text-gray-900 dark:text-white">
+						{'Most Frequent Connections'}
+					</h2>
+					<TopPairs />
+				</div>
 			</Card>
 		</div>
+
+		<!-- Right side: Pipeline Stats -->
 		<div class="lg:col-span-1">
-			<Card class="min-h-[550px] rounded-lg shadow-lg">
-				<Stats />
-			</Card>
+			<Stats />
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes blink {
+		0% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0;
+		}
+		100% {
+			opacity: 1;
+		}
+	}
+
+	.blinking-dot {
+		display: inline-block;
+		width: 12px;
+		height: 12px;
+		margin-left: 10px;
+		background-color: #ff6384;
+		border-radius: 50%;
+		animation: blink 1.5s infinite;
+	}
+</style>
