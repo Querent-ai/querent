@@ -178,7 +178,7 @@ impl BaseIngestor for DocxIngestor {
 									yield Ok(tokens);
 								},
 							Err(e) => {
-								eprintln!("Failed to get tokens: {:?}", e);
+								tracing::error!("Failed to get tokens from images: {:?}", e);
 							},
 						}
 					}

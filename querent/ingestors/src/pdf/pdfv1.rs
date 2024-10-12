@@ -115,7 +115,7 @@ impl BaseIngestor for PdfIngestor {
 										yield Ok(tokens);
 									},
 								Err(e) => {
-									eprintln!("Failed to get tokens: {:?}", e);
+									tracing::error!("Failed to get tokens from images: {:?}", e);
 								},
 							}
 						}
@@ -325,7 +325,7 @@ mod tests {
 						all_data.push(tokens.data);
 					},
 				Err(e) => {
-					eprintln!("Failed to get tokens: {:?}", e);
+					tracing::error!("Failed to get tokens from images: {:?}", e);
 				},
 			}
 		}
