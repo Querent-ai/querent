@@ -3,7 +3,7 @@ use std::{fmt, ops::Range, path::Path, pin::Pin};
 use async_stream::stream;
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine as _};
-use common::CollectedBytes;
+use common::{retry, CollectedBytes};
 use futures::{Stream, StreamExt};
 use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
@@ -25,6 +25,7 @@ pub struct OpendalStorage {
 	op: Operator,
 	_bucket: Option<String>,
 	source_id: String,
+	retry_params: common::RetryParams,
 }
 
 impl fmt::Debug for OpendalStorage {
@@ -44,7 +45,7 @@ impl OpendalStorage {
 		source_id: String,
 	) -> Result<Self, SourceError> {
 		let op = Operator::new(cfg)?.finish();
-		Ok(Self { op, _bucket: bucket, source_id })
+		Ok(Self { op, _bucket: bucket, source_id, retry_params: common::RetryParams::aggressive() })
 	}
 }
 
@@ -103,10 +104,13 @@ impl Source for OpendalStorage {
 		let op = self.op.clone();
 		let source_id = self.source_id.clone();
 		let stream = stream! {
-			let mut object_lister = op.lister_with("")
+			let mut object_lister = retry(&self.retry_params, || async {
+				op.lister_with("")
 				.recursive(true)
 				.metakey(Metakey::ContentLength)
-				.await?;
+				.await
+				.map_err(SourceError::from)
+			}).await?;
 
 			while let Some(object) = object_lister.next().await {
 				let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
