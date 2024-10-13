@@ -108,6 +108,21 @@ impl Retryable for SourceError {
 	}
 }
 
+impl From<google_drive3::Error> for SourceError {
+	fn from(err: google_drive3::Error) -> Self {
+		SourceError::new(
+			SourceErrorKind::Connection,
+			Arc::new(anyhow::anyhow!("Error while converting the request into struct: {:?}", err)),
+		)
+	}
+}
+
+impl From<SourceError> for google_drive3::Error {
+	fn from(_err: SourceError) -> Self {
+		google_drive3::Error::FieldClash("Error in SourceError")
+	}
+}
+
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
 pub trait Source: fmt::Debug + Send + Sync {

@@ -1,6 +1,6 @@
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{retry, CollectedBytes, RetryParams};
 use futures::{Stream, StreamExt, TryStreamExt};
 use google_drive3::{
 	api::Scope,
@@ -33,6 +33,7 @@ pub struct GoogleDriveSource {
 	folder_id: String,
 	page_token: Option<String>,
 	source_id: String,
+	retry_params: RetryParams,
 }
 
 impl std::fmt::Debug for GoogleDriveSource {
@@ -69,6 +70,7 @@ impl GoogleDriveSource {
 			folder_id: config.folder_to_crawl,
 			page_token: None,
 			source_id: config.id.clone(),
+			retry_params: RetryParams::aggressive(),
 		}
 	}
 
@@ -284,7 +286,8 @@ impl Source for GoogleDriveSource {
 		let source_id = self.source_id.clone();
 		let stream = stream! {
 			loop {
-				let (_, list) =hub
+				let (_, list) = retry(&self.retry_params, || async {
+					hub
 					.files()
 					.list()
 					.q(&format!("'{}' in parents", folder_id))
@@ -297,14 +300,15 @@ impl Source for GoogleDriveSource {
 							SourceErrorKind::Io,
 							anyhow::anyhow!("Error listing files in Google Drive: {:?}", err).into(),
 						)
-					})?;
+					})
+				}).await?;
 
 				if let Some(files) = list.files {
 					for file in files {
 						let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 						if let Some(file_id) = file.id {
 							let content_body =
-								download_file(&hub, &file_id).await.map_err(|err| {
+								download_file(&hub, &file_id,&self.retry_params).await.map_err(|err| {
 									SourceError::new(
 										SourceErrorKind::Io,
 										anyhow::anyhow!(
@@ -345,17 +349,29 @@ fn body_to_async_read(body: Body) -> impl AsyncRead + Send + Unpin {
 	StreamReader::new(body.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)))
 }
 
-async fn download_file(hub: &DriveHub, file_id: &str) -> Result<Body, google_drive3::Error> {
-	let (resp_obj, file) = hub
-		.files()
-		.get(file_id)
-		.supports_all_drives(true)
-		.acknowledge_abuse(false)
-		.param("fields", FIELDS)
-		.param("alt", "media")
-		.add_scope(Scope::Full)
-		.doit()
-		.await?;
+async fn download_file(
+	hub: &DriveHub,
+	file_id: &str,
+	retry_params: &RetryParams,
+) -> Result<Body, google_drive3::Error> {
+	let (resp_obj, file) = retry(retry_params, || async {
+		hub.files()
+			.get(file_id)
+			.supports_all_drives(true)
+			.acknowledge_abuse(false)
+			.param("fields", FIELDS)
+			.param("alt", "media")
+			.add_scope(Scope::Full)
+			.doit()
+			.await
+			.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error querying files in Google Drive: {:?}", err).into(),
+				)
+			})
+	})
+	.await?;
 
 	let mime_type = file.mime_type.unwrap_or_default();
 	if mime_type == "application/vnd.google-apps.folder" {
