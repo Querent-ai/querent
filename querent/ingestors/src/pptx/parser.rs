@@ -1,18 +1,27 @@
-use std::io::{Cursor, Read};
+use std::{
+	collections::HashMap,
+	io::{Cursor, Read},
+};
 use xml::reader::{EventReader, XmlEvent};
 use zip::ZipArchive;
 
 use crate::IngestorError;
 
-pub fn extract_text_from_pptx(bytes: &[u8]) -> Result<String, IngestorError> {
+pub fn extract_text_and_images_from_pptx(
+	bytes: &[u8],
+) -> Result<(Vec<String>, HashMap<String, Vec<u8>>), IngestorError> {
 	let cursor = Cursor::new(bytes);
 	let mut archive = ZipArchive::new(cursor)?;
 
 	let mut slide_texts = Vec::new();
+	let mut slide_images = HashMap::new();
 
 	for i in 0..archive.len() {
 		let mut file = archive.by_index(i)?;
-		if file.name().starts_with("ppt/slides/slide") && file.name().ends_with(".xml") {
+		let file_name = file.name().to_string();
+
+		// Extract text from slide XML files
+		if file_name.starts_with("ppt/slides/slide") && file_name.ends_with(".xml") {
 			let mut content = String::new();
 			file.read_to_string(&mut content)?;
 			let parser = EventReader::from_str(&content);
@@ -40,7 +49,14 @@ pub fn extract_text_from_pptx(bytes: &[u8]) -> Result<String, IngestorError> {
 			}
 			slide_texts.push(current_text.trim().to_string());
 		}
+
+		// Extract images from media files
+		if file_name.starts_with("ppt/media/") {
+			let mut img_data = Vec::new();
+			file.read_to_end(&mut img_data)?;
+			slide_images.insert(file_name, img_data);
+		}
 	}
 
-	Ok(slide_texts.join("\n\n"))
+	Ok((slide_texts, slide_images))
 }
