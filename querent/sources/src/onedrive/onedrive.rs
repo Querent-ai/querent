@@ -3,7 +3,7 @@ use std::{io::Cursor, ops::Range, path::Path, pin::Pin, sync::Arc};
 use anyhow::{anyhow, Result};
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{retry, CollectedBytes, RetryParams};
 use futures::{Stream, TryStreamExt as _};
 use onedrive_api::{
 	Auth, ClientCredential, DriveLocation, ItemLocation, OneDrive, Permission, Tenant,
@@ -24,6 +24,7 @@ pub struct OneDriveSource {
 	onedrive: OneDrive,
 	folder_path: String,
 	source_id: String,
+	retry_params: RetryParams,
 }
 
 pub static TOKEN: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
@@ -35,6 +36,7 @@ impl OneDriveSource {
 			onedrive,
 			folder_path: config.folder_path,
 			source_id: config.id.clone(),
+			retry_params: RetryParams::aggressive(),
 		})
 	}
 
@@ -61,9 +63,16 @@ impl OneDriveSource {
 	}
 
 	async fn download_file(
+		retry_params: &RetryParams,
 		url: &str,
-	) -> Result<impl AsyncRead + Send + Unpin, Box<dyn std::error::Error>> {
-		let response = get(url).await?;
+	) -> Result<impl AsyncRead + Send + Unpin, SourceError> {
+		let response = retry(retry_params, || async {
+			get(url).await.map_err(|e| SourceError {
+				kind: SourceErrorKind::Connection,
+				source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
+			})
+		})
+		.await?;
 		let body = response.bytes_stream();
 		Ok(StreamReader::new(
 			body.map_err(|err| std::io::Error::new(std::io::ErrorKind::Other, err)),
@@ -107,10 +116,7 @@ impl Source for OneDriveSource {
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let mut bytes_stream =
-						Self::download_file(download_url).await.map_err(|e| SourceError {
-							kind: SourceErrorKind::Io,
-							source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
-						})?;
+						Self::download_file(&self.retry_params, download_url).await?;
 					let mut bytes = Vec::new();
 					bytes_stream.read_to_end(&mut bytes).await.map_err(|e| SourceError {
 						kind: SourceErrorKind::Io,
@@ -145,10 +151,7 @@ impl Source for OneDriveSource {
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let mut bytes_stream =
-						Self::download_file(download_url).await.map_err(|e| SourceError {
-							kind: SourceErrorKind::Io,
-							source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
-						})?;
+						Self::download_file(&self.retry_params, download_url).await?;
 					let mut bytes = Vec::new();
 					bytes_stream.read_to_end(&mut bytes).await.map_err(|e| SourceError {
 						kind: SourceErrorKind::Io,
@@ -178,10 +181,7 @@ impl Source for OneDriveSource {
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let mut bytes_stream =
-						Self::download_file(download_url).await.map_err(|e| SourceError {
-							kind: SourceErrorKind::Io,
-							source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
-						})?;
+						Self::download_file(&self.retry_params, download_url).await?;
 					let mut bytes = Vec::new();
 					bytes_stream.read_to_end(&mut bytes).await.map_err(|e| SourceError {
 						kind: SourceErrorKind::Io,
@@ -212,10 +212,7 @@ impl Source for OneDriveSource {
 					let extension = Self::get_file_extension(&name);
 					let size = drive_item.size.unwrap_or(0);
 					if let Some(download_url) = &drive_item.download_url {
-						let bytes_stream = Self::download_file(download_url).await.map_err(|e| SourceError {
-							kind: SourceErrorKind::Io,
-							source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
-						})?;
+						let bytes_stream = Self::download_file(&self.retry_params, download_url).await?;
 						yield Ok(CollectedBytes {
 							data: Some(Box::pin(bytes_stream)),
 							file: Some(Path::new(&name).to_path_buf()),
@@ -244,10 +241,7 @@ impl Source for OneDriveSource {
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let mut bytes_stream =
-						Self::download_file(download_url).await.map_err(|e| SourceError {
-							kind: SourceErrorKind::Io,
-							source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
-						})?;
+						Self::download_file(&self.retry_params, download_url).await?;
 					let mut bytes = Vec::new();
 					bytes_stream.read_to_end(&mut bytes).await.map_err(|e| SourceError {
 						kind: SourceErrorKind::Io,
@@ -270,10 +264,7 @@ impl Source for OneDriveSource {
 			if let Some(_file) = &drive_item.file {
 				if let Some(download_url) = &drive_item.download_url {
 					let mut bytes_stream =
-						Self::download_file(download_url).await.map_err(|e| SourceError {
-							kind: SourceErrorKind::Io,
-							source: Arc::new(anyhow!("Got error while downloading file: {}", e)),
-						})?;
+						Self::download_file(&self.retry_params, download_url).await?;
 					let mut bytes = Vec::new();
 					bytes_stream.read_to_end(&mut bytes).await.map_err(|e| SourceError {
 						kind: SourceErrorKind::Io,

@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, Retryable};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -96,6 +96,15 @@ impl From<reqwest::Error> for SourceError {
 			SourceErrorKind::Io,
 			Arc::new(anyhow::anyhow!("Error while converting the request into struct: {:?}", err)),
 		)
+	}
+}
+
+impl Retryable for SourceError {
+	fn is_retryable(&self) -> bool {
+		match self.kind {
+			SourceErrorKind::Connection | SourceErrorKind::Polling => true,
+			_ => false,
+		}
 	}
 }
 
