@@ -309,7 +309,7 @@ impl Source for NewsApiClient {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let source_id = self.source_id.clone();
 
 		let news = self.fetch_news().await.map_err(|err| {

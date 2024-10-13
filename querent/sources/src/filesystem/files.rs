@@ -28,10 +28,10 @@ impl LocalFolderSource {
 		self.folder_path.join(path)
 	}
 
-	async fn poll_data_recursive(
+	async fn poll_data_recursive<'life0>(
 		&self,
 		folder_path: PathBuf,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let mut streams: Vec<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> =
 			Vec::new();
 
@@ -187,7 +187,7 @@ impl Source for LocalFolderSource {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let result = self.poll_data_recursive(self.folder_path.clone()).await;
 
 		result
