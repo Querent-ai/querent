@@ -1,6 +1,9 @@
 use std::{io, ops::Range, path::Path, pin::Pin};
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	s3::retry::aws_retry, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult,
+	REQUEST_SEMAPHORE,
+};
 use async_stream::stream;
 use async_trait::async_trait;
 use aws_credential_types::Credentials;
@@ -12,7 +15,7 @@ use aws_sdk_s3::{
 	Client as S3Client,
 };
 
-use common::CollectedBytes;
+use common::{CollectedBytes, RetryParams};
 use futures::Stream;
 use proto::semantics::S3CollectorConfig;
 use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
@@ -26,6 +29,7 @@ pub struct S3Source {
 	pub s3_client: Option<S3Client>,
 	pub continuation_token: Option<String>,
 	pub source_id: String,
+	pub retry_params: RetryParams,
 }
 
 impl S3Source {
@@ -36,6 +40,7 @@ impl S3Source {
 		let access_key = config.access_key.clone();
 		let secret_key = config.secret_key.clone();
 		let source_id = config.id.clone();
+		let retry_params = RetryParams::aggressive();
 		let mut s3 = S3Source {
 			bucket_name,
 			region,
@@ -44,6 +49,7 @@ impl S3Source {
 			s3_client: None,
 			continuation_token: None,
 			source_id,
+			retry_params,
 		};
 
 		let credentials = Credentials::new(
@@ -181,7 +187,7 @@ impl Source for S3Source {
 					anyhow::anyhow!("Error getting object from S3: {:?}", err).into(),
 				)
 			})?;
-		Ok(head_object_output.content_length() as u64)
+		Ok(head_object_output.content_length().unwrap_or(0) as u64)
 	}
 
 	async fn poll_data(
@@ -192,9 +198,14 @@ impl Source for S3Source {
 		let continuation_token_start = self.continuation_token.clone();
 		let source_id = self.source_id.clone();
 
-		let stream =
-			create_poll_data_stream(s3_client, bucket_name, continuation_token_start, source_id)
-				.await;
+		let stream = create_poll_data_stream(
+			s3_client,
+			bucket_name,
+			continuation_token_start,
+			source_id,
+			self.retry_params,
+		)
+		.await;
 
 		Ok(Box::pin(stream))
 	}
@@ -205,22 +216,22 @@ async fn create_poll_data_stream(
 	bucket_name: String,
 	continuation_token_start: Option<String>,
 	source_id: String,
+	retry_params: RetryParams,
 ) -> impl Stream<Item = SourceResult<CollectedBytes>> + Send + 'static {
 	stream! {
 		let mut continuation_token = continuation_token_start;
 		loop {
-			let list_objects_v2 = s3_client
+			let list_objects_v2_output =  aws_retry(&retry_params, || async { s3_client
 				.list_objects_v2()
 				.bucket(&bucket_name)
-				.set_continuation_token(continuation_token.clone());
-
-			let list_objects_v2_output = list_objects_v2.send().await.map_err(|err| {
+				.set_continuation_token(continuation_token.clone())
+				.send().await
+			}).await.map_err(|err| {
 				SourceError::new(
 					SourceErrorKind::Io,
 					anyhow::anyhow!("Error listing objects from S3: {:?}", err).into(),
 				)
 			})?;
-
 			if let Some(contents) = list_objects_v2_output.contents {
 				for object in contents {
 					let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
@@ -244,7 +255,7 @@ async fn create_poll_data_stream(
 							Some(Box::pin(get_object_output.body.into_async_read())),
 							true,
 							Some(bucket_name.clone()),
-							Some(file_size as usize),
+							Some(file_size.unwrap_or(0) as usize),
 							source_id.clone(),
 							None,
 						);
