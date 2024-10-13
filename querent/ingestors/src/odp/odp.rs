@@ -9,7 +9,7 @@ use std::{
 	sync::Arc,
 };
 use tokio::io::AsyncReadExt;
-use tracing::error;
+use tracing::{error, info};
 use xml::reader::{EventReader, XmlEvent};
 use zip::ZipArchive;
 
@@ -141,8 +141,8 @@ impl BaseIngestor for OdpIngestor {
 				}
 			}
 
-			if text.is_empty() {
-				error!("No text found in the document");
+			if text.is_empty() && slide_images.is_empty() {
+				info!("No content.xml found in the archive or the file is empty");
 				return;
 			}
 
@@ -157,6 +157,9 @@ impl BaseIngestor for OdpIngestor {
 			};
 			yield Ok(ingested_tokens);
 
+			if slide_images.is_empty() {
+				return;
+			}
 			// Process and yield images
 			for (image_name, img_data) in slide_images {
 				let collected_bytes = CollectedBytes {

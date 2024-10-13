@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use image::guess_format;
 use tokio::io::AsyncReadExt as _;
-use tracing::error;
+use tracing::{error, info};
 
 use futures::{Stream, StreamExt};
 use proto::semantics::IngestedTokens;
@@ -106,7 +106,7 @@ impl BaseIngestor for DocxIngestor {
 			}
 
 			if xml_data.is_empty() && images.is_empty() {
-				error!("No content.xml found in the archive or the file is empty");
+				info!("No content.xml found in the archive or the file is empty");
 				return;
 			}
 

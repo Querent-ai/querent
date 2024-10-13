@@ -12,7 +12,7 @@ use std::{
 	sync::Arc,
 };
 use tokio::io::AsyncReadExt;
-use tracing::error;
+use tracing::{error, info};
 use xml::reader::{EventReader, XmlEvent};
 use zip::ZipArchive;
 
@@ -134,7 +134,7 @@ impl BaseIngestor for DocIngestor {
 				}
 			}
 			if text.is_empty() && images.is_empty() {
-				error!("No text/image found in the document");
+				info!("No content.xml found in the archive or the file is empty");
 				return;
 			}
 			let ingested_tokens = IngestedTokens {
