@@ -192,7 +192,7 @@ impl Source for S3Source {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let s3_client = self.s3_client.clone().unwrap();
 		let bucket_name = self.bucket_name.clone();
 		let continuation_token_start = self.continuation_token.clone();

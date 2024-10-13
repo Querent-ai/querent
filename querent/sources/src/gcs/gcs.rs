@@ -99,7 +99,7 @@ impl Source for OpendalStorage {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let op = self.op.clone();
 		let source_id = self.source_id.clone();
 		let stream = stream! {

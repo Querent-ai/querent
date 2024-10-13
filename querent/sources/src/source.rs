@@ -156,5 +156,5 @@ pub trait Source: fmt::Debug + Send + Sync {
 	/// Output is a sender that can be used to send data to the next actor in the pipeline.
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>>;
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>>;
 }

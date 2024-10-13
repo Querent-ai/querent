@@ -277,7 +277,7 @@ impl Source for GoogleDriveSource {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let mut page_token = self.page_token.clone();
 		let folder_id = self.folder_id.clone();
 		let hub = self.hub.clone();

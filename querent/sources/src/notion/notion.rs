@@ -387,7 +387,7 @@ impl Source for NotionSource {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,

@@ -196,7 +196,7 @@ impl Source for OneDriveSource {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let drive_items = self
 			.onedrive
 			.list_children(ItemLocation::from_path(&self.folder_path).unwrap())
