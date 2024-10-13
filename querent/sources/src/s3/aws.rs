@@ -228,7 +228,7 @@ async fn create_poll_data_stream(
 				.send().await
 			}).await.map_err(|err| {
 				SourceError::new(
-					SourceErrorKind::Io,
+					SourceErrorKind::Connection,
 					anyhow::anyhow!("Error listing objects from S3: {:?}", err).into(),
 				)
 			})?;

@@ -366,7 +366,7 @@ async fn download_file(
 			.await
 			.map_err(|err| {
 				SourceError::new(
-					SourceErrorKind::Io,
+					SourceErrorKind::Connection,
 					anyhow::anyhow!("Error querying files in Google Drive: {:?}", err).into(),
 				)
 			})

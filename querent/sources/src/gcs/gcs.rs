@@ -109,7 +109,9 @@ impl Source for OpendalStorage {
 				.recursive(true)
 				.metakey(Metakey::ContentLength)
 				.await
-				.map_err(SourceError::from)
+				.map_err(
+					|e| SourceError::new(SourceErrorKind::Connection, anyhow::anyhow!("Error listing objects: {:?}", e).into())
+				)
 			}).await?;
 
 			while let Some(object) = object_lister.next().await {
