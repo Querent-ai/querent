@@ -92,7 +92,7 @@ impl Source for NotionSource {
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
-		let page_id = PageId::from_str(&self.page_id).map_err(|err| {
+		let page_id = PageId::from_str(&self.page_id.clone()).map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
 				anyhow::anyhow!("Invalid Page ID: {:?}", err).into(),
