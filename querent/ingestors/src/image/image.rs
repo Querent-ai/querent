@@ -2,9 +2,10 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
+use image::ImageFormat;
+use leptess::LepTess;
 use proto::semantics::IngestedTokens;
-use rusty_tesseract::{image, Image};
-use std::{pin::Pin, sync::Arc};
+use std::{io::Cursor, pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
 
 use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
@@ -32,10 +33,25 @@ impl BaseIngestor for ImageIngestor {
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
 		let stream = stream! {
+			let lep_tess = LepTess::new(None, "eng");
+			if lep_tess.is_err() {
+				tracing::error!("Failed to create LepTess instance");
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: "".to_string(),
+					doc_source: "".to_string(),
+					is_token_stream: false,
+					source_id: "".to_string(),
+					image_id: None,
+				});
+			}
+			let mut lep_tess = lep_tess.unwrap();
 			let mut buffer = Vec::new();
 			let mut file = String::new();
 			let mut doc_source = String::new();
 			let mut source_id = String::new();
+			let mut image_id: Option<String> = None;
+			let mut extension = String::new();
 			for collected_bytes in all_collected_bytes {
 				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 					continue;
@@ -45,6 +61,12 @@ impl BaseIngestor for ImageIngestor {
 				}
 				if doc_source.is_empty() {
 					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				if image_id.is_none() {
+					image_id = collected_bytes.image_id.clone();
+				}
+				if extension.is_empty() {
+					extension = collected_bytes.extension.clone().unwrap_or_default();
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
@@ -56,16 +78,70 @@ impl BaseIngestor for ImageIngestor {
 				}
 				source_id = collected_bytes.source_id.clone();
 			}
-			let dyn_img = image::load_from_memory(&buffer).unwrap();
-			let img = Image::from_dynamic_image(&dyn_img).unwrap();
-			let default_args = rusty_tesseract::Args::default();
-			let output = rusty_tesseract::image_to_string(&img, &default_args).unwrap();
+
+
+			let img = image::load_from_memory(&buffer);
+			if img.is_err() {
+				tracing::error!("Failed to load image from memory: {:?}", img.err());
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
+			let img = img.unwrap();
+			let mut tiff_buffer = Vec::new();
+			let tiff_img = img.write_to(
+				&mut Cursor::new(&mut tiff_buffer),
+				ImageFormat::Tiff
+			);
+			if tiff_img.is_err() {
+				tracing::error!("Failed to write image to tiff: {:?}", tiff_img.err());
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
+			let set_image = lep_tess.set_image_from_mem(&tiff_buffer);
+			lep_tess.set_fallback_source_resolution(70);
+			if set_image.is_err() {
+				tracing::error!("Failed to set image from memory: {:?}", set_image.err());
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
+			let output = lep_tess.get_utf8_text();
+			if output.is_err() {
+				tracing::error!("Failed to get text from image: {:?}", output.err());
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
+			let output = output.unwrap();
 			let ingested_tokens = IngestedTokens {
 				data: vec![output.to_string()],
 				file: file.clone(),
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id,
 			};
 			yield Ok(ingested_tokens);
 
@@ -75,6 +151,7 @@ impl BaseIngestor for ImageIngestor {
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 
@@ -106,6 +183,7 @@ mod tests {
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
 			_owned_permit: None,
+			image_id: None,
 		};
 
 		// Create a TxtIngestor instance

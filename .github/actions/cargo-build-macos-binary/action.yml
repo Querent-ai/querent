@@ -18,6 +18,9 @@ runs:
     - name: Install protoc
       run: brew install protobuf
       shell: bash
+    - name: Install 
+      run: brew install tesseract leptonica
+      shell: bash
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y

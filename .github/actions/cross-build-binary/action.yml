@@ -32,6 +32,9 @@ runs:
     - name: Install protoc
       run: sudo apt-get install protobuf-compiler
       shell: bash
+    - name: Install Tesseract OCR
+      run: sudo apt-get install libleptonica-dev libtesseract-dev clang tesseract-ocr-eng
+      shell: bash
     - name: Setup Tauri and Specta Dependencies
       run: |
         sudo apt-get update

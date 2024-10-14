@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, Retryable};
 use futures::Stream;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -99,6 +99,30 @@ impl From<reqwest::Error> for SourceError {
 	}
 }
 
+impl Retryable for SourceError {
+	fn is_retryable(&self) -> bool {
+		match self.kind {
+			SourceErrorKind::Connection | SourceErrorKind::Polling => true,
+			_ => false,
+		}
+	}
+}
+
+impl From<google_drive3::Error> for SourceError {
+	fn from(err: google_drive3::Error) -> Self {
+		SourceError::new(
+			SourceErrorKind::Connection,
+			Arc::new(anyhow::anyhow!("Error while converting the request into struct: {:?}", err)),
+		)
+	}
+}
+
+impl From<SourceError> for google_drive3::Error {
+	fn from(_err: SourceError) -> Self {
+		google_drive3::Error::FieldClash("Error in SourceError")
+	}
+}
+
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
 pub trait Source: fmt::Debug + Send + Sync {
@@ -156,5 +180,5 @@ pub trait Source: fmt::Debug + Send + Sync {
 	/// Output is a sender that can be used to send data to the next actor in the pipeline.
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>>;
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>>;
 }
