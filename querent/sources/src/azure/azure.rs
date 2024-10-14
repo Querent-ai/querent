@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use azure_core::{error::ErrorKind, Pageable, StatusCode};
 use azure_storage::{Error as AzureError, StorageCredentials};
 use azure_storage_blobs::{blob::operations::GetBlobResponse, prelude::*};
-use common::{CollectedBytes, Retryable};
+use common::{retry, CollectedBytes, RetryParams, Retryable};
 use futures::{
 	io::{Error as FutureError, ErrorKind as FutureErrorKind},
 	stream::{StreamExt, TryStreamExt},
@@ -32,6 +32,7 @@ pub struct AzureBlobStorage {
 	container_client: ContainerClient,
 	prefix: String,
 	source_id: String,
+	retry_params: RetryParams,
 }
 
 impl fmt::Debug for AzureBlobStorage {
@@ -59,6 +60,7 @@ impl AzureBlobStorage {
 			container_client,
 			prefix: azure_storage_config.prefix,
 			source_id: azure_storage_config.id.clone(),
+			retry_params: RetryParams::aggressive(),
 		}
 	}
 
@@ -218,7 +220,7 @@ impl Source for AzureBlobStorage {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let mut blob_stream = self.container_client.list_blobs().into_stream();
 		let container_client = self.container_client.clone();
 		let source_id = self.source_id.clone();
@@ -238,18 +240,22 @@ impl Source for AzureBlobStorage {
 					let blob_name = blob_info.name.clone();
 					let blob_path = Path::new(&blob_name);
 					let file_size = blob_info.properties.content_length;
-					let output_stream = container_client.blob_client(&blob_name).get().into_stream();
-					let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-					let async_read_stream = output_stream
-					.map(|page_res| {
-						page_res
-							.map(|page| page.data)
-							.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
-					})
-					.try_flatten()
-					.map(|e| e.map_err(|err| FutureError::new(FutureErrorKind::Other, err)));
-					let stream_reader = StreamReader::new(async_read_stream);
-					let boxed_reader = Box::pin(stream_reader) as Pin<Box<dyn AsyncRead + Send + Unpin>>;
+					let boxed_reader = retry(&self.retry_params, || async {
+						let output_stream = container_client.blob_client(&blob_name).get().into_stream();
+						let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
+						let async_read_stream = output_stream
+						.map(|page_res| {
+							page_res
+								.map(|page| page.data)
+								.map_err(|err| FutureError::new(FutureErrorKind::Other, err))
+						})
+						.try_flatten()
+						.map(|e| e.map_err(|err| FutureError::new(FutureErrorKind::Other, err)));
+						let stream_reader = StreamReader::new(async_read_stream);
+						let boxed_pinned_stream  = Box::pin(stream_reader) as Pin<Box<dyn AsyncRead + Send + Unpin>>;
+						Ok::<_, AzureErrorWrapper>(boxed_pinned_stream)
+					}).await.map_err(AzureErrorWrapper::from)?;
+
 					// Only process and serialize if bytes were read
 					let collected_bytes = CollectedBytes::new(
 						Some(blob_path.to_path_buf()),

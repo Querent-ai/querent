@@ -157,6 +157,8 @@ pub struct IngestedTokens {
     pub doc_source: ::prost::alloc::string::String,
     #[prost(string, tag = "5")]
     pub source_id: ::prost::alloc::string::String,
+    #[prost(string, optional, tag = "6")]
+    pub image_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

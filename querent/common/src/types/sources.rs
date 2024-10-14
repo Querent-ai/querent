@@ -11,6 +11,7 @@ pub struct CollectedBytes {
 	pub size: Option<usize>,
 	pub source_id: String,
 	pub _owned_permit: Option<tokio::sync::OwnedSemaphorePermit>,
+	pub image_id: Option<String>,
 }
 
 impl Debug for CollectedBytes {
@@ -48,6 +49,7 @@ impl CollectedBytes {
 			size,
 			source_id,
 			_owned_permit: _permit,
+			image_id: None,
 		}
 	}
 

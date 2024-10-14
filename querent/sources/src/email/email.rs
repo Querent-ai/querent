@@ -11,7 +11,7 @@ use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, R
 use async_trait::async_trait;
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
-use common::CollectedBytes;
+use common::{retry, CollectedBytes};
 use futures::stream::{self, Stream, StreamExt};
 use imap::Session;
 use native_tls::TlsStream;
@@ -31,6 +31,7 @@ pub struct EmailSource {
 	pub imap_folder: String,
 	pub imap_session: Arc<Mutex<Session<TlsStream<TcpStream>>>>,
 	pub source_id: String,
+	pub retry_params: common::RetryParams,
 }
 
 impl EmailSource {
@@ -54,6 +55,7 @@ impl EmailSource {
 			imap_folder: config.imap_folder,
 			imap_session: Arc::new(Mutex::new(imap_session)),
 			source_id: config.id.clone(),
+			retry_params: common::RetryParams::aggressive(),
 		})
 	}
 
@@ -136,6 +138,18 @@ impl EmailSource {
 #[async_trait]
 impl Source for EmailSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		let tls = native_tls::TlsConnector::builder().build()?;
+
+		let client = imap::connect(
+			(self.imap_server.as_str(), self.imap_port as u16),
+			self.imap_server.as_str(),
+			&tls,
+		)?;
+		let imap_session = client
+			.login(self.imap_username.clone(), self.imap_password.clone())
+			.map_err(|e| e.0)?;
+		// Replace the current session with the new one
+		*self.imap_session.lock().await = imap_session;
 		Ok(())
 	}
 
@@ -217,10 +231,15 @@ impl Source for EmailSource {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let session_lock = self.imap_session.clone();
+		retry(&self.retry_params, || async {
+			self.check_connectivity()
+				.await
+				.map_err(|err| SourceError::new(SourceErrorKind::Connection, err.into()))
+		})
+		.await?;
 		let mut session = session_lock.lock().await;
-
 		session.select(self.imap_folder.as_str()).map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
@@ -276,6 +295,7 @@ impl Source for EmailSource {
 						extension: Some(file_extension),
 						size: Some(content.len()),
 						_owned_permit: None,
+						image_id: None,
 					});
 				}
 
@@ -290,6 +310,7 @@ impl Source for EmailSource {
 					extension: Some("txt".to_string()),
 					size: Some(body.len() as usize),
 					_owned_permit: None,
+					image_id: None,
 				});
 			}
 		}

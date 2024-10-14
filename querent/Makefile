@@ -39,6 +39,7 @@ format:
 	@cargo +nightly fmt --all
 format-check:
 	@echo "Running Cargo fmt..."
+	@rustup toolchain install nightly
 	@rustup component add rustfmt --toolchain nightly
 	@cargo +nightly fmt --all -- --check
 

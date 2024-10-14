@@ -65,7 +65,8 @@ pub async fn fetch_documents_for_embedding(
 			doc_payload.subject = query_result_semantic.subject.clone();
 			doc_payload.object = query_result_semantic.object.clone();
 			doc_payload.doc_source = query_result_semantic.document_source.clone();
-			doc_payload.cosine_distance = Some(1.0 - query_result.cosine_distance.clone());
+			doc_payload.cosine_distance =
+				Some(1.0 - query_result.cosine_distance.unwrap_or(0.0).clone());
 			doc_payload.score = query_result.score.clone();
 			doc_payload.sentence = query_result_semantic.sentence.clone();
 			doc_payload.session_id = Some(session_id.clone());

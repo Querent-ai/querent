@@ -145,6 +145,7 @@ impl grpc::SemanticsServiceGrpc for SemanticsGrpcAdapter {
 				is_token_stream: token.is_token_stream,
 				doc_source: token.doc_source.into(),
 				source_id: token.source_id.into(),
+				image_id: None,
 			};
 			synapse_tokens.push(synapse_token);
 		});

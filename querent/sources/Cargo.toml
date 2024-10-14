@@ -67,3 +67,7 @@ onedrive-api = {workspace = true}
 reqwest = {workspace = true}
 dotenv = {workspace = true}
 notion = {workspace = true}
+aws-runtime = {workspace = true}
+aws-smithy-async = {workspace = true}
+aws-smithy-runtime = {workspace = true}
+aws-types = {workspace = true}
