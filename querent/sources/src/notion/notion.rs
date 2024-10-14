@@ -91,7 +91,7 @@ impl Source for NotionSource {
 
 	async fn poll_data(
 		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let page_id = PageId::from_str(&self.page_id.clone()).map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
@@ -196,13 +196,12 @@ mod tests {
 				let mut count_files: HashSet<String> = HashSet::new();
 				while let Some(item) = stream.next().await {
 					match item {
-						Ok(collected_bytes) => {
+						Ok(collected_bytes) =>
 							if let Some(pathbuf) = collected_bytes.file {
 								if let Some(str_path) = pathbuf.to_str() {
 									count_files.insert(str_path.to_string());
 								}
-							}
-						},
+							},
 						Err(e) => {
 							println!("Error {:?}", e);
 							panic!("Expected successful data collection")

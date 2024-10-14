@@ -99,63 +99,54 @@ pub fn format_page(properties: &Properties) -> String {
 			PropertyValue::Title { title, .. } | PropertyValue::Text { rich_text: title, .. } => {
 				values.extend(title.iter().map(|t| format!("{}: {}", key, t.plain_text())));
 			},
-			PropertyValue::Number { number, .. } => {
+			PropertyValue::Number { number, .. } =>
 				if let Some(num) = number {
 					values.push(format!("{}: {}", key, num));
-				}
-			},
-			PropertyValue::Select { select, .. } | PropertyValue::Status { status: select, .. } => {
+				},
+			PropertyValue::Select { select, .. } | PropertyValue::Status { status: select, .. } =>
 				if let Some(sel) = select {
 					values.push(format!("{}: {:?}", key, sel.name));
-				}
-			},
-			PropertyValue::MultiSelect { multi_select, .. } => {
+				},
+			PropertyValue::MultiSelect { multi_select, .. } =>
 				if let Some(ms) = multi_select {
 					values.extend(ms.iter().map(|s| format!("{}: {:?}", key, s.name)));
-				}
-			},
-			PropertyValue::Date { date, .. } => {
+				},
+			PropertyValue::Date { date, .. } =>
 				if let Some(d) = date {
 					values.push(format!("{}: {:?}", key, d.start));
-				}
-			},
-			PropertyValue::Relation { relation, .. } => {
+				},
+			PropertyValue::Relation { relation, .. } =>
 				if let Some(rel) = relation {
 					values.extend(rel.iter().map(|r| format!("{}: {}", key, r.id)));
-				}
-			},
-			PropertyValue::Rollup { rollup, .. } => {
+				},
+			PropertyValue::Rollup { rollup, .. } =>
 				if let Some(r) = rollup {
 					values.push(format!("{}: {}", key, format!("{:?}", r)));
-				}
-			},
-			PropertyValue::Files { files, .. } => {
+				},
+			PropertyValue::Files { files, .. } =>
 				if let Some(fs) = files {
 					values.extend(fs.iter().map(|f| format!("{}: {}", key, f.name)));
-				}
-			},
+				},
 			PropertyValue::Checkbox { checkbox, .. } => {
 				values.push(format!("{}: {}", key, checkbox));
 			},
-			PropertyValue::Url { url, .. } => {
+			PropertyValue::Url { url, .. } =>
 				if let Some(u) = url {
 					values.push(format!("{}: {}", key, u));
-				}
-			},
-			PropertyValue::Email { email, .. } => {
+				},
+			PropertyValue::Email { email, .. } =>
 				if let Some(e) = email {
 					values.push(format!("{}: {}", key, e));
-				}
-			},
+				},
 			PropertyValue::PhoneNumber { phone_number, .. } => {
 				values.push(format!("{}: {}", key, phone_number));
 			},
-			PropertyValue::CreatedTime { created_time, .. }
-			| PropertyValue::LastEditedTime { last_edited_time: created_time, .. } => {
+			PropertyValue::CreatedTime { created_time, .. } |
+			PropertyValue::LastEditedTime { last_edited_time: created_time, .. } => {
 				values.push(format!("{}: {}", key, created_time));
 			},
-			PropertyValue::CreatedBy { created_by, .. }
-			| PropertyValue::LastEditedBy { last_edited_by: created_by, .. } => {
+			PropertyValue::CreatedBy { created_by, .. } |
+			PropertyValue::LastEditedBy { last_edited_by: created_by, .. } => {
 				values.push(format!("{}: {:?}", key, created_by));
 			},
 			PropertyValue::UniqueId { unique_id, .. } => {
