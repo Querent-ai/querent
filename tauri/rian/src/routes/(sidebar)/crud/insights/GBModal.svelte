@@ -115,7 +115,7 @@
 					: 0;
 				const topCentralNodesMatch = cleanedData.match(/Top 3 Central Nodes: \[(.+)\]/);
 				if (topCentralNodesMatch) {
-					const nodesString = topCentralNodesMatch[1].replace(/[\[\]\(\)\"]/g, '').trim();
+					const nodesString = topCentralNodesMatch[1].replace(/[()[\]"]/g, '').trim();
 					const nodesArray = nodesString.split(', ').reduce(
 						(acc, val, idx, arr) => {
 							if (idx % 2 === 0) {
