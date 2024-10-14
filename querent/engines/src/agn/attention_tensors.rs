@@ -242,7 +242,7 @@ impl Engine for AttentionTensorsEngine {
 								object: head_tail_relation.tail.name.to_string(),
 								object_type: object_type.to_string(),
 								sentence: sentence_with_relations.classified_sentence.sentence.to_string(),
-								image_id: None,
+								image_id: token.image_id.clone(),
 								blob: Some("mock".to_string()),
 								source_id: source_id.to_string(),
 								event_id: event_id,
@@ -258,7 +258,7 @@ impl Engine for AttentionTensorsEngine {
 								event_type: EventType::Graph,
 								file: file.to_string(),
 								doc_source: doc_source.to_string(),
-								image_id: None,
+								image_id: token.image_id.clone(),
 								timestamp: 0.0,
 								payload: serialized_payload,
 							};
@@ -310,7 +310,7 @@ impl Engine for AttentionTensorsEngine {
 								event_type: EventType::Vector,
 								file: file.to_string(),
 								doc_source: doc_source.to_string(),
-								image_id: None,
+								image_id: token.image_id.clone(),
 								timestamp: 0.0,
 								payload: serialized_payload,
 							};
