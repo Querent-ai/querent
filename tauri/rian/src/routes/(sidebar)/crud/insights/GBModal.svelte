@@ -11,6 +11,14 @@
 	export let insightsId: string | null = null;
 	let sessionId: string;
 	let responseMessage = '';
+	let errorMessage = '';
+	let userQuery = '';
+	let totalNodes = 0;
+	let totalRelationships = 0;
+	let graphDensity = 0;
+	let totalCommunities = 0;
+	let largestCommunitySize = 0;
+	let topCentralNodes: [string, number][] = [];
 
 	let loadingStatus: boolean;
 	$: {
@@ -33,10 +41,9 @@
 				sessionId = $insightSessionId;
 			} else {
 				responseMessage = '';
+				errorMessage = '';
 				let additional_options: { [x: string]: string } = {};
 				let semantic_pipeline_id: string = '';
-				// let query: string = '';
-
 				if (insight?.additionalOptions) {
 					for (const key in insight.additionalOptions) {
 						if (Object.prototype.hasOwnProperty.call(insight.additionalOptions, key)) {
@@ -58,40 +65,79 @@
 					additional_options: additional_options
 				};
 				isLoadingInsight.set(true);
-				console.log('This is the query-------', request);
 				let res = await commands.triggerInsightAnalyst(request);
 				if (res.status == 'ok') {
 					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
 				} else {
-					console.log('Error while starting insights:', res.error);
+					errorMessage = formatErrorMessage(res.error);
 				}
 			}
 		} catch (error) {
-			console.error('Unexpected error while initializing Graph Builder Insight:', error);
+			errorMessage = formatErrorMessage(String(error));
 		} finally {
 			isLoadingInsight.set(false);
 		}
 	}
 
 	async function sendMessage() {
-		console.log('This is the query-------', inputMessage);
 		try {
 			isLoadingInsight.set(true);
+			responseMessage = '';
+			errorMessage = '';
+			userQuery = inputMessage;
+			totalNodes = 0;
+			totalRelationships = 0;
+			graphDensity = 0;
+			totalCommunities = 0;
+			largestCommunitySize = 0;
+			topCentralNodes = [];
 			let request: InsightQuery = {
 				session_id: sessionId,
 				query: inputMessage
 			};
 			let res = await commands.promptInsightAnalyst(request);
 			if (res.status == 'ok') {
-				console.log('This is the query-------', res.data);
-				responseMessage = res.data.response.replace(/\\n|\n/g, ' ').trim();
+				const responseData = res.data.response;
+				const cleanedData = responseData.replace(/\\n/g, '\n').replace(/\\"/g, '"');
+				const totalNodesMatch = cleanedData.match(/Total Nodes: (\d+)/);
+				const averageNodeDegree = cleanedData.match(/Average Node Degree: (\d+)/);
+				const graphDensityMatch = cleanedData.match(/Graph Density: ([0-9.]+)/);
+				const totalCommunitiesMatch = cleanedData.match(/Number of Communities: (\d+)/);
+				const largestCommunitySizeMatch = cleanedData.match(/Largest Community Size: (\d+)/);
+
+				totalNodes = totalNodesMatch ? parseInt(totalNodesMatch[1]) : 0;
+				totalRelationships = averageNodeDegree ? parseInt(averageNodeDegree[1]) : 0;
+				graphDensity = graphDensityMatch ? parseFloat(graphDensityMatch[1]) : 0;
+				totalCommunities = totalCommunitiesMatch ? parseInt(totalCommunitiesMatch[1]) : 0;
+				largestCommunitySize = largestCommunitySizeMatch
+					? parseInt(largestCommunitySizeMatch[1])
+					: 0;
+				const topCentralNodesMatch = cleanedData.match(/Top 3 Central Nodes: \[(.+)\]/);
+				if (topCentralNodesMatch) {
+					const nodesString = topCentralNodesMatch[1].replace(/[\[\]\(\)\"]/g, '').trim();
+					const nodesArray = nodesString.split(', ').reduce(
+						(acc, val, idx, arr) => {
+							if (idx % 2 === 0) {
+								const nodeName = val;
+								const connections = parseInt(arr[idx + 1]);
+								if (!isNaN(connections)) {
+									acc.push([nodeName.trim(), connections]);
+								}
+							}
+							return acc;
+						},
+						[] as [string, number][]
+					);
+					topCentralNodes = nodesArray.filter(([nodeName, connections]) => !isNaN(connections));
+				}
+				responseMessage = cleanedData;
 			} else {
-				console.log('Error while processing the insight query:', res.error);
-				responseMessage = formatErrorMessage(res.error);
+				errorMessage = formatErrorMessage(res.error);
 			}
 		} catch (error) {
 			console.error('Unexpected error while sending message:', error);
+			errorMessage = formatErrorMessage(String(error));
 		} finally {
 			inputMessage = '';
 			isLoadingInsight.set(false);
@@ -117,13 +163,19 @@
 	}
 </script>
 
-<Modal bind:open={show} size="xl" class="w-full" autoclose={false} on:close={closeModal}>
+<Modal
+	bind:open={show}
+	size="xl"
+	class="h-auto max-h-[95vh] w-full"
+	autoclose={false}
+	on:close={closeModal}
+>
 	<div class="modal-header mb-4 flex items-center justify-between">
 		<h3 class="text-xl font-medium text-gray-900 dark:text-white">
 			{insight ? insight.name : 'Query'}
 		</h3>
 	</div>
-	<div class="modal-body">
+	<div class="modal-body h-auto">
 		<form on:submit|preventDefault={sendMessage} class="flex">
 			<textarea
 				placeholder="Enter your query or context..."
@@ -138,9 +190,97 @@
 			<Button type="submit">Send</Button>
 		</form>
 		{#if responseMessage}
-			<div class="response mt-4 rounded-lg bg-white p-4 shadow">
-				<h4 class="mb-2 text-lg font-semibold">Response:</h4>
-				<p class="text-gray-700 dark:text-white">{responseMessage}</p>
+			{#if userQuery}
+				<div class="mb-4 rounded-lg bg-gray-100 p-4">
+					<p class="text-sm text-gray-600"><strong>User Query:</strong> {userQuery}</p>
+				</div>
+			{/if}
+			<div class="mt-8">
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+					<div class="card flex items-center rounded-lg bg-white p-4 shadow-md">
+						<div
+							class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500 text-white"
+						>
+							<Icon icon="fluent:diagram-24-filled" class="h-6 w-6" />
+						</div>
+						<div>
+							<h4 class="text-lg font-semibold text-gray-900">Total Nodes</h4>
+							<p class="text-gray-700">{totalNodes}</p>
+						</div>
+					</div>
+					<div class="card flex items-center rounded-lg bg-white p-4 shadow-md">
+						<div
+							class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-500 text-white"
+						>
+							<Icon icon="fluent:link-20-filled" class="h-6 w-6" />
+						</div>
+						<div>
+							<h4 class="text-lg font-semibold text-gray-900">Average Node Degree</h4>
+							<p class="text-gray-700">{totalRelationships}</p>
+						</div>
+					</div>
+					<div class="card flex items-center rounded-lg bg-white p-4 shadow-md">
+						<div
+							class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500 text-white"
+						>
+							<Icon icon="mdi:grid-large" class="h-6 w-6" />
+						</div>
+						<div>
+							<h4 class="text-lg font-semibold text-gray-900">Graph Density</h4>
+							<p class="text-gray-700">{graphDensity.toFixed(4)}</p>
+						</div>
+					</div>
+				</div>
+
+				<div class="mt-4 grid grid-cols-1 gap-6 md:grid-cols-3">
+					<div class="card flex items-center rounded-lg bg-white p-4 shadow-md">
+						<div
+							class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-purple-500 text-white"
+						>
+							<Icon icon="fluent:group-24-filled" class="h-6 w-6" />
+						</div>
+						<div>
+							<h4 class="text-lg font-semibold text-gray-900">Communities Detected</h4>
+							<p class="text-gray-700">{totalCommunities}</p>
+						</div>
+					</div>
+					<div class="card flex items-center rounded-lg bg-white p-4 shadow-md">
+						<div
+							class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500 text-white"
+						>
+							<Icon icon="fluent:people-community-16-filled" class="h-6 w-6" />
+						</div>
+						<div>
+							<h4 class="text-lg font-semibold text-gray-900">Largest Community Size</h4>
+							<p class="text-gray-700">{largestCommunitySize}</p>
+						</div>
+					</div>
+					<div class="card rounded-lg bg-white p-4 shadow-md">
+						<div class="mb-0 flex items-center">
+							<div
+								class="mr-4 flex h-12 w-12 items-center justify-center rounded-full bg-orange-500 text-white"
+							>
+								<Icon icon="mdi:chart-donut" class="h-6 w-6" />
+							</div>
+							<h4 class="text-lg font-semibold text-gray-900">Top Central Nodes</h4>
+						</div>
+						<ul class="ml-[4rem] mt-0 space-y-1 text-gray-700">
+							{#each topCentralNodes as [nodeName, connections]}
+								<li>{nodeName}: {connections} connections</li>
+							{/each}
+						</ul>
+					</div>
+				</div>
+			</div>
+		{/if}
+		{#if errorMessage}
+			{#if userQuery}
+				<div class="mb-4 rounded-lg bg-gray-100 p-4">
+					<p class="text-sm text-gray-600"><strong>User Query:</strong> {userQuery}</p>
+				</div>
+			{/if}
+			<div class="mb-4 rounded-lg bg-red-100 p-4">
+				<p class="text-sm text-red-600"><strong>Error:</strong> {errorMessage}</p>
 			</div>
 		{/if}
 	</div>
@@ -152,12 +292,11 @@
 	}
 
 	.modal-body {
-		max-height: 200px;
-		overflow-y: auto;
 		padding: 1rem;
 		background-color: #f9f9f9;
 		border-radius: 10px;
 	}
+
 	.search-input {
 		flex-grow: 1;
 		min-height: 40px;

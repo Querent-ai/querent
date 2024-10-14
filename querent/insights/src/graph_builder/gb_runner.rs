@@ -77,7 +77,7 @@ impl InsightRunner for GraphBuilderRunner {
 				"Auto_Suggest"
 			},
 		};
-
+		let mut insights_text = "".to_string();
 		let embedding_model = self.embedding_model.as_ref().ok_or_else(|| {
 			InsightError::new(
 				InsightErrorKind::Internal,
@@ -187,7 +187,7 @@ impl InsightRunner for GraphBuilderRunner {
 										sentence: knowledge.sentence,
 										subject_type: "Entity".to_string(),
 										object_type: "Entity".to_string(),
-										predicate_type: "relationship".to_string(),
+										predicate_type: "fabric connection".to_string(),
 										blob: Some("".to_string()),
 										image_id: Some("".to_string()),
 										event_id: "".to_string(),
@@ -210,7 +210,7 @@ impl InsightRunner for GraphBuilderRunner {
 							.get_semanticknowledge_data(&self.config.semantic_pipeline_id)
 							.await
 						{
-							Ok(discovered_data) => {
+							Ok(discovered_data) =>
 								for knowledge in discovered_data {
 									let semantic_payload = SemanticKnowledgePayload {
 										subject: knowledge.subject,
@@ -242,22 +242,7 @@ impl InsightRunner for GraphBuilderRunner {
 										knowledge.image_id.clone(),
 										semantic_payload,
 									));
-								}
-
-								if !neo4j_payload.is_empty() {
-									match neo4j_storage
-										.insert_graph(session_id.to_string(), &neo4j_payload)
-										.await
-									{
-										Ok(_) => {
-											log::info!("Successfully inserted discovered knowledge into Neo4j");
-										},
-										Err(err) => {
-											log::error!("Failed to insert discovered knowledge into Neo4j: {:?}", err);
-										},
-									}
-								}
-							},
+								},
 							Err(err) => {
 								log::error!("Failed to fetch discovered data: {:?}", err);
 							},
@@ -270,6 +255,102 @@ impl InsightRunner for GraphBuilderRunner {
 						{
 							Ok(_) => {
 								log::info!("Successfully inserted discovered knowledge into Neo4j");
+								let mut unique_nodes: HashSet<String> = HashSet::new();
+								let mut unique_relationships: HashSet<(
+									String,
+									String,
+									String,
+									String,
+									String,
+									String,
+									Option<String>,
+									String,
+								)> = HashSet::new();
+								let mut node_connections: HashMap<String, usize> = HashMap::new();
+								let mut connected_nodes: HashSet<(String, String)> = HashSet::new();
+								for (doc_id, doc_source, _image_id, semantic_payload) in
+									&neo4j_payload
+								{
+									let relationship = (
+										semantic_payload.subject.clone(),
+										semantic_payload.object.clone(),
+										semantic_payload.predicate.clone(),
+										semantic_payload.sentence.clone(),
+										doc_id.clone(),
+										doc_source.clone(),
+										_image_id.clone(),
+										semantic_payload.predicate_type.clone(),
+									);
+									if unique_relationships.insert(relationship.clone()) {
+										*node_connections
+											.entry(semantic_payload.subject.clone())
+											.or_insert(0) += 1;
+										*node_connections
+											.entry(semantic_payload.object.clone())
+											.or_insert(0) += 1;
+
+										unique_nodes.insert(semantic_payload.subject.clone());
+										unique_nodes.insert(semantic_payload.object.clone());
+
+										connected_nodes.insert((
+											semantic_payload.subject.clone(),
+											semantic_payload.object.clone(),
+										));
+									}
+								}
+								let total_nodes = unique_nodes.len();
+								let relationship_count = unique_relationships.len();
+								let total_degrees: usize = node_connections.values().sum();
+								let average_node_degree = if total_nodes > 0 {
+									total_degrees as f64 / total_nodes as f64
+								} else {
+									0.0
+								};
+								let mut top_nodes: Vec<_> = node_connections.iter().collect();
+								top_nodes.sort_by(|a, b| b.1.cmp(a.1));
+
+								let top_3_nodes: Vec<_> = top_nodes.iter().take(3).collect();
+								let total_possible_relationships =
+									total_nodes * (total_nodes - 1) / 2;
+								let graph_density = if total_possible_relationships > 0 {
+									relationship_count as f64 / total_possible_relationships as f64
+								} else {
+									0.0
+								};
+								let mut communities: HashMap<String, HashSet<String>> =
+									HashMap::new();
+								for (subject, object) in connected_nodes {
+									communities
+										.entry(subject.clone())
+										.or_insert(HashSet::new())
+										.insert(object.clone());
+									communities
+										.entry(object.clone())
+										.or_insert(HashSet::new())
+										.insert(subject.clone());
+								}
+
+								let total_communities = communities.len();
+								let largest_community_size = communities
+									.values()
+									.map(|community| community.len())
+									.max()
+									.unwrap_or(0);
+								insights_text = format!(
+									"Graph Builder Summary:\n\
+									- Total Nodes: {}\n\
+									- Average Node Degree: {:.2}\n\
+									- Graph Density: {:.4}\n\
+									- Number of Communities: {}\n\
+									- Largest Community Size: {}\n\
+									- Top 3 Central Nodes: {:?}\n",
+									total_nodes,
+									average_node_degree,
+									graph_density,
+									total_communities,
+									largest_community_size,
+									top_3_nodes
+								);
 							},
 							Err(err) => {
 								log::error!(
@@ -280,9 +361,7 @@ impl InsightRunner for GraphBuilderRunner {
 						}
 					}
 				}
-				return Ok(InsightOutput {
-					data: Value::String("Successfully inserted fabric data in Neo4j".to_string()),
-				});
+				return Ok(InsightOutput { data: Value::String(insights_text) });
 			}
 		}
 
