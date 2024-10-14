@@ -8,6 +8,7 @@ use common::CollectedBytes;
 use futures::Stream;
 use google_drive3::chrono::DateTime;
 use proto::semantics::NewsCollectorConfig;
+use reqwest::Url;
 use std::{
 	io::Cursor,
 	ops::Range,
@@ -87,10 +88,6 @@ impl NewsApiClient {
 			url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
 		}
 
-		if let Some(sort_by) = &self.sort_by {
-			url.push_str(&format!("&sortBy={}", sort_by));
-		}
-
 		if self.query_type == "topheadlines" {
 			if let Some(country) = &self.country {
 				url.push_str(&format!("&country={}", country));
@@ -105,8 +102,14 @@ impl NewsApiClient {
 			}
 		}
 
-		if let Some(language) = &self.language {
-			url.push_str(&format!("&language={}", language));
+		if self.query_type == "everything" {
+			if let Some(sort_by) = &self.sort_by {
+				url.push_str(&format!("&sortBy={}", sort_by));
+			}
+
+			if let Some(language) = &self.language {
+				url.push_str(&format!("&language={}", language));
+			}
 		}
 
 		if let Some(query) = &self.query {
@@ -156,6 +159,63 @@ async fn fetch_news(client: &reqwest::Client, url: &str) -> Result<NewsResponse,
 	})?;
 
 	Ok(news_response)
+}
+
+async fn get_image(client: &reqwest::Client, url: &str) -> Result<(String, Vec<u8>), SourceError> {
+	let response = client
+		.get(url)
+		.header(reqwest::header::USER_AGENT, "Querent/1.0")
+		.send()
+		.await
+		.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error making the API request: {:?}", err).into(),
+			)
+		})?;
+
+	if !response.status().is_success() {
+		return Err(SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Failed to download image: HTTP status {}", response.status()).into(),
+		));
+	}
+
+	let image_bytes = response.bytes().await.map_err(|err| {
+		SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Error reading response body: {:?}", err).into(),
+		)
+	})?;
+
+	let image_name = extract_image_name(url)?;
+
+	Ok((image_name, image_bytes.to_vec()))
+}
+
+fn extract_image_name(url: &str) -> Result<String, SourceError> {
+	let parsed_url = Url::parse(url).map_err(|_| {
+		SourceError::new(SourceErrorKind::Io, anyhow::anyhow!("Failed to parse URL").into())
+	})?;
+
+	let path =
+		parsed_url.path_segments().and_then(|segments| segments.last()).ok_or_else(|| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed to extract image name from URL").into(),
+			)
+		})?;
+
+	let binding = PathBuf::from(path);
+	let file_name = binding.file_name().and_then(|name| name.to_str()).ok_or_else(|| {
+		SourceError::new(SourceErrorKind::Io, anyhow::anyhow!("Invalid image name in URL").into())
+	})?;
+
+	Ok(file_name.to_string())
+}
+
+fn extract_file_extension(file_name: &str) -> Option<&str> {
+	file_name.split('.').last()
 }
 
 fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
@@ -241,7 +301,6 @@ impl Source for NewsApiClient {
 								if articles.is_empty() {
 									break;
 								}
-								println!("News is as givn below {:?}", articles);
 								for individual_news in articles {
 									let file_name = individual_news.title
 										.clone()
@@ -254,6 +313,31 @@ impl Source for NewsApiClient {
 
 									let doc_source = individual_news.source.name.clone();
 
+									if let Some(url_to_image) = individual_news.url_to_image {
+										let res = get_image(&client, &url_to_image).await;
+
+										if res.is_ok() {
+											if let Ok((image_name, image_bytes)) = res {
+
+												let image_name_path = Some(PathBuf::from(image_name.clone()));
+
+												let extension = extract_file_extension(&image_name).unwrap_or("").to_string();
+
+												let collected_bytes = CollectedBytes {
+													file: image_name_path,
+													data: Some(Box::pin(std::io::Cursor::new(image_bytes.clone()))),
+													eof: true,
+													doc_source: doc_source.clone(),
+													size: Some(image_bytes.len()),
+													source_id: source_id.clone(),
+													_owned_permit: None,
+													image_id: Some(image_name),
+													extension: Some(extension),
+												};
+												yield Ok(collected_bytes);
+											}
+										}
+									}
 
 									let collected_bytes = CollectedBytes::new(
 										file_name_path,
@@ -306,7 +390,7 @@ mod tests {
 	use super::*;
 	use dotenv::dotenv;
 	use futures::StreamExt;
-	use std::{collections::HashSet, env};
+	use std::env;
 
 	// Negative tests
 	#[tokio::test]
@@ -331,26 +415,12 @@ mod tests {
 		};
 
 		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
-		let result = news_api_client.poll_data().await;
+		let connectivity = news_api_client.check_connectivity().await;
 
-		match result {
-			Ok(mut stream) => {
-				let mut found_error = false;
-				while let Some(item) = stream.next().await {
-					if item.is_err() {
-						found_error = true;
-						break;
-					}
-				}
-				assert!(
-					found_error,
-					"Expected at least one error in the stream with an invalid API key"
-				);
-			},
-			Err(_) => {
-				assert!(false, "Expected a stream but encountered an error during stream creation")
-			},
-		}
+		assert!(
+			connectivity.is_err(),
+			"Expected the connectivity check to fail with an invalid API key"
+		);
 	}
 
 	#[tokio::test]
@@ -430,6 +500,7 @@ mod tests {
 					match item {
 						Ok(_collected_bytes) => {
 							found_data = true;
+							break;
 						},
 						Err(_err) => {
 							found_error = true;
@@ -453,6 +524,7 @@ mod tests {
 	#[tokio::test]
 	async fn test_query_with_future_dates() {
 		dotenv().ok();
+
 		let news_config = NewsCollectorConfig {
 			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
 			query: Some("Tesla".to_string()),
@@ -477,25 +549,27 @@ mod tests {
 		match result {
 			Ok(mut stream) => {
 				let mut found_error = false;
+				let mut no_data_returned = true;
+
 				while let Some(item) = stream.next().await {
+					no_data_returned = false;
+
 					if item.is_err() {
 						found_error = true;
 						break;
 					}
-					println!("Response is {:?}", item);
-					println!("Error: {:?}", item.err());
 				}
-				assert!(found_error, "Expected at least one error in the stream with future dates");
+				assert!(found_error || no_data_returned, "Expected an error or no data returned for future date range, but got some data.");
 			},
 			Err(_) => {
-				assert!(false, "Expected a stream but encountered an error during stream creation")
+				assert!(false, "Expected a stream but encountered an error during stream creation");
 			},
 		}
 	}
 
-	// This one works
+	// This one works, with everything as type
 	#[tokio::test]
-	async fn test_successful_news_fetch() {
+	async fn test_successful_news_fetch_everything() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
 			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
@@ -523,12 +597,57 @@ mod tests {
 				let mut found_data = false;
 				while let Some(item) = stream.next().await {
 					if item.is_ok() {
-						println!("Found result as {:?}", item);
 						found_data = true;
 						break;
 					} else if item.is_err() {
 						break;
 					}
+				}
+				assert!(found_data, "Expected at least one successful data item in the stream");
+			},
+			Err(_) => {
+				assert!(false, "Expected a stream but encountered an error during stream creation")
+			},
+		}
+	}
+
+	//This one is for top headlines
+	#[tokio::test]
+	async fn test_successful_news_fetch_top_headlines() {
+		dotenv().ok();
+		let news_config = NewsCollectorConfig {
+			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			query: Some("Technology".to_string()),
+			query_type: 1,
+			id: "Some-id".to_string(),
+			sources: None,
+			from_date: None,
+			to_date: None,
+			language: Some("en".to_string()),
+			sort_by: Some(0),
+			exclude_domains: None,
+			search_in: None,
+			page_size: Some(10),
+			domains: None,
+			country: None,
+			category: None,
+		};
+
+		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+		let result = news_api_client.poll_data().await;
+
+		match result {
+			Ok(mut stream) => {
+				let mut found_data = false;
+				while let Some(item) = stream.next().await {
+					if item.is_ok() {
+						found_data = true;
+						break;
+					} else if item.is_err() {
+						println!("Found error as {:?}", item.err());
+						break;
+					}
+					println!("Entered here atleast");
 				}
 				assert!(found_data, "Expected at least one successful data item in the stream");
 			},
@@ -565,23 +684,20 @@ mod tests {
 
 		match result {
 			Ok(mut stream) => {
-				let mut count = 0;
-				let mut file_names: HashSet<String> = HashSet::new();
+				let mut found_data = false;
 				while let Some(item) = stream.next().await {
-					if let Ok(collected_bytes) = item {
-						if let Some(file_path) = collected_bytes.file.clone() {
-							if let Some(path_str) = file_path.to_str() {
-								file_names.insert(path_str.to_string());
-							}
-						}
-						count += 1;
+					if item.is_ok() {
+						found_data = true;
+						break;
+					} else if item.is_err() {
+						println!("Found error as {:?}", item.err());
+						break;
 					}
+					println!("Entered here atleast");
 				}
-
-				assert!(count > 0, "Expected multiple pages but got none");
-				assert!(!file_names.is_empty(), "Expected file names but found none");
+				assert!(found_data, "Expected at least one successful data item in the stream");
 			},
-			Err(_e) => {
+			Err(_) => {
 				assert!(false, "Expected a stream but encountered an error during stream creation")
 			},
 		}

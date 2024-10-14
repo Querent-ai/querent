@@ -18,7 +18,8 @@ use tokio::io::AsyncRead;
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
 use super::utils::{
-	fetch_databases_in_page, fetch_page, format_page, format_properties, string_to_async_read,
+	extract_file_extension, fetch_databases_in_page, fetch_page, format_page, format_properties,
+	get_images_from_page, string_to_async_read,
 };
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
@@ -117,6 +118,33 @@ impl Source for NotionSource {
 						source_id.clone(),
 						None,
 					));
+
+
+					let res = get_images_from_page(page.properties.properties).await;
+					if res.is_ok() {
+						if let Ok(images) = res {
+							for (image_name, image_bytes) in images {
+
+								let image_name_path = Some(PathBuf::from(image_name.clone()));
+
+								let extension = extract_file_extension(&image_name).unwrap_or("").to_string();
+
+								let collected_bytes = CollectedBytes {
+									file: image_name_path,
+									data: Some(Box::pin(std::io::Cursor::new(image_bytes.clone()))),
+									eof: true,
+									doc_source: Some("notion://image".to_string()),
+									size: Some(image_bytes.len()),
+									source_id: source_id.clone(),
+									_owned_permit: None,
+									image_id: Some(image_name),
+									extension: Some(extension),
+								};
+
+								yield Ok(collected_bytes);
+							}
+						}
+					}
 				},
 				Err(err) => {
 					yield Err(SourceError::new(

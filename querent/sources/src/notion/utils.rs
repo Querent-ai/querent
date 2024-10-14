@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::Cursor};
+use std::{collections::HashMap, io::Cursor, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 use notion::{
@@ -270,4 +270,87 @@ pub async fn fetch_databases_in_page(
 			anyhow::anyhow!("Failed to fetch databases from Notion API").into(),
 		))
 	}
+}
+
+async fn get_image(client: &reqwest::Client, url: &str) -> Result<(String, Vec<u8>), SourceError> {
+	let response = client
+		.get(url)
+		.header(reqwest::header::USER_AGENT, "Querent/1.0")
+		.send()
+		.await
+		.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error making the API request: {:?}", err).into(),
+			)
+		})?;
+
+	if !response.status().is_success() {
+		return Err(SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Failed to download image: HTTP status {}", response.status()).into(),
+		));
+	}
+
+	let image_bytes = response.bytes().await.map_err(|err| {
+		SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Error reading response body: {:?}", err).into(),
+		)
+	})?;
+
+	let image_name = extract_image_name(url)?;
+
+	Ok((image_name, image_bytes.to_vec()))
+}
+
+fn extract_image_name(url: &str) -> Result<String, SourceError> {
+	let path = url.split('/').last().ok_or_else(|| {
+		SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Failed to extract image name from URL").into(),
+		)
+	})?;
+
+	let binding = PathBuf::from(path);
+	let file_name = binding.file_name().and_then(|name| name.to_str()).ok_or_else(|| {
+		SourceError::new(SourceErrorKind::Io, anyhow::anyhow!("Invalid image name in URL").into())
+	})?;
+
+	Ok(file_name.to_string())
+}
+
+pub async fn get_images_from_page(
+	properties: HashMap<String, PropertyValue>,
+) -> Result<Vec<(String, Vec<u8>)>, SourceError> {
+	let mut images = Vec::new();
+	let client = Client::new();
+
+	for (_key, value) in properties {
+		match value {
+			PropertyValue::Files { files, .. } =>
+				if let Some(file_list) = files {
+					for file in file_list {
+						match get_image(&client, &file.name).await {
+							Ok((image_name, image_bytes)) => {
+								images.push((image_name, image_bytes));
+							},
+							Err(err) => {
+								return Err(SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Failed to fetch image: {:?}", err).into(),
+								));
+							},
+						}
+					}
+				},
+			_ => {},
+		}
+	}
+
+	Ok(images)
+}
+
+pub fn extract_file_extension(file_name: &str) -> Option<&str> {
+	file_name.split('.').last()
 }
