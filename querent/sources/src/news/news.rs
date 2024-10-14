@@ -60,73 +60,38 @@ impl NewsApiClient {
 		})
 	}
 
-	pub async fn fetch_news(&self, page: u32) -> Result<NewsResponse, SourceError> {
-		let url = self.create_query(page).await;
-		let response = self
-			.client
-			.get(&url)
-			.header(reqwest::header::USER_AGENT, "Querent/1.0")
-			.send()
-			.await
-			.map_err(|err| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Error making the API request: {:?}", err).into(),
-				)
-			})?;
-		let news_response: NewsResponse = response.json::<NewsResponse>().await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Failed to parse JSON response: {:?}", err).into(),
-			)
-		})?;
-		if news_response.status != "ok" {
-			return Err(SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!(news_response
-					.message
-					.unwrap_or_else(|| "Failed to fetch news".to_string()))
-				.into(),
-			));
+	pub async fn create_query(&self) -> String {
+		let mut url = if self.query_type.to_lowercase() == "everything" {
+			format!("https://newsapi.org/v2/{}?apiKey={}", "everything", self.api_token)
+		} else {
+			format!("https://newsapi.org/v2/{}?apiKey={}", "top-headlines", self.api_token)
+		};
+
+		if let Some(search_in) = &self.search_in {
+			url.push_str(&format!("&searchIn={}", search_in));
 		}
 
-		Ok(news_response)
-	}
-
-	pub async fn create_query(&self, page: u32) -> String {
-		let mut url = "".to_string();
-
-		if self.query_type.to_lowercase() == "everything" {
-			url = format!("https://newsapi.org/v2/{}?apiKey={}", "everything", self.api_token);
-
-			if let Some(search_in) = &self.search_in {
-				url.push_str(&format!("&searchIn={}", search_in));
-			}
-
-			if let Some(domains) = &self.domains {
-				url.push_str(&format!("&domains={}", domains));
-			}
-
-			if let Some(exclude_domains) = &self.exclude_domains {
-				url.push_str(&format!("&excludeDomains={}", exclude_domains));
-			}
-
-			if let Some(from) = &self.from {
-				url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
-				eprintln!("This is the url33 :m {:?}", url);
-			}
-
-			if let Some(to) = &self.to {
-				url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
-				eprintln!("This is the url44 :m {:?}", url);
-			}
-
-			if let Some(sort_by) = &self.sort_by {
-				url.push_str(&format!("&sortBy={}", sort_by));
-			}
+		if let Some(domains) = &self.domains {
+			url.push_str(&format!("&domains={}", domains));
 		}
+
+		if let Some(exclude_domains) = &self.exclude_domains {
+			url.push_str(&format!("&excludeDomains={}", exclude_domains));
+		}
+
+		if let Some(from) = &self.from {
+			url.push_str(&format!("&from={}", from.format("%Y-%m-%dT%H:%M:%SZ")));
+		}
+
+		if let Some(to) = &self.to {
+			url.push_str(&format!("&to={}", to.format("%Y-%m-%dT%H:%M:%SZ")));
+		}
+
+		if let Some(sort_by) = &self.sort_by {
+			url.push_str(&format!("&sortBy={}", sort_by));
+		}
+
 		if self.query_type == "topheadlines" {
-			url = format!("https://newsapi.org/v2/{}?apiKey={}", "top-headlines", self.api_token);
 			if let Some(country) = &self.country {
 				url.push_str(&format!("&country={}", country));
 			}
@@ -138,23 +103,18 @@ impl NewsApiClient {
 			if let Some(sources) = &self.sources {
 				url.push_str(&format!("&sources={}", sources));
 			}
-			if self.sources.is_some() && (self.country.is_some() || self.category.is_some()) {
-				eprintln!("Warning: 'sources' cannot be used with 'country' or 'category' in 'top-headlines'. Ignoring 'country' and 'category'.");
-			}
 		}
 
 		if let Some(language) = &self.language {
 			url.push_str(&format!("&language={}", language));
 		}
+
 		if let Some(query) = &self.query {
 			if !query.is_empty() {
 				url.push_str(&format!("&q={}", query));
 			}
 		}
-		url.push_str(&format!("&page={}", page));
-		if let Some(page_size) = self.page_size {
-			url.push_str(&format!("&pageSize={}", page_size));
-		}
+
 		url
 	}
 
@@ -173,6 +133,29 @@ impl NewsApiClient {
 				.ok()
 		})
 	}
+}
+
+async fn fetch_news(client: &reqwest::Client, url: &str) -> Result<NewsResponse, SourceError> {
+	let response = client
+		.get(url)
+		.header(reqwest::header::USER_AGENT, "Querent/1.0")
+		.send()
+		.await
+		.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error making the API request: {:?}", err).into(),
+			)
+		})?;
+
+	let news_response: NewsResponse = response.json::<NewsResponse>().await.map_err(|err| {
+		SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Failed to parse JSON response: {:?}", err).into(),
+		)
+	})?;
+
+	Ok(news_response)
 }
 
 fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
@@ -240,18 +223,25 @@ impl Source for NewsApiClient {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'static>>> {
 		let source_id = self.source_id.clone();
 		let page_size = self.page_size.unwrap_or(20);
+
+		let client = reqwest::Client::new();
+
+		let base_query = self.create_query().await;
+
 		let mut page = 1;
-		let self_cloned = self.clone();
+
 		let stream = stream! {
 			loop {
-				match self_cloned.fetch_news(page).await {
+				let url = format!("{}&page={}", base_query, page);
+
+				match fetch_news(&client, &url).await {
 					Ok(news) => {
 						if news.status == "ok" {
 							if let Some(articles) = news.articles {
 								if articles.is_empty() {
 									break;
 								}
-
+								println!("News is as givn below {:?}", articles);
 								for individual_news in articles {
 									let file_name = individual_news.title
 										.clone()
@@ -263,6 +253,7 @@ impl Source for NewsApiClient {
 									let data_len = data_str.len();
 
 									let doc_source = individual_news.source.name.clone();
+
 
 									let collected_bytes = CollectedBytes::new(
 										file_name_path,
@@ -458,6 +449,7 @@ mod tests {
 		}
 	}
 
+	// Future dates hence would not work
 	#[tokio::test]
 	async fn test_query_with_future_dates() {
 		dotenv().ok();
@@ -490,6 +482,8 @@ mod tests {
 						found_error = true;
 						break;
 					}
+					println!("Response is {:?}", item);
+					println!("Error: {:?}", item.err());
 				}
 				assert!(found_error, "Expected at least one error in the stream with future dates");
 			},
@@ -499,7 +493,7 @@ mod tests {
 		}
 	}
 
-	// Happy path test
+	// This one works
 	#[tokio::test]
 	async fn test_successful_news_fetch() {
 		dotenv().ok();
@@ -515,7 +509,7 @@ mod tests {
 			sort_by: Some(0),
 			exclude_domains: None,
 			search_in: None,
-			page_size: Some(100),
+			page_size: Some(10),
 			domains: None,
 			country: None,
 			category: None,
@@ -529,6 +523,7 @@ mod tests {
 				let mut found_data = false;
 				while let Some(item) = stream.next().await {
 					if item.is_ok() {
+						println!("Found result as {:?}", item);
 						found_data = true;
 						break;
 					} else if item.is_err() {
@@ -543,7 +538,7 @@ mod tests {
 		}
 	}
 
-	// Multiple files test
+	// Returning more than 1 result
 	#[tokio::test]
 	async fn test_multiple_news_pages() {
 		dotenv().ok();
