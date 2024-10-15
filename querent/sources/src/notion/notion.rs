@@ -39,7 +39,7 @@ impl NotionSource {
 #[async_trait]
 impl Source for NotionSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let response = fetch_all_page_ids(&self.api_token).await;
+		let response = fetch_page(&self.api_token, &self.page_ids[0]).await;
 
 		if response.is_ok() {
 			Ok(())
@@ -84,7 +84,6 @@ impl Source for NotionSource {
 		let source_id = self.source_id.clone();
 
 		let stream = stream! {
-			// If no page_ids are provided, fetch all available page IDs
 			let page_ids = if page_ids.is_empty() {
 				match fetch_all_page_ids(&api_token).await {
 					Ok(ids) => ids,
@@ -99,7 +98,6 @@ impl Source for NotionSource {
 			} else {
 				self.page_ids.clone()
 			};
-			println!("Page ids are {:?}", page_ids);
 
 			for page_id in page_ids {
 				match fetch_page(&api_token, &page_id).await {
@@ -107,7 +105,6 @@ impl Source for NotionSource {
 						let page_data = format_page(&page.properties);
 						let page_file_name = format!("{}.notion", page_id);
 
-						println!("page data is as given below {}", page_data);
 						yield Ok(CollectedBytes::new(
 							Some(PathBuf::from(page_file_name)),
 							Some(Box::pin(string_to_async_read(page_data.clone()))),
