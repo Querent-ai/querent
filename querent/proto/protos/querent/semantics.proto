@@ -367,7 +367,7 @@ message NotionConfig {
   // API key of the notion
   string api_key = 1;
   // Query id to the notion API/ either page id or database id
-  string page_id = 2;
+  repeated string page_ids = 2;
   /// Id for the collector
   string id = 3;
 }

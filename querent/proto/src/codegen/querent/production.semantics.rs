@@ -138,8 +138,8 @@ pub struct IngestedTokens {
 	pub doc_source: ::prost::alloc::string::String,
 	#[prost(string, tag = "5")]
 	pub source_id: ::prost::alloc::string::String,
-    #[prost(string, optional, tag = "6")]
-    pub image_id: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(string, optional, tag = "6")]
+	pub image_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -614,8 +614,8 @@ pub struct NotionConfig {
 	#[prost(string, tag = "1")]
 	pub api_key: ::prost::alloc::string::String,
 	/// Query id to the notion API/ either page id or database id
-	#[prost(string, tag = "2")]
-	pub page_id: ::prost::alloc::string::String,
+	#[prost(string, repeated, tag = "2")]
+	pub page_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 	/// / Id for the collector
 	#[prost(string, tag = "3")]
 	pub id: ::prost::alloc::string::String,

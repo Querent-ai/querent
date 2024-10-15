@@ -593,8 +593,8 @@ pub struct NotionConfig {
     #[prost(string, tag = "1")]
     pub api_key: ::prost::alloc::string::String,
     /// Query id to the notion API/ either page id or database id
-    #[prost(string, tag = "2")]
-    pub page_id: ::prost::alloc::string::String,
+    #[prost(string, repeated, tag = "2")]
+    pub page_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
     /// / Id for the collector
     #[prost(string, tag = "3")]
     pub id: ::prost::alloc::string::String,

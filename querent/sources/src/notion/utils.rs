@@ -354,3 +354,53 @@ pub async fn get_images_from_page(
 pub fn extract_file_extension(file_name: &str) -> Option<&str> {
 	file_name.split('.').last()
 }
+
+pub async fn fetch_all_page_ids(api_token: &str) -> Result<Vec<String>, SourceError> {
+	let client = Client::new();
+	let url = "https://api.notion.com/v1/search";
+
+	let body = json!({
+		"filter": {
+			"property": "object",
+			"value": "page"
+		}
+	});
+
+	let response = client
+		.post(url)
+		.bearer_auth(api_token)
+		.header("Notion-Version", "2022-06-28")
+		.json(&body)
+		.send()
+		.await
+		.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+			)
+		})?;
+
+	if response.status().is_success() {
+		let list_response: serde_json::Value =
+			response.json::<serde_json::Value>().await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error parsing Notion response: {:?}", err).into(),
+				)
+			})?;
+
+		let page_ids = list_response["results"]
+			.as_array()
+			.unwrap_or(&vec![])
+			.iter()
+			.filter_map(|page| page["id"].as_str().map(|s| s.to_string()))
+			.collect();
+
+		Ok(page_ids)
+	} else {
+		Err(SourceError::new(
+			SourceErrorKind::Io,
+			anyhow::anyhow!("Failed to fetch pages from Notion API").into(),
+		))
+	}
+}
