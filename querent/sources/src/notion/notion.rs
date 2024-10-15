@@ -39,7 +39,20 @@ impl NotionSource {
 #[async_trait]
 impl Source for NotionSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let response = fetch_page(&self.api_token, &self.page_ids[0]).await;
+		let page_ids = if self.page_ids.is_empty() {
+			match fetch_all_page_ids(&self.api_token).await {
+				Ok(ids) => ids,
+				Err(err) =>
+					return Err(SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Failed to fetch page IDs: {:?}", err).into(),
+					)
+					.into()),
+			}
+		} else {
+			self.page_ids.clone()
+		};
+		let response = fetch_page(&self.api_token, &page_ids[0]).await;
 
 		if response.is_ok() {
 			Ok(())
