@@ -98,6 +98,9 @@
 							.replace(/\\n|\n/g, ' ')
 							.replace(/\s+/g, ' ')
 							.trim();
+						if (text.startsWith('"') && text.endsWith('"')) {
+							text = text.slice(1, -1);
+						}
 						messages = [...messages, { text: text, isUser: false }];
 
 						messagesList.update((list) => [...list, { text: text, isUser: false }]);
@@ -133,15 +136,15 @@
 <Modal bind:open={show} size="xl" class="w-full" autoclose={false} on:close={closeModal}>
 	<div class="mb-4 flex items-center justify-between">
 		<h3 class="text-xl font-medium text-gray-900 dark:text-white">
-			{insight ? insight.name : 'Chat'}
+			{insight ? `Querent Chat - ${insight.name}` : 'Chat'}
 		</h3>
 	</div>
-	<div class="mb-4 h-96 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+	<div class="mb-4 h-80 overflow-y-auto rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
 		{#if messages.length === 0}
 			<div class="flex h-full items-center justify-center">
-				<div class="flex items-center">
+				<div class="flex items-center text-center">
 					<Icon {icon} style="width: 48px; height: 48px;" />
-					<p class="ml-4">{description}</p>
+					<p class="ml-4 text-gray-500">{description}</p>
 				</div>
 			</div>
 		{:else}
@@ -156,9 +159,12 @@
 			{/each}
 		{/if}
 	</div>
-	<form on:submit|preventDefault={sendMessage} class="flex">
+	<form
+		on:submit|preventDefault={sendMessage}
+		class="flex items-center rounded-b-lg bg-gray-100 p-2"
+	>
 		<textarea
-			placeholder="Search..."
+			placeholder="Type your message here..."
 			class="search-input"
 			id="searchInput"
 			bind:value={inputMessage}
@@ -167,7 +173,7 @@
 		{#if loadingStatus}
 			<div class="loader mr-2"></div>
 		{/if}
-		<Button type="submit">Send</Button>
+		<Button type="submit" class="ml-2">Send</Button>
 	</form>
 </Modal>
 
@@ -175,30 +181,44 @@
 	:global(.modal-content > button[type='button']) {
 		display: none !important;
 	}
+
 	.search-input {
 		flex-grow: 1;
 		min-height: 40px;
-		max-height: 120px;
+		max-height: 80px;
 		padding: 10px;
-		border: 1px solid black;
-		background: transparent;
+		border: 1px solid #ddd;
+		background: #fff;
 		outline: none;
-		padding: 5px;
 		resize: none;
-		overflow-y: auto;
-		margin-right: 50px;
-		font-family: inherit;
-		font-size: inherit;
-		line-height: 1.5;
-		overflow-y: hidden;
-		border-radius: 20px;
+		border-radius: 4px;
+		font-size: 0.95rem;
 	}
 
 	.search-input:focus {
-		outline: none;
-		box-shadow: none;
-		overflow-y: auto;
+		border-color: #3498db;
+		box-shadow: 0px 2px 8px rgba(52, 152, 219, 0.2);
 	}
+
+	.loader {
+		border: 2px solid #f3f3f3;
+		border-top: 2px solid #3498db;
+		border-radius: 50%;
+		width: 20px;
+		height: 20px;
+		animation: spin 1s linear infinite;
+		position: relative;
+	}
+
+	@keyframes spin {
+		0% {
+			transform: rotate(0deg);
+		}
+		100% {
+			transform: rotate(360deg);
+		}
+	}
+
 	.flex.h-full.items-center.justify-center {
 		height: 100%;
 	}
@@ -210,25 +230,17 @@
 
 	.flex.h-full.items-center.justify-center p {
 		margin-left: 1rem;
-	}
-	.loader {
-		border: 2px solid #f3f3f3;
-		border-top: 2px solid #3498db;
-		border-radius: 50%;
-		width: 20px;
-		height: 20px;
-		animation: spin 1s linear infinite;
-		position: absolute;
-		right: 100px;
-		bottom: 45px;
+		color: #666;
+		font-size: 0.9rem;
 	}
 
-	@keyframes spin {
-		0% {
-			transform: rotate(0deg);
-		}
-		100% {
-			transform: rotate(360deg);
-		}
+	.form-container Button {
+		background-color: #3498db;
+		color: white;
+		border-radius: 5px;
+	}
+
+	.form-container Button:hover {
+		background-color: #2c80b4;
 	}
 </style>
