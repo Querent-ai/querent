@@ -170,8 +170,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_image_ingestor() {
-		let test_images_dir =
-			Path::new("/home/nishant/backup/querent-main/querent/test_data/images/");
+		let test_images_dir = Path::new("../../test_data/images/");
 		let test_images = vec![
 			("output.jpeg", "jpeg"),
 			("input.jpg", "jpg"),
