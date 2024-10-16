@@ -49,6 +49,10 @@ fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
 	Cursor::new(description.into_bytes())
 }
 
+fn remove_special_characters(input: &str) -> String {
+	input.chars().filter(|c| c.is_alphanumeric() || c.is_whitespace()).collect()
+}
+
 pub async fn get_message(
 	req: SlackApiConversationsHistoryRequest,
 	token: &SlackApiToken,
@@ -146,7 +150,8 @@ impl Source for SlackApiClient {
 					if !attachments.is_empty() {
 						// finding links in the attachments
 						for attachment in attachments {
-							if let Some(fallback) = attachment.fallback {
+							if let Some(mut fallback) = attachment.fallback {
+								fallback = remove_special_characters(&fallback);
 								message_text.push_str(" ");
 								message_text.push_str(&fallback);
 							}
