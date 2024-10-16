@@ -140,7 +140,25 @@ impl Source for SlackApiClient {
 				let file_name = format!("{}.slack", channel_id.to_string());
 				let file_name_path = Some(PathBuf::from(file_name));
 
-				let message_text = messages.content.text.unwrap_or("".to_string());
+				let mut message_text = messages.content.text.unwrap_or("".to_string());
+
+				if let Some(attachments) = messages.content.attachments {
+					if !attachments.is_empty() {
+						// finding links in the attachments
+						for attachment in attachments {
+							if let Some(fallback) = attachment.fallback {
+								message_text.push_str(" ");
+								message_text.push_str(&fallback);
+							}
+							if let Some(text) = attachment.text {
+								message_text.push_str(" ");
+								message_text.push_str(&text);
+							}
+						}
+					}
+				} else {
+					continue;
+				}
 
 				let doc_source = Some("slack://".to_string());
 				let data_len = Some(message_text.len());
