@@ -45,7 +45,6 @@ impl BaseIngestor for ImageIngestor {
 					image_id: None,
 				});
 			}
-			eprintln!("Ingested Token ----111");
 			let mut lep_tess = lep_tess.unwrap();
 			let mut buffer = Vec::new();
 			let mut file = String::new();
