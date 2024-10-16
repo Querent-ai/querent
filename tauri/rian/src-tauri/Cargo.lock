@@ -12638,11 +12638,13 @@ dependencies = [
  "serde_json",
  "sqlx",
  "surrealdb",
+ "tempfile",
  "thiserror",
  "tokio",
  "tokio-postgres",
  "tokio-postgres-rustls",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

@@ -43,7 +43,7 @@ pub struct QueryResultEmbedded {
 	pub embeddings: Option<Vec<f32>>,
 	pub score: f32,
 	pub event_id: String,
-	pub cosine_distance: f64,
+	pub cosine_distance: Option<f64>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -97,6 +97,18 @@ pub struct DiscoveredKnowledgeSurrealDb {
 	pub session_id: Option<String>,
 	pub score: Option<f64>,
 	pub collection_id: Option<String>,
+}
+
+#[derive(Serialize, Debug, Clone, Deserialize)]
+pub struct FilteredResultsSurreal {
+	pub document_id: String,
+	pub subject: String,
+	pub object: String,
+	pub document_source: String,
+	pub sentence: String,
+	pub score: f32,
+	pub embeddings: Option<Vec<f32>>,
+	pub event_id: String,
 }
 
 impl DiscoveredKnowledgeSurrealDb {
@@ -459,12 +471,101 @@ impl FabricAccessor for SurrealDB {
 	/// Retrieve filtered results when query is empty and semantic pair filters are provided
 	async fn filter_and_query(
 		&self,
-		_session_id: &String,
-		_top_pairs: &Vec<String>,
-		_max_results: i32,
-		_offset: i64,
+		session_id: &String,
+		top_pairs: &Vec<String>,
+		max_results: i32,
+		offset: i64,
 	) -> StorageResult<Vec<DocumentPayload>> {
-		Ok(vec![])
+		let mut query = String::from(
+			"SELECT document_id, subject, object, document_source, sentence, event_id, subject_type, object_type, source_id
+			 FROM semantic_knowledge"
+		);
+
+		let formatted_pairs = top_pairs
+			.iter()
+			.map(|pair| {
+				let parts: Vec<&str> = pair.split(" - ").collect();
+				format!(
+					"(subject = '{}' AND object = '{}') OR (subject = '{}' AND object = '{}')",
+					parts[0], parts[1], parts[1], parts[0]
+				)
+			})
+			.collect::<Vec<String>>()
+			.join(" OR ");
+
+		if !formatted_pairs.is_empty() {
+			query.push_str(&format!(" WHERE ({})", formatted_pairs));
+		}
+
+		query.push_str(" ORDER BY event_id ASC");
+		query.push_str(&format!(" LIMIT {} START {}", max_results, offset));
+
+		let mut response = self.db.query(query).await.map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let semantic_results: Vec<SemanticKnowledge> =
+			response.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		let event_ids: Vec<String> = semantic_results
+			.iter()
+			.filter_map(|record| Some(record.event_id.clone()))
+			.collect();
+
+		let embedding_conditions = event_ids
+			.iter()
+			.map(|id| format!("event_id == '{}'", id))
+			.collect::<Vec<String>>()
+			.join(" OR ");
+
+		let embedding_query = format!(
+			"SELECT event_id, score, embeddings
+			 FROM embedded_knowledge
+			 WHERE {}",
+			embedding_conditions
+		);
+
+		let mut embedding_response =
+			self.db.query(embedding_query).await.map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+
+		let embedding_results: Vec<QueryResultEmbedded> =
+			embedding_response.take(0).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+		let embeddings_map: HashMap<String, QueryResultEmbedded> = embedding_results
+			.into_iter()
+			.map(|result| (result.event_id.clone(), result))
+			.collect();
+		let document_payloads = semantic_results
+			.into_iter()
+			.map(|result| {
+				let embedding_result = embeddings_map.get(&result.event_id);
+
+				DocumentPayload {
+					doc_id: result.document_id,
+					doc_source: result.document_source,
+					sentence: result.sentence,
+					knowledge: format!("{} - {}", result.subject, result.object),
+					subject: result.subject,
+					object: result.object,
+					cosine_distance: None,
+					query_embedding: embedding_result
+						.map(|e| e.embeddings.clone().unwrap_or_else(Vec::new)),
+					query: Some("".to_string()),
+					session_id: Some(session_id.clone()),
+					score: embedding_result.map(|e| e.score).unwrap_or(0.0),
+					collection_id: String::new(),
+				}
+			})
+			.collect();
+
+		Ok(document_payloads)
 	}
 
 	/// Asynchronously fetches suggestions from the semantic table in SurrealDB.
@@ -759,3 +860,441 @@ pub async fn traverse_node<'a>(
 }
 
 impl Storage for SurrealDB {}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use tempfile::tempdir;
+	use tokio;
+	use uuid::Uuid;
+
+	#[tokio::test]
+	async fn test_surrealdb_new() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await;
+		assert!(surreal_db.is_ok());
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_check_connectivity() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+		let result = surreal_db.check_connectivity().await;
+		assert!(result.is_ok());
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_insert_insight_knowledge() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+
+		let session_id = Some("session_1".to_string());
+		let query = Some("What is Rust?".to_string());
+		let response = Some("Rust is a systems programming language...".to_string());
+
+		let result = surreal_db
+			.insert_insight_knowledge(query.clone(), session_id.clone(), response.clone())
+			.await;
+		assert!(result.is_ok());
+		let select_query =
+			format!("SELECT * FROM insight_knowledge WHERE session_id = '{}'", session_id.unwrap());
+		let mut response = surreal_db.db.query(select_query).await.unwrap();
+		let records: Vec<InsightKnowledgeSurrealDb> = response.take(0).unwrap();
+		assert_eq!(records.len(), 1);
+		assert_eq!(records[0].query, query.unwrap());
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_insert_vector() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+
+		let collection_id = "collection_1".to_string();
+		let payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			VectorPayload {
+				embeddings: vec![0.1, 0.2, 0.3],
+				score: 0.9,
+				event_id: "event_1".to_string(),
+			},
+		)];
+
+		let result = surreal_db.insert_vector(collection_id.clone(), &payload).await;
+		assert!(result.is_ok());
+		let select_query = format!(
+			"SELECT * FROM embedded_knowledge WHERE event_id = '{}'",
+			payload[0].3.event_id
+		);
+		let mut response = surreal_db.db.query(select_query).await.unwrap();
+		let records: Vec<EmbeddedKnowledgeSurrealDb> = response.take(0).unwrap();
+		assert_eq!(records.len(), 1);
+		assert_eq!(records[0].embeddings, payload[0].3.embeddings);
+		assert_eq!(records[0].score, payload[0].3.score);
+		assert_eq!(records[0].event_id, payload[0].3.event_id);
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_insert_discovered_knowledge() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+
+		let payload = vec![DocumentPayload {
+			doc_id: "doc_1".to_string(),
+			doc_source: "source_1".to_string(),
+			sentence: "This is a test sentence.".to_string(),
+			knowledge: "This is knowledge".to_string(),
+			subject: "subject_1".to_string(),
+			object: "object_1".to_string(),
+			cosine_distance: Some(0.5),
+			query_embedding: Some(vec![0.1, 0.2, 0.3]),
+			query: Some("Test query".to_string()),
+			session_id: Some("session_1".to_string()),
+			score: 0.9,
+			collection_id: "collection_1".to_string(),
+		}];
+
+		let result = surreal_db.insert_discovered_knowledge(&payload).await;
+		assert!(result.is_ok());
+		let select_query =
+			format!("SELECT * FROM discovered_knowledge WHERE doc_id = '{}'", payload[0].doc_id);
+		let mut response = surreal_db.db.query(select_query).await.unwrap();
+		let records: Vec<DiscoveredKnowledgeSurrealDb> = response.take(0).unwrap();
+		assert_eq!(records.len(), 1);
+		assert_eq!(records[0].doc_id, payload[0].doc_id);
+		assert_eq!(records[0].sentence, payload[0].sentence);
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_index_knowledge() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+
+		let collection_id = "collection_1".to_string();
+		let payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			SemanticKnowledgePayload {
+				subject: "subject_1".to_string(),
+				subject_type: "type_1".to_string(),
+				object: "object_1".to_string(),
+				object_type: "type_2".to_string(),
+				sentence: "This is a test sentence.".to_string(),
+				event_id: "event_1".to_string(),
+				source_id: "source_id_1".to_string(),
+				predicate: "predicate_1".to_string(),
+				predicate_type: "ptype_1".to_string(),
+				image_id: Some("".to_string()),
+				blob: Some("event_1".to_string()),
+			},
+		)];
+
+		let result = surreal_db.index_knowledge(collection_id.clone(), &payload).await;
+		assert!(result.is_ok());
+		let select_query =
+			format!("SELECT * FROM semantic_knowledge WHERE document_id = '{}'", payload[0].0);
+		let mut response = surreal_db.db.query(select_query).await.unwrap();
+		let records: Vec<SemanticKnowledge> = response.take(0).unwrap();
+		assert_eq!(records.len(), 1);
+		assert_eq!(records[0].subject, payload[0].3.subject);
+		assert_eq!(records[0].object, payload[0].3.object);
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_insert_graph() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+
+		let collection_id = "collection_1".to_string();
+		let payload = vec![];
+
+		let result = surreal_db.insert_graph(collection_id, &payload).await;
+		assert!(result.is_ok());
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_traverse_metadata_table() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+		let semantic_payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			SemanticKnowledgePayload {
+				subject: "subject_a".to_string(),
+				subject_type: "type_a".to_string(),
+				object: "subject_b".to_string(),
+				object_type: "type_b".to_string(),
+				sentence: "A relates to B.".to_string(),
+				event_id: "event_1".to_string(),
+				source_id: "source_id_1".to_string(),
+				predicate: "predicate_1".to_string(),
+				predicate_type: "ptype_1".to_string(),
+				image_id: Some("".to_string()),
+				blob: Some("event_1".to_string()),
+			},
+		)];
+
+		surreal_db
+			.index_knowledge("collection_1".to_string(), &semantic_payload)
+			.await
+			.unwrap();
+
+		let vector_payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			VectorPayload {
+				embeddings: vec![0.1, 0.2, 0.3],
+				score: 0.9,
+				event_id: "event_1".to_string(),
+			},
+		)];
+
+		surreal_db
+			.insert_vector("collection_1".to_string(), &vector_payload)
+			.await
+			.unwrap();
+
+		let filtered_pairs = vec![("subject_a".to_string(), "subject_b".to_string())];
+
+		let result = surreal_db.traverse_metadata_table(&filtered_pairs).await;
+		assert!(result.is_ok());
+		let traversal_results = result.unwrap();
+		assert!(!traversal_results.is_empty());
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_get_discovered_data() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+		let payload = vec![DocumentPayload {
+			doc_id: "doc_1".to_string(),
+			doc_source: "source_1".to_string(),
+			sentence: "This is a test sentence.".to_string(),
+			subject: "subject_1".to_string(),
+			object: "object_1".to_string(),
+			cosine_distance: Some(0.5),
+			query_embedding: Some(vec![0.1, 0.2, 0.3]),
+			query: Some("Test query".to_string()),
+			session_id: Some("session_1".to_string()),
+			score: 0.9,
+			collection_id: "collection_1".to_string(),
+			knowledge: "This is knowledge".to_string(),
+		}];
+
+		surreal_db.insert_discovered_knowledge(&payload).await.unwrap();
+
+		let result = surreal_db
+			.get_discovered_data("session_1".to_string(), "collection_1".to_string())
+			.await;
+		assert!(result.is_ok());
+		let data = result.unwrap();
+		assert_eq!(data.len(), 1);
+		assert_eq!(data[0].doc_id, "doc_1");
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_get_semanticknowledge_data() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+		let collection_id = "collection_1".to_string();
+		let payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			SemanticKnowledgePayload {
+				subject: "subject_1".to_string(),
+				subject_type: "type_1".to_string(),
+				object: "object_1".to_string(),
+				object_type: "type_2".to_string(),
+				sentence: "This is a test sentence.".to_string(),
+				event_id: "event_1".to_string(),
+				source_id: "source_id_1".to_string(),
+				predicate: "predicate_1".to_string(),
+				predicate_type: "ptype_1".to_string(),
+				image_id: Some("".to_string()),
+				blob: Some("event_1".to_string()),
+			},
+		)];
+
+		surreal_db.index_knowledge(collection_id.clone(), &payload).await.unwrap();
+
+		let result = surreal_db.get_semanticknowledge_data(&collection_id).await;
+		assert!(result.is_ok());
+		let data = result.unwrap();
+		assert_eq!(data.len(), 1);
+		assert_eq!(data[0].subject, "subject_1");
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+
+	#[tokio::test]
+	async fn test_filter_and_query() -> Result<(), Box<dyn std::error::Error>> {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+		let mut semantic_payload = Vec::new();
+		for i in 1..=20 {
+			semantic_payload.push((
+				format!("doc_{}", i),
+				format!("source_{}", i),
+				None,
+				SemanticKnowledgePayload {
+					subject: format!("subject_{}", i),
+					subject_type: format!("type_{}", i),
+					object: format!("object_{}", i),
+					object_type: format!("type_{}", i),
+					sentence: format!("This is a test sentence number {}.", i),
+					event_id: format!("event_{}", i),
+					source_id: format!("source_id_{}", i),
+					predicate: format!("predicate_{}", i),
+					predicate_type: format!("ptype_{}", i),
+					image_id: Some(format!("image_{}", i)),
+					blob: Some(format!("blob_{}", i)),
+				},
+			));
+		}
+		let mut vector_payload = Vec::new();
+		for i in 1..=20 {
+			vector_payload.push((
+				format!("doc_{}", i),
+				format!("source_{}", i),
+				None,
+				VectorPayload {
+					embeddings: vec![0.1 * i as f32, 0.2 * i as f32, 0.3 * i as f32],
+					score: 1.0 / i as f32,
+					event_id: format!("event_{}", i),
+				},
+			));
+		}
+		surreal_db
+			.index_knowledge("collection_1".to_string(), &semantic_payload)
+			.await
+			.unwrap();
+		surreal_db
+			.insert_vector("collection_1".to_string(), &vector_payload)
+			.await
+			.unwrap();
+
+		let session_id = "test_session".to_string();
+		let top_pairs =
+			vec!["subject_1 - object_1".to_string(), "subject_5 - object_5".to_string()];
+		let max_results = 10;
+		let offset = 0;
+		let results = surreal_db
+			.filter_and_query(&session_id, &top_pairs, max_results, offset)
+			.await
+			.unwrap();
+
+		assert_eq!(results.len(), 2, "Expected {} results, got {}", max_results, results.len());
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+
+		Ok(())
+	}
+
+	#[tokio::test]
+	async fn test_similarity_search_l2() {
+		let temp_dir = tempdir().unwrap();
+		let db_path = temp_dir.path().join(format!("test-{}.db", Uuid::new_v4()));
+		let surreal_db = SurrealDB::new(db_path.clone()).await.unwrap();
+		let collection_id = "collection_1".to_string();
+		let session_id = "session_1".to_string();
+		let query = "Sample query".to_string();
+		let embedding_1 = vec![0.1, 0.2, 0.3];
+		let query_embedding = vec![0.1, 0.2, 0.3];
+
+		let payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			SemanticKnowledgePayload {
+				subject: "subject_1".to_string(),
+				subject_type: "type_1".to_string(),
+				object: "object_1".to_string(),
+				object_type: "type_2".to_string(),
+				sentence: "This is a test sentence.".to_string(),
+				event_id: "event_1".to_string(),
+				source_id: "source_id_1".to_string(),
+				predicate: "predicate_1".to_string(),
+				predicate_type: "ptype_1".to_string(),
+				image_id: Some("".to_string()),
+				blob: Some("event_1".to_string()),
+			},
+		)];
+
+		let result = surreal_db.index_knowledge(collection_id.clone(), &payload).await;
+		assert!(result.is_ok());
+
+		let vector_payload = vec![(
+			"doc_1".to_string(),
+			"source_1".to_string(),
+			None,
+			VectorPayload {
+				embeddings: embedding_1.clone(),
+				score: 0.9,
+				event_id: "event_1".to_string(),
+			},
+		)];
+		surreal_db.insert_vector(collection_id.clone(), &vector_payload).await.unwrap();
+		let result = surreal_db
+			.similarity_search_l2(
+				session_id.clone(),
+				query.clone(),
+				collection_id.clone(),
+				&query_embedding,
+				10,
+				0,
+				&vec![],
+			)
+			.await;
+
+		assert!(result.is_ok());
+		let documents = result.unwrap();
+		assert!(documents.len() >= 1);
+		assert_eq!(documents[0].doc_id, "doc_1");
+
+		drop(surreal_db);
+		temp_dir.close().unwrap();
+	}
+}

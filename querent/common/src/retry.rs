@@ -86,6 +86,17 @@ impl RetryParams {
 			..Default::default()
 		}
 	}
+
+	/// Creates a new [`RetryParams`] instance using settings that are more aggressive than those of
+	/// the standard policy for services that are more resilient to retries, usually managed
+	/// cloud services.
+	pub fn aggressive() -> Self {
+		Self {
+			base_delay: Duration::from_millis(250),
+			max_delay: Duration::from_secs(20),
+			max_attempts: 5,
+		}
+	}
 }
 
 #[async_trait]

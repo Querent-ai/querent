@@ -9,11 +9,10 @@ use thiserror::Error;
 
 use crate::{
 	code::code::CodeIngestor, csv::csv::CsvIngestor, doc::doc::DocIngestor,
-	docx::docx::DocxIngestor, email::email::EmailIngestor, html::html::HtmlIngestor,
-	image::image::ImageIngestor, json::json::JsonIngestor, news::news::NewsIngestor,
-	notion::notion::NotionIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor,
-	pptx::pptx::PptxIngestor, slack::slack::SlackIngestor, txt::txt::TxtIngestor,
-	xlsx::xlsx::XlsxIngestor, xml::xml::XmlIngestor,
+	docx::docx::DocxIngestor, html::html::HtmlIngestor, image::image::ImageIngestor,
+	json::json::JsonIngestor, odp::odp::OdpIngestor, pdf::pdfv1::PdfIngestor,
+	pptx::pptx::PptxIngestor, txt::txt::TxtIngestor, xlsx::xlsx::XlsxIngestor,
+	xml::xml::XmlIngestor,
 };
 use tracing::info;
 
@@ -78,8 +77,9 @@ impl IngestorError {
 impl From<io::Error> for IngestorError {
 	fn from(err: io::Error) -> IngestorError {
 		match err.kind() {
-			io::ErrorKind::NotFound =>
-				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into())),
+			io::ErrorKind::NotFound => {
+				IngestorError::new(IngestorErrorKind::NotFound, Arc::new(err.into()))
+			},
 			_ => IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())),
 		}
 	}
@@ -215,10 +215,9 @@ pub async fn resolve_ingestor_with_extension(
 		"pptx" => Ok(Arc::new(PptxIngestor::new())),
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
-		"news" => Ok(Arc::new(NewsIngestor::new())),
-		"email" => Ok(Arc::new(EmailIngestor::new())),
-		"slack" => Ok(Arc::new(SlackIngestor::new())),
-		"notion" => Ok(Arc::new(NotionIngestor::new())),
+		"news" => Ok(Arc::new(TxtIngestor::new())),
+		"email" => Ok(Arc::new(TxtIngestor::new())),
+		"notion" => Ok(Arc::new(TxtIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 		// _ => Err(IngestorError::new(
 		// 	IngestorErrorKind::NotSupported,
