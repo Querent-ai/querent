@@ -174,7 +174,7 @@ mod tests {
 		let test_images_dir =
 			Path::new("/home/nishant/backup/querent-main/querent/test_data/images/");
 		let test_images = vec![
-			("1520206936825.jpeg", "jpeg"),
+			("output.jpeg", "jpeg"),
 			("input.jpg", "jpg"),
 			("output.png", "png"),
 			("output.bmp", "bmp"),
@@ -184,11 +184,9 @@ mod tests {
 			("output.webp", "webp"),
 			("output.dds", "dds"),
 			("output.dds", "ff"),
-			("chat_bubble_conversation_contact_icon_264230.ico", "ico"),
+			("output.ico", "ico"),
 			("output.hdr", "hdr"),
 			("output.exr", "exr"),
-			// ("earth.tga", "tga"),
-			// //("output.avif", "avif"),
 		];
 
 		for (file_name, ext) in test_images {
