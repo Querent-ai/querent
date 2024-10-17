@@ -9,7 +9,8 @@ use tokio::io::AsyncReadExt;
 
 use crate::{
 	image::image::ImageIngestor, pptx::parser::extract_text_and_images_from_pptx,
-	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult,
+	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
+	AsyncProcessor, BaseIngestor, IngestorResult,
 };
 
 // Define the TxtIngestor
@@ -19,7 +20,7 @@ pub struct PptxIngestor {
 
 impl PptxIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 

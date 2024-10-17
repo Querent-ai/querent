@@ -16,7 +16,8 @@ use tracing::error;
 use zip::ZipArchive;
 
 use crate::{
-	image::image::ImageIngestor, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
+	image::image::ImageIngestor, process_ingested_tokens_stream,
+	processors::text_processing::TextCleanupProcessor, AsyncProcessor, BaseIngestor,
 	IngestorResult,
 };
 // Define the XlsxIngestor
@@ -26,7 +27,7 @@ pub struct XlsxIngestor {
 
 impl XlsxIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 
