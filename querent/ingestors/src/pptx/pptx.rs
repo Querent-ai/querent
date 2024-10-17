@@ -1,14 +1,15 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::Stream;
+use futures::{Stream, StreamExt};
+use image::guess_format;
 use proto::semantics::IngestedTokens;
-use std::{pin::Pin, sync::Arc};
+use std::{path::PathBuf, pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
 
 use crate::{
-	pptx::parser::extract_text_from_pptx, process_ingested_tokens_stream, AsyncProcessor,
-	BaseIngestor, IngestorResult,
+	image::image::ImageIngestor, pptx::parser::extract_text_and_images_from_pptx,
+	process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult,
 };
 
 // Define the TxtIngestor
@@ -55,17 +56,60 @@ impl BaseIngestor for PptxIngestor {
 			}
 			source_id = collected_bytes.source_id.clone();
 		}
-		let text_result = extract_text_from_pptx(&buffer);
+		let text_result = extract_text_and_images_from_pptx(&buffer);
 		match text_result {
-			Ok(text) => {
-				let ingested_tokens = IngestedTokens {
-					data: vec![text],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-				};
-				yield Ok(ingested_tokens);
+			Ok((texts, images)) => {
+				for text in texts {
+					let ingested_tokens = IngestedTokens {
+						data: vec![text],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+						image_id: None,
+					};
+					yield Ok(ingested_tokens);
+				}
+				if images.len() > 0 {
+					for image in &images {
+						let img_data = image.1;
+						let image_id = image.0.clone();
+						let file_path = PathBuf::from(file.clone());
+						// Guess the format of the image data
+						let format = guess_format(&img_data);
+						let mut ext = "jpeg";
+						if let Ok(f) = format {
+							ext = f.to_mime_type();
+							ext = ext.split("/").last().unwrap_or("jpeg");
+						}
+						let collected_bytes = CollectedBytes {
+							data: Some(Box::pin(std::io::Cursor::new(img_data.clone()))),
+							file: Some(file_path.clone()),
+							doc_source: Some(doc_source.clone()),
+							eof: false,
+							extension: Some(ext.to_string()),
+							size: Some(img_data.len()),
+							source_id: source_id.clone(),
+							_owned_permit: None,
+							image_id: Some(image_id.to_string()),
+						};
+						let image_ingestor = ImageIngestor::new();
+						let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
+						let mut image_stream = Box::pin(image_stream);
+						while let Some(tokens) = image_stream.next().await {
+							match tokens {
+								Ok(tokens) =>
+									if !tokens.data.is_empty() {
+										// only yield good tokens
+										yield Ok(tokens);
+									},
+								Err(e) => {
+									tracing::error!("Failed to get tokens from images: {:?}", e);
+								},
+							}
+						}
+					}
+				}
 			},
 			Err(e) => {
 				eprintln!("Error: {:?}", e);
@@ -78,6 +122,7 @@ impl BaseIngestor for PptxIngestor {
 			doc_source: doc_source.clone(),
 			is_token_stream: false,
 			source_id: source_id.clone(),
+			image_id: None,
 		})
 		};
 
@@ -109,20 +154,26 @@ mod tests {
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
 			_owned_permit: None,
+			image_id: None,
 		};
 
 		// Create a TxtIngestor instance
 		let ingestor = PptxIngestor::new();
 
 		// Ingest the file
-		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
-
+		let result_stream: Pin<
+			Box<dyn Stream<Item = Result<IngestedTokens, crate::IngestorError>> + Send>,
+		> = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		let mut is_image_included = false;
 		let mut stream = result_stream;
 		let mut all_data = Vec::new();
 		while let Some(tokens) = stream.next().await {
 			match tokens {
 				Ok(tokens) =>
 					if !tokens.data.is_empty() {
+						if tokens.image_id.is_some() {
+							is_image_included = true;
+						}
 						all_data.push(tokens.data);
 					},
 				Err(e) => {
@@ -131,5 +182,6 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest DOC file");
+		assert!(is_image_included, "Image not included in the ingestor output");
 	}
 }

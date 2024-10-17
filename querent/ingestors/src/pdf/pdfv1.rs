@@ -1,16 +1,19 @@
 use crate::{
-	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
-	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
+	image::image::ImageIngestor, process_ingested_tokens_stream,
+	processors::text_processing::TextCleanupProcessor, AsyncProcessor, BaseIngestor, IngestorError,
+	IngestorErrorKind, IngestorResult,
 };
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
-use futures::Stream;
+use futures::{Stream, StreamExt};
 use pdf_extract::{output_doc, ConvertToFmt, OutputDev, OutputError, PlainTextOutput};
 use proto::semantics::IngestedTokens;
+use rusty_tesseract::image::guess_format;
 use std::{
-	collections::HashMap,
+	collections::{BTreeMap, HashMap},
 	fmt,
+	path::PathBuf,
 	pin::Pin,
 	sync::{Arc, Mutex},
 };
@@ -65,38 +68,88 @@ impl BaseIngestor for PdfIngestor {
 				return;
 			}
 			let doc = doc.unwrap();
-			let mut output = PagePlainTextOutput::new();
-			output_doc(&doc, &mut output).unwrap();
-			for (_, text) in output.pages {
+			let mut output = PagePlainTextOutput::new(Arc::new(doc.clone()));
+			let _ = output_doc(&doc, &mut output);
+			let page_images = output.images;
+			for (_, (text, has_image)) in output.pages {
 				let ingested_tokens = IngestedTokens {
 					data: vec![text],
 					file: file.clone(),
 					doc_source: doc_source.clone(),
 					is_token_stream: false,
 					source_id: source_id.clone(),
+					image_id: None,
 				};
 				yield Ok(ingested_tokens);
+				if has_image {
+					for image in &page_images {
+						let img_data = image.1;
+						let image_id = image.0.clone();
+						let file_path = PathBuf::from(file.clone());
+						// Guess the format of the image data
+						let format = guess_format(&img_data);
+						let mut ext = "jpeg";
+						if let Ok(f) = format {
+							ext = f.to_mime_type();
+							ext = ext.split("/").last().unwrap_or("jpeg");
+						}
+						let collected_bytes = CollectedBytes {
+							data: Some(Box::pin(std::io::Cursor::new(img_data.clone()))),
+							file: Some(file_path.clone()),
+							doc_source: Some(doc_source.clone()),
+							eof: false,
+							extension: Some(ext.to_string()),
+							size: Some(img_data.len()),
+							source_id: source_id.clone(),
+							_owned_permit: None,
+							image_id: Some(image_id.to_string()),
+						};
+						let image_ingestor = ImageIngestor::new();
+						let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
+						let mut image_stream = Box::pin(image_stream);
+						while let Some(tokens) = image_stream.next().await {
+							match tokens {
+								Ok(tokens) =>
+									if !tokens.data.is_empty() {
+										// only yield good tokens
+										yield Ok(tokens);
+									},
+								Err(e) => {
+									tracing::error!("Failed to get tokens from images: {:?}", e);
+								},
+							}
+						}
+					}
+				}
 			}
+
 			yield Ok(IngestedTokens {
 				data: vec![],
 				file: file.clone(),
 				doc_source: doc_source.clone(),
 				is_token_stream: false,
 				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 
-		let processed_stream =
-			process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
+		let processed_stream: Pin<
+			Box<dyn Stream<Item = Result<IngestedTokens, IngestorError>> + Send>,
+		> = process_ingested_tokens_stream(Box::pin(stream), self.processors.clone()).await;
 		Ok(Box::pin(processed_stream))
 	}
 }
 
+pub type HasImage = bool;
 struct PagePlainTextOutput {
 	inner: PlainTextOutput<OutputWrapper>,
-	pages: HashMap<u32, String>,
+	pages: HashMap<u32, (String, HasImage)>,
+	images: HashMap<u32, Vec<u8>>,
 	current_page: u32,
+	current_page_has_image: bool,
 	reader: Arc<Mutex<String>>,
+	document: Arc<lopdf::Document>,
+	inner_pages: BTreeMap<u32, (u32, u16)>,
 }
 
 struct OutputWrapper(Arc<Mutex<String>>);
@@ -117,14 +170,18 @@ impl ConvertToFmt for OutputWrapper {
 }
 
 impl PagePlainTextOutput {
-	fn new() -> Self {
+	fn new(document: Arc<lopdf::Document>) -> Self {
 		let s = Arc::new(Mutex::new(String::new()));
 		let writer = Arc::clone(&s);
 		Self {
+			inner_pages: document.get_pages().clone(),
+			document,
 			pages: HashMap::new(),
 			current_page: 0,
+			current_page_has_image: false,
 			reader: s,
 			inner: PlainTextOutput::new(OutputWrapper(writer)),
+			images: HashMap::new(),
 		}
 	}
 }
@@ -137,15 +194,23 @@ impl OutputDev for PagePlainTextOutput {
 		art_box: Option<(f64, f64, f64, f64)>,
 	) -> Result<(), OutputError> {
 		self.current_page = page_num;
+		self.current_page_has_image = false;
 		self.reader.lock().unwrap().clear(); // Ensure the buffer is clear at the start of each page
+		let page = self.inner_pages.get(&page_num).unwrap_or(&(0, 0));
+		let page_images = self.document.get_page_images(page.clone());
+		if let Ok(images) = page_images {
+			self.current_page_has_image = images.len() > 0;
+			for image in images {
+				self.images.insert(image.id.0, image.content.to_vec());
+			}
+		}
 		self.inner.begin_page(page_num, media_box, art_box)
 	}
 
 	fn end_page(&mut self) -> Result<(), OutputError> {
 		self.inner.end_page()?;
-
 		let buf = self.reader.lock().unwrap().clone();
-		self.pages.insert(self.current_page, buf);
+		self.pages.insert(self.current_page, (buf, self.current_page_has_image));
 		self.reader.lock().unwrap().clear();
 
 		Ok(())
@@ -197,6 +262,7 @@ mod tests {
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
 			_owned_permit: None,
+			image_id: None,
 		};
 
 		// Create a TxtIngestor instance
@@ -219,5 +285,51 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest PDF file");
+	}
+
+	#[tokio::test]
+	async fn test_pdf_ingestor_with_images() {
+		let included_bytes = include_bytes!("../../../../test_data/scanned.pdf");
+		let bytes = included_bytes.to_vec();
+
+		// Create a CollectedBytes instance
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("GeoExProQuerent.pdf").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pdf".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		// Create a TxtIngestor instance
+		let ingestor = PdfIngestor::new();
+
+		// Ingest the file
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		let mut is_image_found = false;
+		while let Some(tokens) = stream.next().await {
+			eprintln!("Tokens: {:?}", tokens);
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						if tokens.image_id.is_some() {
+							is_image_found = true;
+						}
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					tracing::error!("Failed to get tokens from images: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest PDF file");
+		assert!(is_image_found, "Unable to ingest PDF file with images");
 	}
 }

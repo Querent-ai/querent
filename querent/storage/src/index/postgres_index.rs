@@ -18,8 +18,8 @@ use crate::{ActualDbPool, StorageError, StorageErrorKind, StorageResult, POOL_TI
 use deadpool::Runtime;
 use diesel::{table, Insertable, Queryable, Selectable};
 use diesel_async::AsyncConnection;
-use serde::Serialize;
-#[derive(Serialize, Queryable, Insertable, Selectable, Debug, Clone)]
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Queryable, Insertable, Selectable, Debug, Clone, Deserialize)]
 #[diesel(table_name = semantic_knowledge)]
 pub struct SemanticKnowledge {
 	pub subject: String,

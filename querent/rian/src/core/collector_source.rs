@@ -58,7 +58,7 @@ impl Source for Collector {
 		if self.source_counter_semaphore.available_permits() < self.data_pollers.len() ||
 			self.event_receiver.is_some()
 		{
-			return Ok(())
+			return Ok(());
 		}
 
 		info!("Starting data source collection for {}", self.id);
