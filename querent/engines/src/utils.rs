@@ -308,27 +308,29 @@ pub fn create_binary_pairs(
 }
 
 /// Selects the relationship with the highest score for an entity pair
-/// Selects the relationship with the highest score for an entity pair
 pub fn select_highest_score_relation(head_tail_relations: &HeadTailRelations) -> HeadTailRelations {
-	// Check if the relations vector is empty
 	if head_tail_relations.relations.is_empty() {
 		return head_tail_relations.clone();
 	}
-
-	// Find the relation with the highest score
-	let highest_relation = head_tail_relations
+	if let Some(max_score) = head_tail_relations
 		.relations
 		.iter()
-		.max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
-
-	// Handle the case where no relation is found
-	match highest_relation {
-		Some(relation) => HeadTailRelations {
+		.map(|(_, score)| *score)
+		.max_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal))
+	{
+		let highest_relations: Vec<_> = head_tail_relations
+			.relations
+			.iter()
+			.filter(|(_, score)| *score == max_score)
+			.cloned()
+			.collect();
+		HeadTailRelations {
 			head: head_tail_relations.head.clone(),
 			tail: head_tail_relations.tail.clone(),
-			relations: vec![relation.clone()],
-		},
-		None => head_tail_relations.clone(),
+			relations: highest_relations,
+		}
+	} else {
+		head_tail_relations.clone()
 	}
 }
 
@@ -719,7 +721,7 @@ mod tests {
 		let expected = HeadTailRelations {
 			head: Entity { name: "Alice".to_string(), start_idx: 0, end_idx: 5 },
 			tail: Entity { name: "Bob".to_string(), start_idx: 10, end_idx: 13 },
-			relations: vec![("colleague".to_string(), 0.8)],
+			relations: vec![("friend".to_string(), 0.8), ("colleague".to_string(), 0.8)],
 		};
 		assert_eq!(select_highest_score_relation(&input), expected);
 	}
