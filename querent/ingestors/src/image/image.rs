@@ -2,7 +2,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use image::ImageFormat;
+use image::{DynamicImage, ImageFormat};
 use leptess::LepTess;
 use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
@@ -81,8 +81,6 @@ impl BaseIngestor for ImageIngestor {
 				}
 				source_id = collected_bytes.source_id.clone();
 			}
-
-
 			let img = image::load_from_memory(&buffer);
 			if img.is_err() {
 				tracing::error!("Failed to load image from memory: {:?}", img.err());
@@ -95,11 +93,11 @@ impl BaseIngestor for ImageIngestor {
 					image_id,
 				});
 			}
-			let img = img.unwrap();
+			let img = img.unwrap().to_rgb8();
 			let mut tiff_buffer = Vec::new();
-			let tiff_img = img.write_to(
+			let tiff_img = DynamicImage::ImageRgb8(img).write_to(
 				&mut Cursor::new(&mut tiff_buffer),
-				ImageFormat::Tiff
+				ImageFormat::Tiff,
 			);
 			if tiff_img.is_err() {
 				tracing::error!("Failed to write image to tiff: {:?}", tiff_img.err());
@@ -146,6 +144,7 @@ impl BaseIngestor for ImageIngestor {
 				source_id: source_id.clone(),
 				image_id,
 			};
+
 			yield Ok(ingested_tokens);
 
 			yield Ok(IngestedTokens {
@@ -167,47 +166,67 @@ impl BaseIngestor for ImageIngestor {
 #[cfg(test)]
 mod tests {
 	use futures::StreamExt;
+	use tokio::fs;
 
 	use super::*;
 	use std::{io::Cursor, path::Path};
 
 	#[tokio::test]
 	async fn test_image_ingestor() {
-		let included_bytes = include_bytes!("../../../../test_data/1520206936825.jpeg");
-		let bytes = included_bytes.to_vec();
+		let test_images_dir = Path::new("../../test_data/images/");
+		let test_images = vec![
+			("output.jpeg", "jpeg"),
+			("input.jpg", "jpg"),
+			("output.png", "png"),
+			("output.bmp", "bmp"),
+			("output.gif", "gif"),
+			("output.pnm", "pnm"),
+			("output.tiff", "tiff"),
+			("output.webp", "webp"),
+			("output.dds", "dds"),
+			("output.dds", "ff"),
+			("output.ico", "ico"),
+			("output.hdr", "hdr"),
+			("output.exr", "exr"),
+		];
 
-		// Create a CollectedBytes instance
-		let collected_bytes = CollectedBytes {
-			data: Some(Box::pin(Cursor::new(bytes))),
-			file: Some(Path::new("1520206936825.jpeg").to_path_buf()),
-			doc_source: Some("test_source".to_string()),
-			eof: false,
-			extension: Some("jpeg".to_string()),
-			size: Some(10),
-			source_id: "FileSystem1".to_string(),
-			_owned_permit: None,
-			image_id: None,
-		};
+		for (file_name, ext) in test_images {
+			let image_path = test_images_dir.join(file_name);
+			let included_bytes = fs::read(&image_path).await.expect("Failed to read image file");
+			let bytes = included_bytes.to_vec();
+			let collected_bytes = CollectedBytes {
+				data: Some(Box::pin(Cursor::new(bytes))),
+				file: Some(image_path),
+				doc_source: Some("test_source".to_string()),
+				eof: false,
+				extension: Some(ext.to_string()),
+				size: Some(10),
+				source_id: "FileSystem1".to_string(),
+				_owned_permit: None,
+				image_id: None,
+			};
+			let ingestor = ImageIngestor::new();
+			let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
-		// Create a TxtIngestor instance
-		let ingestor = ImageIngestor::new();
-
-		// Ingest the file
-		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
-
-		let mut stream = result_stream;
-		let mut all_data = Vec::new();
-		while let Some(tokens) = stream.next().await {
-			match tokens {
-				Ok(tokens) =>
-					if !tokens.data.is_empty() {
-						all_data.push(tokens.data);
+			let mut stream = result_stream;
+			let mut all_data = Vec::new();
+			while let Some(tokens) = stream.next().await {
+				match tokens {
+					Ok(tokens) =>
+						if !tokens.data.is_empty() {
+							all_data.push(tokens.data);
+						},
+					Err(e) => {
+						eprintln!("Failed to get tokens for {}: {:?}", file_name, e);
 					},
-				Err(e) => {
-					eprintln!("Failed to get tokens: {:?}", e);
-				},
+				}
 			}
+			assert!(
+				all_data.len() >= 1,
+				"Unable to ingest image file: {} with extension: {}",
+				file_name,
+				ext
+			);
 		}
-		assert!(all_data.len() >= 1, "Unable to ingest Image file");
 	}
 }
