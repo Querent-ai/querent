@@ -146,23 +146,19 @@ impl Source for AzureBlobStorage {
 		Ok(())
 	}
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		if let Some(first_blob_result) = self
+		let mut blobs = self
 			.container_client
 			.list_blobs()
 			.max_results(NonZeroU32::new(1u32).expect("1 is always non-zero."))
-			.into_stream()
-			.next()
-			.await
-		{
-			match first_blob_result {
-				Ok(_) => Ok(()),
-				Err(e) => {
-					eprintln!("Error connecting to Azure Blob Storage: {}", e);
-					Err(e.into())
-				},
-			}
-		} else {
-			Err(anyhow::anyhow!("Failed to get first blob result"))
+			.into_stream();
+
+		match blobs.next().await {
+			Some(Ok(_)) => Ok(()),
+			Some(Err(e)) => Err(anyhow::anyhow!("Got the error as {:?}", e)),
+			None => {
+				eprintln!("No blobs found or empty container");
+				Ok(())
+			},
 		}
 	}
 
@@ -287,10 +283,10 @@ impl Retryable for AzureErrorWrapper {
 		match self.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => !matches!(
 				status,
-				StatusCode::NotFound |
-					StatusCode::Unauthorized |
-					StatusCode::BadRequest |
-					StatusCode::Forbidden
+				StatusCode::NotFound
+					| StatusCode::Unauthorized
+					| StatusCode::BadRequest
+					| StatusCode::Forbidden
 			),
 			ErrorKind::Io => true,
 			_ => false,
@@ -314,13 +310,15 @@ impl From<AzureErrorWrapper> for SourceError {
 	fn from(err: AzureErrorWrapper) -> Self {
 		match err.inner.kind() {
 			ErrorKind::HttpResponse { status, .. } => match status {
-				StatusCode::NotFound =>
-					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into())),
+				StatusCode::NotFound => {
+					SourceError::new(SourceErrorKind::NotFound, Arc::new(err.into()))
+				},
 				_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 			},
 			ErrorKind::Io => SourceError::new(SourceErrorKind::Io, Arc::new(err.into())),
-			ErrorKind::Credential =>
-				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into())),
+			ErrorKind::Credential => {
+				SourceError::new(SourceErrorKind::Unauthorized, Arc::new(err.into()))
+			},
 			_ => SourceError::new(SourceErrorKind::Service, Arc::new(err.into())),
 		}
 	}
@@ -360,15 +358,59 @@ mod tests {
 		let mut count_files: HashSet<String> = HashSet::new();
 		while let Some(item) = stream.next().await {
 			match item {
-				Ok(collected_bytes) =>
+				Ok(collected_bytes) => {
 					if let Some(pathbuf) = collected_bytes.file {
 						if let Some(str_path) = pathbuf.to_str() {
 							count_files.insert(str_path.to_string());
 						}
-					},
+					}
+				},
 				Err(_) => panic!("Expected successful data collection"),
 			}
 		}
 		println!("Files are --- {:?}", count_files);
+	}
+
+	#[tokio::test]
+	async fn test_azure_collector_invalid_credentials() {
+		dotenv().ok();
+		let azure_config = AzureCollectorConfig {
+			connection_string: "InvalidConnectionString".to_string(),
+			credentials: "InvalidCredentials".to_string(),
+			container: "testfiles".to_string(),
+			prefix: "".to_string(),
+			id: "Azure-source-id".to_string(),
+		};
+
+		let azure_storage = AzureBlobStorage::new(azure_config);
+
+		assert!(
+			azure_storage.check_connectivity().await.is_err(),
+			"Expected connection to fail with invalid credentials"
+		);
+	}
+
+	#[tokio::test]
+	async fn test_azure_collector_empty_container() {
+		dotenv().ok();
+		let azure_config = AzureCollectorConfig {
+			connection_string: env::var("AZURE_CONNECTION_STRING")
+				.unwrap_or_else(|_| "".to_string()),
+			credentials: env::var("AZURE_CREDENTIALS").unwrap_or_else(|_| "".to_string()),
+			container: "".to_string(),
+			prefix: "".to_string(),
+			id: "Azure-source-id".to_string(),
+		};
+
+		let azure_storage = AzureBlobStorage::new(azure_config);
+
+		assert!(
+			azure_storage.check_connectivity().await.is_err(),
+			"Expected connection to fail due to empty container"
+		);
+
+		// let result = azure_storage.poll_data().await;
+
+		// assert!(result.is_err(), "Expected poll_data to fail due to empty container");
 	}
 }
