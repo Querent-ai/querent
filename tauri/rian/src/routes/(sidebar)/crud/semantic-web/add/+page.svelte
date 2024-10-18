@@ -87,12 +87,14 @@
 				<div class="card-container">
 					<button
 						type="button"
-						class="flex w-full cursor-pointer items-start space-x-4 rounded-lg p-4 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+						class="flex w-full cursor-pointer items-center space-x-4 rounded-lg p-4 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
 						on:click={() => setActiveForm(form.name)}
 						aria-label={`Select ${form.name}`}
 						title={form.tooltip}
 					>
-						<svelte:component this={form.icon} />
+						<div class="icon-wrapper">
+							<svelte:component this={form.icon} />
+						</div>
 						<div class="text-left">
 							<span class="text-left text-lg text-gray-700 dark:text-gray-200">
 								{form.name}
@@ -116,15 +118,19 @@
 
 <style>
 	.card-container {
-		width: 250px; /* Set equal width for all cards */
-		background-color: white; /* Optional card background color */
+		width: 370px; /* Set equal width for all cards */
+		height: 100px; /* Ensures uniform height */
+		background-color: white;
 		border-radius: 0.5rem;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 		overflow: hidden;
 	}
-	.card-container svg {
-		width: 40px; /* Fixed width for icons */
-		height: 40px; /* Fixed height for icons */
+	.icon-wrapper {
+		width: 40px; /* Fixed width for all icons */
+		height: 40px; /* Fixed height for all icons */
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 	.pro-badge {
 		background-color: #f97316; /* Orange color */
@@ -136,4 +142,3 @@
 		margin-left: 8px;
 	}
 </style>
-
