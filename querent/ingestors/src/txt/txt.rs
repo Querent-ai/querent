@@ -8,7 +8,7 @@ use tokio::io::{AsyncReadExt, BufReader};
 
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
-	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
+	AsyncProcessor, BaseIngestor, IngestorResult,
 };
 
 // Define the TxtIngestor

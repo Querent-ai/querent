@@ -212,6 +212,8 @@ mod tests {
 	async fn test_slack_collector() {
 		dotenv().ok();
 
+		let _ = rustls::crypto::ring::default_provider().install_default();
+
 		let slack_config = SlackCollectorConfig {
 			access_token: env::var("SLACK_API_TOKEN")
 				.map_err(|e| e.to_string())
@@ -293,6 +295,8 @@ mod tests {
 	async fn test_slack_collector_invalid_channel() {
 		dotenv().ok();
 
+		let _ = rustls::crypto::ring::default_provider().install_default();
+
 		let slack_config = SlackCollectorConfig {
 			access_token: env::var("SLACK_API_TOKEN")
 				.map_err(|e| e.to_string())
@@ -339,6 +343,8 @@ mod tests {
 	#[tokio::test]
 	async fn test_slack_collector_channel_not_joined() {
 		dotenv().ok();
+
+		let _ = rustls::crypto::ring::default_provider().install_default();
 
 		let slack_config = SlackCollectorConfig {
 			access_token: env::var("SLACK_API_TOKEN")
