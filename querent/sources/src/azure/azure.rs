@@ -408,9 +408,25 @@ mod tests {
 			azure_storage.check_connectivity().await.is_err(),
 			"Expected connection to fail due to empty container"
 		);
+	}
 
-		// let result = azure_storage.poll_data().await;
+	#[tokio::test]
+	async fn test_azure_collector_multiple_files() {
+		dotenv().ok();
+		let azure_config = AzureCollectorConfig {
+			connection_string: env::var("AZURE_CONNECTION_STRING")
+				.unwrap_or_else(|_| "".to_string()),
+			credentials: env::var("AZURE_CREDENTIALS").unwrap_or_else(|_| "".to_string()),
+			container: "Special-characters".to_string(),
+			prefix: "".to_string(),
+			id: "Azure-source-id".to_string(),
+		};
 
-		// assert!(result.is_err(), "Expected poll_data to fail due to empty container");
+		let azure_storage = AzureBlobStorage::new(azure_config);
+
+		assert!(
+			azure_storage.check_connectivity().await.is_err(),
+			"Expected connection to fail due to empty container"
+		);
 	}
 }
