@@ -8,8 +8,6 @@ pub mod docx;
 pub mod html;
 pub mod image;
 pub mod json;
-pub mod news;
-pub mod notion;
 pub mod odp;
 pub mod pdf;
 pub mod pptx;

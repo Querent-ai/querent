@@ -66,6 +66,8 @@ jobs:
           sudo apt-get install -y protobuf-compiler
       - name: Setup Tauri and Specta Dependencies
         run: sudo apt-get update && sudo apt-get install javascriptcoregtk-4.1  libsoup-3.0 librust-atk-dev libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Install Tesseract OCR
+        run: sudo apt-get install libleptonica-dev libtesseract-dev clang tesseract-ocr-eng
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
         with:
@@ -98,8 +100,9 @@ jobs:
       AWS_ACCESS_KEY: ${{secrets.AWS_ACCESS_KEY}}
       AWS_SECRET_KEY: ${{secrets.AWS_SECRET_KEY}}
       NEWS_API_KEY: ${{ secrets.NEWS_API_KEY }}
+      IMAP_USERNAME: ${{secrets.IMAP_USERNAME}}
+      IMAP_PASSWORD: ${{secrets.IMAP_PASSWORD}}
       NOTION_API_KEY: ${{secrets.NOTION_API_KEY}}
-      NOTION_DATABASE_ID: ${{secrets.NOTION_DATABASE_ID}}
       NOTION_PAGE_ID: ${{secrets.NOTION_PAGE_ID}}
     steps:
       - name: Checkout code
@@ -113,7 +116,7 @@ jobs:
       - name: Setup Tauri and Specta Dependencies
         run: sudo apt-get update && sudo apt-get install javascriptcoregtk-4.1  libsoup-3.0 librust-atk-dev libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
       - name: Install Tesseract OCR
-        run: sudo apt-get install -y tesseract-ocr
+        run: sudo apt-get install libleptonica-dev libtesseract-dev clang tesseract-ocr-eng
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
         with:
@@ -164,6 +167,8 @@ jobs:
           sudo apt-get install -y protobuf-compiler
       - name: Setup Tauri and Specta Dependencies
         run: sudo apt-get update && sudo apt-get install javascriptcoregtk-4.1  libsoup-3.0 librust-atk-dev libwebkit2gtk-4.1-dev build-essential libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - name: Install Tesseract OCR
+        run: sudo apt-get install libleptonica-dev libtesseract-dev clang tesseract-ocr-eng
       - name: Install Rust Toolchain
         uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af
         with:

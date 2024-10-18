@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Card, Heading, TabItem, Tabs } from 'flowbite-svelte';
+	import { Card } from 'flowbite-svelte';
 	import { commands, type IndexingStatistics } from '../../service/bindings';
 	import { onDestroy, onMount } from 'svelte';
 	import { describeStats } from '../../stores/appState';
@@ -12,15 +12,13 @@
 
 	let selectedPipeline: string;
 	let runningPipelines: string[] = [];
-
 	$: selectedPipeline = runningPipelines.length > 0 ? runningPipelines[0] : 'no_active_pipeline';
-
+	let isLive = false;
 	onMount(async () => {
 		try {
 			let res = await commands.getRunningAgns();
-			res.forEach(([pipelineId, _]) => {
-				runningPipelines = [...runningPipelines, pipelineId];
-			});
+			runningPipelines = res.map(([pipelineId, _]) => pipelineId);
+			isLive = runningPipelines.length > 0;
 
 			if ($describeStats.total_docs > 0) {
 				productsArray = convertStatsToArray($describeStats);
@@ -56,26 +54,26 @@
 
 	async function fetchPipelineData(selectedPipeline: string) {
 		try {
-			if (!selectedPipeline || selectedPipeline == 'no_active_pipeline' || selectedPipeline == '') {
+			if (!selectedPipeline || selectedPipeline == 'no_active_pipeline') {
+				isLive = false;
 				return;
 			}
 			const response = await commands.describePipeline(selectedPipeline);
-			if (response.status == 'ok') {
+			if (response.status === 'ok') {
 				products = response.data;
 				describeStats.set(products);
 				productsArray = convertStatsToArray(products);
+				isLive = true;
 			} else {
-				errorMessage = 'Error fetching pipeline data:' + response.error;
-				showErrorModal = true;
+				isLive = false;
+				throw new Error(`Unexpected response status: ${response.status}`);
 			}
 		} catch (error) {
-			errorMessage = 'Error fetching pipeline data:' + error;
-			showErrorModal = true;
+			console.error('Error fetching pipeline data:', error);
 		}
 	}
 
 	let intervalId: ReturnType<typeof setInterval>;
-
 	onMount(() => {
 		fetchPipelineData(selectedPipeline);
 		intervalId = setInterval(() => {
@@ -88,58 +86,76 @@
 	});
 
 	function convertStatsToArray(products: IndexingStatistics) {
-		return Object.entries(products).map(([key, value]) => ({
-			label: key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-			number: value
-		}));
+		return [
+			{ section: 'Fabric-Based Stats' },
+			{ label: 'Nodes Identified', number: products.total_subjects + products.total_objects },
+			{ label: 'Context Identified', number: products.total_sentences },
+			{ label: 'Connections Identified', number: products.total_predicates },
+			{ label: 'Metadata Interactions', number: products.total_graph_events },
+			{ label: 'Embedding Interactions', number: products.total_vector_events },
+
+			{ section: 'Document-Based Stats' },
+			{ label: 'Documents Ingested', number: products.total_docs },
+			{ label: 'Document Batches Processed', number: products.total_batches },
+			{ label: 'Data Events Logged', number: products.total_events },
+			{ label: 'Incoming Events', number: products.total_events_received },
+			{ label: 'Events Processed Successfully', number: products.total_events_processed },
+			{ label: 'Outgoing Events', number: products.total_events_sent },
+			{ label: 'Total Data Volume Processed (mb)', number: products.total_data_processed_size }
+		];
 	}
 </script>
 
 <Card size="xl">
 	<div class="mb-4 flex items-center gap-2">
-		<Heading tag="h3" class="w-fit text-lg font-semibold dark:text-white">Pipeline Stats</Heading>
+		<h2 class="text-center text-[24px] font-semibold text-gray-900 dark:text-white">
+			{'Data Fabric Pipeline Stats'}
+			{#if isLive}
+				<span class="blinking-dot"></span>
+			{/if}
+		</h2>
 	</div>
-	<Tabs
-		style="full"
-		defaultClass="flex divide-x rtl:divide-x-reverse divide-gray-200 shadow dark:divide-gray-700"
-		contentClass="p-3 mt-4"
-	>
-		<TabItem class="w-full" open>
-			<select
-				slot="title"
-				id="pipelineSelect"
-				class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-			>
-				<option value={selectedPipeline} selected>{selectedPipeline}</option>
-			</select>
-			<ul class="-m-3 divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800">
-				{#each productsArray as { label, number }}
-					<li class="py-3 sm:py-4">
-						<div class="flex items-center justify-between">
-							<div class="flex min-w-0 items-center">
-								<div class="ml-3">
-									<p class="truncate font-medium text-gray-900 dark:text-white">
-										{label}
-									</p>
-								</div>
-							</div>
-							<div
-								class="inline-flex items-center text-base font-semibold text-gray-900 dark:text-white"
-							>
-								{number}
-							</div>
-						</div>
-					</li>
-				{/each}
-			</ul>
-		</TabItem>
-	</Tabs>
 
-	<div
-		class="mt-4 flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700 sm:pt-6"
-	></div>
+	<!-- Dropdown to select pipeline -->
+	<div class="mb-4">
+		<select
+			id="pipelineSelect"
+			class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
+			bind:value={selectedPipeline}
+			on:change={() => fetchPipelineData(selectedPipeline)}
+		>
+			{#each runningPipelines as pipeline}
+				<option value={pipeline}>{pipeline}</option>
+			{/each}
+			{#if runningPipelines.length === 0}
+				<option value="no_active_pipeline">No Active Pipeline</option>
+			{/if}
+		</select>
+	</div>
+
+	<!-- Display stats in a grid layout -->
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+		{#each productsArray as stat, index (index)}
+			{#if stat.section}
+				<!-- Section Header -->
+				<div class="col-span-full">
+					<h3 class="mb-2 text-lg font-semibold text-gray-700 dark:text-white">
+						{stat.section}
+					</h3>
+				</div>
+			{/if}
+
+			<!-- Stat Card -->
+			{#if !stat.section}
+				<Card class="rounded-lg bg-gray-50 pb-2 pl-3 pr-3 pt-2 shadow-md dark:bg-gray-800">
+					<p class="font-medium text-gray-900 dark:text-white">
+						{stat.label}
+					</p>
+					<p class="text-lg font-semibold text-gray-900 dark:text-white">
+						{stat.number}
+					</p>
+				</Card>
+			{/if}
+		{/each}
+	</div>
 </Card>
-
-{#if showErrorModal}
-	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
-{/if}

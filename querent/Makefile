@@ -39,13 +39,14 @@ format:
 	@cargo +nightly fmt --all
 format-check:
 	@echo "Running Cargo fmt..."
+	@rustup toolchain install nightly
 	@rustup component add rustfmt --toolchain nightly
 	@cargo +nightly fmt --all -- --check
 
 .PHONY: build, build-without-license-check
 build:
 	@echo "Running Cargo build with full features..."
-	@cargo build --release --features "license-check","openssl-support","bundled" --bin rian
+	@cargo build --release --features "license-check","openssl-support" --bin rian
 
 build-without-license-check:
 	@echo "Running Cargo build..."
