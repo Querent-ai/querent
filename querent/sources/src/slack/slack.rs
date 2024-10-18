@@ -7,7 +7,7 @@ use std::{
 
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{retry, CollectedBytes};
 use futures::Stream;
 use proto::semantics::SlackCollectorConfig;
 use slack_morphism::{
@@ -27,6 +27,7 @@ pub struct SlackApiClient {
 	latest: Option<String>,
 	inclusive: Option<bool>,
 	oldest: Option<String>,
+	pub retry_params: common::RetryParams,
 }
 
 impl SlackApiClient {
@@ -41,6 +42,7 @@ impl SlackApiClient {
 			latest: config.latest,
 			inclusive: config.inclusive,
 			oldest: config.oldest,
+			retry_params: common::RetryParams::aggressive(),
 		})
 	}
 }
@@ -126,73 +128,66 @@ impl Source for SlackApiClient {
 		let source_id = self.source_id.clone();
 		let mut cursor: Option<SlackCursorId> = None;
 		let stream = stream! {
-
 			loop {
 				let req: SlackApiConversationsHistoryRequest = SlackApiConversationsHistoryRequest {
-				channel: Some(channel_id.clone()),
-				cursor: cursor.clone(),
-				latest: Some(latest.clone()),
-				limit: Some(limit.clone()),
-				oldest: Some(oldest.clone()),
-				inclusive: Some(self.inclusive.unwrap_or(true)),
-			};
-			let message_response = get_message(req, &token).await?;
-
-
-			for messages in message_response.messages {
-
-				let file_name = format!("{}.slack", channel_id.to_string());
-				let file_name_path = Some(PathBuf::from(file_name));
-
-				let mut message_text = messages.content.text.unwrap_or("".to_string());
-
-				if let Some(attachments) = messages.content.attachments {
-					if !attachments.is_empty() {
-						// finding links in the attachments
-						for attachment in attachments {
-							if let Some(mut fallback) = attachment.fallback {
-								fallback = remove_special_characters(&fallback);
-								message_text.push_str(" ");
-								message_text.push_str(&fallback);
-							}
-							if let Some(text) = attachment.text {
-								message_text.push_str(" ");
-								message_text.push_str(&text);
+					channel: Some(channel_id.clone()),
+					cursor: cursor.clone(),
+					latest: Some(latest.clone()),
+					limit: Some(limit.clone()),
+					oldest: Some(oldest.clone()),
+					inclusive: Some(self.inclusive.unwrap_or(true)),
+				};
+				let message_response = retry(&self.retry_params, || async {
+					get_message(req.clone(), &token)
+						.await
+				})
+				.await?;
+				for messages in message_response.messages {
+					let file_name = format!("{}.slack", channel_id.to_string());
+					let file_name_path = Some(PathBuf::from(file_name));
+					let mut message_text = messages.content.text.unwrap_or("".to_string());
+					if let Some(attachments) = messages.content.attachments {
+						if !attachments.is_empty() {
+							// finding links in the attachments
+							for attachment in attachments {
+								if let Some(mut fallback) = attachment.fallback {
+									fallback = remove_special_characters(&fallback);
+									message_text.push_str(" ");
+									message_text.push_str(&fallback);
+								}
+								if let Some(text) = attachment.text {
+									message_text.push_str(" ");
+									message_text.push_str(&text);
+								}
 							}
 						}
+					} else {
+						continue;
 					}
-				} else {
-					continue;
+					let doc_source = Some("slack://".to_string());
+					let data_len = Some(message_text.len());
+					yield Ok(CollectedBytes::new(
+						file_name_path,
+						Some(Box::pin(string_to_async_read(message_text))),
+						true,
+						doc_source,
+						data_len,
+						source_id.clone(),
+						None
+					))
 				}
-
-				let doc_source = Some("slack://".to_string());
-				let data_len = Some(message_text.len());
-
-				yield Ok(CollectedBytes::new(
-					file_name_path,
-					Some(Box::pin(string_to_async_read(message_text))),
-					true,
-					doc_source,
-					data_len,
-					source_id.clone(),
-					None
-				))
+				if let Some(metadata) = message_response.response_metadata {
+					cursor = metadata.next_cursor;
+				} else {
+					cursor = None;
+				}
+				if cursor.is_none() {
+					break;
+				}
+				if !message_response.has_more.unwrap_or(false) {
+					break;
+				}
 			}
-
-			if let Some(metadata) = message_response.response_metadata {
-				cursor = metadata.next_cursor;
-			} else {
-				cursor = None;
-			}
-
-			if cursor.is_none() {
-				break;
-			}
-			if !message_response.has_more.unwrap_or(false) {
-				break;
-			}
-			}
-
 		};
 		Ok(Box::pin(stream))
 	}
