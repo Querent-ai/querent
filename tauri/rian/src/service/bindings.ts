@@ -399,6 +399,7 @@ export type IngestedTokens = {
 	is_token_stream: boolean;
 	doc_source: string;
 	source_id: string;
+	image_id: string | null;
 };
 /**
  * Represents an insight discovered from the data
