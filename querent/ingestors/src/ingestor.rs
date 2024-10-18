@@ -226,7 +226,7 @@ pub async fn resolve_ingestor_with_extension(
 		"qoi" => Ok(Arc::new(ImageIngestor::new())),
 		"tiff" => Ok(Arc::new(ImageIngestor::new())),
 		"webp" => Ok(Arc::new(ImageIngestor::new())),
-		"farbfeld" => Ok(Arc::new(ImageIngestor::new())),
+		"ff" => Ok(Arc::new(ImageIngestor::new())),
 		"dds" => Ok(Arc::new(ImageIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 		// _ => Err(IngestorError::new(
