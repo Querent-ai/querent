@@ -318,7 +318,7 @@ export const universalConstant = 42;
  */
 
 /**
- * @typedef { { file: string; data: string[]; is_token_stream: boolean; doc_source: string; source_id: string } } IngestedTokens
+ * @typedef { { file: string; data: string[]; is_token_stream: boolean; doc_source: string; source_id: string; image_id: string | null } } IngestedTokens
  */
 
 /**
