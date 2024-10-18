@@ -105,7 +105,7 @@
 	});
 
 	let iconClass =
-		'flex-shrink-0 w-6 h-6 text-gray-500 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white text-align:center';
+		'flex-shrink-0 w-9 h-9 text-gray-800 transition duration-75 group-hover:text-gray-900 dark:text-gray-400 dark:group-hover:text-white text-align:center';
 
 	let icon = 'carbon:ibm-watson-discovery';
 
@@ -199,59 +199,68 @@
 
 	async function handlePrevious() {
 		const discoveryData = get(discoverylist);
-		const pageNumber = get(discoveryPageNumber);
-		if (pageNumber <= 1) {
+		const pageNumber = get(discoveryPageNumber) - 1;
+		if (pageNumber <= 0) {
 			return;
 		}
-		const previousPageData = discoveryData.find((item) => item.page_number === pageNumber - 1);
+		const previousPageData = discoveryData.find((item) => item.page_number === pageNumber);
 
 		const insights = previousPageData?.data;
 
-		if (insights) {
-			categories = insights;
-			discoveryApiResponseStore.set(insights);
+		if (previousPageData) {
+			categories = previousPageData.data;
+			discoveryApiResponseStore.set(previousPageData.data);
+			discoveryPageNumber.set(pageNumber);
 		} else {
 			console.error('No data available for page number', pageNumber);
 		}
 	}
 
 	async function handleNext() {
-		isLoading.set(true);
+		const discoveryData = get(discoverylist);
+		const pageNumber = get(discoveryPageNumber) + 1;
+		const query = get(discoveryQuery);
 
-		try {
-			const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+		const nextPageData = discoveryData.find((item) => item.page_number === pageNumber);
 
-			if (res.status == 'ok') {
-				if (res.data.insights.length === 0) {
-					return;
+		if (nextPageData) {
+			categories = nextPageData.data;
+			discoveryApiResponseStore.set(nextPageData.data);
+			discoveryPageNumber.set(pageNumber);
+		} else {
+			try {
+				isLoading.set(true);
+				const res = await commands.sendDiscoveryRetrieverRequest(query, selectedCategories);
+
+				if (res.status == 'ok') {
+					if (res.data.insights.length === 0) {
+						return;
+					}
+					let discoveryData: DiscoveryDataPageList = {
+						page_number: pageNumber,
+						data: res.data.insights
+					};
+
+					discoveryPageNumber.set(pageNumber);
+
+					discoverylist.update((currentList) => {
+						return [...currentList, discoveryData];
+					});
+
+					const insights = res.data.insights;
+
+					if (insights) {
+						discoveryApiResponseStore.set(insights);
+						categories = insights;
+					}
+				} else {
+					console.error('Error while sending the request', res.error);
 				}
-				let discoveryData: DiscoveryDataPageList = {
-					page_number: res.data.page_ranking,
-					data: res.data.insights
-				};
-
-				discoveryPageNumber.set(res.data.page_ranking);
-
-				discoverylist.update((currentList) => {
-					return [...currentList, discoveryData];
-				});
-
-				const insights = res.data.insights;
-
-				if (insights) {
-					discoveryApiResponseStore.set(insights);
-				}
-			} else {
-				errorMessage = 'Error while sending the request' + res.error;
+			} catch (error) {
+				console.error('Error while fetching next page:', error);
+			} finally {
 				isLoading.set(false);
-				showErrorModal = true;
 			}
-		} catch (error) {
-			errorMessage = 'Error while fetching next page:' + error;
-			isLoading.set(false);
-			showErrorModal = true;
-		} finally {
-			isLoading.set(false);
 		}
 	}
 
@@ -301,6 +310,12 @@
 		};
 
 		return iconMap[extension] || 'vscode-icons:default-file';
+	}
+	function formatDisplayText(text: string): string {
+		return text
+			.split(' ')
+			.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+			.join(' ');
 	}
 </script>
 
@@ -355,7 +370,7 @@
 						/>
 						<span class="slider round"></span>
 					</label>
-					<span class="traverser-text">Pro</span>
+					<span class="traverser-text">Data Fabric Traverser</span>
 				</div>
 			</div>
 
@@ -377,7 +392,7 @@
 											checked={selectedCategories.includes(category)}
 											on:change={() => toggleCategory(category)}
 										/>
-										{category}
+										{formatDisplayText(category)}
 									</label>
 								{/each}
 							{/if}
@@ -458,26 +473,26 @@
 
 	.search-wrapper {
 		width: 100%;
-		max-width: 800px;
+		max-width: 1200px;
 		text-align: center;
 		box-sizing: border-box;
 		margin: 0 auto;
+		padding: 20px;
+		box-sizing: border-box;
 	}
 
 	.toggle-container {
 		display: flex;
 		align-items: center;
 		justify-content: flex-end;
-		margin-top: 10px;
+		margin-top: 15px;
 	}
 
 	.switch {
 		position: relative;
 		display: inline-block;
-		width: 40px;
-		height: 24px;
-		border: 1px solid black;
-		border-radius: 20px;
+		width: 55px;
+		height: 30px;
 	}
 
 	.switch input {
@@ -491,34 +506,42 @@
 	}
 
 	.slider {
-		background-color: #007bff;
+		position: absolute;
+		cursor: pointer;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background-color: #ccc;
 		transition: 0.4s;
-		border-radius: 24px;
+		border-radius: 30px;
 	}
 
 	.slider:before {
 		position: absolute;
 		content: '';
-		height: 20px;
-		width: 20px;
+		height: 26px;
+		width: 26px;
 		left: 2px;
-		bottom: 1px;
-		background-color: #007bff;
+		bottom: 2px;
+		background-color: white;
 		transition: 0.4s;
 		border-radius: 50px;
 	}
 
 	input:checked + .slider {
-		background-color: #2196f3;
+		background-color: #007bff;
 	}
 
 	input:checked + .slider:before {
-		transform: translateX(16px);
+		transform: translateX(24px);
 	}
 
 	.traverser-text {
 		margin-left: 10px;
-		color: #000;
+		font-size: 16px;
+		font-weight: bold;
+		color: #007bff;
 	}
 
 	.left-container {
@@ -544,10 +567,12 @@
 		align-items: center;
 		justify-content: space-between;
 		gap: 10px;
-		max-width: 600px;
+		padding: 20px 0;
+		margin-bottom: 20px;
 	}
 
 	.discovery-text {
+		font-size: 28px;
 		text-align: center;
 		font-weight: bold;
 	}
@@ -561,8 +586,8 @@
 		background-color: #fff;
 		border-radius: 10px;
 		box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-		padding: 10px;
-		overflow: visible;
+		padding: 20px;
+		margin-bottom: 25px;
 	}
 
 	.input-wrapper {
@@ -576,20 +601,27 @@
 		flex-grow: 1;
 		min-height: 40px;
 		max-height: 120px;
-		padding: 10px;
-		border: none;
-		background: transparent;
+		padding: 12px;
+		border: 1px solid #ccc;
+		border-radius: 8px;
+		background: #f8f9fa;
 		outline: none;
-		padding: 10px;
+		padding: 12px;
 		resize: none;
 		overflow-y: auto;
-		margin-right: 50px;
-		font-family: inherit;
-		font-size: inherit;
+		margin-right: 70px;
+		font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+		font-size: 16px;
 		line-height: 1.5;
 		overflow-y: hidden;
 	}
 
+	.search-input::placeholder {
+		color: #6c757d;
+		font-size: 14px;
+		font-style: italic;
+		content: 'Search documents by title, category...';
+	}
 	.search-input:focus {
 		outline: none;
 		box-shadow: none;
@@ -598,29 +630,28 @@
 
 	.search-button {
 		position: absolute;
-		right: 4px;
+		background: #007bff;
+		right: 1px;
 		top: 50%;
 		transform: translateY(-50%);
-		background: none;
-		border: none;
-		cursor: pointer;
+		padding: 12px;
+		width: 48px;
+		height: 48px;
+		border-radius: 12px;
+		box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 50%;
-		background-color: #007bff;
-		padding: 8px;
-		width: 40px;
-		height: 40px;
 	}
 
 	.search-button:hover {
-		background-color: rgb(46, 119, 235);
+		background-color: #0056b3;
+		box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 	}
 
 	.card-container {
 		width: 100%;
-		max-width: 800px;
+		max-width: 1200px;
 		margin: 0 auto;
 		padding: 20px;
 		box-sizing: border-box;
@@ -663,6 +694,7 @@
 		left: 0;
 		background-color: #f9f9f9;
 		min-width: 300px;
+		max-height: 250px;
 		box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
 		z-index: 1;
 		max-height: 300px;
@@ -678,19 +710,20 @@
 		padding: 10px;
 		cursor: pointer;
 		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
+		border-radius: 6px;
+		font-size: 14px;
+		transition: background-color 0.2s ease;
 	}
 
 	.category-item:hover {
-		background-color: #f1f1f1;
+		background-color: #f0f0f0;
 	}
 
 	.cards-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 20px;
-		padding-top: 20px;
+		gap: 30px;
+		padding-top: 30px;
 	}
 
 	.full-width-card {
@@ -702,30 +735,39 @@
 		display: flex;
 		flex-direction: column;
 		background-color: #fff;
-		border-radius: 8px;
-		padding: 15px;
-		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-		transition: box-shadow 0.3s ease-in-out;
+		border-radius: 12px;
+		padding: 20px;
+		box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+		transition:
+			box-shadow 0.3s ease-in-out,
+			transform 0.2s ease-in-out;
 		height: 100%;
 	}
 
 	.full-width-card:hover,
 	.small-card:hover {
-		box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+		transform: translateY(-3px);
 	}
 
 	.tagline {
 		margin: 0;
 		padding: 10px 0 5px;
 		text-align: left;
-		font-weight: 600;
+		font-weight: 700;
+		font-size: 18px;
+		color: #333;
+		line-height: 1.4;
+		overflow-wrap: break-word;
 	}
 
 	.main-paragraph {
 		margin: 0;
-		padding: 0 0 10px;
+		padding: 10px 0;
 		text-align: left;
-		font-size: 12px;
+		font-size: 14px;
+		line-height: 1.6;
+		color: #666;
 		flex-grow: 1;
 	}
 
@@ -733,8 +775,9 @@
 		display: flex;
 		justify-content: center;
 		align-items: center;
-		height: 36px;
+		height: 40px;
 		background-color: white;
+		margin-bottom: 10px;
 	}
 
 	.small-card {
@@ -757,7 +800,6 @@
 
 	.sources,
 	.documents {
-		position: relative;
 		display: flex;
 		align-items: center;
 		cursor: pointer;
@@ -778,13 +820,7 @@
 		padding: 5px 10px;
 		border-radius: 6px;
 		z-index: 1;
-		bottom: 100%;
-		left: 50%;
-		transform: translateX(-50%);
 		font-size: 12px;
-		min-height: 20px;
-		min-width: 50px;
-		overflow-x: inherit;
 	}
 
 	.sources:hover .tooltip,
@@ -836,7 +872,7 @@
 
 	.discovery-query {
 		padding: 15px;
-		font-size: 20px;
+		font-size: 24px;
 		border: 2px solid transparent;
 		border-radius: 5px;
 		margin-bottom: 20px;
@@ -849,5 +885,28 @@
 		background-color: #f8f9fa;
 		box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 		border-color: transparent;
+	}
+	.category-item input[type='checkbox'] {
+		appearance: none;
+		width: 16px;
+		height: 16px;
+		border: 2px solid #007bff;
+		border-radius: 4px;
+		transition: background-color 0.2s ease;
+		margin-right: 10px;
+		cursor: pointer;
+	}
+
+	.category-item input[type='checkbox']:checked {
+		background-color: #007bff;
+		border-color: #007bff;
+	}
+
+	.category-item input[type='checkbox']:checked::after {
+		content: '✓';
+		color: white;
+		font-size: 12px;
+		display: block;
+		text-align: center;
 	}
 </style>

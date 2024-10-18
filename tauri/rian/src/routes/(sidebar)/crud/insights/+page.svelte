@@ -122,7 +122,7 @@
 		<div class="p-4">
 			<Breadcrumb class="mb-5">
 				<BreadcrumbItem home>Home</BreadcrumbItem>
-				<BreadcrumbItem href="/crud/sources">Insights</BreadcrumbItem>
+				<BreadcrumbItem href="/crud/insights">Insights</BreadcrumbItem>
 				<BreadcrumbItem>Start New Insight</BreadcrumbItem>
 			</Breadcrumb>
 			<Heading tag="h1" class="text-xl font-semibold text-gray-900 dark:text-white sm:text-2xl">
