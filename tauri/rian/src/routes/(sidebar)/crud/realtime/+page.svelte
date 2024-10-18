@@ -24,7 +24,8 @@
 		data: [''],
 		doc_source: '',
 		source_id: '',
-		is_token_stream: true
+		is_token_stream: true,
+		image_id:'',
 	};
 
 	async function handleSubmit() {
