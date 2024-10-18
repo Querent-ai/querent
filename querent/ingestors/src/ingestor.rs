@@ -201,7 +201,6 @@ pub async fn resolve_ingestor_with_extension(
 	}
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new())),
-		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),
 		"xml" => Ok(Arc::new(XmlIngestor::new())),
@@ -214,9 +213,7 @@ pub async fn resolve_ingestor_with_extension(
 		"pptx" => Ok(Arc::new(PptxIngestor::new())),
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
-		"news" => Ok(Arc::new(TxtIngestor::new())),
-		"email" => Ok(Arc::new(TxtIngestor::new())),
-		"notion" => Ok(Arc::new(TxtIngestor::new())),
-		_ => Ok(Arc::new(TxtIngestor::new())),
+		"news" | "email" | "notion" | "txt" | "" | "md" => Ok(Arc::new(TxtIngestor::new())),
+		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 	}
 }
