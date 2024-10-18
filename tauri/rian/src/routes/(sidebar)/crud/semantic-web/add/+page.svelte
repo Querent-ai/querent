@@ -99,7 +99,6 @@
 							<span class="text-left text-lg text-gray-700 dark:text-gray-200">
 								{form.name}
 								{#if !form.form}
-									<!-- Styled Pro badge -->
 									<span class="pro-badge">Pro</span>
 								{/if}
 							</span>
@@ -118,22 +117,22 @@
 
 <style>
 	.card-container {
-		width: 370px; /* Set equal width for all cards */
-		height: 100px; /* Ensures uniform height */
+		width: 350px;
+		height: 100px;
 		background-color: white;
 		border-radius: 0.5rem;
 		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 		overflow: hidden;
 	}
 	.icon-wrapper {
-		width: 40px; /* Fixed width for all icons */
-		height: 40px; /* Fixed height for all icons */
+		width: 40px;
+		height: 40px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 	}
 	.pro-badge {
-		background-color: #f97316; /* Orange color */
+		background-color: #f97316;
 		color: white;
 		padding: 2px 6px;
 		border-radius: 0.25rem;

@@ -371,11 +371,11 @@ export const universalConstant = 42;
 
 /**
  * NewsCollectorConfig is a message to hold configuration for a News collector.
- * @typedef { { api_key: string; query: string; query_type: number; sources: string | null; from_date: string | null; to_date: string | null; language: string | null; sort_by: number | null; page_size: number | null; page: number | null; domains: string | null; id: string } } NewsCollectorConfig
+ * @typedef { { api_key: string; query: string | null; query_type: number; sources: string | null; from_date: string | null; to_date: string | null; language: string | null; sort_by: number | null; domains: string | null; id: string; exclude_domains: string | null; search_in: string | null; page_size: number | null; country: string | null; category: string | null } } NewsCollectorConfig
  */
 
 /**
- * @typedef { { api_key: string; query_type: number; query_id: string; id: string } } NotionConfig
+ * @typedef { { api_key: string; page_ids: string[]; id: string } } NotionConfig
  */
 
 /**

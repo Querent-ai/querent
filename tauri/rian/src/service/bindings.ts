@@ -615,7 +615,7 @@ export type NewsCollectorConfig = {
 	/**
 	 * Query of the News collector.
 	 */
-	query: string;
+	query: string | null;
 	/**
 	 * Query type of the News collector.
 	 */
@@ -641,14 +641,6 @@ export type NewsCollectorConfig = {
 	 */
 	sort_by: number | null;
 	/**
-	 * Page Size of the News Response
-	 */
-	page_size: number | null;
-	/**
-	 * Page number of the News Response
-	 */
-	page: number | null;
-	/**
 	 * Comma-seperated string of Domains of the News Collector
 	 */
 	domains: string | null;
@@ -656,6 +648,26 @@ export type NewsCollectorConfig = {
 	 * Id for the collector
 	 */
 	id: string;
+	/**
+	 * A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+	 */
+	exclude_domains: string | null;
+	/**
+	 * The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+	 */
+	search_in: string | null;
+	/**
+	 * Page Size of the News Response
+	 */
+	page_size: number | null;
+	/**
+	 * The 2-letter ISO 3166-1 code of the country you want to get headlines for. Possible options: us. Note: you can't mix this param with the sources param.
+	 */
+	country: string | null;
+	/**
+	 * The category you want to get headlines for. Possible options: business, entertainment, general, health, science, sports, technology. Note: you can't mix this param with the sources param.
+	 */
+	category: string | null;
 };
 export type NotionConfig = {
 	/**
@@ -663,13 +675,9 @@ export type NotionConfig = {
 	 */
 	api_key: string;
 	/**
-	 * Type of query to notion API
-	 */
-	query_type: number;
-	/**
 	 * Query id to the notion API/ either page id or database id
 	 */
-	query_id: string;
+	page_ids: string[];
 	/**
 	 * / Id for the collector
 	 */
