@@ -6,7 +6,10 @@ use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
 use tokio::io::{AsyncReadExt, BufReader};
 
-use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
+use crate::{
+	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
+	AsyncProcessor, BaseIngestor, IngestorResult,
+};
 
 // Define the TxtIngestor
 pub struct TxtIngestor {
@@ -15,7 +18,7 @@ pub struct TxtIngestor {
 
 impl TxtIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 

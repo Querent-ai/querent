@@ -6,7 +6,10 @@ use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
 
-use crate::{process_ingested_tokens_stream, AsyncProcessor, BaseIngestor, IngestorResult};
+use crate::{
+	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
+	AsyncProcessor, BaseIngestor, IngestorResult,
+};
 use xml::reader::{EventReader, XmlEvent};
 
 // Define the TxtIngestor
@@ -16,7 +19,7 @@ pub struct XmlIngestor {
 
 impl XmlIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 

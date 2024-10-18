@@ -290,16 +290,14 @@ message SlackCollectorConfig {
   string access_token = 1;
   // Channel name of the Slack collector.
   string channel_name = 2;
-  // Cursor of the Slack collector.
-  string cursor = 3;
-  // Include all metadata of the Slack collector.
-  bool include_all_metadata = 4;
-  // Includive of the Slack collector.
-  bool includive = 5;
-  // Limit of the Slack collector
-  int32 limit = 6;
+  // Specify the beginning of the time range for messages
+  optional string oldest = 3;
+  // Inclusive of the Slack collector.
+  optional bool inclusive = 4;
+  // Specify the end of the time range for messages
+  optional string latest = 5;
   // Id for the collector
-  string id = 7;
+  string id = 6;
 }
 
 enum QueryType {

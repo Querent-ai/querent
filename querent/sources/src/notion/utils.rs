@@ -1,6 +1,7 @@
 use std::{collections::HashMap, io::Cursor, path::PathBuf};
 
 use chrono::{DateTime, Utc};
+use common::retry;
 use notion::{
 	ids::PageId,
 	models::{
@@ -167,22 +168,29 @@ pub fn format_page(properties: &Properties) -> String {
 	values.join(", ")
 }
 
-pub async fn fetch_page(api_token: &str, page_id: &str) -> Result<Page, SourceError> {
+pub async fn fetch_page(
+	api_token: &str,
+	page_id: &str,
+	retry_params: &common::RetryParams,
+) -> Result<Page, SourceError> {
 	let client = Client::new();
 	let url = format!("https://api.notion.com/v1/pages/{}", page_id);
 
-	let response = client
-		.get(&url)
-		.bearer_auth(api_token)
-		.header("Notion-Version", "2022-06-28")
-		.send()
-		.await
-		.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
-			)
-		})?;
+	let response = retry(retry_params, || async {
+		client
+			.get(&url)
+			.bearer_auth(api_token)
+			.header("Notion-Version", "2022-06-28")
+			.send()
+			.await
+			.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+				)
+			})
+	})
+	.await?;
 
 	if response.status().is_success() {
 		let page: Page = response.json::<Page>().await.map_err(|err| {
