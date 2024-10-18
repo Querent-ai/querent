@@ -217,10 +217,6 @@ pub async fn resolve_ingestor_with_extension(
 		"news" => Ok(Arc::new(TxtIngestor::new())),
 		"email" => Ok(Arc::new(TxtIngestor::new())),
 		"notion" => Ok(Arc::new(TxtIngestor::new())),
-		_ => Ok(Arc::new(UnsupportedIngestor::new())),
-		// _ => Err(IngestorError::new(
-		// 	IngestorErrorKind::NotSupported,
-		// 	Arc::new(anyhow::anyhow!("Extension not supported")),
-		// )),
+		_ => Ok(Arc::new(TxtIngestor::new())),
 	}
 }
