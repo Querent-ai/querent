@@ -60,15 +60,6 @@ impl EmailSource {
 	}
 
 	fn extract_attachments(&self, email_content: &str) -> Vec<(String, Vec<u8>)> {
-		let content_types = [
-			"application/pdf",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-			"text/html",
-			"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-			"image/jpeg",
-			"image/png",
-		];
-
 		let mut attachments = Vec::new();
 
 		// Extract the boundary string
@@ -86,7 +77,6 @@ impl EmailSource {
 				// Check if this part contains an attachment
 				if part.contains("Content-Disposition: attachment") {
 					let mut filename = String::new();
-					let mut content_type = String::new();
 					let mut base64_content = String::new();
 
 					// Extract filename and content type
@@ -98,8 +88,6 @@ impl EmailSource {
 								.unwrap_or("")
 								.trim_matches(|c: char| c == '"' || c.is_whitespace())
 								.to_string();
-						} else if line.starts_with("Content-Type:") {
-							content_type = line.split(":").nth(1).unwrap_or("").trim().to_string();
 						}
 					}
 
@@ -116,14 +104,10 @@ impl EmailSource {
 							})
 							.collect();
 					}
-
-					// Check if the content type is in our list
-					if content_types.iter().any(|&ct| content_type.starts_with(ct)) {
-						if let Ok(decoded) = BASE64.decode(&base64_content) {
-							attachments.push((filename, decoded));
-						} else {
-							eprintln!("Base64 decoding error for file: {}", filename);
-						}
+					if let Ok(decoded) = BASE64.decode(&base64_content) {
+						attachments.push((filename, decoded));
+					} else {
+						eprintln!("Base64 decoding error for file: {}", filename);
 					}
 				}
 			}
@@ -257,7 +241,6 @@ impl Source for EmailSource {
 		for fetch in fetches.into_iter() {
 			if let Some(body) = fetch.body() {
 				let email_content = String::from_utf8(body.to_vec()).expect("Invalid UTF-8");
-
 				let message_id = email_content
 					.split("Message-ID: <")
 					.nth(1)

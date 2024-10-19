@@ -7,8 +7,9 @@ use std::{io::Cursor, pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
 
 use crate::{
-	html::parser::HtmlParser, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
-	IngestorError, IngestorErrorKind, IngestorResult,
+	html::parser::HtmlParser, process_ingested_tokens_stream,
+	processors::text_processing::TextCleanupProcessor, AsyncProcessor, BaseIngestor, IngestorError,
+	IngestorErrorKind, IngestorResult,
 };
 
 // Define the HtmlIngestor
@@ -18,7 +19,7 @@ pub struct HtmlIngestor {
 
 impl HtmlIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 
