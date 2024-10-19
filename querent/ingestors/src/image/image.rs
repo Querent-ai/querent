@@ -111,8 +111,8 @@ impl BaseIngestor for ImageIngestor {
 					image_id,
 				});
 			}
-			let img = img.unwrap().to_rgb8();
-			if img.width() < 3 || img.height() < 36 {
+			let img = img.unwrap();
+			if img.width() <= 3 || img.height() <= 36 {
 				// too small to OCR
 				return yield Ok(IngestedTokens {
 					data: vec![],
@@ -123,6 +123,7 @@ impl BaseIngestor for ImageIngestor {
 					image_id,
 				});
 			}
+			let img = img.to_rgb8();
 			let mut tiff_buffer = Vec::new();
 			let tiff_img = DynamicImage::ImageRgb8(img).write_to(
 				&mut Cursor::new(&mut tiff_buffer),

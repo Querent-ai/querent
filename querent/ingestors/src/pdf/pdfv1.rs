@@ -68,6 +68,17 @@ impl BaseIngestor for PdfIngestor {
 				return;
 			}
 			let doc = doc.unwrap();
+			if doc.is_encrypted() {
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				});
+				return;
+			}
 			let mut output = PagePlainTextOutput::new(Arc::new(doc.clone()));
 			let _ = output_doc(&doc, &mut output);
 			let page_images = output.images;
