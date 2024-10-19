@@ -5,6 +5,7 @@
 	import CodeFabricIcon from './CodeFabricIcon.svelte';
 	import Modal from '../../sources/add/Modal.svelte';
 	import TimeSeriesFabric from './TimeSeriesFabric.svelte';
+	import GeoFabricIcon from './GeoFabricIcon.svelte';
 	export let formOpen = true;
 
 	let activeForm: string | number | null = null;
@@ -19,20 +20,28 @@
 				'Attention Graph Fabric is a semantic engine that weaves concepts into dynamic knowledge networks using advanced language processing and graph theory.'
 		},
 		{
-			name: 'Code',
-			form: null,
-			icon: CodeFabricIcon,
-			description: 'Code Graph Fabric',
-			tooltip:
-				'Code Graph Fabric is a software analysis engine that constructs interconnected representations of codebases, enabling deep insights and intelligent navigation across complex software systems.'
-		},
-		{
 			name: 'Temporal',
 			form: null,
 			icon: TimeSeriesFabric,
 			description: 'Temporal Graph Fabric',
 			tooltip:
 				'Temporal Graph Fabric is a data processing engine that weaves temporal patterns into a rich, interconnected network for advanced forecasting and trend analysis.'
+		},
+		{
+			name: 'Geo',
+			form: null,
+			icon: GeoFabricIcon,
+			description: 'Geo Graph Fabric',
+			tooltip:
+				'Geo Graph Fabric is a data processing engine that helps in identifying geo locations.'
+		},
+		{
+			name: 'Code',
+			form: null,
+			icon: CodeFabricIcon,
+			description: 'Code Graph Fabric',
+			tooltip:
+				'Code Graph Fabric is a software analysis engine that constructs interconnected representations of codebases, enabling deep insights and intelligent navigation across complex software systems.'
 		}
 	];
 
@@ -75,19 +84,28 @@
 
 		<div class="mt-6 flex flex-wrap justify-start gap-8">
 			{#each formsList as form (form.name)}
-				<button
-					type="button"
-					class="flex cursor-pointer items-start space-x-4 rounded-lg p-4 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
-					on:click={() => setActiveForm(form.name)}
-					aria-label={`Select ${form.name}`}
-					title={form.tooltip}
-				>
-					<svelte:component this={form.icon} />
-					<div class="text-left">
-						<span class="text-left text-lg text-gray-700 dark:text-gray-200">{form.name}</span>
-						<div class="text-sm text-gray-500 dark:text-gray-400">{form.description}</div>
-					</div>
-				</button>
+				<div class="card-container">
+					<button
+						type="button"
+						class="flex w-full cursor-pointer items-center space-x-4 rounded-lg p-4 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+						on:click={() => setActiveForm(form.name)}
+						aria-label={`Select ${form.name}`}
+						title={form.tooltip}
+					>
+						<div class="icon-wrapper">
+							<svelte:component this={form.icon} />
+						</div>
+						<div class="text-left">
+							<span class="text-left text-lg text-gray-700 dark:text-gray-200">
+								{form.name}
+								{#if !form.form}
+									<span class="pro-badge">Pro</span>
+								{/if}
+							</span>
+							<div class="text-sm text-gray-500 dark:text-gray-400">{form.description}</div>
+						</div>
+					</button>
+				</div>
 			{/each}
 		</div>
 		{#if activeForm}
@@ -96,3 +114,30 @@
 	</div>
 	<Modal bind:show={showModal} message={modalMessage} />
 </main>
+
+<style>
+	.card-container {
+		width: 350px;
+		height: 100px;
+		background-color: white;
+		border-radius: 0.5rem;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		overflow: hidden;
+	}
+	.icon-wrapper {
+		width: 40px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+	.pro-badge {
+		background-color: #f97316;
+		color: white;
+		padding: 2px 6px;
+		border-radius: 0.25rem;
+		font-size: 0.75rem;
+		font-weight: 500;
+		margin-left: 8px;
+	}
+</style>

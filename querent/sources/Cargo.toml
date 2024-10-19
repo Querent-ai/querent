@@ -71,3 +71,5 @@ aws-runtime = {workspace = true}
 aws-smithy-async = {workspace = true}
 aws-smithy-runtime = {workspace = true}
 aws-types = {workspace = true}
+slack-morphism = { workspace = true }
+hyper-util = { workspace = true }

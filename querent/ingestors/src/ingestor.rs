@@ -201,7 +201,6 @@ pub async fn resolve_ingestor_with_extension(
 	}
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new())),
-		"txt" => Ok(Arc::new(TxtIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
 		"csv" => Ok(Arc::new(CsvIngestor::new())),
 		"xml" => Ok(Arc::new(XmlIngestor::new())),
@@ -214,13 +213,19 @@ pub async fn resolve_ingestor_with_extension(
 		"pptx" => Ok(Arc::new(PptxIngestor::new())),
 		"odp" => Ok(Arc::new(OdpIngestor::new())),
 		"xlsx" => Ok(Arc::new(XlsxIngestor::new())),
-		"news" => Ok(Arc::new(TxtIngestor::new())),
-		"email" => Ok(Arc::new(TxtIngestor::new())),
-		"notion" => Ok(Arc::new(TxtIngestor::new())),
+		"bmp" => Ok(Arc::new(ImageIngestor::new())),
+		"gif" => Ok(Arc::new(ImageIngestor::new())),
+		"hdr" => Ok(Arc::new(ImageIngestor::new())),
+		"ico" => Ok(Arc::new(ImageIngestor::new())),
+		"exr" => Ok(Arc::new(ImageIngestor::new())),
+		"pnm" => Ok(Arc::new(ImageIngestor::new())),
+		"qoi" => Ok(Arc::new(ImageIngestor::new())),
+		"tiff" => Ok(Arc::new(ImageIngestor::new())),
+		"webp" => Ok(Arc::new(ImageIngestor::new())),
+		"ff" => Ok(Arc::new(ImageIngestor::new())),
+		"dds" => Ok(Arc::new(ImageIngestor::new())),
+		"news" | "email" | "notion" | "txt" | "" | "md" | "slack" =>
+			Ok(Arc::new(TxtIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
-		// _ => Err(IngestorError::new(
-		// 	IngestorErrorKind::NotSupported,
-		// 	Arc::new(anyhow::anyhow!("Extension not supported")),
-		// )),
 	}
 }

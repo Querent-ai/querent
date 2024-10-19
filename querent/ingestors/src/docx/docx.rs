@@ -16,7 +16,8 @@ use std::{
 };
 
 use crate::{
-	image::image::ImageIngestor, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
+	image::image::ImageIngestor, process_ingested_tokens_stream,
+	processors::text_processing::TextCleanupProcessor, AsyncProcessor, BaseIngestor,
 	IngestorResult,
 };
 use xml::{reader::XmlEvent, EventReader};
@@ -29,7 +30,7 @@ pub struct DocxIngestor {
 
 impl DocxIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 
