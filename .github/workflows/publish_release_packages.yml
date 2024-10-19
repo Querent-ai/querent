@@ -66,7 +66,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
         run: cargo tauri info
       - name: Build Tauri App
@@ -116,7 +116,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
         run: cargo tauri info
       - name: Build Tauri App (macOS aarch64)
@@ -161,7 +161,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
@@ -210,7 +210,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
