@@ -14,7 +14,13 @@ impl TextCleanupProcessor {
 	async fn cleanup_text(&self, data: &str) -> String {
 		let mut data = data.to_string();
 
-		data = data.replace("\"", "").replace('“', "").replace('”', "");
+		let cleaned_data: String = data
+			.split_whitespace()
+			.filter(|word| word.len() <= 50)
+			.collect::<Vec<&str>>()
+			.join(" ");
+
+		data = cleaned_data.replace("\"", "").replace('“', "").replace('”', "");
 		data = data.replace("\\n", " ").replace("\\t", " ");
 
 		let re_hex = Regex::new(r"\\x[0-9a-fA-F]{2}").unwrap();

@@ -290,27 +290,25 @@ message SlackCollectorConfig {
   string access_token = 1;
   // Channel name of the Slack collector.
   string channel_name = 2;
-  // Cursor of the Slack collector.
-  string cursor = 3;
-  // Include all metadata of the Slack collector.
-  bool include_all_metadata = 4;
-  // Includive of the Slack collector.
-  bool includive = 5;
-  // Limit of the Slack collector
-  int32 limit = 6;
+  // Specify the beginning of the time range for messages
+  optional string oldest = 3;
+  // Inclusive of the Slack collector.
+  optional bool inclusive = 4;
+  // Specify the end of the time range for messages
+  optional string latest = 5;
   // Id for the collector
-  string id = 7;
+  string id = 6;
 }
 
 enum QueryType {
-  Everything = 0;
-  TopHeadlines = 1;
+  everything = 0;
+  topheadlines = 1;
 }
 
 enum SortBy {
-  Relevancy = 0;
-  Popularity = 1;
-  PublishedAt = 2;
+  relevancy = 0;
+  popularity = 1;
+  publishedAt = 2;
 }
 
 // NewsCollectorConfig is a message to hold configuration for a News collector.
@@ -318,7 +316,7 @@ message NewsCollectorConfig {
   // API key of the News collector.
   string api_key = 1;
   // Query of the News collector.
-  string query = 2;
+  optional string query = 2;
   // Query type of the News collector.
   QueryType query_type = 3;
   // Comma separated sources of the news representing news sources or blogs
@@ -331,14 +329,20 @@ message NewsCollectorConfig {
   optional string language = 7;
   // Sort by for the News Collector
   optional SortBy sort_by = 8;
-  // Page Size of the News Response
-  optional int32 page_size = 9;
-  // Page number of the News Response
-  optional int32 page = 10;
   // Comma-seperated string of Domains of the News Collector
-  optional string domains = 11;
+  optional string domains = 9;
   // Id for the collector
-  string id = 12;
+  string id = 10;
+   // A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+  optional string exclude_domains = 11;
+  // The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+  optional string search_in = 12;
+  // Page Size of the News Response
+  optional int32 page_size = 13;
+  // The 2-letter ISO 3166-1 code of the country you want to get headlines for. Possible options: us. Note: you can't mix this param with the sources param.
+  optional string country = 14;
+  // The category you want to get headlines for. Possible options: business, entertainment, general, health, science, sports, technology. Note: you can't mix this param with the sources param.
+  optional string category = 15;
 }
 
 message OneDriveConfig {
@@ -356,18 +360,12 @@ message OneDriveConfig {
   string id = 6;
 }
 
-enum QueryTypeNotion {
-  Page=0;
-  Database=1;
-}
 
 message NotionConfig {
   // API key of the notion
   string api_key = 1;
-  // Type of query to notion API
-  QueryTypeNotion query_type = 2;
   // Query id to the notion API/ either page id or database id
-  string query_id = 3;
+  repeated string page_ids = 2;
   /// Id for the collector
-  string id = 4;
+  string id = 3;
 }

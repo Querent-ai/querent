@@ -14,7 +14,8 @@ use xml::reader::{EventReader, XmlEvent};
 use zip::ZipArchive;
 
 use crate::{
-	image::image::ImageIngestor, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
+	image::image::ImageIngestor, process_ingested_tokens_stream,
+	processors::text_processing::TextCleanupProcessor, AsyncProcessor, BaseIngestor,
 	IngestorResult,
 };
 
@@ -25,7 +26,7 @@ pub struct OdpIngestor {
 
 impl OdpIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 

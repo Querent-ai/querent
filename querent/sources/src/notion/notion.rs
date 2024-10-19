@@ -1,278 +1,72 @@
 use std::{
-	collections::HashMap,
-	io::Cursor,
 	ops::Range,
 	path::{Path, PathBuf},
 	pin::Pin,
-	str::FromStr,
 };
 
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
-use notion::{
-	ids::{DatabaseId, PageId},
-	models::{
-		properties::{PropertyConfiguration, PropertyValue},
-		Properties,
-	},
-	NotionApi,
-};
 use proto::semantics::NotionConfig;
-use serde::{Deserialize, Serialize};
-use tokio::io::{AsyncRead, BufReader};
+use tokio::io::AsyncRead;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
-fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
-	Cursor::new(description.into_bytes())
-}
+use super::utils::{
+	extract_file_extension, fetch_all_page_ids, fetch_page, format_page, get_images_from_page,
+	string_to_async_read,
+};
 
-pub fn format_properties(properties: &HashMap<String, PropertyConfiguration>) -> String {
-	let mut result = String::new();
-	let mut first = true;
-
-	for (key, value) in properties {
-		let prop_type = match value {
-			PropertyConfiguration::Title { .. } => "Title",
-			PropertyConfiguration::Text { .. } => "Text",
-			PropertyConfiguration::Number { .. } => "Number",
-			PropertyConfiguration::Select { select, id: _ } => &{
-				let options = select
-					.options
-					.iter()
-					.map(|opt| format!("{} ({:?})", opt.name, opt.color))
-					.collect::<Vec<String>>()
-					.join(", ");
-				format!("Select [{}]", options)
-			},
-			PropertyConfiguration::Status { .. } => "Status",
-			PropertyConfiguration::MultiSelect { multi_select, id: _ } => &{
-				let options = multi_select
-					.options
-					.iter()
-					.map(|opt| format!("{} ({:?})", opt.name, opt.color))
-					.collect::<Vec<String>>()
-					.join(", ");
-				format!("[{}]", options)
-			},
-			PropertyConfiguration::Date { .. } => "Date",
-			PropertyConfiguration::People { .. } => "People",
-			PropertyConfiguration::Files { .. } => "Files",
-			PropertyConfiguration::Checkbox { .. } => "Checkbox",
-			PropertyConfiguration::Url { .. } => "Url",
-			PropertyConfiguration::Email { .. } => "Email",
-			PropertyConfiguration::PhoneNumber { .. } => "PhoneNumber",
-			PropertyConfiguration::Formula { .. } => "Formula",
-			PropertyConfiguration::Relation { .. } => "Relation",
-			PropertyConfiguration::Rollup { .. } => "Rollup",
-			PropertyConfiguration::CreatedTime { .. } => "CreatedTime",
-			PropertyConfiguration::CreatedBy { .. } => "CreatedBy",
-			PropertyConfiguration::LastEditedTime { .. } => "LastEditedTime",
-			PropertyConfiguration::LastEditBy { .. } => "LastEditBy",
-			PropertyConfiguration::UniqueId { .. } => "UniqueId",
-			PropertyConfiguration::Button { .. } => "Button",
-		};
-
-		if first {
-			first = false;
-		} else {
-			result.push_str(", ");
-		}
-
-		result.push_str(&format!("{}: {}", key, prop_type));
-	}
-
-	result
-}
-
-pub fn format_page(properties: &Properties) -> String {
-	let mut values: Vec<String> = Vec::new();
-
-	for (key, value) in &properties.properties {
-		match value {
-			PropertyValue::Title { title, .. } | PropertyValue::Text { rich_text: title, .. } => {
-				values.extend(title.iter().map(|t| format!("{}: {}", key, t.plain_text())));
-			},
-			PropertyValue::Number { number, .. } =>
-				if let Some(num) = number {
-					values.push(format!("{}: {}", key, num));
-				},
-			PropertyValue::Select { select, .. } | PropertyValue::Status { status: select, .. } =>
-				if let Some(sel) = select {
-					values.push(format!("{}: {:?}", key, sel.name));
-				},
-			PropertyValue::MultiSelect { multi_select, .. } =>
-				if let Some(ms) = multi_select {
-					values.extend(ms.iter().map(|s| format!("{}: {:?}", key, s.name)));
-				},
-			PropertyValue::Date { date, .. } =>
-				if let Some(d) = date {
-					values.push(format!("{}: {:?}", key, d.start));
-				},
-			PropertyValue::Relation { relation, .. } =>
-				if let Some(rel) = relation {
-					values.extend(rel.iter().map(|r| format!("{}: {}", key, r.id)));
-				},
-			PropertyValue::Rollup { rollup, .. } =>
-				if let Some(r) = rollup {
-					values.push(format!("{}: {}", key, format!("{:?}", r)));
-				},
-			PropertyValue::Files { files, .. } =>
-				if let Some(fs) = files {
-					values.extend(fs.iter().map(|f| format!("{}: {}", key, f.name)));
-				},
-			PropertyValue::Checkbox { checkbox, .. } => {
-				values.push(format!("{}: {}", key, checkbox));
-			},
-			PropertyValue::Url { url, .. } =>
-				if let Some(u) = url {
-					values.push(format!("{}: {}", key, u));
-				},
-			PropertyValue::Email { email, .. } =>
-				if let Some(e) = email {
-					values.push(format!("{}: {}", key, e));
-				},
-			PropertyValue::PhoneNumber { phone_number, .. } => {
-				values.push(format!("{}: {}", key, phone_number));
-			},
-			PropertyValue::CreatedTime { created_time, .. } |
-			PropertyValue::LastEditedTime { last_edited_time: created_time, .. } => {
-				values.push(format!("{}: {}", key, created_time));
-			},
-			PropertyValue::CreatedBy { created_by, .. } |
-			PropertyValue::LastEditedBy { last_edited_by: created_by, .. } => {
-				values.push(format!("{}: {:?}", key, created_by));
-			},
-			PropertyValue::UniqueId { unique_id, .. } => {
-				values.push(format!("{}: {:?}", key, unique_id));
-			},
-			PropertyValue::Button { .. } => {
-				values.push(format!("{}: Button", key));
-			},
-			PropertyValue::Formula { id: _, formula } => {
-				values.push(format!("{}: {:?}", key, formula));
-			},
-			PropertyValue::People { id: _, people } => {
-				values.push(format!("{}: {:?}", key, people));
-			},
-		}
-	}
-
-	values.join(", ")
-}
-
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct NotionSource {
 	api_token: String,
-	query_id: String,
-	query_type: String,
+	page_ids: Vec<String>,
 	source_id: String,
+	pub retry_params: common::RetryParams,
 }
 
 impl NotionSource {
 	pub async fn new(config: NotionConfig) -> anyhow::Result<Self> {
 		Ok(NotionSource {
 			api_token: config.api_key.clone(),
-			query_id: config.query_id.clone(),
-			query_type: config.query_type().as_str_name().to_owned().clone(),
+			page_ids: config.page_ids.clone(),
 			source_id: config.id,
+			retry_params: common::RetryParams::aggressive(),
 		})
-	}
-
-	pub async fn get_data(&self, notion_api: NotionApi) -> Result<(String, String), SourceError> {
-		match self.query_type.as_str() {
-			"Database" => {
-				let database_id = DatabaseId::from_str(&self.query_id).map_err(|err| {
-					SourceError::new(
-						SourceErrorKind::Io,
-						anyhow::anyhow!("Error while creating the database ID object: {:?}", err)
-							.into(),
-					)
-				})?;
-				let database = notion_api.get_database(database_id).await.map_err(|err| {
-					SourceError::new(
-						SourceErrorKind::Io,
-						anyhow::anyhow!("Error while getting the database: {:?}", err).into(),
-					)
-				})?;
-
-				let data = format_properties(&database.properties);
-
-				let title_text = database.id;
-				let title = format!("{}.notion", title_text);
-
-				Ok((title, data))
-			},
-			"Page" => {
-				let page_id = PageId::from_str(&self.query_id).map_err(|err| {
-					SourceError::new(
-						SourceErrorKind::Io,
-						anyhow::anyhow!("Error while creating the page ID object: {:?}", err)
-							.into(),
-					)
-				})?;
-				let page = notion_api.get_page(page_id).await.map_err(|err| {
-					SourceError::new(
-						SourceErrorKind::Io,
-						anyhow::anyhow!("Error while getting the page: {:?}", err).into(),
-					)
-				})?;
-
-				let data = format_page(&page.properties);
-
-				let title_text = page.id;
-				let title = format!("{}.notion", title_text);
-
-				Ok((title, data))
-			},
-			_ => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Unsupported query_type: {}", self.query_type).into(),
-				));
-			},
-		}
 	}
 }
 
 #[async_trait]
 impl Source for NotionSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let _notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
-		Ok(())
+		let page_ids = if self.page_ids.is_empty() {
+			match fetch_all_page_ids(&self.api_token).await {
+				Ok(ids) => ids,
+				Err(err) =>
+					return Err(SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Failed to fetch page IDs: {:?}", err).into(),
+					)
+					.into()),
+			}
+		} else {
+			self.page_ids.clone()
+		};
+		let response = fetch_page(&self.api_token, &page_ids[0], &self.retry_params).await;
+
+		if response.is_ok() {
+			Ok(())
+		} else {
+			Err(anyhow::anyhow!(
+				"Failed to verify API token or page ID, error: {:?}",
+				response.err()
+			))
+		}
 	}
 
 	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
-		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
-
-		let result = self.get_data(notion_api).await;
-
-		let data: String;
-		match result {
-			Ok((_title, data_str)) => {
-				data = data_str;
-			},
-			Err(e) => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Getting error extracting notion data: {}", e).into(),
-				));
-			},
-		}
-
-		Ok(data.into())
+		Ok(vec![])
 	}
 
 	async fn get_slice_stream(
@@ -280,153 +74,91 @@ impl Source for NotionSource {
 		_path: &Path,
 		_range: Range<usize>,
 	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
-
-		let result = self.get_data(notion_api).await;
-
-		let data: String;
-		match result {
-			Ok((_title, data_str)) => {
-				data = data_str;
-			},
-			Err(e) => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Getting error extracting notion data: {}", e).into(),
-				));
-			},
-		}
-
-		Ok(Box::new(string_to_async_read(data)))
+		Ok(Box::new(string_to_async_read("".to_string())))
 	}
 
 	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
-		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
-
-		let result = self.get_data(notion_api).await;
-
-		let data: String;
-		match result {
-			Ok((_title, data_str)) => {
-				data = data_str;
-			},
-			Err(e) => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Getting error extracting notion data: {}", e).into(),
-				));
-			},
-		}
-
-		Ok(data.into())
+		Ok(vec![])
 	}
 
 	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
-		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
-
-		let result = self.get_data(notion_api).await;
-
-		let data: String;
-		match result {
-			Ok((_title, data_str)) => {
-				data = data_str;
-			},
-			Err(e) => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Getting error extracting notion data: {}", e).into(),
-				));
-			},
-		}
-
-		Ok(data.len() as u64)
+		Ok(0)
 	}
 
-	async fn copy_to(&self, _path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
-		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
-
-		let result = self.get_data(notion_api).await;
-
-		let data: String;
-		match result {
-			Ok((_title, data_str)) => {
-				data = data_str;
-			},
-			Err(e) => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Getting error extracting notion data: {}", e).into(),
-				));
-			},
-		}
-
-		let mut body_stream_reader = BufReader::new(data.as_bytes());
-		tokio::io::copy_buf(&mut body_stream_reader, output).await?;
+	async fn copy_to(&self, _path: &Path, _output: &mut dyn SendableAsync) -> SourceResult<()> {
 		Ok(())
 	}
 
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
-		let notion_api = NotionApi::new(self.api_token.clone()).map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while creating Notion API client: {:?}", err).into(),
-			)
-		})?;
+		let page_ids = self.page_ids.clone();
+
+		let api_token = self.api_token.clone();
 		let source_id = self.source_id.clone();
 
-		let file_name_path: Option<PathBuf>;
-		let data: String;
-
-		let result = self.get_data(notion_api).await;
-		match result {
-			Ok((title, data_str)) => {
-				data = data_str;
-				file_name_path = Some(PathBuf::from(title));
-			},
-			Err(e) => {
-				return Err(SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Getting error extracting notion data: {}", e).into(),
-				));
-			},
-		}
-
-		let doc_source = Some("notion://".to_string());
-		let data_len = data.len();
-		let collected_bytes = CollectedBytes::new(
-			file_name_path,
-			Some(Box::pin(string_to_async_read(data))),
-			true,
-			doc_source,
-			Some(data_len),
-			source_id.clone(),
-			None,
-		);
-
 		let stream = stream! {
-			yield Ok(collected_bytes);
+			let page_ids = if page_ids.is_empty() {
+				match fetch_all_page_ids(&api_token).await {
+					Ok(ids) => ids,
+					Err(err) => {
+						yield Err(SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Failed to fetch page IDs: {:?}", err).into(),
+						));
+						return;
+					}
+				}
+			} else {
+				self.page_ids.clone()
+			};
+
+			for page_id in page_ids {
+				match fetch_page(&api_token, &page_id, &self.retry_params).await {
+					Ok(page) => {
+						let page_data = format_page(&page.properties);
+						let page_file_name = format!("{}.notion", page_id);
+
+						yield Ok(CollectedBytes::new(
+							Some(PathBuf::from(page_file_name)),
+							Some(Box::pin(string_to_async_read(page_data.clone()))),
+							true,
+							Some("notion://page".to_string()),
+							Some(page_data.len()),
+							source_id.clone(),
+							None,
+						));
+
+						let res = get_images_from_page(page.properties.properties).await;
+						if let Ok(images) = res {
+							for (image_name, image_bytes) in images {
+								let image_name_path = Some(PathBuf::from(image_name.clone()));
+								let extension = extract_file_extension(&image_name).unwrap_or("").to_string();
+
+								let collected_bytes = CollectedBytes {
+									file: image_name_path,
+									data: Some(Box::pin(std::io::Cursor::new(image_bytes.clone()))),
+									eof: true,
+									doc_source: Some("notion://image".to_string()),
+									size: Some(image_bytes.len()),
+									source_id: source_id.clone(),
+									_owned_permit: None,
+									image_id: Some(image_name),
+									extension: Some(extension),
+								};
+
+								yield Ok(collected_bytes);
+							}
+						}
+					},
+					Err(err) => {
+						yield Err(SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error while fetching page: {:?}", err).into(),
+						));
+					}
+				}
+			}
 		};
 
 		Ok(Box::pin(stream))
@@ -450,10 +182,7 @@ mod tests {
 			api_key: env::var("NOTION_API_KEY")
 				.map_err(|e| e.to_string())
 				.unwrap_or("".to_string()),
-			query_type: 0,
-			query_id: env::var("NOTION_PAGE_ID")
-				.map_err(|e| e.to_string())
-				.unwrap_or("".to_string()),
+			page_ids: vec![],
 			id: "NS1".to_string(),
 		};
 
@@ -479,14 +208,51 @@ mod tests {
 									count_files.insert(str_path.to_string());
 								}
 							},
-						Err(_) => panic!("Expected successful data collection"),
+						Err(e) => {
+							println!("Error {:?}", e);
+							panic!("Expected successful data collection")
+						},
 					}
 				}
 				println!("Files are --- {:?}", count_files);
+				assert!(count_files.len() > 0, "No files found");
 			},
 			Err(e) => {
 				eprintln!("Failed to get stream: {:?}", e);
 			},
 		}
+	}
+
+	#[tokio::test]
+	async fn test_invalid_api_key() {
+		dotenv().ok();
+		let notion_config = NotionConfig {
+			api_key: "INVALID_API_KEY".to_string(),
+			page_ids: vec![env::var("NOTION_PAGE_ID").unwrap_or_default()],
+			id: "NS1".to_string(),
+		};
+
+		let notion_api_client = NotionSource::new(notion_config).await.unwrap();
+
+		let connectivity = notion_api_client.check_connectivity().await;
+		assert!(
+			connectivity.is_err(),
+			"Expected connectivity check to fail with an invalid API key"
+		);
+	}
+
+	#[tokio::test]
+	async fn test_invalid_page_id() {
+		dotenv().ok();
+		let notion_config = NotionConfig {
+			api_key: env::var("NOTION_API_KEY").unwrap_or_default(),
+			page_ids: vec!["INVALID_PAGE_ID".to_string()],
+			id: "NS1".to_string(),
+		};
+
+		let notion_api_client = NotionSource::new(notion_config).await.unwrap();
+
+		let connectivity = notion_api_client.check_connectivity().await;
+		assert!(connectivity.is_err(), "Connectivity check should pass with a valid API key");
 	}
 }

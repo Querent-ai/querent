@@ -138,8 +138,8 @@ pub struct IngestedTokens {
 	pub doc_source: ::prost::alloc::string::String,
 	#[prost(string, tag = "5")]
 	pub source_id: ::prost::alloc::string::String,
-    #[prost(string, optional, tag = "6")]
-    pub image_id: ::core::option::Option<::prost::alloc::string::String>,
+	#[prost(string, optional, tag = "6")]
+	pub image_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -457,20 +457,17 @@ pub struct SlackCollectorConfig {
 	/// Channel name of the Slack collector.
 	#[prost(string, tag = "2")]
 	pub channel_name: ::prost::alloc::string::String,
-	/// Cursor of the Slack collector.
-	#[prost(string, tag = "3")]
-	pub cursor: ::prost::alloc::string::String,
-	/// Include all metadata of the Slack collector.
-	#[prost(bool, tag = "4")]
-	pub include_all_metadata: bool,
-	/// Includive of the Slack collector.
-	#[prost(bool, tag = "5")]
-	pub includive: bool,
-	/// Limit of the Slack collector
-	#[prost(int32, tag = "6")]
-	pub limit: i32,
+	/// Specify the beginning of the time range for messages
+	#[prost(string, optional, tag = "3")]
+	pub oldest: ::core::option::Option<::prost::alloc::string::String>,
+	/// Inclusive of the Slack collector.
+	#[prost(bool, optional, tag = "4")]
+	pub inclusive: ::core::option::Option<bool>,
+	/// Specify the end of the time range for messages
+	#[prost(string, optional, tag = "5")]
+	pub latest: ::core::option::Option<::prost::alloc::string::String>,
 	/// Id for the collector
-	#[prost(string, tag = "7")]
+	#[prost(string, tag = "6")]
 	pub id: ::prost::alloc::string::String,
 }
 /// NewsCollectorConfig is a message to hold configuration for a News collector.
@@ -482,8 +479,8 @@ pub struct NewsCollectorConfig {
 	#[prost(string, tag = "1")]
 	pub api_key: ::prost::alloc::string::String,
 	/// Query of the News collector.
-	#[prost(string, tag = "2")]
-	pub query: ::prost::alloc::string::String,
+	#[prost(string, optional, tag = "2")]
+	pub query: ::core::option::Option<::prost::alloc::string::String>,
 	/// Query type of the News collector.
 	#[prost(enumeration = "QueryType", tag = "3")]
 	pub query_type: i32,
@@ -502,19 +499,29 @@ pub struct NewsCollectorConfig {
 	/// Sort by for the News Collector
 	#[prost(enumeration = "SortBy", optional, tag = "8")]
 	pub sort_by: ::core::option::Option<i32>,
-	/// Page Size of the News Response
-	#[prost(int32, optional, tag = "9")]
-	pub page_size: ::core::option::Option<i32>,
-	/// Page number of the News Response
-	#[prost(int32, optional, tag = "10")]
-	pub page: ::core::option::Option<i32>,
 	/// Comma-seperated string of Domains of the News Collector
-	#[prost(string, optional, tag = "11")]
+	#[prost(string, optional, tag = "9")]
 	pub domains: ::core::option::Option<::prost::alloc::string::String>,
 	/// Id for the collector
-	#[prost(string, tag = "12")]
+	#[prost(string, tag = "10")]
 	pub id: ::prost::alloc::string::String,
+	/// A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+	#[prost(string, optional, tag = "11")]
+	pub exclude_domains: ::core::option::Option<::prost::alloc::string::String>,
+	/// The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+	#[prost(string, optional, tag = "12")]
+	pub search_in: ::core::option::Option<::prost::alloc::string::String>,
+	/// Page Size of the News Response
+	#[prost(int32, optional, tag = "13")]
+	pub page_size: ::core::option::Option<i32>,
+	/// The 2-letter ISO 3166-1 code of the country you want to get headlines for. Possible options: us. Note: you can't mix this param with the sources param.
+	#[prost(string, optional, tag = "14")]
+	pub country: ::core::option::Option<::prost::alloc::string::String>,
+	/// The category you want to get headlines for. Possible options: business, entertainment, general, health, science, sports, technology. Note: you can't mix this param with the sources param.
+	#[prost(string, optional, tag = "15")]
+	pub category: ::core::option::Option<::prost::alloc::string::String>,
 }
+
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
@@ -603,14 +610,11 @@ pub struct NotionConfig {
 	/// API key of the notion
 	#[prost(string, tag = "1")]
 	pub api_key: ::prost::alloc::string::String,
-	/// Type of query to notion API
-	#[prost(enumeration = "QueryTypeNotion", tag = "2")]
-	pub query_type: i32,
 	/// Query id to the notion API/ either page id or database id
-	#[prost(string, tag = "3")]
-	pub query_id: ::prost::alloc::string::String,
+	#[prost(string, repeated, tag = "2")]
+	pub page_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 	/// / Id for the collector
-	#[prost(string, tag = "4")]
+	#[prost(string, tag = "3")]
 	pub id: ::prost::alloc::string::String,
 }
 
@@ -690,9 +694,9 @@ impl SortBy {
 	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
 	pub fn as_str_name(&self) -> &'static str {
 		match self {
-			SortBy::Relevancy => "Relevancy",
-			SortBy::Popularity => "Popularity",
-			SortBy::PublishedAt => "PublishedAt",
+			SortBy::Relevancy => "relevancy",
+			SortBy::Popularity => "popularity",
+			SortBy::PublishedAt => "publishedAt",
 		}
 	}
 	/// Creates an enum from field names used in the ProtoBuf definition.
@@ -701,34 +705,6 @@ impl SortBy {
 			"Relevancy" => Some(Self::Relevancy),
 			"Popularity" => Some(Self::Popularity),
 			"PublishedAt" => Some(Self::PublishedAt),
-			_ => None,
-		}
-	}
-}
-#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
-#[serde(rename_all = "snake_case")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum QueryTypeNotion {
-	Page = 0,
-	Database = 1,
-}
-impl QueryTypeNotion {
-	/// String value of the enum field names used in the ProtoBuf definition.
-	///
-	/// The values are not transformed in any way and thus are considered stable
-	/// (if the ProtoBuf definition does not change) and safe for programmatic use.
-	pub fn as_str_name(&self) -> &'static str {
-		match self {
-			QueryTypeNotion::Page => "Page",
-			QueryTypeNotion::Database => "Database",
-		}
-	}
-	/// Creates an enum from field names used in the ProtoBuf definition.
-	pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-		match value {
-			"Page" => Some(Self::Page),
-			"Database" => Some(Self::Database),
 			_ => None,
 		}
 	}
