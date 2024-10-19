@@ -95,12 +95,10 @@ impl GoogleDriveSource {
 		if mime_type.starts_with("application/vnd.google-apps.") {
 			match mime_type.as_str() {
 				"application/vnd.google-apps.document" => "application/pdf",
-				"application/vnd.google-apps.spreadsheet" => {
-					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-				},
-				"application/vnd.google-apps.presentation" => {
-					"application/vnd.openxmlformats-officedocument.presentationml.presentation"
-				},
+				"application/vnd.google-apps.spreadsheet" =>
+					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+				"application/vnd.google-apps.presentation" =>
+					"application/vnd.openxmlformats-officedocument.presentationml.presentation",
 				_ => {
 					return Err(google_drive3::Error::FieldClash(
 						"Unsupported Google Apps file type",
@@ -383,12 +381,10 @@ async fn download_file(
 	if mime_type.starts_with("application/vnd.google-apps.") {
 		let _export_mime_type = match mime_type.as_str() {
 			"application/vnd.google-apps.document" => "application/pdf",
-			"application/vnd.google-apps.spreadsheet" => {
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-			},
-			"application/vnd.google-apps.presentation" => {
-				"application/vnd.openxmlformats-officedocument.presentationml.presentation"
-			},
+			"application/vnd.google-apps.spreadsheet" =>
+				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+			"application/vnd.google-apps.presentation" =>
+				"application/vnd.openxmlformats-officedocument.presentationml.presentation",
 			_ => return Err(google_drive3::Error::FieldClash("Unsupported Google Apps file type")),
 		};
 
@@ -425,7 +421,7 @@ mod tests {
 		let drive_storage = GoogleDriveSource::new(google_config).await;
 		let connectivity = drive_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
+		assert!(connectivity.is_ok(), "Got error in connectivity check");
 
 		let result = drive_storage.poll_data().await;
 
@@ -433,16 +429,16 @@ mod tests {
 		let mut count_files: HashSet<String> = HashSet::new();
 		while let Some(item) = stream.next().await {
 			match item {
-				Ok(collected_bytes) => {
+				Ok(collected_bytes) =>
 					if let Some(pathbuf) = collected_bytes.file {
 						if let Some(str_path) = pathbuf.to_str() {
 							count_files.insert(str_path.to_string());
 						}
-					}
-				},
+					},
 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
 			}
 		}
+		assert!(count_files.len() > 0, "Did not get any data");
 		println!("Files are --- {:?}", count_files);
 	}
 
@@ -476,12 +472,70 @@ mod tests {
 
 		let drive_storage = GoogleDriveSource::new(google_config).await;
 		let connectivity = drive_storage.check_connectivity().await;
-		// assert!(connectivity.is_ok(), "Expected connectivity to pass");
+		assert!(connectivity.is_ok(), "Expected connectivity to pass");
 
 		println!("connectivity is {:?}", connectivity.err());
 
 		let result = drive_storage.poll_data().await;
 
-		assert!(result.is_err(), "Expected data collection to fail with invalid folder ID");
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		let mut found_error = false;
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => {
+					found_error = true;
+					eprintln!("Expected successful data collection {:?}", err)
+				},
+			}
+		}
+
+		assert!(found_error, "Expected data collection to fail with invalid folder ID");
+	}
+
+	#[tokio::test]
+	async fn test_drive_collector_special_character_files() {
+		dotenv().ok();
+		let google_config = GoogleDriveCollectorConfig {
+			id: "Drive-source-id".to_string(),
+			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_to_crawl: "special-character-folder-id".to_string(),
+		};
+
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
+		assert!(connectivity.is_ok(), "Expected connectivity to pass");
+
+		println!("connectivity is {:?}", connectivity.err());
+
+		let result = drive_storage.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		let mut found_error = false;
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => {
+					found_error = true;
+					eprintln!("Expected successful data collection {:?}", err)
+				},
+			}
+		}
+
+		assert!(found_error, "Expected data collection to fail with invalid folder ID");
 	}
 }

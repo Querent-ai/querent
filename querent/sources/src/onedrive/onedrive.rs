@@ -41,7 +41,7 @@ impl OneDriveSource {
 	}
 
 	pub async fn get_logined_onedrive(config: &OneDriveConfig) -> Result<OneDrive, anyhow::Error> {
-		let token = TOKEN
+		let token_result = TOKEN
 			.get_or_init(|| async {
 				let auth = Auth::new(
 					config.client_id.clone(),
@@ -49,17 +49,28 @@ impl OneDriveSource {
 					config.redirect_uri.clone(),
 					Tenant::Consumers,
 				);
-				auth.login_with_refresh_token(
-					&config.refresh_token,
-					&ClientCredential::Secret(config.client_secret.clone()),
-				)
-				.await
-				.map_err(|e| anyhow!("Login failed: {}", e))
-				.unwrap()
-				.access_token
+				let token_response = auth
+					.login_with_refresh_token(
+						&config.refresh_token,
+						&ClientCredential::Secret(config.client_secret.clone()),
+					)
+					.await;
+
+				match token_response {
+					Ok(response) => response.access_token,
+					Err(e) => {
+						eprintln!("Login failed: {}", e);
+						String::new()
+					},
+				}
 			})
 			.await;
-		Ok(OneDrive::new(token.clone(), DriveLocation::me()))
+
+		if token_result.is_empty() {
+			return Err(anyhow!("Failed to obtain access token from OneDrive"));
+		}
+
+		Ok(OneDrive::new(token_result.clone(), DriveLocation::me()))
 	}
 
 	async fn download_file(
@@ -97,8 +108,19 @@ impl std::fmt::Debug for OneDriveSource {
 #[async_trait]
 impl Source for OneDriveSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		self.onedrive.get_drive().await?;
-		Ok(())
+		let folder_path = self.folder_path.clone();
+		let folder_location = ItemLocation::from_path(&folder_path);
+
+		if folder_location.is_none() {
+			return Err(anyhow!("Invalid folder path: {}", self.folder_path));
+		}
+
+		let folder_metadata = self.onedrive.get_item(folder_location.unwrap()).await;
+
+		match folder_metadata {
+			Ok(_) => Ok(()),
+			Err(e) => Err(anyhow!("Failed to verify folder existence: {}", e)),
+		}
 	}
 
 	async fn copy_to_file(&self, path: &Path, output_path: &Path) -> SourceResult<u64> {
@@ -321,6 +343,75 @@ mod tests {
 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
 			}
 		}
-		println!("Files are --- {:?}", count_files);
+		assert!(count_files.len() > 0, "Expected successful data polling");
+	}
+
+	#[tokio::test]
+	async fn test_onedrive_collector_invalid_credentials() {
+		dotenv().ok();
+		let onedrive_config = OneDriveConfig {
+			client_id: "invalid_client_id".to_string(),
+			client_secret: "invalid_client_secret".to_string(),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: "invalid_refresh_token".to_string(),
+			folder_path: "/testing".to_string(),
+			id: "test".to_string(),
+		};
+
+		let drive_storage = OneDriveSource::new(onedrive_config).await;
+
+		assert!(drive_storage.is_err(), "Expected drive storage to fail");
+	}
+
+	#[tokio::test]
+	async fn test_onedrive_collector_invalid_folder() {
+		dotenv().ok();
+		let onedrive_config = OneDriveConfig {
+			client_id: env::var("ONEDRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			client_secret: env::var("ONEDRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: env::var("ONEDRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_path: "/invalid_folder_path-1".to_string(),
+			id: "test".to_string(),
+		};
+
+		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
+
+		let connectivity = drive_storage.check_connectivity().await;
+		// println!("Error is {:?}", connectivity.err());
+
+		assert!(connectivity.is_err(), "Expected drive storage to fail");
+	}
+
+	#[tokio::test]
+	async fn test_onedrive_collector_empty_folder() {
+		dotenv().ok();
+		let onedrive_config = OneDriveConfig {
+			client_id: env::var("ONEDRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			client_secret: env::var("ONEDRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: env::var("ONEDRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_path: "/empty-folder".to_string(),
+			id: "test".to_string(),
+		};
+
+		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
+		let result = drive_storage.poll_data().await;
+		assert!(result.is_ok(), "Expected successful connectivity");
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+			}
+		}
+		assert!(count_files.len() == 0, "Expected zero data");
 	}
 }
