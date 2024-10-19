@@ -436,7 +436,8 @@ mod tests {
 	async fn test_empty_query() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -481,7 +482,8 @@ mod tests {
 	async fn test_query_with_special_characters() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("@!#$%^&*".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -535,7 +537,8 @@ mod tests {
 		dotenv().ok();
 
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Tesla".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -581,7 +584,8 @@ mod tests {
 	async fn test_successful_news_fetch_everything() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Technology".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -625,7 +629,8 @@ mod tests {
 	async fn test_successful_news_fetch_top_headlines() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Technology".to_string()),
 			query_type: 1,
 			id: "Some-id".to_string(),
@@ -671,7 +676,8 @@ mod tests {
 	async fn test_multiple_news_pages() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Technology".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
