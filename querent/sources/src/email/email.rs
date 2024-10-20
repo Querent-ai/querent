@@ -404,7 +404,6 @@ mod tests {
 		let email_source = EmailSource::new(email_config).await.unwrap();
 
 		let result = email_source.poll_data().await;
-		// println!("Result: {:?}", result.err());
 		assert!(result.is_ok(), "Expected successful connectivity");
 
 		let mut stream = result.unwrap();

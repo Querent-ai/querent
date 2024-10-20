@@ -338,7 +338,7 @@ mod tests {
 		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
 		let connectivity = drive_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
+		assert!(connectivity.is_ok(), "Expected connectivity to work");
 
 		let result = drive_storage.poll_data().await;
 

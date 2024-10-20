@@ -214,8 +214,7 @@ mod tests {
 		);
 		let connectivity = local_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
-
+		assert!(connectivity.is_ok(), "Expected connctivity to work");
 		let result = local_storage.poll_data().await;
 
 		let mut stream = result.unwrap();

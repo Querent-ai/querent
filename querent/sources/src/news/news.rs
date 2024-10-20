@@ -297,8 +297,6 @@ impl Source for NewsApiClient {
 
 		let base_query = self.create_query().await;
 
-		println!("Query: {:?}", base_query.clone());
-
 		let mut page = 1;
 
 		let stream = stream! {

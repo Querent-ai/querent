@@ -474,8 +474,6 @@ mod tests {
 		let connectivity = drive_storage.check_connectivity().await;
 		assert!(connectivity.is_ok(), "Expected connectivity to pass");
 
-		println!("connectivity is {:?}", connectivity.err());
-
 		let result = drive_storage.poll_data().await;
 
 		let mut stream = result.unwrap();
@@ -513,8 +511,6 @@ mod tests {
 		let drive_storage = GoogleDriveSource::new(google_config).await;
 		let connectivity = drive_storage.check_connectivity().await;
 		assert!(connectivity.is_ok(), "Expected connectivity to pass");
-
-		println!("connectivity is {:?}", connectivity.err());
 
 		let result = drive_storage.poll_data().await;
 
