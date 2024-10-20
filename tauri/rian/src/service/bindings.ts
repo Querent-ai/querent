@@ -758,21 +758,17 @@ export type SlackCollectorConfig = {
 	 */
 	channel_name: string;
 	/**
-	 * Cursor of the Slack collector.
+	 * Specify the beginning of the time range for messages
 	 */
-	cursor: string;
+	oldest: string | null;
 	/**
-	 * Include all metadata of the Slack collector.
+	 * Inclusive of the Slack collector.
 	 */
-	include_all_metadata: boolean;
+	inclusive: boolean | null;
 	/**
-	 * Includive of the Slack collector.
+	 * Specify the end of the time range for messages
 	 */
-	includive: boolean;
-	/**
-	 * Limit of the Slack collector
-	 */
-	limit: number;
+	latest: string | null;
 	/**
 	 * Id for the collector
 	 */

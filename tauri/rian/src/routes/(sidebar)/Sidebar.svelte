@@ -10,7 +10,7 @@
 		SidebarItem,
 		SidebarWrapper
 	} from 'flowbite-svelte';
-	import { AngleDownSolid, AngleUpOutline } from 'flowbite-svelte-icons';
+	import { AngleUpOutline, AngleDownOutline } from 'flowbite-svelte-icons';
 
 	export let drawerHidden: boolean = false;
 
@@ -92,7 +92,7 @@
 				{#each posts as { name, icon, children, href } (name)}
 					{#if children}
 						<SidebarDropdownWrapper bind:isOpen={dropdowns[name]} label={name} class="pr-3">
-							<AngleDownSolid slot="arrowdown" strokeWidth="3.3" size="sm" />
+							<AngleDownOutline slot="arrowdown" strokeWidth="3.3" size="sm" />
 							<AngleUpOutline slot="arrowup" strokeWidth="3.3" size="sm" />
 							<Icon {icon} slot="icon" class={iconClass} />
 

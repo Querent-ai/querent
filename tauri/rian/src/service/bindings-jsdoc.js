@@ -413,7 +413,7 @@ export const universalConstant = 42;
 
 /**
  * SlackCollectorConfig is a message to hold configuration for a Slack collector.
- * @typedef { { access_token: string; channel_name: string; cursor: string; include_all_metadata: boolean; includive: boolean; limit: number; id: string } } SlackCollectorConfig
+ * @typedef { { access_token: string; channel_name: string; oldest: string | null; inclusive: boolean | null; latest: string | null; id: string } } SlackCollectorConfig
  */
 
 /**
