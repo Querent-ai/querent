@@ -297,6 +297,8 @@ impl Source for NewsApiClient {
 
 		let base_query = self.create_query().await;
 
+		println!("Query: {:?}", base_query.clone());
+
 		let mut page = 1;
 
 		let stream = stream! {
@@ -626,7 +628,7 @@ mod tests {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
 			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
-			query: Some("Technology".to_string()),
+			query: Some("trump".to_string()),
 			query_type: 1,
 			id: "Some-id".to_string(),
 			sources: None,
@@ -643,6 +645,10 @@ mod tests {
 		};
 
 		let news_api_client = NewsApiClient::new(news_config).await.unwrap();
+
+		let connectivity = news_api_client.check_connectivity().await;
+		assert!(connectivity.is_ok(), "Expected connectivity to pass");
+
 		let result = news_api_client.poll_data().await;
 
 		match result {
@@ -656,7 +662,6 @@ mod tests {
 						println!("Found error as {:?}", item.err());
 						break;
 					}
-					println!("Entered here atleast");
 				}
 				assert!(found_data, "Expected at least one successful data item in the stream");
 			},
@@ -702,7 +707,6 @@ mod tests {
 						println!("Found error as {:?}", item.err());
 						break;
 					}
-					println!("Entered here atleast");
 				}
 				assert!(found_data, "Expected at least one successful data item in the stream");
 			},
