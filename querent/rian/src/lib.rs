@@ -339,8 +339,8 @@ pub fn get_product_info(licence_key: String) -> Result<ProductRegistrationInfo, 
 pub fn get_product_info(_licence_key: String) -> Result<ProductRegistrationInfo, anyhow::Error> {
 	Ok(ProductRegistrationInfo {
 		name: "Querent DEV".to_string(),
-		website: "dd".to_string(),
-		email: "dd".to_string(),
+		website: "querent.xyz".to_string(),
+		email: "contact@querent.xyz".to_string(),
 		product: ProductType::RianEnterprise,
 	})
 }
@@ -357,7 +357,7 @@ pub fn get_pipeline_count_by_product(licence_key: String) -> Result<usize, anyho
 pub fn get_total_sources_by_product(licence_key: String) -> Result<usize, anyhow::Error> {
 	let info = get_product_info(licence_key)?;
 	match info.product {
-		ProductType::Rian => Ok(5),
+		ProductType::Rian => Ok(10),
 		ProductType::RianPro => Ok(usize::MAX),
 		ProductType::RianEnterprise => Ok(usize::MAX),
 	}
