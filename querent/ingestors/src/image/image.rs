@@ -4,16 +4,19 @@ use common::CollectedBytes;
 use futures::Stream;
 use image::{DynamicImage, ImageFormat};
 use leptess::LepTess;
+use once_cell::sync::Lazy;
 use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
-use tokio::io::AsyncReadExt;
+use tokio::{io::AsyncReadExt, sync::Semaphore};
 
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
 	AsyncProcessor, BaseIngestor, IngestorResult,
 };
 
-// Define the TxtIngestor
+static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(10));
+
+// Define the ImageIngestor
 pub struct ImageIngestor {
 	processors: Vec<Arc<dyn AsyncProcessor>>,
 }
@@ -81,6 +84,21 @@ impl BaseIngestor for ImageIngestor {
 				}
 				source_id = collected_bytes.source_id.clone();
 			}
+			// Acquire semaphore for image processing
+			let permit_res = REQUEST_SEMAPHORE.acquire().await;
+			if permit_res.is_err() {
+				tracing::error!("Failed to acquire semaphore: {:?}", permit_res.err());
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
+			let _permit = permit_res.unwrap();
+
 			let img = image::load_from_memory(&buffer);
 			if img.is_err() {
 				tracing::error!("Failed to load image from memory: {:?}", img.err());
@@ -93,7 +111,19 @@ impl BaseIngestor for ImageIngestor {
 					image_id,
 				});
 			}
-			let img = img.unwrap().to_rgb8();
+			let img = img.unwrap();
+			if img.width() <= 3 || img.height() <= 36 {
+				// too small to OCR
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
+			let img = img.to_rgb8();
 			let mut tiff_buffer = Vec::new();
 			let tiff_img = DynamicImage::ImageRgb8(img).write_to(
 				&mut Cursor::new(&mut tiff_buffer),

@@ -19,8 +19,8 @@ pub mod insights;
 pub use insights::*;
 pub mod ingest;
 use serde::{Deserialize, Serialize};
-use sp_core::sr25519;
-use sp_runtime::{traits::Verify, MultiSignature};
+#[cfg(feature = "license-check")]
+use sp_runtime::MultiSignature;
 use tracing::info;
 
 #[allow(clippy::too_many_arguments)]
@@ -238,6 +238,7 @@ pub async fn create_dynamic_sources(
 	Ok(sources)
 }
 
+#[cfg(feature = "license-check")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignedPayload {
 	pub payload: ProductRegistrationInfo,
@@ -276,8 +277,11 @@ impl ProductType {
 }
 
 /// Verify a license key
+#[cfg(feature = "license-check")]
 #[allow(deprecated)]
 pub fn verify_key(licence_key: String) -> Result<bool, anyhow::Error> {
+	use sp_core::sr25519;
+	use sp_runtime::traits::Verify;
 	// license_key is a base64 encoded string
 	let key = base64::decode(licence_key)?;
 	// parse key into ProductRegistrationInfo
@@ -314,8 +318,14 @@ pub fn verify_key(licence_key: String) -> Result<bool, anyhow::Error> {
 	}
 	Ok(true)
 }
+#[cfg(not(feature = "license-check"))]
+#[allow(deprecated)]
+pub fn verify_key(_licence_key: String) -> Result<bool, anyhow::Error> {
+	Ok(true)
+}
 
 // Return a ProductRegistrationInfo from a license key
+#[cfg(feature = "license-check")]
 #[allow(deprecated)]
 pub fn get_product_info(licence_key: String) -> Result<ProductRegistrationInfo, anyhow::Error> {
 	// license_key is a base64 encoded string
@@ -323,6 +333,16 @@ pub fn get_product_info(licence_key: String) -> Result<ProductRegistrationInfo, 
 	// parse key into ProductRegistrationInfo
 	let product_sign: SignedPayload = serde_json::from_slice(&key)?;
 	Ok(product_sign.payload)
+}
+#[cfg(not(feature = "license-check"))]
+#[allow(deprecated)]
+pub fn get_product_info(_licence_key: String) -> Result<ProductRegistrationInfo, anyhow::Error> {
+	Ok(ProductRegistrationInfo {
+		name: "Querent DEV".to_string(),
+		website: "querent.xyz".to_string(),
+		email: "contact@querent.xyz".to_string(),
+		product: ProductType::RianEnterprise,
+	})
 }
 
 pub fn get_pipeline_count_by_product(licence_key: String) -> Result<usize, anyhow::Error> {
@@ -337,7 +357,7 @@ pub fn get_pipeline_count_by_product(licence_key: String) -> Result<usize, anyho
 pub fn get_total_sources_by_product(licence_key: String) -> Result<usize, anyhow::Error> {
 	let info = get_product_info(licence_key)?;
 	match info.product {
-		ProductType::Rian => Ok(5),
+		ProductType::Rian => Ok(10),
 		ProductType::RianPro => Ok(usize::MAX),
 		ProductType::RianEnterprise => Ok(usize::MAX),
 	}

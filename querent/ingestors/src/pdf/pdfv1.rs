@@ -68,6 +68,17 @@ impl BaseIngestor for PdfIngestor {
 				return;
 			}
 			let doc = doc.unwrap();
+			if doc.is_encrypted() {
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				});
+				return;
+			}
 			let mut output = PagePlainTextOutput::new(Arc::new(doc.clone()));
 			let _ = output_doc(&doc, &mut output);
 			let page_images = output.images;
@@ -105,19 +116,23 @@ impl BaseIngestor for PdfIngestor {
 							image_id: Some(image_id.to_string()),
 						};
 						let image_ingestor = ImageIngestor::new();
-						let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
-						let mut image_stream = Box::pin(image_stream);
-						while let Some(tokens) = image_stream.next().await {
-							match tokens {
-								Ok(tokens) =>
-									if !tokens.data.is_empty() {
+						let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+						tokio::spawn(async move {
+							let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
+							let mut image_stream = Box::pin(image_stream);
+							while let Some(tokens) = image_stream.next().await {
+								match tokens {
+									Ok(tokens) => if !tokens.data.is_empty() {
 										// only yield good tokens
-										yield Ok(tokens);
+										tx.send(Ok(tokens)).await.unwrap();
 									},
-								Err(e) => {
-									tracing::error!("Failed to get tokens from images: {:?}", e);
-								},
+									Err(e) => tracing::error!("Failed to get tokens from images: {:?}", e),
+								}
 							}
+						});
+
+						while let Some(tokens) = rx.recv().await {
+							yield tokens;
 						}
 					}
 				}
