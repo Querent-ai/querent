@@ -16,6 +16,7 @@ pub mod gcs;
 pub mod news;
 pub mod notion;
 pub mod onedrive;
+pub mod osdu;
 pub mod s3;
 pub mod slack;
 use once_cell::sync::Lazy;
