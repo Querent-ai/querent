@@ -5,8 +5,11 @@ on:
       version:
         description: 'Version of the release'
         required: true
+  release:
+    types:
+      - created
 env:
-  ASSET_VERSION: ${{ github.event.inputs.version }}
+  ASSET_VERSION: ${{ github.event.inputs.version || github.event.release.tag_name || github.ref_name }}
 jobs:
   release-rian-bare-metal:
     name: Build ${{ matrix.target }}

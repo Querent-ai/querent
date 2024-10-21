@@ -42,6 +42,13 @@ runs:
         echo "QUERENT_COMMIT_HASH=$(git rev-parse HEAD)" >> $GITHUB_ENV
         echo "QUERENT_COMMIT_TAGS=$(git tag --points-at HEAD | tr '\n' ',')" >> $GITHUB_ENV
       shell: bash
+    - name: Install vcpkg
+      run: |
+        echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV
+        vcpkg install openssl:x64-windows-static-md
+        vcpkg install tesseract:x64-windows-static-md
+        vcpkg install leptonica:x64-windows-static-md
+      shell: pwsh
     # - name: Build binary
     #   run: |
     #     cargo build --release --target ${{ inputs.target }} --features "license-check","openssl-support" --bin rian
