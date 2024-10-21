@@ -313,6 +313,7 @@ mod tests {
 	use dotenv::dotenv;
 	use futures::StreamExt;
 	use proto::semantics::OneDriveConfig;
+	use serial_test::serial;
 	use std::{collections::HashSet, env};
 
 	use super::TOKEN;
@@ -323,6 +324,7 @@ mod tests {
 	}
 
 	#[tokio::test]
+	#[serial]
 	async fn test_onedrive_collector() {
 		dotenv().ok();
 		reset_token().await;
@@ -359,27 +361,29 @@ mod tests {
 	}
 
 	//The given test runs when we run it individually but it fails when we run it using cargo test. The reason is TOKEN value does not gets reset properly
-	// #[tokio::test]
-	// async fn test_onedrive_collector_invalid_credentials() {
-	// 	dotenv().ok();
-	// 	reset_token().await;
-	// 	let onedrive_config = OneDriveConfig {
-	// 		client_id: "invalid_client_id".to_string(),
-	// 		client_secret: "invalid_client_secret".to_string(),
-	// 		redirect_uri: "http://localhost:8000/callback".to_string(),
-	// 		refresh_token: "invalid_refresh_token".to_string(),
-	// 		folder_path: "/testing".to_string(),
-	// 		id: "test".to_string(),
-	// 	};
+	#[tokio::test]
+	#[serial]
+	async fn test_onedrive_collector_invalid_credentials() {
+		dotenv().ok();
+		reset_token().await;
+		let onedrive_config = OneDriveConfig {
+			client_id: "invalid_client_id".to_string(),
+			client_secret: "invalid_client_secret".to_string(),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: "invalid_refresh_token".to_string(),
+			folder_path: "/testing".to_string(),
+			id: "test".to_string(),
+		};
 
-	// 	let drive_storage = OneDriveSource::new(onedrive_config).await;
+		let drive_storage = OneDriveSource::new(onedrive_config).await;
 
-	// 	// println!("Drive storage is {:?}", drive_storage.err());
+		// println!("Drive storage is {:?}", drive_storage.err());
 
-	// 	assert!(drive_storage.is_err(), "Expected drive storage to fail");
-	// }
+		assert!(drive_storage.is_err(), "Expected drive storage to fail");
+	}
 
 	#[tokio::test]
+	#[serial]
 	async fn test_onedrive_collector_invalid_folder() {
 		dotenv().ok();
 		let onedrive_config = OneDriveConfig {
@@ -400,6 +404,7 @@ mod tests {
 	}
 
 	#[tokio::test]
+	#[serial]
 	async fn test_onedrive_collector_empty_folder() {
 		dotenv().ok();
 		let onedrive_config = OneDriveConfig {
