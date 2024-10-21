@@ -21,6 +21,9 @@ runs:
     - name: Install 
       run: brew install tesseract leptonica
       shell: bash
+    - name: Install pq and postgres
+      shell: bash
+      run: brew install postgresql libpq
     - name: Install rustup
       shell: bash
       run: curl https://sh.rustup.rs -sSf | sh -s -- --default-toolchain none -y
