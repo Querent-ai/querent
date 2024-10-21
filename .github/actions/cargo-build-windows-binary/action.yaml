@@ -46,8 +46,8 @@ runs:
       run: |
         echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -FilePath $env:GITHUB_ENV
         vcpkg install openssl:x64-windows-static-md
-        vcpkg install tesseract:x64-windows
-        vcpkg install leptonica:x64-windows
+        vcpkg install tesseract:x64-windows-static-md
+        vcpkg install leptonica:x64-windows-static-md
       shell: pwsh
     # - name: Build binary
     #   run: |
