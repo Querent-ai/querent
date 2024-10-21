@@ -79,7 +79,6 @@ fastembed =  { workspace = true }
 log = { workspace = true }
 rustls = { workspace = true }
 dirs = { workspace = true }
-postgresql_embedded = { workspace = true }
 
 [build-dependencies]
 time = { workspace = true }
@@ -94,6 +93,3 @@ default = ["openssl-support"]
 testsuite = []
 console = ["console-subscriber"]
 license-check = []
-bundled = [
-  "postgresql_embedded/bundled",
-]
