@@ -7,8 +7,6 @@ use api::{
     stop_insight_analyst, trigger_insight_analyst,
 };
 use common::TerimateSignal;
-use diesel::prelude::*;
-use diesel::r2d2;
 use log::{error, info};
 use node::serve::service::QUERENT_SERVICES_ONCE;
 use node::{serve_quester_without_servers, shutdown_querent};
@@ -17,10 +15,7 @@ use parking_lot::Mutex;
 use proto::{semantics::SemanticPipelineRequest, InsightAnalystRequest, NodeConfig};
 #[cfg(debug_assertions)]
 use specta_typescript::Typescript;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::{atomic::AtomicBool, atomic::Ordering};
-use storage::{StorageError, StorageErrorKind};
 use sysinfo::System;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_autostart::MacosLauncher;
@@ -170,11 +165,7 @@ pub fn run(node_config: NodeConfig) {
             app_handle.plugin(tauri_plugin_global_shortcut::Builder::new().build())?;
             app_handle.plugin(tauri_plugin_updater::Builder::new().build())?;
             // start querent services
-            tauri::async_runtime::spawn(start_querent_services(
-                node_config.clone(),
-                sig_clone,
-                None,
-            ));
+            tauri::async_runtime::spawn(start_querent_services(node_config.clone(), sig_clone));
             if !query_accessibility_permissions() {
                 if let Some(window) = app.get_webview_window("rian") {
                     window.minimize().unwrap();
@@ -285,14 +276,8 @@ fn monitor_pinned_event(app_handle: AppHandle) {
     });
 }
 
-async fn start_querent_services(
-    node_config: NodeConfig,
-    terminate_sig: TerimateSignal,
-    embedded_url: Option<String>,
-) {
-    match serve_quester_without_servers(node_config, terminate_sig.clone(), embedded_url, None)
-        .await
-    {
+async fn start_querent_services(node_config: NodeConfig, terminate_sig: TerimateSignal) {
+    match serve_quester_without_servers(node_config, terminate_sig.clone()).await {
         // if error occurs, we should terminate the app
         Ok(_) => {
             println!("QuerentServices started successfully");
@@ -302,9 +287,4 @@ async fn start_querent_services(
             terminate_sig.kill();
         }
     }
-}
-
-fn is_postgres_running(data_dir: &PathBuf) -> bool {
-    let pid_file = data_dir.join("postmaster.pid");
-    pid_file.exists()
 }
