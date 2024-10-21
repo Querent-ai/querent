@@ -44,7 +44,7 @@ jobs:
   build-macos-binaries-x86_64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
-    runs-on: macos-12
+    runs-on: macos-latest
     strategy:
       matrix:
         target: [x86_64-apple-darwin]
@@ -94,7 +94,7 @@ jobs:
   build-macos-binaries-aarch64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       matrix:
         target: [aarch64-apple-darwin]
