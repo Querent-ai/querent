@@ -208,7 +208,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/sample-document.docx");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("sample-document.docx").to_path_buf()),
@@ -221,10 +220,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = DocxIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 		let mut found_image_data = false;
 		let mut stream = result_stream;
@@ -245,5 +242,41 @@ mod tests {
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest DOCX file");
 		assert!(found_image_data, "Unable to ingest image data");
+	}
+
+	#[tokio::test]
+	async fn test_docx_ingestor_with_corrupt_file() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.docx");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.docx").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("docx".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = DocxIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() == 0, "Should not have found data in DOCX file");
 	}
 }
