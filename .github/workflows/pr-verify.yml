@@ -106,6 +106,7 @@ jobs:
       NOTION_PAGE_ID: ${{secrets.NOTION_PAGE_ID}}
       SLACK_API_TOKEN: ${{ secrets.SLACK_API_TOKEN }}
       SLACK_CHANNEL_NAME: ${{ secrets.SLACK_CHANNEL_NAME }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3

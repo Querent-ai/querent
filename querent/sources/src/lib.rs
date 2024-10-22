@@ -18,6 +18,7 @@ pub mod notion;
 pub mod onedrive;
 pub mod s3;
 pub mod slack;
+pub mod jira;
 use once_cell::sync::Lazy;
 use tokio::sync::Semaphore;
 
