@@ -277,7 +277,7 @@ openssl-sys = { version = "0.9.93", features = ["vendored"] }
 slack-morphism = { version = "2.5.0", features = ["hyper"] }
 hyper-util = "0.1.9"
 surrealdb = { version = "1.5.4", features = ["kv-rocksdb"] }
-leptess = "0.14.0"
+leptess = {git = "https://github.com/Querent-ai/leptess", branch = "master"}
 image = "0.25.2"
 aws-runtime = "1.3.1"
 

@@ -26,14 +26,6 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* rian-*
 
-# Install tesseract-ocr and the required libtesseract4 version
-RUN apt-get update && apt-get install -y \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    libtesseract4 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN chmod +x /usr/local/bin/rian && \
     rian --version && \
     echo "Querent RIAN is ready to run!"
