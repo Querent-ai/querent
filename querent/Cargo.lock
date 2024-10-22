@@ -15927,3 +15927,18 @@ checksum = "16099418600b4d8f028622f73ff6e3deaabdff330fb9a2a131dea781ee8b0768"
 dependencies = [
  "zune-core",
 ]
+
+[[patch.unused]]
+name = "leptess"
+version = "0.15.0"
+source = "git+https://github.com/Querent-ai/leptess?branch=master#3e2712a4d6ff185d3da609ad6905f9404c59deb9"
+
+[[patch.unused]]
+name = "tesseract-plumbing"
+version = "0.11.1"
+source = "git+https://github.com/Querent-ai/tesseract-plumbing?branch=main#ae407448e2cb0a02cfe33ef6eb80be7f2e54c1da"
+
+[[patch.unused]]
+name = "tesseract-sys"
+version = "0.6.2"
+source = "git+https://github.com/Querent-ai/tesseract-sys?branch=main#d12636b05a4faa90792130269f1ee43dd7465099"

@@ -287,6 +287,9 @@ aws-runtime = "1.3.1"
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
 esaxx-rs = { git = "https://github.com/Querent-ai/esaxx-rs" }
+leptess = { git = "https://github.com/Querent-ai/leptess", branch = "master" }
+tesseract-plumbing = { git = "https://github.com/Querent-ai/tesseract-plumbing", branch = "main" }
+tesseract-sys = { git = "https://github.com/Querent-ai/tesseract-sys", branch = "main" }
 
 [profile.release]
 panic = "unwind"
