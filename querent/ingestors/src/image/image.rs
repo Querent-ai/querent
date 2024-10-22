@@ -45,6 +45,18 @@ impl BaseIngestor for ImageIngestor {
 			let mut source_id = String::new();
 			let mut image_id: Option<String> = None;
 			let mut extension = String::new();
+			let tesseract_path = rusty_tesseract::tesseract::find_tesseract_path();
+			if tesseract_path.is_none() {
+				tracing::warn!("Tesseract not found in path: Skip image processing");
+				return yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id,
+				});
+			}
 			for collected_bytes in all_collected_bytes {
 				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
 					continue;
