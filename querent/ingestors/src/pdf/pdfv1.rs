@@ -287,11 +287,10 @@ mod tests {
 		let mut all_data = Vec::new();
 		while let Some(tokens) = stream.next().await {
 			match tokens {
-				Ok(tokens) => {
+				Ok(tokens) =>
 					if !tokens.data.is_empty() {
 						all_data.push(tokens.data);
-					}
-				},
+					},
 				Err(e) => {
 					eprintln!("Failed to get tokens: {:?}", e);
 				},
@@ -327,14 +326,13 @@ mod tests {
 		while let Some(tokens) = stream.next().await {
 			eprintln!("Tokens: {:?}", tokens);
 			match tokens {
-				Ok(tokens) => {
+				Ok(tokens) =>
 					if !tokens.data.is_empty() {
 						if tokens.image_id.is_some() {
 							is_image_found = true;
 						}
 						all_data.push(tokens.data);
-					}
-				},
+					},
 				Err(e) => {
 					tracing::error!("Failed to get tokens from images: {:?}", e);
 				},
@@ -370,11 +368,10 @@ mod tests {
 		let mut all_data = Vec::new();
 		while let Some(tokens) = stream.next().await {
 			match tokens {
-				Ok(tokens) => {
+				Ok(tokens) =>
 					if !tokens.data.is_empty() {
 						all_data.push(tokens.data);
-					}
-				},
+					},
 				Err(e) => {
 					eprintln!("Failed to get tokens: {:?}", e);
 				},
