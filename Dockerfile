@@ -26,10 +26,11 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* rian-*
 
-# Install tesseract-ocr and its library
+# Install tesseract-ocr and the required libtesseract4 version
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-eng \
+    libtesseract4 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
