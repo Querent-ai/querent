@@ -26,7 +26,11 @@ RUN apt-get update && apt-get install -y \
     && mv rian-*/config/querent.config.yaml /rian/config/ \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* rian-*
-
+# Install tesseract-ocr
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr-eng \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 RUN chmod +x /usr/local/bin/rian && \
     rian --version && \
     echo "Querent RIAN is ready to run!"
