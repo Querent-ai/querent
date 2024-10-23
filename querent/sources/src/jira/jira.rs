@@ -166,7 +166,8 @@ impl Source for JiraSource {
                             let summary = issue.fields.summary.clone();
                             let issue_str = format!("{}. {}", description, summary);
 
-                            let file_name_path = Some(PathBuf::from(issue.id.clone()));
+                            let file_name = format!("{}.jira", issue.id.clone());
+                            let file_name_path = Some(PathBuf::from(file_name));
                             let doc_source = Some("jira://".to_string());
 
                             let collected_bytes = CollectedBytes::new(
