@@ -1,6 +1,6 @@
 [package]
 name = "sources"
-version = "1.0.3"
+version = "1.1.0"
 authors = ["Querent AI LLC <contact@querent.xyz>"]
 edition = "2021"
 license = "BSL-1.1"
@@ -71,3 +71,5 @@ aws-runtime = {workspace = true}
 aws-smithy-async = {workspace = true}
 aws-smithy-runtime = {workspace = true}
 aws-types = {workspace = true}
+slack-morphism = { workspace = true }
+hyper-util = { workspace = true }

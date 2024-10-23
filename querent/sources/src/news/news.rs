@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_stream::stream;
 use async_trait::async_trait;
 use chrono::{NaiveDate, Utc};
-use common::CollectedBytes;
+use common::{retry, CollectedBytes};
 use futures::Stream;
 use google_drive3::chrono::DateTime;
 use proto::semantics::NewsCollectorConfig;
@@ -35,6 +35,7 @@ pub struct NewsApiClient {
 	search_in: Option<String>,
 	country: Option<String>,
 	category: Option<String>,
+	retry_params: common::RetryParams,
 }
 
 impl NewsApiClient {
@@ -58,6 +59,7 @@ impl NewsApiClient {
 			search_in: config.search_in.clone(),
 			country: config.country.clone(),
 			category: config.category.clone(),
+			retry_params: common::RetryParams::aggressive(),
 		})
 	}
 
@@ -138,18 +140,25 @@ impl NewsApiClient {
 	}
 }
 
-async fn fetch_news(client: &reqwest::Client, url: &str) -> Result<NewsResponse, SourceError> {
-	let response = client
-		.get(url)
-		.header(reqwest::header::USER_AGENT, "Querent/1.0")
-		.send()
-		.await
-		.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Error making the API request: {:?}", err).into(),
-			)
-		})?;
+async fn fetch_news(
+	client: &reqwest::Client,
+	url: &str,
+	retry_params: &common::RetryParams,
+) -> Result<NewsResponse, SourceError> {
+	let response = retry(retry_params, || async {
+		client
+			.get(url)
+			.header(reqwest::header::USER_AGENT, "Querent/1.0")
+			.send()
+			.await
+			.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error making the API request: {:?}", err).into(),
+				)
+			})
+	})
+	.await?;
 
 	let news_response: NewsResponse = response.json::<NewsResponse>().await.map_err(|err| {
 		SourceError::new(
@@ -294,7 +303,7 @@ impl Source for NewsApiClient {
 			loop {
 				let url = format!("{}&page={}", base_query, page);
 
-				match fetch_news(&client, &url).await {
+				match fetch_news(&client, &url, &self.retry_params).await {
 					Ok(news) => {
 						if news.status == "ok" {
 							if let Some(articles) = news.articles {
@@ -427,7 +436,8 @@ mod tests {
 	async fn test_empty_query() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -472,7 +482,8 @@ mod tests {
 	async fn test_query_with_special_characters() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("@!#$%^&*".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -526,7 +537,8 @@ mod tests {
 		dotenv().ok();
 
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Tesla".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -572,7 +584,8 @@ mod tests {
 	async fn test_successful_news_fetch_everything() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Technology".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),
@@ -616,7 +629,8 @@ mod tests {
 	async fn test_successful_news_fetch_top_headlines() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Technology".to_string()),
 			query_type: 1,
 			id: "Some-id".to_string(),
@@ -662,7 +676,8 @@ mod tests {
 	async fn test_multiple_news_pages() {
 		dotenv().ok();
 		let news_config = NewsCollectorConfig {
-			api_key: env::var("NEWS_API_KEY").unwrap_or("".to_string()),
+			api_key: env::var("NEWS_API_KEY")
+				.unwrap_or("40c2081dfed94f4d91636f8e27764ccc".to_string()),
 			query: Some("Technology".to_string()),
 			query_type: 0,
 			id: "Some-id".to_string(),

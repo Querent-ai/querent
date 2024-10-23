@@ -17,7 +17,8 @@ use xml::reader::{EventReader, XmlEvent};
 use zip::ZipArchive;
 
 use crate::{
-	image::image::ImageIngestor, process_ingested_tokens_stream, AsyncProcessor, BaseIngestor,
+	image::image::ImageIngestor, process_ingested_tokens_stream,
+	processors::text_processing::TextCleanupProcessor, AsyncProcessor, BaseIngestor,
 	IngestorResult,
 };
 
@@ -28,7 +29,7 @@ pub struct DocIngestor {
 
 impl DocIngestor {
 	pub fn new() -> Self {
-		Self { processors: Vec::new() }
+		Self { processors: vec![Arc::new(TextCleanupProcessor::new())] }
 	}
 }
 
@@ -167,19 +168,22 @@ impl BaseIngestor for DocIngestor {
 						image_id: Some(name.to_string()),
 					};
 					let image_ingestor = ImageIngestor::new();
-					let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
-					let mut image_stream = Box::pin(image_stream);
-					while let Some(tokens) = image_stream.next().await {
-						match tokens {
-							Ok(tokens) =>
-								if !tokens.data.is_empty() {
+					let (tx, mut rx) = tokio::sync::mpsc::channel(100);
+					tokio::spawn(async move {
+						let image_stream = image_ingestor.ingest(vec![collected_bytes]).await.unwrap();
+						let mut image_stream = Box::pin(image_stream);
+						while let Some(tokens) = image_stream.next().await {
+							match tokens {
+								Ok(tokens) => if !tokens.data.is_empty() {
 									// only yield good tokens
-									yield Ok(tokens);
+									tx.send(Ok(tokens)).await.unwrap();
 								},
-							Err(e) => {
-								tracing::error!("Failed to get tokens from images: {:?}", e);
-							},
+								Err(e) => tracing::error!("Failed to get tokens from images: {:?}", e),
+							}
 						}
+					});
+					while let Some(tokens) = rx.recv().await {
+						yield tokens;
 					}
 				}
 			}

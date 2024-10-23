@@ -185,19 +185,19 @@ log = { version = "^0.4.17", features = [
   "max_level_debug",
   "release_max_level_debug"
 ] }
-actors = { version = "1.0.3", path = "./actors" }
-common = { version = "1.0.3", path = "./common" }
-rian-core = { version = "1.0.3", path = "./rian" }
-storage = { version = "1.0.3", path = "./storage" }
-cluster = { version = "1.0.3", path = "./cluster" }
-codegen = { version = "1.0.3", path = "./codegen" }
-proto = { version = "1.0.3", path = "./proto" }
-node = { version = "1.0.3", path = "./node" }
-sources = { version = "1.0.3", path = "./sources" }
-ingestors = { version = "1.0.3", path = "./ingestors" }
-engines = { version = "1.0.3", path = "./engines" }
-llms = { version = "1.0.3", path = "./llms" }
-insights = { version = "1.0.3", path = "./insights" }
+actors = { version = "1.1.0", path = "./actors" }
+common = { version = "1.1.0", path = "./common" }
+rian-core = { version = "1.1.0", path = "./rian" }
+storage = { version = "1.1.0", path = "./storage" }
+cluster = { version = "1.1.0", path = "./cluster" }
+codegen = { version = "1.1.0", path = "./codegen" }
+proto = { version = "1.1.0", path = "./proto" }
+node = { version = "1.1.0", path = "./node" }
+sources = { version = "1.1.0", path = "./sources" }
+ingestors = { version = "1.1.0", path = "./ingestors" }
+engines = { version = "1.1.0", path = "./engines" }
+llms = { version = "1.1.0", path = "./llms" }
+insights = { version = "1.1.0", path = "./insights" }
 neo4rs = "0.7.0"
 diesel-async = { version = "0.5.0", features = ["bb8", "postgres", "async-connection-wrapper"] }
 tokio-postgres = "0.7.10"
@@ -241,7 +241,7 @@ records = "0.2.0"
 unicode-segmentation = "1.7"
 xlsx_reader = "3.1.1"
 xml = "0.8.20"
-rusty-tesseract = "1.1.10"
+rusty-tesseract = { git = "https://github.com/louis030195/rusty-tesseract.git", branch = "main" }
 imap = "2.4.1"
 native-tls = "0.2"
 mailparse = "0.15.0"
@@ -270,14 +270,13 @@ tauri-specta = { git ="https://github.com/oscartbeaumont/tauri-specta", branch =
 specta-typescript = "=0.0.7"
 specta-jsdoc = "=0.0.7"
 lazy_static = "1.5.0"
-postgresql_embedded = { version = "0.16.3", default-features = false, features = ["theseus", "rustls-tls", "bundled"] }
-postgresql_extensions = "0.16.3"
-postgresql_archive = "0.16.3"
 rustls-native-certs = "0.8.0"
 sqlx = { version = "0.8.2", default-features = false, features = ["postgres"] }
 notion = "0.6.0"
+openssl-sys = { version = "0.9.93", features = ["vendored"] }
+slack-morphism = { version = "2.5.0", features = ["hyper"] }
+hyper-util = "0.1.9"
 surrealdb = { version = "1.5.4", features = ["kv-rocksdb"] }
-leptess = "0.14.0"
 image = "0.25.2"
 aws-runtime = "1.3.1"
 
@@ -286,6 +285,7 @@ aws-runtime = "1.3.1"
 [patch.crates-io]
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
+esaxx-rs = { git = "https://github.com/Querent-ai/esaxx-rs" }
 
 [profile.release]
 panic = "unwind"

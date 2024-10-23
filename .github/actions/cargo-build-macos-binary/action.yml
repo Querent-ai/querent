@@ -18,8 +18,11 @@ runs:
     - name: Install protoc
       run: brew install protobuf
       shell: bash
-    - name: Install 
-      run: brew install tesseract leptonica
+    - name: Install libpq and postgresql16
+      run: |
+        brew install --skip-post-install postgresql@16 libpq
+        brew link --force --overwrite postgresql@16
+        echo "export PQ_LIB_DIR=$(brew --prefix libpq)/lib" >> ~/.bash_profile
       shell: bash
     - name: Install rustup
       shell: bash

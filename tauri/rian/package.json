@@ -1,6 +1,6 @@
 {
 	"name": "rian",
-	"version": "1.0.3",
+	"version": "1.1.0",
 	"description": "Rian is realtime information aggregation network",
 	"license": "BSL-1.1",
 	"private": true,
@@ -68,11 +68,11 @@
 		"svelte": "^4.0.0"
 	},
 	"dependencies": {
-		"@tauri-apps/api": "2.0.0-rc.0",
-		"@tauri-apps/cli": "2.0.0-rc.0",
-		"@tauri-apps/plugin-dialog": "2.0.0-rc.0",
-		"@tauri-apps/plugin-fs": "2.0.0-rc.0",
-		"@tauri-apps/plugin-shell": "2.0.0-rc.0",
+		"@tauri-apps/api": "2.0.1",
+		"@tauri-apps/cli": "2.0.1",
+		"@tauri-apps/plugin-dialog": "2.0.0",
+		"@tauri-apps/plugin-fs": "2.0.0",
+		"@tauri-apps/plugin-shell": "2.0.0",
 		"chart.js": "^4.4.3",
 		"d3": "^7.9.0",
 		"dotenv": "^16.4.5",

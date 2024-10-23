@@ -14,8 +14,6 @@ on:
         required: true
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
-  POSTGRESQL_VERSION: 16.4.0
-  PQ_LIB_STATIC: 1
 jobs:
   build-tauri-rian-ui:
     permissions:
@@ -44,7 +42,7 @@ jobs:
   build-macos-binaries-x86_64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
-    runs-on: macos-12
+    runs-on: macos-latest
     strategy:
       matrix:
         target: [x86_64-apple-darwin]
@@ -66,7 +64,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
         run: cargo tauri info
       - name: Build Tauri App
@@ -94,7 +92,7 @@ jobs:
   build-macos-binaries-aarch64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
-    runs-on: macos-14
+    runs-on: macos-latest
     strategy:
       matrix:
         target: [aarch64-apple-darwin]
@@ -116,7 +114,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
         run: cargo tauri info
       - name: Build Tauri App (macOS aarch64)
@@ -136,6 +134,7 @@ jobs:
             tauri/rian/src-tauri/target/*/release/bundle/**/*.dmg
             tauri/rian/src-tauri/target/*/release/bundle/macos/*.tar.gz
             tauri/rian/src-tauri/target/*/release/bundle/**/*.sig
+
   build-linux-binaries:
     needs: [build-tauri-rian-ui]
     strategy:
@@ -161,7 +160,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
@@ -210,7 +209,7 @@ jobs:
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
       - name: Install Cargo Tauri for info
-        run: cargo install tauri-cli --version "=2.0.0-rc.0" --locked
+        run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:

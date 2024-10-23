@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::NotionConfig;
-use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
@@ -19,11 +18,12 @@ use super::utils::{
 	string_to_async_read,
 };
 
-#[derive(Deserialize, Serialize, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct NotionSource {
 	api_token: String,
 	page_ids: Vec<String>,
 	source_id: String,
+	pub retry_params: common::RetryParams,
 }
 
 impl NotionSource {
@@ -32,6 +32,7 @@ impl NotionSource {
 			api_token: config.api_key.clone(),
 			page_ids: config.page_ids.clone(),
 			source_id: config.id,
+			retry_params: common::RetryParams::aggressive(),
 		})
 	}
 }
@@ -52,7 +53,7 @@ impl Source for NotionSource {
 		} else {
 			self.page_ids.clone()
 		};
-		let response = fetch_page(&self.api_token, &page_ids[0]).await;
+		let response = fetch_page(&self.api_token, &page_ids[0], &self.retry_params).await;
 
 		if response.is_ok() {
 			Ok(())
@@ -113,7 +114,7 @@ impl Source for NotionSource {
 			};
 
 			for page_id in page_ids {
-				match fetch_page(&api_token, &page_id).await {
+				match fetch_page(&api_token, &page_id, &self.retry_params).await {
 					Ok(page) => {
 						let page_data = format_page(&page.properties);
 						let page_file_name = format!("{}.notion", page_id);

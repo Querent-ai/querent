@@ -298,7 +298,7 @@ impl LLM for RobertaLLM {
 	}
 
 	async fn maximum_tokens(&self) -> usize {
-		512
+		255
 	}
 
 	async fn tokens_to_words(&self, tokens: &[i32]) -> Vec<String> {
