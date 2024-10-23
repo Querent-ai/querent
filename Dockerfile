@@ -8,7 +8,6 @@ LABEL org.opencontainers.image.title="Querent" \
 
 WORKDIR /rian
 
-
 RUN apt-get -y update \
     && apt-get -y install ca-certificates \
                           libssl3 \
@@ -26,6 +25,13 @@ RUN apt-get update && apt-get install -y \
     && mv rian-*/config/querent.config.yaml /rian/config/ \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* rian-*
+
+# Install tesseract-ocr and the required libtesseract4 version
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN chmod +x /usr/local/bin/rian && \
     rian --version && \
