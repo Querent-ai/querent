@@ -228,7 +228,7 @@ pub async fn create_dynamic_sources(
 						)));
 					},
 				}
-			}
+			},
 
 			Some(proto::semantics::Backend::Email(config)) => {
 				#[cfg(feature = "license-check")]
