@@ -113,7 +113,6 @@ pub async fn get_issues(
 		.collect::<Vec<Issue>>();
 
 	for issue in &issues {
-		// https://querent.atlassian.net/rest/api/2/search
 		let issue_details_url =
 			format!("{}/rest/api/2/issue/{}", jira_server.clone(), issue.key.clone());
 		let issue_details_response = client
