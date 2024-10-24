@@ -96,8 +96,6 @@ pub async fn get_issues(
 		)
 	})?;
 
-	println!("response is: {:?}", json_response);
-
 	let issues = json_response
 		.get("issues")
 		.and_then(|v| v.as_array())
@@ -145,7 +143,6 @@ pub async fn get_issues(
 		if let Some(fields) = issue_details.get("fields") {
 			if let Some(attachments) = fields.get("attachment").and_then(|v| v.as_array()) {
 				for attachment in attachments {
-					println!("Got the attachments here");
 					if let (Some(content_url), Some(filename)) = (
 						attachment.get("content").and_then(|v| v.as_str()),
 						attachment.get("filename").and_then(|v| v.as_str()),
@@ -164,7 +161,6 @@ pub async fn get_issues(
 							})?;
 
 						if attachment_response.status().is_success() {
-							println!("Successful data getting");
 							let bytes = attachment_response.bytes().await.map_err(|err| {
 								SourceError::new(
 									SourceErrorKind::Io,
@@ -172,12 +168,9 @@ pub async fn get_issues(
 										.into(),
 								)
 							})?;
-							println!("File name is {:?}", filename);
 							let attachment_data =
 								AttachmentJira { file_name: filename.to_string(), data: bytes };
 							attachments_res.push(attachment_data);
-						} else {
-							println!("Unscuuesscful");
 						}
 					}
 				}
