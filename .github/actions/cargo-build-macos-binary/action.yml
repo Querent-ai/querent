@@ -18,9 +18,6 @@ runs:
     - name: Install protoc
       run: brew install protobuf
       shell: bash
-    - name: Install 
-      run: brew install tesseract leptonica
-      shell: bash
     - name: Install libpq and postgresql16
       run: |
         brew install --skip-post-install postgresql@16 libpq
