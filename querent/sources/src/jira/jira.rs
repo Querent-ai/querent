@@ -115,17 +115,21 @@ pub async fn get_issues(
 	for issue in &issues {
 		let issue_details_url =
 			format!("{}/rest/api/2/issue/{}", jira_server.clone(), issue.key.clone());
-		let issue_details_response = client
-			.get(&issue_details_url)
-			.basic_auth(email.clone(), Some(api_token.clone()))
-			.send()
-			.await
-			.map_err(|err| {
-				SourceError::new(
-					SourceErrorKind::Io,
-					anyhow::anyhow!("Error fetching issue details: {:?}", err).into(),
-				)
-			})?;
+
+		let issue_details_response = retry(retry_params, || async {
+			client
+				.get(&issue_details_url)
+				.basic_auth(email.clone(), Some(api_token.clone()))
+				.send()
+				.await
+				.map_err(|err| {
+					SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Error fetching issue details: {:?}", err).into(),
+					)
+				})
+		})
+		.await?;
 
 		if !issue_details_response.status().is_success() {
 			continue;
@@ -146,18 +150,21 @@ pub async fn get_issues(
 						attachment.get("content").and_then(|v| v.as_str()),
 						attachment.get("filename").and_then(|v| v.as_str()),
 					) {
-						let attachment_response = client
-							.get(content_url)
-							.basic_auth(email.clone(), Some(api_token.clone()))
-							.send()
-							.await
-							.map_err(|err| {
-								SourceError::new(
-									SourceErrorKind::Io,
-									anyhow::anyhow!("Error downloading attachment: {:?}", err)
-										.into(),
-								)
-							})?;
+						let attachment_response = retry(retry_params, || async {
+							client
+								.get(content_url)
+								.basic_auth(email.clone(), Some(api_token.clone()))
+								.send()
+								.await
+								.map_err(|err| {
+									SourceError::new(
+										SourceErrorKind::Io,
+										anyhow::anyhow!("Error downloading attachment: {:?}", err)
+											.into(),
+									)
+								})
+						})
+						.await?;
 
 						if attachment_response.status().is_success() {
 							let bytes = attachment_response.bytes().await.map_err(|err| {
@@ -199,12 +206,21 @@ impl Source for JiraSource {
 
 		let client = Client::new();
 
-		let response = client
-			.get(jira_url)
-			.basic_auth(email, Some(api_token))
-			.query(&[("jql", jql_query), ("maxResults", "1".to_string())])
-			.send()
-			.await?;
+		let response = retry(&self.retry_params, || async {
+			client
+				.get(jira_url.clone())
+				.basic_auth(email.clone(), Some(api_token.clone()))
+				.query(&[("jql", jql_query.clone()), ("maxResults", "1".to_string())])
+				.send()
+				.await
+				.map_err(|err| {
+					SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Error checking connectivity: {:?}", err).into(),
+					)
+				})
+		})
+		.await?;
 
 		if response.status().as_str() != "200" {
 			let error_message = response.text().await.unwrap_or("Unknown error".to_string());
