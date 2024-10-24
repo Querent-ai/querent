@@ -19,32 +19,15 @@ services:
       retries: 5
       start_period: 80s
 
-  neo4j:
-    image: neo4j
-    environment:
-      - NEO4J_AUTH=neo4j/password_neo
-    ports:
-      - "7474:7474"
-      - "7687:7687"
-    networks:
-      - querent
-    healthcheck:
-      test: wget http://localhost:7474 || exit 1
-      interval: 1s
-      timeout: 10s
-      retries: 20
-      start_period: 3s
-
   querent:
     image: querent/rian:v1.0.1
     ports:
       - "1111:1111"
       - "2222:2222"
       - "3333:3333"
+      - "10074:10074"
     depends_on:
       postgres:
-        condition: service_healthy
-      neo4j:
         condition: service_healthy
     volumes:
       - ./config:/external-config

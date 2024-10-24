@@ -110,6 +110,7 @@ pub struct ApiKeyResponse {
 	post,
 	tag = "Node Health",
 	path = "/apikey",
+	request_body = ApiKeyPayload,
 	responses(
 		(status = 200, description = "The API Key is set.", body = ApiKeyResponse),
 		(status = 400, description = "The API Key is not set.", body = ApiKeyResponse),
