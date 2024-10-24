@@ -355,9 +355,9 @@ pub struct S3CollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct JiraCollectorConfig {
-    /// URL of the project
+    /// URL of the server, for example :- <https://querent.atlassian.net>
     #[prost(string, tag = "1")]
-    pub jira_url: ::prost::alloc::string::String,
+    pub jira_server: ::prost::alloc::string::String,
     /// Email associated with the API key
     #[prost(string, tag = "2")]
     pub jira_email: ::prost::alloc::string::String,

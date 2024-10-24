@@ -7,7 +7,8 @@ use std::{
 
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use bytes::Bytes;
+use common::{retry, CollectedBytes};
 use futures::Stream;
 use jira_query::Issue;
 use proto::semantics::JiraCollectorConfig;
@@ -16,9 +17,15 @@ use tokio::io::AsyncRead;
 
 use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
 
+#[derive(Debug, Clone)]
+pub struct AttachmentJira {
+	pub file_name: String,
+	pub data: Bytes,
+}
+
 #[derive(Clone, Debug)]
 pub struct JiraSource {
-	jira_url: String,
+	jira_server: String,
 	jira_email: String,
 	jira_api_token: String,
 	project_id: String,
@@ -31,7 +38,7 @@ impl JiraSource {
 		Ok(JiraSource {
 			jira_api_token: config.jira_api_key,
 			jira_email: config.jira_email,
-			jira_url: config.jira_url,
+			jira_server: config.jira_server,
 			project_id: config.jira_project,
 			source_id: config.id,
 			retry_params: common::RetryParams::aggressive(),
@@ -41,23 +48,34 @@ impl JiraSource {
 
 pub async fn get_issues(
 	client: &Client,
-	jira_url: String,
+	jira_server: String,
 	email: String,
 	api_token: String,
 	jql_query: String,
 	start_at: u32,
 	max_results: u32,
-) -> Result<Vec<Issue>, SourceError> {
-	let response = client
-		.get(jira_url)
-		.basic_auth(email, Some(api_token))
-		.query(&[
-			("jql", jql_query),
-			("startAt", start_at.to_string()),
-			("maxResults", max_results.to_string()),
-		])
-		.send()
-		.await?;
+	retry_params: &common::RetryParams,
+) -> Result<(Vec<Issue>, Vec<AttachmentJira>), SourceError> {
+	let jira_url = format!("{}/rest/api/2/search", jira_server.clone());
+	let response = retry(retry_params, || async {
+		client
+			.get(jira_url.clone())
+			.basic_auth(email.clone(), Some(api_token.clone()))
+			.query(&[
+				("jql", jql_query.clone()),
+				("startAt", start_at.clone().to_string()),
+				("maxResults", max_results.clone().to_string()),
+			])
+			.send()
+			.await
+			.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error making the API request: {:?}", err).into(),
+				)
+			})
+	})
+	.await?;
 
 	if !response.status().is_success() {
 		return Err(SourceError::new(
@@ -70,6 +88,7 @@ pub async fn get_issues(
 		));
 	}
 
+	let mut attachments_res: Vec<AttachmentJira> = Vec::new();
 	let json_response = response.json::<serde_json::Value>().await.map_err(|e| {
 		SourceError::new(
 			SourceErrorKind::Io,
@@ -77,7 +96,8 @@ pub async fn get_issues(
 		)
 	})?;
 
-	// Extract the issues field as an array
+	println!("response is: {:?}", json_response);
+
 	let issues = json_response
 		.get("issues")
 		.and_then(|v| v.as_array())
@@ -94,10 +114,81 @@ pub async fn get_issues(
 		.filter_map(|issue| serde_json::from_value(issue.clone()).ok())
 		.collect::<Vec<Issue>>();
 
+	for issue in &issues {
+		// https://querent.atlassian.net/rest/api/2/search
+		let issue_details_url =
+			format!("{}/rest/api/2/issue/{}", jira_server.clone(), issue.key.clone());
+		let issue_details_response = client
+			.get(&issue_details_url)
+			.basic_auth(email.clone(), Some(api_token.clone()))
+			.send()
+			.await
+			.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error fetching issue details: {:?}", err).into(),
+				)
+			})?;
+
+		if !issue_details_response.status().is_success() {
+			continue;
+		}
+
+		let issue_details =
+			issue_details_response.json::<serde_json::Value>().await.map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error parsing issue details: {:?}", e).into(),
+				)
+			})?;
+
+		if let Some(fields) = issue_details.get("fields") {
+			if let Some(attachments) = fields.get("attachment").and_then(|v| v.as_array()) {
+				for attachment in attachments {
+					println!("Got the attachments here");
+					if let (Some(content_url), Some(filename)) = (
+						attachment.get("content").and_then(|v| v.as_str()),
+						attachment.get("filename").and_then(|v| v.as_str()),
+					) {
+						let attachment_response = client
+							.get(content_url)
+							.basic_auth(email.clone(), Some(api_token.clone()))
+							.send()
+							.await
+							.map_err(|err| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error downloading attachment: {:?}", err)
+										.into(),
+								)
+							})?;
+
+						if attachment_response.status().is_success() {
+							println!("Successful data getting");
+							let bytes = attachment_response.bytes().await.map_err(|err| {
+								SourceError::new(
+									SourceErrorKind::Io,
+									anyhow::anyhow!("Error reading attachment bytes: {:?}", err)
+										.into(),
+								)
+							})?;
+							println!("File name is {:?}", filename);
+							let attachment_data =
+								AttachmentJira { file_name: filename.to_string(), data: bytes };
+							attachments_res.push(attachment_data);
+						} else {
+							println!("Unscuuesscful");
+						}
+					}
+				}
+			}
+		}
+	}
+
 	if issues.len() > 0 {
-		Ok(issues.clone())
+		Ok((issues.clone(), attachments_res))
 	} else {
-		Ok(Vec::new())
+		Ok((Vec::new(), Vec::new()))
 	}
 }
 
@@ -108,7 +199,7 @@ fn string_to_async_read(data: String) -> impl AsyncRead + Send + Unpin {
 #[async_trait]
 impl Source for JiraSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		let jira_url = self.jira_url.clone();
+		let jira_url = format!("{}/rest/api/2/search", self.jira_server.clone());
 		let email = self.jira_email.clone();
 		let api_token = self.jira_api_token.clone();
 
@@ -160,7 +251,7 @@ impl Source for JiraSource {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let source_id = self.source_id.clone();
 
-		let jira_url = self.jira_url.clone();
+		let jira_url = self.jira_server.clone();
 		let email = self.jira_email.clone();
 		let api_token = self.jira_api_token.clone();
 
@@ -172,8 +263,8 @@ impl Source for JiraSource {
 			let mut start_at = 0;
 			let max_results = 50;
 			loop {
-				match get_issues(&client, jira_url.clone(), email.clone(), api_token.clone(), jql_query.clone(), start_at, max_results).await {
-					Ok(issues) => {
+				match get_issues(&client, jira_url.clone(), email.clone(), api_token.clone(), jql_query.clone(), start_at, max_results, &self.retry_params).await {
+					Ok((issues, attachments)) => {
 						if issues.is_empty() {
 							break;
 						}
@@ -190,6 +281,24 @@ impl Source for JiraSource {
 							let collected_bytes = CollectedBytes::new(
 								file_name_path,
 								Some(Box::pin(string_to_async_read(issue_str))),
+								true,
+								doc_source,
+								Some(1),
+								source_id.clone(),
+								None,
+							);
+							yield Ok(collected_bytes);
+						}
+
+						for attachment in attachments {
+							let file_name_path = Some(PathBuf::from(attachment.file_name.clone()));
+
+							let cursor = Cursor::new(attachment.data.to_vec());
+
+							let doc_source = Some("jira://".to_string());
+							let collected_bytes = CollectedBytes::new(
+								file_name_path,
+								Some(Box::pin(cursor)),
 								true,
 								doc_source,
 								Some(1),
@@ -227,7 +336,7 @@ mod tests {
 		dotenv().ok();
 
 		let jira_config: JiraCollectorConfig = JiraCollectorConfig {
-			jira_url: "https://querent.atlassian.net/rest/api/2/search".to_string(),
+			jira_server: "https://querent.atlassian.net".to_string(),
 			jira_email: "ansh@querent.xyz".to_string(),
 			jira_api_key: env::var("JIRA_API_TOKEN").unwrap_or("".to_string()),
 			jira_project: "SCRUM".to_string(),
@@ -244,6 +353,7 @@ mod tests {
 					if item.is_ok() {
 						found_data = true;
 					} else if item.is_err() {
+						eprintln!("Found error {:?}", item.err());
 						break;
 					}
 				},
@@ -260,7 +370,7 @@ mod tests {
 		dotenv().ok();
 
 		let jira_config: JiraCollectorConfig = JiraCollectorConfig {
-			jira_url: "https://querent.atlassian.net/rest/api/2/search".to_string(),
+			jira_server: "https://querent.atlassian.net".to_string(),
 			jira_email: "ansh@querent.xyz".to_string(),
 			jira_api_key: "Invalid_key".to_string(),
 			jira_project: "SCRUM".to_string(),
@@ -278,7 +388,7 @@ mod tests {
 		dotenv().ok();
 
 		let jira_config: JiraCollectorConfig = JiraCollectorConfig {
-			jira_url: "https://querent.atlassian.net/rest/api/2/search".to_string(),
+			jira_server: "https://querent.atlassian.net".to_string(),
 			jira_email: "ansh@querent.xyz".to_string(),
 			jira_api_key: env::var("JIRA_API_TOKEN").unwrap_or("".to_string()),
 			jira_project: "Invalid project".to_string(),

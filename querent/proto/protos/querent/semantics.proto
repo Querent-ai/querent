@@ -202,8 +202,8 @@ message S3CollectorConfig {
 
 // JiraCollectorConfig is a message to hold configuration for a Jira collector.
 message JiraCollectorConfig {
-  // URL of the project
-  string jira_url = 1;
+  // URL of the server, for example :- https://querent.atlassian.net
+  string jira_server = 1;
   // Email associated with the API key
   string jira_email = 2;
   // Jira API key
