@@ -6262,6 +6262,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "jira_query"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dae71aaba87e76af163ee3dfd830e54ed95b47e2203e1090738f70e1ebde8b94"
+dependencies = [
+ "chrono",
+ "log 0.4.22",
+ "reqwest 0.12.8",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "jni"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11593,6 +11607,7 @@ dependencies = [
  "hyper-util",
  "imap",
  "ingestors",
+ "jira_query",
  "log 0.4.22",
  "mailparse",
  "md5",

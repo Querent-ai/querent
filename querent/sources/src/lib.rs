@@ -13,6 +13,7 @@ pub mod drive;
 pub mod email;
 pub mod filesystem;
 pub mod gcs;
+pub mod jira;
 pub mod news;
 pub mod notion;
 pub mod onedrive;

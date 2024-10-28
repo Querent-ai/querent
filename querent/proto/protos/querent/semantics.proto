@@ -202,30 +202,16 @@ message S3CollectorConfig {
 
 // JiraCollectorConfig is a message to hold configuration for a Jira collector.
 message JiraCollectorConfig {
-  // Server of the Jira collector.
+  // URL of the server, for example :- https://querent.atlassian.net
   string jira_server = 1;
-  // Username of the Jira collector.
-  string jira_username = 2;
-  // Password of the Jira collector.
-  string jira_password = 3;
-  // API token of the Jira collector.
-  string jira_api_token = 4;
-  // Certificate file of the Jira collector.
-  string jira_certfile = 5;
-  // Key file of the Jira collector.
-  string jira_keyfile = 6;
-  // Verify of the Jira collector.
-  bool jira_verify = 7;
+  // Email associated with the API key
+  string jira_email = 2;
+  // Jira API key
+  string jira_api_key = 3;
   // Project of the Jira collector.
-  string jira_project = 8;
-  // Query of the Jira collector.
-  string jira_query = 9;
-  // Start at of the Jira collector.
-  int32 jira_start_at = 10;
-  // Max results of the Jira collector.
-  int32 jira_max_results = 11;
+  string jira_project = 4;
   // Id for the collector
-  string id = 12;
+  string id = 5;
 }
 
 // GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
