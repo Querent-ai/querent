@@ -7,6 +7,7 @@ use std::{
 	ops::Range,
 	path::{Path, PathBuf},
 	pin::Pin,
+	sync::Arc,
 };
 use tokio::{
 	fs,
@@ -77,7 +78,8 @@ impl LocalFolderSource {
 		let stream = async_stream::stream! {
 			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			if extension == "zip" {
-				let collected_files = process_zip_file(file_path.clone(), source_id.clone()).await?;
+				let mut collected_files = Vec::new();
+				process_zip_file(file_path.clone(), source_id.clone(), &mut collected_files).await?;
 				for collected_bytes in collected_files {
 					yield Ok(collected_bytes);
 				}
@@ -109,42 +111,55 @@ impl LocalFolderSource {
 async fn process_zip_file(
 	file_path: PathBuf,
 	source_id: String,
-) -> SourceResult<Vec<CollectedBytes>> {
-	let mut collected_files = Vec::new();
+	collected_files: &mut Vec<CollectedBytes>,
+) -> SourceResult<()> {
+	let mut files_to_process = vec![fs::read(&file_path).await.map_err(SourceError::from)?];
 
-	let file_data = fs::read(&file_path).await.map_err(SourceError::from)?;
-	let cursor = Cursor::new(file_data);
-
-	let mut archive = ZipArchive::new(cursor).map_err(|e| {
-		SourceError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
-	})?;
-
-	for i in 0..archive.len() {
-		let mut file = archive.by_index(i).map_err(|e| {
-			SourceError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
+	while let Some(file_data) = files_to_process.pop() {
+		let cursor = Cursor::new(file_data);
+		let mut archive = ZipArchive::new(cursor).map_err(|e| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				Arc::new(anyhow::anyhow!("Failed to read the file: {:?}", e).into()),
+			)
 		})?;
-		if !file.is_dir() {
-			let file_name = file.name().to_string();
-			let file_size = file.size() as usize;
-			let mut file_buffer = Vec::new();
 
-			file.read_to_end(&mut file_buffer).map_err(SourceError::from)?;
+		for i in 0..archive.len() {
+			let mut file = archive.by_index(i).map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					Arc::new(anyhow::anyhow!("Failed to unzip the file: {:?}", e).into()),
+				)
+			})?;
 
-			let collected_bytes = CollectedBytes::new(
-				Some(PathBuf::from(file_name.clone())),
-				Some(Box::pin(BufReader::new(Cursor::new(file_buffer)))),
-				true,
-				Some(file_name),
-				Some(file_size),
-				source_id.clone(),
-				None,
-			);
+			if !file.is_dir() {
+				let file_name = file.name().to_string();
+				println!("File name {:?}", file_name);
+				let file_size = file.size() as usize;
+				let mut file_buffer = Vec::new();
 
-			collected_files.push(collected_bytes);
+				file.read_to_end(&mut file_buffer).map_err(SourceError::from)?;
+
+				if !file_name.ends_with(".zip") {
+					let collected_bytes = CollectedBytes::new(
+						Some(PathBuf::from(file_name.clone())),
+						Some(Box::pin(BufReader::new(Cursor::new(file_buffer)))),
+						true,
+						Some(file_name),
+						Some(file_size),
+						source_id.clone(),
+						None,
+					);
+
+					collected_files.push(collected_bytes);
+				} else {
+					files_to_process.push(file_buffer);
+				}
+			}
 		}
 	}
 
-	Ok(collected_files)
+	Ok(())
 }
 
 #[async_trait]
