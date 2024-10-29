@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{stream, Stream};
 use std::{
-	io::SeekFrom,
+	io::{Cursor, Read, SeekFrom},
 	ops::Range,
 	path::{Path, PathBuf},
 	pin::Pin,
@@ -12,6 +12,7 @@ use tokio::{
 	fs,
 	io::{AsyncRead, AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader},
 };
+use zip::ZipArchive;
 
 #[derive(Clone, Debug)]
 pub struct LocalFolderSource {
@@ -70,29 +71,80 @@ impl LocalFolderSource {
 		file_path: PathBuf,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
 		let source_id = self.source_id.clone();
+		let extension =
+			file_path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string();
+
 		let stream = async_stream::stream! {
 			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
-			let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
-			let file_size = file_metadata.len() as usize;
-			let file_name = file_path.to_string_lossy().to_string();
-			let file = fs::File::open(&file_path).await.map_err(SourceError::from)?;
-			let reader = BufReader::new(file);
+			if extension == "zip" {
+				let collected_files = process_zip_file(file_path.clone(), source_id.clone()).await?;
+				for collected_bytes in collected_files {
+					yield Ok(collected_bytes);
+				}
+			} else {
+				let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
+				let file_size = file_metadata.len() as usize;
+				let file_name = file_path.to_string_lossy().to_string();
+				let file = fs::File::open(&file_path).await.map_err(SourceError::from)?;
+				let reader = BufReader::new(file);
 
-			let collected_bytes = CollectedBytes::new(
-				Some(file_path.clone()),
-				Some(Box::pin(reader)),
-				true,
-				Some(file_name),
-				Some(file_size),
-				source_id,
-				None,
-			);
+				let collected_bytes = CollectedBytes::new(
+					Some(file_path.clone()),
+					Some(Box::pin(reader) as Pin<Box<dyn AsyncRead + Send>>),
+					true,
+					Some(file_name),
+					Some(file_size),
+					source_id.clone(),
+					None,
+				);
 
-			yield Ok(collected_bytes);
+				yield Ok(collected_bytes);
+			}
 		};
 
 		Ok(Box::pin(stream))
 	}
+}
+
+async fn process_zip_file(
+	file_path: PathBuf,
+	source_id: String,
+) -> SourceResult<Vec<CollectedBytes>> {
+	let mut collected_files = Vec::new();
+
+	let file_data = fs::read(&file_path).await.map_err(SourceError::from)?;
+	let cursor = Cursor::new(file_data);
+
+	let mut archive = ZipArchive::new(cursor).map_err(|e| {
+		SourceError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
+	})?;
+
+	for i in 0..archive.len() {
+		let mut file = archive.by_index(i).map_err(|e| {
+			SourceError::from(std::io::Error::new(std::io::ErrorKind::InvalidData, e.to_string()))
+		})?;
+		if !file.is_dir() {
+			let file_name = file.name().to_string();
+			let file_size = file.size() as usize;
+			let mut file_buffer = Vec::new();
+
+			file.read_to_end(&mut file_buffer).map_err(SourceError::from)?;
+
+			let collected_bytes = CollectedBytes::new(
+				Some(PathBuf::from(file_name.clone())),
+				Some(Box::pin(BufReader::new(Cursor::new(file_buffer)))),
+				true,
+				Some(file_name),
+				Some(file_size),
+				source_id.clone(),
+				None,
+			);
+
+			collected_files.push(collected_bytes);
+		}
+	}
+
+	Ok(collected_files)
 }
 
 #[async_trait]

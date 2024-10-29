@@ -247,7 +247,7 @@ native-tls = "0.2"
 mailparse = "0.15.0"
 yup-oauth2 = "10.0.1"
 oauth2 = "4.4.2"
-zip = "0.5.13"
+zip = "2.2.0"
 candle-core = { version = "0.5.0" }
 candle-transformers = { version = "0.5.0" }
 candle-nn = { version = "0.5.0" }
