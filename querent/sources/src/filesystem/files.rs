@@ -92,7 +92,7 @@ impl LocalFolderSource {
 
 				let collected_bytes = CollectedBytes::new(
 					Some(file_path.clone()),
-					Some(Box::pin(reader) as Pin<Box<dyn AsyncRead + Send>>),
+					Some(Box::pin(reader)),
 					true,
 					Some(file_name),
 					Some(file_size),
