@@ -134,7 +134,6 @@ async fn process_zip_file(
 
 			if !file.is_dir() {
 				let file_name = file.name().to_string();
-				println!("File name {:?}", file_name);
 				let file_size = file.size() as usize;
 				let mut file_buffer = Vec::new();
 
@@ -280,7 +279,7 @@ mod tests {
 		);
 		let connectivity = local_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
+		assert!(connectivity.is_ok(), "Got connectivity error");
 
 		let result = local_storage.poll_data().await;
 
