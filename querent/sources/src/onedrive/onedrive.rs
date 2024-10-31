@@ -15,7 +15,7 @@ use tokio_util::io::StreamReader;
 use tracing::instrument;
 
 use crate::{
-	default_copy_to_file, SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult,
+	default_copy_to_file, DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult,
 	REQUEST_SEMAPHORE,
 };
 

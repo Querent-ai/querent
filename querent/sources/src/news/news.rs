@@ -1,5 +1,5 @@
 use super::structs::NewsResponse;
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult};
+use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
 use anyhow::Result;
 use async_stream::stream;
 use async_trait::async_trait;

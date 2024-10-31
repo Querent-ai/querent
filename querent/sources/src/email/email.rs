@@ -7,7 +7,9 @@ use std::{
 	sync::Arc,
 };
 
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 use async_trait::async_trait;
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};

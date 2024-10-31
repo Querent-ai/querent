@@ -93,21 +93,39 @@ impl Source for Collector {
 							buffer_data.push(data);
 
 							if extension == "zip".to_string() {
-								let zip_source_res = ZipSource::new(file_data.clone(), source_id).await;
+								let zip_source_res =
+									ZipSource::new(file_data.clone(), source_id).await;
 								match zip_source_res {
 									Ok(zip_source) => {
 										let result = zip_source.poll_data().await;
 										match result {
 											Ok(mut zip_stream) => {
-												while let Some(Ok(zip_data)) = zip_stream.next().await {
-													let zip_file =
-														zip_data.file.clone().unwrap_or_default().to_string_lossy().to_string();
-													let zip_extension = zip_data.extension.clone().unwrap_or_default();
-													let mut zip_buffer_data: Vec<CollectedBytes> = Vec::new();
+												while let Some(Ok(zip_data)) =
+													zip_stream.next().await
+												{
+													let zip_file = zip_data
+														.file
+														.clone()
+														.unwrap_or_default()
+														.to_string_lossy()
+														.to_string();
+													let zip_extension = zip_data
+														.extension
+														.clone()
+														.unwrap_or_default();
+													let mut zip_buffer_data: Vec<CollectedBytes> =
+														Vec::new();
 													zip_buffer_data.push(zip_data);
-													
-													let zip_batch = CollectionBatch::new(&zip_file, &zip_extension, zip_buffer_data, None);
-													if let Err(e) = event_sender.send(zip_batch).await {
+
+													let zip_batch = CollectionBatch::new(
+														&zip_file,
+														&zip_extension,
+														zip_buffer_data,
+														None,
+													);
+													if let Err(e) =
+														event_sender.send(zip_batch).await
+													{
 														error!("Failed to send zip data to event sender: {:?}", e);
 													}
 												}
@@ -120,7 +138,7 @@ impl Source for Collector {
 									},
 									Err(e) => {
 										error!("Failed to get bytes from zip: {:?}", e);
-									}
+									},
 								}
 							}
 

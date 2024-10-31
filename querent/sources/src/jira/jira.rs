@@ -15,7 +15,7 @@ use proto::semantics::JiraCollectorConfig;
 use reqwest::Client;
 use tokio::io::AsyncRead;
 
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult};
+use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
 
 #[derive(Debug, Clone)]
 pub struct AttachmentJira {

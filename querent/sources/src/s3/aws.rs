@@ -1,7 +1,7 @@
 use std::{io, ops::Range, path::Path, pin::Pin};
 
 use crate::{
-	s3::retry::aws_retry, SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult,
+	s3::retry::aws_retry, DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult,
 	REQUEST_SEMAPHORE,
 };
 use async_stream::stream;

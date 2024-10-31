@@ -9,7 +9,9 @@ use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
 use tokio::io::{AsyncRead, AsyncWriteExt};
 
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObjectMetadata {

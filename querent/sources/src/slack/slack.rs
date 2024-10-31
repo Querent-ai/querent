@@ -17,7 +17,7 @@ use slack_morphism::{
 };
 use tokio::io::AsyncRead;
 
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult};
+use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
 
 #[derive(Clone, Debug)]
 pub struct SlackApiClient {

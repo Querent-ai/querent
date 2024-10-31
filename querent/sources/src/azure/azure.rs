@@ -25,7 +25,9 @@ use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 
 /// Azure object storage implementation
 pub struct AzureBlobStorage {

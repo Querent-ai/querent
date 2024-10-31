@@ -1,4 +1,6 @@
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{stream, Stream};
@@ -95,7 +97,6 @@ impl LocalFolderSource {
 		Ok(Box::pin(stream))
 	}
 }
-
 
 #[async_trait]
 impl DataSource for LocalFolderSource {

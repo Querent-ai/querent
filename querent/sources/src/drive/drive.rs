@@ -20,7 +20,9 @@ use tokio::io::{AsyncRead, AsyncWriteExt};
 use tokio_util::io::StreamReader;
 use tracing::instrument;
 
-use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 
 type DriveHub = google_drive3::DriveHub<HttpsConnector<HttpConnector>>;
 
