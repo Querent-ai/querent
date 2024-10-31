@@ -146,7 +146,7 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_zip_collector() {
-        let bytes = include_bytes!("/home/ansh/Downloads/compressed-files/test-3.zip");
+        let bytes = include_bytes!("../../../../test_data/test-3.zip");
 		let zip_source = ZipSource::new(
 			bytes.into(),
             "File-system".to_string(),
