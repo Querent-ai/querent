@@ -20,7 +20,7 @@ use tokio::io::{AsyncRead, AsyncWriteExt};
 use tokio_util::io::StreamReader;
 use tracing::instrument;
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
 
 type DriveHub = google_drive3::DriveHub<HttpsConnector<HttpConnector>>;
 
@@ -137,7 +137,7 @@ impl GoogleDriveSource {
 }
 
 #[async_trait]
-impl Source for GoogleDriveSource {
+impl DataSource for GoogleDriveSource {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let file_id = self.get_file_id_by_path(path).await?;
 		let mut content_body = self.download_file(&file_id).await.map_err(|err| {
@@ -402,7 +402,7 @@ mod tests {
 	use futures::StreamExt;
 	use proto::semantics::GoogleDriveCollectorConfig;
 
-	use crate::Source;
+	use crate::DataSource;
 
 	use super::GoogleDriveSource;
 	use dotenv::dotenv;

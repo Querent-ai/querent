@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use common::{EventType, PubSubBroker, TerimateSignal};
 use engines::Engine;
 use proto::semantics::{IndexingStatistics, IngestedTokens};
-use sources::Source;
+use sources::DataSource;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use storage::{SecretStorage, Storage};
 use tokio::{
@@ -39,7 +39,7 @@ struct ControlLoop;
 
 #[derive(Clone, Debug)]
 pub struct PipelineSettings {
-	pub data_sources: Vec<Arc<dyn sources::Source>>,
+	pub data_sources: Vec<Arc<dyn sources::DataSource>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn SecretStorage>,
@@ -72,7 +72,7 @@ pub struct SemanticPipeline {
 	// Dynamic enging running the pipeline.
 	pub engine: Arc<dyn Engine>,
 	// Data sources
-	pub data_sources: Vec<Arc<dyn sources::Source>>,
+	pub data_sources: Vec<Arc<dyn sources::DataSource>>,
 	// Token sender
 	pub token_sender: Option<mpsc::Sender<IngestedTokens>>,
 	// Event storages
@@ -94,7 +94,7 @@ impl SemanticPipeline {
 	pub fn new(
 		id: String,
 		engine: Arc<dyn Engine>,
-		data_sources: Vec<Arc<dyn Source>>,
+		data_sources: Vec<Arc<dyn DataSource>>,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 		index_storages: Vec<Arc<dyn Storage>>,
 		pubsub_broker: PubSubBroker,

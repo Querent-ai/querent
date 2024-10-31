@@ -11,7 +11,7 @@ use futures::Stream;
 use proto::semantics::NotionConfig;
 use tokio::io::AsyncRead;
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult};
 
 use super::utils::{
 	extract_file_extension, fetch_all_page_ids, fetch_page, format_page, get_images_from_page,
@@ -38,7 +38,7 @@ impl NotionSource {
 }
 
 #[async_trait]
-impl Source for NotionSource {
+impl DataSource for NotionSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let page_ids = if self.page_ids.is_empty() {
 			match fetch_all_page_ids(&self.api_token).await {

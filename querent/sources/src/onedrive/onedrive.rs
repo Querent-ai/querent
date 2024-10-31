@@ -15,7 +15,7 @@ use tokio_util::io::StreamReader;
 use tracing::instrument;
 
 use crate::{
-	default_copy_to_file, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult,
+	default_copy_to_file, SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult,
 	REQUEST_SEMAPHORE,
 };
 
@@ -95,7 +95,7 @@ impl std::fmt::Debug for OneDriveSource {
 }
 
 #[async_trait]
-impl Source for OneDriveSource {
+impl DataSource for OneDriveSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		self.onedrive.get_drive().await?;
 		Ok(())
@@ -283,7 +283,7 @@ impl Source for OneDriveSource {
 
 #[cfg(test)]
 mod tests {
-	use crate::{onedrive::onedrive::OneDriveSource, Source};
+	use crate::{onedrive::onedrive::OneDriveSource, DataSource};
 	use dotenv::dotenv;
 	use futures::StreamExt;
 	use proto::semantics::OneDriveConfig;

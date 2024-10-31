@@ -1,7 +1,7 @@
 use std::{io, ops::Range, path::Path, pin::Pin};
 
 use crate::{
-	s3::retry::aws_retry, SendableAsync, Source, SourceError, SourceErrorKind, SourceResult,
+	s3::retry::aws_retry, SendableAsync, DataSource, SourceError, SourceErrorKind, SourceResult,
 	REQUEST_SEMAPHORE,
 };
 use async_stream::stream;
@@ -114,7 +114,7 @@ impl S3Source {
 }
 
 #[async_trait]
-impl Source for S3Source {
+impl DataSource for S3Source {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let _ = self
 			.s3_client
