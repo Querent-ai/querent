@@ -83,18 +83,26 @@ impl Source for Collector {
 							let extension = data.extension.clone().unwrap_or_default();
 							let source_id = data.source_id.clone();
 
-							if let Some(ref mut data) = data.data {
-								data.read_to_end(&mut file_data).await?;
+							let zip_source_extensions =
+								vec!["zip", "zipx", "jar", "war", "ear", "tar", "gz"];
+							let is_zipped = zip_source_extensions.contains(&extension.as_str());
+
+							if is_zipped{
+								if let Some(ref mut data) = data.data {
+									data.read_to_end(&mut file_data).await?;
+								}
 							}
+							
 
 							let file =
 								data.file.clone().unwrap_or_default().to_string_lossy().to_string();
 							let eof = data.eof;
 							buffer_data.push(data);
 
-							if extension == "zip".to_string() {
+							if is_zipped {
 								let zip_source_res =
-									ZipSource::new(file_data.clone(), source_id).await;
+									ZipSource::new(file_data.clone(), source_id, extension.clone())
+										.await;
 								match zip_source_res {
 									Ok(zip_source) => {
 										let result = zip_source.poll_data().await;
@@ -143,6 +151,9 @@ impl Source for Collector {
 							}
 
 							if eof {
+								if is_zipped {
+									continue;
+								}
 								let batch =
 									CollectionBatch::new(&file, &extension, buffer_data, None);
 								if let Err(e) = event_sender.send(batch).await {

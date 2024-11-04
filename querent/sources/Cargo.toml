@@ -75,3 +75,5 @@ slack-morphism = { workspace = true }
 hyper-util = { workspace = true }
 zip = { workspace = true }
 jira_query = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
