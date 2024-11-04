@@ -116,6 +116,10 @@ impl DataSource for ZipSource {
 						}
 					};
 
+					if file_data.len() == 0 {
+						continue;
+					}
+
 					let extension = file_name.split('.').last().unwrap_or("").to_string();
 
 					let file_path = PathBuf::from(file_name.clone());
@@ -193,6 +197,10 @@ impl DataSource for ZipSource {
 				};
 
 				for (file_name, buffer, extension) in entries {
+					if buffer.len() == 0 {
+						continue;
+					}
+
 					let file_path = PathBuf::from(&file_name);
 					let doc_source = Some(format!("filesystem://{}", file_name));
 
@@ -252,7 +260,7 @@ mod tests {
 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
 			}
 		}
-		println!("Files are --- {:?}", count_files);
+		assert!(count_files.len() > 0, "No files found");
 	}
 
 	#[tokio::test]
@@ -280,6 +288,6 @@ mod tests {
 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
 			}
 		}
-		println!("Files are --- {:?}", count_files);
+		assert!(count_files.len() > 0, "No files found");
 	}
 }

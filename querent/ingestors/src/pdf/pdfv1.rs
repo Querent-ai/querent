@@ -99,10 +99,21 @@ impl BaseIngestor for PdfIngestor {
 						let file_path = PathBuf::from(file.clone());
 						// Guess the format of the image data
 						let format = guess_format(&img_data);
-						let mut ext = "jpeg";
+						let mut ext;
 						if let Ok(f) = format {
 							ext = f.to_mime_type();
 							ext = ext.split("/").last().unwrap_or("jpeg");
+						} else {
+							log::debug!("Failed to load image from memory with image id as  {:?}", image_id);
+							yield Ok(IngestedTokens {
+								data: vec![],
+								file: file.clone(),
+								doc_source: doc_source.clone(),
+								is_token_stream: false,
+								source_id: source_id.clone(),
+								image_id: None,
+							});
+							continue;
 						}
 						let collected_bytes = CollectedBytes {
 							data: Some(Box::pin(std::io::Cursor::new(img_data.clone()))),
