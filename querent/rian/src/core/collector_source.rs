@@ -87,12 +87,11 @@ impl Source for Collector {
 								vec!["zip", "zipx", "jar", "war", "ear", "tar", "gz"];
 							let is_zipped = zip_source_extensions.contains(&extension.as_str());
 
-							if is_zipped{
+							if is_zipped {
 								if let Some(ref mut data) = data.data {
 									data.read_to_end(&mut file_data).await?;
 								}
 							}
-							
 
 							let file =
 								data.file.clone().unwrap_or_default().to_string_lossy().to_string();
