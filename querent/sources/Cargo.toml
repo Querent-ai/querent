@@ -74,3 +74,4 @@ aws-types = {workspace = true}
 slack-morphism = { workspace = true }
 hyper-util = { workspace = true }
 serial_test = { workspace = true }
+jira_query = { workspace = true }
