@@ -352,6 +352,73 @@ mod tests {
 				Err(_) => panic!("Expected successful data collection"),
 			}
 		}
-		println!("Files are --- {:?}", count_files);
+		assert!(count_files.len() > 0, "Expected successful data collection");
+	}
+
+	#[tokio::test]
+	async fn test_email_collector_invalid_credentials() {
+		dotenv().ok();
+		let email_config = EmailCollectorConfig {
+			imap_server: "imap.gmail.com".to_string(),
+			imap_port: 993,
+			imap_username: "invalid_user@gmail.com".to_string(),
+			imap_password: "invalid_password".to_string(),
+			imap_folder: "[Gmail]/Drafts".to_string(),
+			id: "Email-source-id".to_string(),
+		};
+
+		let email_source = EmailSource::new(email_config).await;
+
+		assert!(email_source.is_err(), "Expected source creation to fail");
+	}
+
+	#[tokio::test]
+	async fn test_email_collector_invalid_server() {
+		dotenv().ok();
+		let email_config = EmailCollectorConfig {
+			imap_server: "invalid.imap.server.com".to_string(),
+			imap_port: 993,
+			imap_username: env::var("IMAP_USERNAME").unwrap_or_else(|_| "".to_string()),
+			imap_password: env::var("IMAP_PASSWORD").unwrap_or_else(|_| "".to_string()),
+			imap_folder: "[Gmail]/Drafts".to_string(),
+			id: "Email-source-id".to_string(),
+		};
+
+		let email_source = EmailSource::new(email_config).await;
+
+		assert!(email_source.is_err(), "Expected connection to fail with invalid IMAP server");
+	}
+
+	#[tokio::test]
+	async fn test_email_collector_no_emails() {
+		dotenv().ok();
+		let email_config = EmailCollectorConfig {
+			imap_server: "imap.gmail.com".to_string(),
+			imap_port: 993,
+			imap_username: env::var("IMAP_USERNAME").unwrap_or_else(|_| "".to_string()),
+			imap_password: env::var("IMAP_PASSWORD").unwrap_or_else(|_| "".to_string()),
+			imap_folder: "[Gmail]/Starred".to_string(),
+			id: "Email-source-id".to_string(),
+		};
+
+		let email_source = EmailSource::new(email_config).await.unwrap();
+
+		let result = email_source.poll_data().await;
+		assert!(result.is_ok(), "Expected successful connectivity");
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(_) => panic!("Expected successful data collection"),
+			}
+		}
+		assert!(count_files.len() == 0, "Expected no emails to be collected");
 	}
 }

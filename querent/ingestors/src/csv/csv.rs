@@ -1,6 +1,7 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::CollectedBytes;
+use csv::StringRecord;
 use futures::Stream;
 use proto::semantics::IngestedTokens;
 use std::{io::Cursor, pin::Pin, sync::Arc};
@@ -50,7 +51,17 @@ impl BaseIngestor for CsvIngestor {
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
-					data.read_to_end(&mut buf).await.unwrap();
+					let data_res = data.read_to_end(&mut buf).await;
+					if data_res.is_err() {
+						yield Ok(IngestedTokens {
+								data: vec![],
+								file: file.clone(),
+								doc_source: doc_source.clone(),
+								is_token_stream: false,
+								source_id: source_id.clone(),
+								image_id: None,
+							})
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
@@ -59,7 +70,22 @@ impl BaseIngestor for CsvIngestor {
 			let mut reader = csv::Reader::from_reader(cursor);
 			let headers = reader.headers()?.clone();
 			for result in reader.records() {
-				let record = result?;
+				let record: StringRecord;
+				match result {
+					Ok(res) => {
+						record = res;
+					}, Err(_e) => {
+						yield Ok(IngestedTokens {
+								data: vec![],
+								file: file.clone(),
+								doc_source: doc_source.clone(),
+								is_token_stream: false,
+								source_id: source_id.clone(),
+								image_id: None,
+							});
+						continue;
+					}
+				}
 				let mut content = String::new();
 				for (i, field) in record.iter().enumerate() {
 					let header = &headers[i];
@@ -107,7 +133,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/sample-csv.csv");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("sample-csv.csv").to_path_buf()),
@@ -120,10 +145,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = CsvIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 		let mut all_data = Vec::new();
 		let mut stream = result_stream;
@@ -139,5 +162,41 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest CSV file");
+	}
+
+	#[tokio::test]
+	async fn test_csv_ingestor_with_corrupt_data() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.csv");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.csv").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("csv".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = CsvIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		let mut all_data = Vec::new();
+		let mut stream = result_stream;
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 2, "Unable to ingest CSV file");
 	}
 }
