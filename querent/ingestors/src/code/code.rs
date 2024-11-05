@@ -8,7 +8,7 @@ use tokio::io::AsyncReadExt;
 
 use crate::{
 	process_ingested_tokens_stream, processors::text_processing::TextCleanupProcessor,
-	AsyncProcessor, BaseIngestor, IngestorError, IngestorErrorKind, IngestorResult,
+	AsyncProcessor, BaseIngestor, IngestorResult,
 };
 
 // Define the TxtIngestor
@@ -34,52 +34,72 @@ impl BaseIngestor for CodeIngestor {
 	) -> IngestorResult<Pin<Box<dyn Stream<Item = IngestorResult<IngestedTokens>> + Send + 'static>>>
 	{
 		let stream = stream! {
-		let mut buffer = Vec::new();
-		let mut file = String::new();
-		let mut doc_source = String::new();
-		let mut source_id = String::new();
-		for collected_bytes in all_collected_bytes {
-			if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
-				continue;
-			}
-			if file.is_empty() {
-				file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
-			}
-			if doc_source.is_empty() {
-				doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
-			}
-			if let Some(mut data) = collected_bytes.data {
-				let mut buf = Vec::new();
-				data.read_to_end(&mut buf).await.unwrap();
-				buffer.extend_from_slice(&buf);
-			}
-			source_id = collected_bytes.source_id.clone();
-			}
+			let mut buffer = Vec::new();
+			let mut file = String::new();
+			let mut doc_source = String::new();
+			let mut source_id = String::new();
+			for collected_bytes in all_collected_bytes {
+				if collected_bytes.data.is_none() || collected_bytes.file.is_none() {
+					continue;
+				}
+				if file.is_empty() {
+					file = collected_bytes.file.as_ref().unwrap().to_string_lossy().to_string();
+				}
+				if doc_source.is_empty() {
+					doc_source = collected_bytes.doc_source.clone().unwrap_or_default();
+				}
+				if let Some(mut data) = collected_bytes.data {
+					let mut buf = Vec::new();
+					let read_res = data.read_to_end(&mut buf).await;
+					if read_res.is_err() {
+						yield Ok(IngestedTokens {
+							data: vec![],
+							file: file.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+							image_id: None,
+						})
+						}
+					buffer.extend_from_slice(&buf);
+				}
+				source_id = collected_bytes.source_id.clone();
+				}
 
-			let mut content = String::new();
-			let mut cursor = Cursor::new(buffer);
-			cursor.read_to_string(&mut content).await
-				.map_err(|err| IngestorError::new(IngestorErrorKind::Io, Arc::new(err.into())))?;
-			let ingested_tokens = IngestedTokens {
-				data: vec![content.to_string()],
-				file: file.clone(),
-				doc_source: doc_source.clone(),
-				is_token_stream: false,
-				source_id: source_id.clone(),
-				image_id: None,
-			};
-			yield Ok(ingested_tokens);
+				let mut content = String::new();
+				let mut cursor = Cursor::new(buffer);
+				let is_read = cursor.read_to_string(&mut content).await;
+				if is_read.is_err() {
+					yield Ok(IngestedTokens {
+						data: vec![],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+						image_id: None,
+					})
+				}else {
+				let ingested_tokens = IngestedTokens {
+					data: vec![content.to_string()],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				};
+				yield Ok(ingested_tokens);
 
-			let ingested_tokens = IngestedTokens {
-				data: vec![],
-				file: file.clone(),
-				doc_source: doc_source.clone(),
-				is_token_stream: false,
-				source_id: source_id.clone(),
-				image_id: None,
-			};
+				let ingested_tokens = IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				};
 
-			yield Ok(ingested_tokens);
+				yield Ok(ingested_tokens);
+			}
 		};
 
 		let processed_stream =
@@ -99,7 +119,6 @@ mod tests {
 		let included_bytes = include_bytes!("../csv/csv.rs");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("csv.rs").to_path_buf()),
@@ -112,15 +131,61 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = CodeIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
 		let mut stream = result_stream;
+		let mut found_data = false;
 		while let Some(tokens) = stream.next().await {
-			let _tokens = tokens.unwrap();
+			match tokens {
+				Ok(tokens_res) =>
+					if !tokens_res.data.is_empty() {
+						found_data = true;
+					},
+				Err(e) => {
+					eprintln!("Found error as {:?}", e);
+				},
+			}
 		}
+
+		assert!(found_data, "Data not found");
+	}
+
+	#[tokio::test]
+	async fn test_code_ingestor_with_corrupt_file() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.rs");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.rs").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("rs".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = CodeIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut found_data = false;
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens_res) =>
+					if !tokens_res.data.is_empty() {
+						found_data = true;
+					},
+				Err(e) => {
+					eprintln!("Found error as {:?}", e);
+				},
+			}
+		}
+		assert!(!found_data, "Data should not have been found");
 	}
 }

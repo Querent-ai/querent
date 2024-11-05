@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 /// Represents an entity with a name and its start and end indices in the text.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Entity {
 	/// The name of the entity.
 	pub name: String,

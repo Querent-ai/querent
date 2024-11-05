@@ -223,7 +223,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/samplepptx.odp");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("samplepptx.odp").to_path_buf()),
@@ -236,10 +235,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create an OdpIngestor instance
 		let ingestor = OdpIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 		let mut has_found_image = false;
 		let mut stream = result_stream;
@@ -260,5 +257,41 @@ mod tests {
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest ODP file");
 		assert!(has_found_image, "Unable to ingest images from ODP file");
+	}
+
+	#[tokio::test]
+	async fn test_odp_ingestor_with_corrupt_file() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.odp");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.odp").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("odp".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = OdpIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() == 0, "Should not have ingested ODP file");
 	}
 }

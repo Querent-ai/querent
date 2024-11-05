@@ -325,42 +325,21 @@ pub struct S3CollectorConfig {
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
 pub struct JiraCollectorConfig {
-	/// Server of the Jira collector.
-	#[prost(string, tag = "1")]
-	pub jira_server: ::prost::alloc::string::String,
-	/// Username of the Jira collector.
-	#[prost(string, tag = "2")]
-	pub jira_username: ::prost::alloc::string::String,
-	/// Password of the Jira collector.
-	#[prost(string, tag = "3")]
-	pub jira_password: ::prost::alloc::string::String,
-	/// API token of the Jira collector.
-	#[prost(string, tag = "4")]
-	pub jira_api_token: ::prost::alloc::string::String,
-	/// Certificate file of the Jira collector.
-	#[prost(string, tag = "5")]
-	pub jira_certfile: ::prost::alloc::string::String,
-	/// Key file of the Jira collector.
-	#[prost(string, tag = "6")]
-	pub jira_keyfile: ::prost::alloc::string::String,
-	/// Verify of the Jira collector.
-	#[prost(bool, tag = "7")]
-	pub jira_verify: bool,
-	/// Project of the Jira collector.
-	#[prost(string, tag = "8")]
-	pub jira_project: ::prost::alloc::string::String,
-	/// Query of the Jira collector.
-	#[prost(string, tag = "9")]
-	pub jira_query: ::prost::alloc::string::String,
-	/// Start at of the Jira collector.
-	#[prost(int32, tag = "10")]
-	pub jira_start_at: i32,
-	/// Max results of the Jira collector.
-	#[prost(int32, tag = "11")]
-	pub jira_max_results: i32,
-	/// Id for the collector
-	#[prost(string, tag = "12")]
-	pub id: ::prost::alloc::string::String,
+   /// URL of the server, for example :- <https://querent.atlassian.net>
+   #[prost(string, tag = "1")]
+   pub jira_server: ::prost::alloc::string::String,
+    /// Email associated with the API key
+    #[prost(string, tag = "2")]
+    pub jira_email: ::prost::alloc::string::String,
+    /// Jira API key
+    #[prost(string, tag = "3")]
+    pub jira_api_key: ::prost::alloc::string::String,
+    /// Project of the Jira collector.
+    #[prost(string, tag = "4")]
+    pub jira_project: ::prost::alloc::string::String,
+    /// Id for the collector
+    #[prost(string, tag = "5")]
+    pub id: ::prost::alloc::string::String,
 }
 /// GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
