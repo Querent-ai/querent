@@ -125,7 +125,7 @@ impl From<SourceError> for google_drive3::Error {
 
 /// Sources is all possible data sources that can be used to create a `CollectedBytes`.
 #[async_trait]
-pub trait Source: fmt::Debug + Send + Sync {
+pub trait DataSource: fmt::Debug + Send + Sync {
 	/// Establishes a connection to the source.
 	async fn check_connectivity(&self) -> anyhow::Result<()>;
 

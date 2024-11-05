@@ -17,7 +17,7 @@ use slack_morphism::{
 };
 use tokio::io::AsyncRead;
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
 
 #[derive(Clone, Debug)]
 pub struct SlackApiClient {
@@ -73,7 +73,7 @@ pub async fn get_message(
 }
 
 #[async_trait]
-impl Source for SlackApiClient {
+impl DataSource for SlackApiClient {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let client = SlackClient::new(SlackClientHyperConnector::new()?);
 

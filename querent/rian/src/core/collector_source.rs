@@ -2,9 +2,9 @@ use actors::{ActorExitStatus, MessageBus};
 use async_trait::async_trait;
 use common::{CollectedBytes, CollectionBatch, CollectionCounter, TerimateSignal};
 use futures::StreamExt;
-use sources::{SourceError, SourceErrorKind};
+use sources::{zip::zip::ZipSource, DataSource, SourceError, SourceErrorKind};
 use std::{sync::Arc, time::Duration};
-use tokio::{sync::mpsc, task::JoinHandle, time};
+use tokio::{io::AsyncReadExt, sync::mpsc, task::JoinHandle, time};
 use tracing::{debug, error, info};
 
 use crate::{
@@ -16,7 +16,7 @@ pub struct Collector {
 	pub id: String,
 	pub event_lock: EventLock,
 	pub event_receiver: Option<mpsc::Receiver<CollectionBatch>>,
-	data_pollers: Vec<Arc<dyn sources::Source>>,
+	data_pollers: Vec<Arc<dyn sources::DataSource>>,
 	workflow_handles: Vec<JoinHandle<Result<(), SourceError>>>,
 	pub counters: CollectionCounter,
 	pub terminate_sig: TerimateSignal,
@@ -28,7 +28,7 @@ pub struct Collector {
 impl Collector {
 	pub fn new(
 		id: String,
-		data_pollers: Vec<Arc<dyn sources::Source>>,
+		data_pollers: Vec<Arc<dyn sources::DataSource>>,
 		terminate_sig: TerimateSignal,
 	) -> Self {
 		let total_pollers = data_pollers.len();
@@ -75,16 +75,84 @@ impl Source for Collector {
 				match result {
 					Ok(mut stream) => {
 						let mut buffer_data: Vec<CollectedBytes> = Vec::new();
-						while let Some(Ok(data)) = stream.next().await {
+						let mut file_data = Vec::new();
+						while let Some(Ok(mut data)) = stream.next().await {
 							if terminate_sig.is_dead() {
 								break;
 							}
 							let extension = data.extension.clone().unwrap_or_default();
+							let source_id = data.source_id.clone();
+
+							let zip_source_extensions =
+								vec!["zip", "zipx", "jar", "war", "ear", "tar", "gz"];
+							let is_zipped = zip_source_extensions.contains(&extension.as_str());
+
+							if is_zipped {
+								if let Some(ref mut data) = data.data {
+									data.read_to_end(&mut file_data).await?;
+								}
+							}
+
 							let file =
 								data.file.clone().unwrap_or_default().to_string_lossy().to_string();
 							let eof = data.eof;
 							buffer_data.push(data);
+
+							if is_zipped {
+								let zip_source_res =
+									ZipSource::new(file_data.clone(), source_id, extension.clone())
+										.await;
+								match zip_source_res {
+									Ok(zip_source) => {
+										let result = zip_source.poll_data().await;
+										match result {
+											Ok(mut zip_stream) => {
+												while let Some(Ok(zip_data)) =
+													zip_stream.next().await
+												{
+													let zip_file = zip_data
+														.file
+														.clone()
+														.unwrap_or_default()
+														.to_string_lossy()
+														.to_string();
+													let zip_extension = zip_data
+														.extension
+														.clone()
+														.unwrap_or_default();
+													let mut zip_buffer_data: Vec<CollectedBytes> =
+														Vec::new();
+													zip_buffer_data.push(zip_data);
+
+													let zip_batch = CollectionBatch::new(
+														&zip_file,
+														&zip_extension,
+														zip_buffer_data,
+														None,
+													);
+													if let Err(e) =
+														event_sender.send(zip_batch).await
+													{
+														error!("Failed to send zip data to event sender: {:?}", e);
+													}
+												}
+											},
+											Err(e) => {
+												error!("Failed to poll zip data: {:?}", e);
+												return Err(e);
+											},
+										}
+									},
+									Err(e) => {
+										error!("Failed to get bytes from zip: {:?}", e);
+									},
+								}
+							}
+
 							if eof {
+								if is_zipped {
+									continue;
+								}
 								let batch =
 									CollectionBatch::new(&file, &extension, buffer_data, None);
 								if let Err(e) = event_sender.send(batch).await {

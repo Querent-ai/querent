@@ -1,4 +1,6 @@
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{stream, Stream};
@@ -70,6 +72,7 @@ impl LocalFolderSource {
 		file_path: PathBuf,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
 		let source_id = self.source_id.clone();
+
 		let stream = async_stream::stream! {
 			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
@@ -84,7 +87,7 @@ impl LocalFolderSource {
 				true,
 				Some(file_name),
 				Some(file_size),
-				source_id,
+				source_id.clone(),
 				None,
 			);
 
@@ -96,7 +99,7 @@ impl LocalFolderSource {
 }
 
 #[async_trait]
-impl Source for LocalFolderSource {
+impl DataSource for LocalFolderSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		if !self.folder_path.exists() {
 			return Err(SourceError::new(
@@ -202,7 +205,7 @@ mod tests {
 	use futures::StreamExt;
 	use tempfile::TempDir;
 
-	use crate::Source;
+	use crate::DataSource;
 
 	use super::LocalFolderSource;
 
@@ -214,7 +217,8 @@ mod tests {
 		);
 		let connectivity = local_storage.check_connectivity().await;
 
-		assert!(connectivity.is_ok(), "Expected connctivity to work");
+		assert!(connectivity.is_ok(), "Got connectivity error");
+
 		let result = local_storage.poll_data().await;
 
 		let mut stream = result.unwrap();
