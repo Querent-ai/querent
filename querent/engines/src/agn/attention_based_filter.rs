@@ -2,7 +2,7 @@ use crate::agn::attention_based_search::Entity;
 use std::collections::HashSet;
 
 /// Represents the relationship between a head and a tail entity, including associated relations and their scores.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct HeadTailRelations {
 	/// The head entity in the relationship.
 	pub head: Entity,

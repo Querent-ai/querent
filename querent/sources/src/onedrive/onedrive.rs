@@ -5,6 +5,7 @@ use async_stream::stream;
 use async_trait::async_trait;
 use common::{retry, CollectedBytes, RetryParams};
 use futures::{Stream, TryStreamExt as _};
+use once_cell::sync::Lazy;
 use onedrive_api::{
 	Auth, ClientCredential, DriveLocation, ItemLocation, OneDrive, Permission, Tenant,
 };
@@ -27,7 +28,8 @@ pub struct OneDriveSource {
 	retry_params: RetryParams,
 }
 
-pub static TOKEN: tokio::sync::OnceCell<String> = tokio::sync::OnceCell::const_new();
+pub static TOKEN: Lazy<tokio::sync::Mutex<Option<String>>> =
+	Lazy::new(|| tokio::sync::Mutex::new(None));
 
 impl OneDriveSource {
 	pub async fn new(config: OneDriveConfig) -> anyhow::Result<Self> {
@@ -41,25 +43,38 @@ impl OneDriveSource {
 	}
 
 	pub async fn get_logined_onedrive(config: &OneDriveConfig) -> Result<OneDrive, anyhow::Error> {
-		let token = TOKEN
-			.get_or_init(|| async {
-				let auth = Auth::new(
-					config.client_id.clone(),
-					Permission::new_read().write(true).offline_access(true),
-					config.redirect_uri.clone(),
-					Tenant::Consumers,
-				);
-				auth.login_with_refresh_token(
+		let mut token_guard = TOKEN.lock().await;
+
+		if token_guard.is_none() {
+			let auth = Auth::new(
+				config.client_id.clone(),
+				Permission::new_read().write(true).offline_access(true),
+				config.redirect_uri.clone(),
+				Tenant::Consumers,
+			);
+			let token_response = auth
+				.login_with_refresh_token(
 					&config.refresh_token,
 					&ClientCredential::Secret(config.client_secret.clone()),
 				)
-				.await
-				.map_err(|e| anyhow!("Login failed: {}", e))
-				.unwrap()
-				.access_token
-			})
-			.await;
-		Ok(OneDrive::new(token.clone(), DriveLocation::me()))
+				.await;
+
+			match token_response {
+				Ok(response) => {
+					*token_guard = Some(response.access_token.clone());
+				},
+				Err(e) => {
+					eprintln!("Login failed: {}", e);
+					return Err(anyhow!("Login failed: {}", e));
+				},
+			}
+		}
+
+		if let Some(token) = &*token_guard {
+			Ok(OneDrive::new(token.clone(), DriveLocation::me()))
+		} else {
+			Err(anyhow!("Failed to obtain access token from OneDrive"))
+		}
 	}
 
 	async fn download_file(
@@ -97,8 +112,19 @@ impl std::fmt::Debug for OneDriveSource {
 #[async_trait]
 impl DataSource for OneDriveSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		self.onedrive.get_drive().await?;
-		Ok(())
+		let folder_path = self.folder_path.clone();
+		let folder_location = ItemLocation::from_path(&folder_path);
+
+		if folder_location.is_none() {
+			return Err(anyhow!("Invalid folder path: {}", self.folder_path));
+		}
+
+		let folder_metadata = self.onedrive.get_item(folder_location.unwrap()).await;
+
+		match folder_metadata {
+			Ok(_) => Ok(()),
+			Err(e) => Err(anyhow!("Failed to verify folder existence: {}", e)),
+		}
 	}
 
 	async fn copy_to_file(&self, path: &Path, output_path: &Path) -> SourceResult<u64> {
@@ -287,11 +313,21 @@ mod tests {
 	use dotenv::dotenv;
 	use futures::StreamExt;
 	use proto::semantics::OneDriveConfig;
+	use serial_test::serial;
 	use std::{collections::HashSet, env};
 
+	use super::TOKEN;
+
+	async fn reset_token() {
+		let mut token_guard = TOKEN.lock().await;
+		*token_guard = None;
+	}
+
 	#[tokio::test]
+	#[serial]
 	async fn test_onedrive_collector() {
 		dotenv().ok();
+		reset_token().await;
 		let onedrive_config = OneDriveConfig {
 			client_id: env::var("ONEDRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
 			client_secret: env::var("ONEDRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
@@ -304,7 +340,7 @@ mod tests {
 		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
 		let connectivity = drive_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
+		assert!(connectivity.is_ok(), "Expected connectivity to work");
 
 		let result = drive_storage.poll_data().await;
 
@@ -321,6 +357,82 @@ mod tests {
 				Err(err) => eprintln!("Expected successful data collection {:?}", err),
 			}
 		}
-		println!("Files are --- {:?}", count_files);
+		assert!(count_files.len() > 0, "Expected successful data polling");
+	}
+
+	//The given test runs when we run it individually but it fails when we run it using cargo test. The reason is TOKEN value does not gets reset properly
+	#[tokio::test]
+	#[serial]
+	async fn test_onedrive_collector_invalid_credentials() {
+		dotenv().ok();
+		reset_token().await;
+		let onedrive_config = OneDriveConfig {
+			client_id: "invalid_client_id".to_string(),
+			client_secret: "invalid_client_secret".to_string(),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: "invalid_refresh_token".to_string(),
+			folder_path: "/testing".to_string(),
+			id: "test".to_string(),
+		};
+
+		let drive_storage = OneDriveSource::new(onedrive_config).await;
+
+		// println!("Drive storage is {:?}", drive_storage.err());
+
+		assert!(drive_storage.is_err(), "Expected drive storage to fail");
+	}
+
+	#[tokio::test]
+	#[serial]
+	async fn test_onedrive_collector_invalid_folder() {
+		dotenv().ok();
+		let onedrive_config = OneDriveConfig {
+			client_id: env::var("ONEDRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			client_secret: env::var("ONEDRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: env::var("ONEDRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_path: "/invalid_folder_path-1".to_string(),
+			id: "test".to_string(),
+		};
+
+		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
+
+		let connectivity = drive_storage.check_connectivity().await;
+		// println!("Error is {:?}", connectivity.err());
+
+		assert!(connectivity.is_err(), "Expected drive storage to fail");
+	}
+
+	#[tokio::test]
+	#[serial]
+	async fn test_onedrive_collector_empty_folder() {
+		dotenv().ok();
+		let onedrive_config = OneDriveConfig {
+			client_id: env::var("ONEDRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			client_secret: env::var("ONEDRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			redirect_uri: "http://localhost:8000/callback".to_string(),
+			refresh_token: env::var("ONEDRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_path: "/empty-folder".to_string(),
+			id: "test".to_string(),
+		};
+
+		let drive_storage = OneDriveSource::new(onedrive_config).await.unwrap();
+		let result = drive_storage.poll_data().await;
+		assert!(result.is_ok(), "Expected successful connectivity");
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => eprintln!("Expected successful data collection {:?}", err),
+			}
+		}
+		assert!(count_files.len() == 0, "Expected zero data");
 	}
 }

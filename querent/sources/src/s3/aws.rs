@@ -123,7 +123,8 @@ impl DataSource for S3Source {
 			.list_objects_v2()
 			.bucket(self.bucket_name.clone())
 			.send()
-			.await;
+			.await?;
+
 		Ok(())
 	}
 
@@ -281,7 +282,6 @@ async fn download_all(byte_stream: ByteStream, output: &mut Vec<u8>) -> io::Resu
 }
 
 #[cfg(test)]
-
 mod tests {
 
 	use std::{collections::HashSet, env};
@@ -325,6 +325,72 @@ mod tests {
 				Err(_) => panic!("Expected successful data collection"),
 			}
 		}
-		println!("Files are --- {:?}", count_files);
+		assert!(count_files.len() > 0, "Expected successful data collection");
 	}
+
+	#[tokio::test]
+	async fn test_aws_collector_invalid_credentials() {
+		dotenv().ok();
+		let aws_config = S3CollectorConfig {
+			access_key: "invalid_access_key".to_string(),
+			secret_key: "invalid_secret_key".to_string(),
+			region: "ap-south-1".to_string(),
+			bucket: "querentbucket1".to_string(),
+			id: "AWS-source".to_string(),
+		};
+
+		let s3_storage = S3Source::new(aws_config).await;
+		let result = s3_storage.check_connectivity().await;
+
+		assert!(result.is_err(), "Expected connection to fail with invalid credentials");
+	}
+
+	#[tokio::test]
+	async fn test_aws_collector_invalid_bucket() {
+		dotenv().ok();
+		let aws_config = S3CollectorConfig {
+			access_key: env::var("AWS_ACCESS_KEY").unwrap_or_else(|_| "".to_string()),
+			secret_key: env::var("AWS_SECRET_KEY").unwrap_or_else(|_| "".to_string()),
+			region: "ap-south-1".to_string(),
+			bucket: "randombucketname".to_string(),
+			id: "AWS-source".to_string(),
+		};
+
+		let s3_storage = S3Source::new(aws_config).await;
+		let result = s3_storage.check_connectivity().await;
+
+		assert!(result.is_err(), "Expected connection to fail with an invalid bucket name");
+	}
+
+	// #[tokio::test]
+	// async fn test_aws_collector_empty_bucket() {
+	// 	dotenv().ok();
+	// 	let aws_config = S3CollectorConfig {
+	// 		access_key: env::var("AWS_ACCESS_KEY").unwrap_or_else(|_| "".to_string()),
+	// 		secret_key: env::var("AWS_SECRET_KEY").unwrap_or_else(|_| "".to_string()),
+	// 		region: "ap-south-1".to_string(),
+	// 		bucket: "empty-bucket".to_string(),
+	// 		id: "AWS-source".to_string(),
+	// 	};
+
+	// 	let s3_storage = S3Source::new(aws_config).await;
+	// 	let result = s3_storage.poll_data().await;
+	// 	assert!(result.is_ok(), "Expected successful connectivity");
+
+	// 	let mut stream = result.unwrap();
+	// 	let mut count_files: HashSet<String> = HashSet::new();
+	// 	while let Some(item) = stream.next().await {
+	// 		match item {
+	// 			Ok(collected_bytes) => {
+	// 				if let Some(pathbuf) = collected_bytes.file {
+	// 					if let Some(str_path) = pathbuf.to_str() {
+	// 						count_files.insert(str_path.to_string());
+	// 					}
+	// 				}
+	// 			},
+	// 			Err(e) => panic!("Expected successful data collection {:?}", e),
+	// 		}
+	// 	}
+	// 	assert!(count_files.len() == 0, "Expected successful data collection");
+	// }
 }

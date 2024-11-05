@@ -476,4 +476,97 @@ mod tests {
 		}
 		assert!(count_files.len() > 0, "Expected at least one file");
 	}
+
+	#[tokio::test]
+	async fn test_drive_collector_invalid_credentials() {
+		dotenv().ok();
+		let google_config = GoogleDriveCollectorConfig {
+			id: "Drive-source-id".to_string(),
+			drive_client_secret: "InvalidSecret".to_string(),
+			drive_client_id: "InvalidClientID".to_string(),
+			drive_refresh_token: "InvalidRefreshToken".to_string(),
+			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+		};
+
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
+
+		assert!(connectivity.is_err(), "Expected connectivity to fail with invalid credentials");
+	}
+
+	#[tokio::test]
+	async fn test_drive_collector_invalid_folder() {
+		dotenv().ok();
+		let google_config = GoogleDriveCollectorConfig {
+			id: "Drive-source-id".to_string(),
+			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_to_crawl: "invalid-folder-id".to_string(),
+		};
+
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
+		assert!(connectivity.is_ok(), "Expected connectivity to pass");
+
+		let result = drive_storage.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		let mut found_error = false;
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => {
+					found_error = true;
+					eprintln!("Expected successful data collection {:?}", err)
+				},
+			}
+		}
+
+		assert!(found_error, "Expected data collection to fail with invalid folder ID");
+	}
+
+	#[tokio::test]
+	async fn test_drive_collector_special_character_files() {
+		dotenv().ok();
+		let google_config = GoogleDriveCollectorConfig {
+			id: "Drive-source-id".to_string(),
+			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
+			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
+			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
+			folder_to_crawl: "special-character-folder-id".to_string(),
+		};
+
+		let drive_storage = GoogleDriveSource::new(google_config).await;
+		let connectivity = drive_storage.check_connectivity().await;
+		assert!(connectivity.is_ok(), "Expected connectivity to pass");
+
+		let result = drive_storage.poll_data().await;
+
+		let mut stream = result.unwrap();
+		let mut count_files: HashSet<String> = HashSet::new();
+		let mut found_error = false;
+		while let Some(item) = stream.next().await {
+			match item {
+				Ok(collected_bytes) =>
+					if let Some(pathbuf) = collected_bytes.file {
+						if let Some(str_path) = pathbuf.to_str() {
+							count_files.insert(str_path.to_string());
+						}
+					},
+				Err(err) => {
+					found_error = true;
+					eprintln!("Expected successful data collection {:?}", err)
+				},
+			}
+		}
+
+		assert!(found_error, "Expected data collection to fail with invalid folder ID");
+	}
 }
