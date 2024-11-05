@@ -9,7 +9,9 @@ use opendal::{Metakey, Operator};
 use proto::semantics::GcsCollectorConfig;
 use tokio::io::{AsyncRead, AsyncWriteExt};
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ObjectMetadata {
@@ -50,7 +52,7 @@ impl OpendalStorage {
 }
 
 #[async_trait]
-impl Source for OpendalStorage {
+impl DataSource for OpendalStorage {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		self.op.check().await?;
 		Ok(())

@@ -7,7 +7,9 @@ use std::{
 	sync::Arc,
 };
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 use async_trait::async_trait;
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
@@ -120,7 +122,7 @@ impl EmailSource {
 }
 
 #[async_trait]
-impl Source for EmailSource {
+impl DataSource for EmailSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let tls = native_tls::TlsConnector::builder().build()?;
 

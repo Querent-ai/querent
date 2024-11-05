@@ -19,12 +19,13 @@ pub mod notion;
 pub mod onedrive;
 pub mod s3;
 pub mod slack;
+pub mod zip;
 use once_cell::sync::Lazy;
 use tokio::sync::Semaphore;
 
 static REQUEST_SEMAPHORE: Lazy<Semaphore> = Lazy::new(|| Semaphore::new(1000));
 
-async fn default_copy_to_file<S: Source + ?Sized>(
+async fn default_copy_to_file<S: DataSource + ?Sized>(
 	storage: &S,
 	path: &Path,
 	output_path: &Path,

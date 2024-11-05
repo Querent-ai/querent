@@ -15,7 +15,7 @@ use proto::semantics::JiraCollectorConfig;
 use reqwest::Client;
 use tokio::io::AsyncRead;
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
 
 #[derive(Debug, Clone)]
 pub struct AttachmentJira {
@@ -196,7 +196,7 @@ fn string_to_async_read(data: String) -> impl AsyncRead + Send + Unpin {
 }
 
 #[async_trait]
-impl Source for JiraSource {
+impl DataSource for JiraSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let jira_url = format!("{}/rest/api/2/search", self.jira_server.clone());
 		let email = self.jira_email.clone();

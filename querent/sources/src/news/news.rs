@@ -1,5 +1,5 @@
 use super::structs::NewsResponse;
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult};
+use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
 use anyhow::Result;
 use async_stream::stream;
 use async_trait::async_trait;
@@ -232,7 +232,7 @@ fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
 }
 
 #[async_trait]
-impl Source for NewsApiClient {
+impl DataSource for NewsApiClient {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		let url = format!(
             "https://newsapi.org/v2/top-headlines?country=us&category=business&pagesize=1&apiKey={}",

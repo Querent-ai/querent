@@ -25,7 +25,9 @@ use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
 use tokio_util::{compat::FuturesAsyncReadCompatExt, io::StreamReader};
 use tracing::instrument;
 
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 
 /// Azure object storage implementation
 pub struct AzureBlobStorage {
@@ -127,7 +129,7 @@ async fn download_all(
 }
 
 #[async_trait]
-impl Source for AzureBlobStorage {
+impl DataSource for AzureBlobStorage {
 	async fn copy_to(&self, path: &Path, output: &mut dyn SendableAsync) -> SourceResult<()> {
 		let name = self.blob_name(path);
 		let mut output_stream = self.container_client.blob_client(name).get().into_stream();
