@@ -3,156 +3,148 @@
 
 /** user-defined commands **/
 
+
 export const commands = {
-	async getUpdateResult(): Promise<[boolean, UpdateResult | null]> {
-		return await TAURI_INVOKE('get_update_result');
-	},
-	async checkIfServiceIsRunning(): Promise<boolean> {
-		return await TAURI_INVOKE('check_if_service_is_running');
-	},
-	async hasRianLicenseKey(): Promise<boolean> {
-		return await TAURI_INVOKE('has_rian_license_key');
-	},
-	async setRianLicenseKey(key: string): Promise<boolean> {
-		return await TAURI_INVOKE('set_rian_license_key', { key });
-	},
-	async setCollectors(collectors: CollectorConfig[]): Promise<boolean> {
-		return await TAURI_INVOKE('set_collectors', { collectors });
-	},
-	async getCollectors(): Promise<ListCollectorConfig> {
-		return await TAURI_INVOKE('get_collectors');
-	},
-	async startAgnFabric(
-		request: SemanticPipelineRequest
-	): Promise<Result<SemanticPipelineResponse, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('start_agn_fabric', { request }) };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async getRunningAgns(): Promise<[string, SemanticPipelineRequest][]> {
-		return await TAURI_INVOKE('get_running_agns');
-	},
-	async stopAgnFabric(pipelineId: string): Promise<Result<null, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('stop_agn_fabric', { pipelineId }) };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async sendDiscoveryRetrieverRequest(
-		searchQuery: string,
-		topPairs: string[]
-	): Promise<Result<DiscoveryResponse, string>> {
-		try {
-			return {
-				status: 'ok',
-				data: await TAURI_INVOKE('send_discovery_retriever_request', { searchQuery, topPairs })
-			};
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async listAvailableInsights(): Promise<Result<InsightInfo[], string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('list_available_insights') };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async listPastInsights(): Promise<Result<InsightRequestInfoList, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('list_past_insights') };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async triggerInsightAnalyst(
-		request: InsightAnalystRequest
-	): Promise<Result<InsightAnalystResponse, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('trigger_insight_analyst', { request }) };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async getRunningInsightAnalysts(): Promise<[string, InsightAnalystRequest][]> {
-		return await TAURI_INVOKE('get_running_insight_analysts');
-	},
-	async stopInsightAnalyst(sessionId: string): Promise<Result<null, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('stop_insight_analyst', { sessionId }) };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async promptInsightAnalyst(request: InsightQuery): Promise<Result<InsightQueryResponse, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('prompt_insight_analyst', { request }) };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async getPastAgns(): Promise<Result<PipelineRequestInfoList, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('get_past_agns') };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async getDriveCredentials(): Promise<Result<[string, string], string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('get_drive_credentials') };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async deleteCollectors(id: DeleteCollectorRequest): Promise<boolean> {
-		return await TAURI_INVOKE('delete_collectors', { id });
-	},
-	async ingestTokens(tokens: IngestedTokens[], pipelineId: string): Promise<boolean> {
-		return await TAURI_INVOKE('ingest_tokens', { tokens, pipelineId });
-	},
-	async describePipeline(pipelineId: string): Promise<Result<IndexingStatistics, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('describe_pipeline', { pipelineId }) };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	},
-	async startOauthServer(): Promise<Result<string, string>> {
-		try {
-			return { status: 'ok', data: await TAURI_INVOKE('start_oauth_server') };
-		} catch (e) {
-			if (e instanceof Error) throw e;
-			else return { status: 'error', error: e as any };
-		}
-	}
-};
+async getUpdateResult() : Promise<[boolean, UpdateResult | null]> {
+    return await TAURI_INVOKE("get_update_result");
+},
+async checkIfServiceIsRunning() : Promise<boolean> {
+    return await TAURI_INVOKE("check_if_service_is_running");
+},
+async hasRianLicenseKey() : Promise<boolean> {
+    return await TAURI_INVOKE("has_rian_license_key");
+},
+async setRianLicenseKey(key: string) : Promise<boolean> {
+    return await TAURI_INVOKE("set_rian_license_key", { key });
+},
+async setCollectors(collectors: CollectorConfig[]) : Promise<boolean> {
+    return await TAURI_INVOKE("set_collectors", { collectors });
+},
+async getCollectors() : Promise<ListCollectorConfig> {
+    return await TAURI_INVOKE("get_collectors");
+},
+async startAgnFabric(request: SemanticPipelineRequest) : Promise<Result<SemanticPipelineResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_agn_fabric", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRunningAgns() : Promise<([string, SemanticPipelineRequest])[]> {
+    return await TAURI_INVOKE("get_running_agns");
+},
+async stopAgnFabric(pipelineId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_agn_fabric", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async sendDiscoveryRetrieverRequest(searchQuery: string, topPairs: string[]) : Promise<Result<DiscoveryResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("send_discovery_retriever_request", { searchQuery, topPairs }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listAvailableInsights() : Promise<Result<InsightInfo[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_available_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listPastInsights() : Promise<Result<InsightRequestInfoList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_past_insights") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async triggerInsightAnalyst(request: InsightAnalystRequest) : Promise<Result<InsightAnalystResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("trigger_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRunningInsightAnalysts() : Promise<([string, InsightAnalystRequest])[]> {
+    return await TAURI_INVOKE("get_running_insight_analysts");
+},
+async stopInsightAnalyst(sessionId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("stop_insight_analyst", { sessionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async promptInsightAnalyst(request: InsightQuery) : Promise<Result<InsightQueryResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prompt_insight_analyst", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getPastAgns() : Promise<Result<PipelineRequestInfoList, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_past_agns") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getDriveCredentials() : Promise<Result<[string, string], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_drive_credentials") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async deleteCollectors(id: DeleteCollectorRequest) : Promise<boolean> {
+    return await TAURI_INVOKE("delete_collectors", { id });
+},
+async ingestTokens(tokens: IngestedTokens[], pipelineId: string) : Promise<boolean> {
+    return await TAURI_INVOKE("ingest_tokens", { tokens, pipelineId });
+},
+async describePipeline(pipelineId: string) : Promise<Result<IndexingStatistics, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("describe_pipeline", { pipelineId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async startOauthServer() : Promise<Result<string, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("start_oauth_server") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+}
+}
 
 /** user-defined events **/
 
+
 export const events = __makeEvents__<{
-	checkUpdateEvent: CheckUpdateEvent;
-	checkUpdateResultEvent: CheckUpdateResultEvent;
-	pinnedFromWindowEvent: PinnedFromWindowEvent;
+checkUpdateEvent: CheckUpdateEvent,
+checkUpdateResultEvent: CheckUpdateResultEvent,
+pinnedFromWindowEvent: PinnedFromWindowEvent
 }>({
-	checkUpdateEvent: 'check-update-event',
-	checkUpdateResultEvent: 'check-update-result-event',
-	pinnedFromWindowEvent: 'pinned-from-window-event'
-});
+checkUpdateEvent: "check-update-event",
+checkUpdateResultEvent: "check-update-result-event",
+pinnedFromWindowEvent: "pinned-from-window-event"
+})
 
 /** user-defined constants **/
 
@@ -163,636 +155,558 @@ export const universalConstant = 42 as const;
 /**
  * AzureCollectorConfig is a message to hold configuration for an Azure collector.
  */
-export type AzureCollectorConfig = {
-	/**
-	 * Connection string of the Azure collector.
-	 */
-	connection_string: string;
-	/**
-	 * Container of the Azure collector.
-	 */
-	container: string;
-	/**
-	 * Credentials of the Azure collector.
-	 */
-	credentials: string;
-	/**
-	 * Prefix of the Azure collector.
-	 */
-	prefix: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
-export type Backend =
-	| { azure: AzureCollectorConfig }
-	| { gcs: GcsCollectorConfig }
-	| { s3: S3CollectorConfig }
-	| { jira: JiraCollectorConfig }
-	| { drive: GoogleDriveCollectorConfig }
-	| { email: EmailCollectorConfig }
-	| { dropbox: DropBoxCollectorConfig }
-	| { github: GithubCollectorConfig }
-	| { slack: SlackCollectorConfig }
-	| { news: NewsCollectorConfig }
-	| { files: FileCollectorConfig }
-	| { onedrive: OneDriveConfig }
-	| { notion: NotionConfig };
-export type CheckUpdateEvent = null;
-export type CheckUpdateResultEvent = UpdateResult;
+export type AzureCollectorConfig = { 
+/**
+ * Connection string of the Azure collector.
+ */
+connection_string: string; 
+/**
+ * Container of the Azure collector.
+ */
+container: string; 
+/**
+ * Credentials of the Azure collector.
+ */
+credentials: string; 
+/**
+ * Prefix of the Azure collector.
+ */
+prefix: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type Backend = { azure: AzureCollectorConfig } | { gcs: GcsCollectorConfig } | { s3: S3CollectorConfig } | { jira: JiraCollectorConfig } | { drive: GoogleDriveCollectorConfig } | { email: EmailCollectorConfig } | { dropbox: DropBoxCollectorConfig } | { github: GithubCollectorConfig } | { slack: SlackCollectorConfig } | { news: NewsCollectorConfig } | { files: FileCollectorConfig } | { onedrive: OneDriveConfig } | { notion: NotionConfig }
+export type CheckUpdateEvent = null
+export type CheckUpdateResultEvent = UpdateResult
 /**
  * CollectorConfig is a message to hold configuration for a collector.
  * Defines a collector with a specific configuration.
  */
-export type CollectorConfig = { name: string; backend: Backend | null };
-export type Custom = string;
+export type CollectorConfig = { name: string; backend: Backend | null }
+export type Custom = string
 /**
  * A custom option for insights.
  */
-export type CustomInsightOption = {
-	/**
-	 * Unique identifier for the option.
-	 */
-	id: string;
-	/**
-	 * Display label for the option.
-	 */
-	label: string;
-	/**
-	 * Tooltip text for the option.
-	 */
-	tooltip: string | null;
-	/**
-	 * Value of the custom option.
-	 */
-	value: InsightCustomOptionValue;
-};
-export type DeleteCollectorRequest = { id: string[] };
+export type CustomInsightOption = { 
+/**
+ * Unique identifier for the option.
+ */
+id: string; 
+/**
+ * Display label for the option.
+ */
+label: string; 
+/**
+ * Tooltip text for the option.
+ */
+tooltip: string | null; 
+/**
+ * Value of the custom option.
+ */
+value: InsightCustomOptionValue }
+export type DeleteCollectorRequest = { id: string[] }
 /**
  * Response message containing insights discovered from the data
  */
-export type DiscoveryResponse = {
-	/**
-	 * The ID of the discovery session
-	 */
-	session_id: string;
-	/**
-	 * Query or question posed by the user
-	 */
-	query: string;
-	/**
-	 * The insights discovered based on the user's query
-	 */
-	insights: Insight[];
-	/**
-	 * The search result page number
-	 */
-	page_ranking: number;
-};
+export type DiscoveryResponse = { 
+/**
+ * The ID of the discovery session
+ */
+session_id: string; 
+/**
+ * Query or question posed by the user
+ */
+query: string; 
+/**
+ * The insights discovered based on the user's query
+ */
+insights: Insight[]; 
+/**
+ * The search result page number
+ */
+page_ranking: number }
 /**
  * DropBoxCollectorConfig is a message to hold configuration for a DropBox collector.
  */
-export type DropBoxCollectorConfig = {
-	/**
-	 * App key of the DropBox collector.
-	 */
-	dropbox_app_key: string;
-	/**
-	 * App secret of the DropBox collector.
-	 */
-	dropbox_app_secret: string;
-	/**
-	 * Refresh token of the DropBox collector.
-	 */
-	dropbox_refresh_token: string;
-	/**
-	 * Folder path of the DropBox collector.
-	 */
-	folder_path: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
+export type DropBoxCollectorConfig = { 
+/**
+ * App key of the DropBox collector.
+ */
+dropbox_app_key: string; 
+/**
+ * App secret of the DropBox collector.
+ */
+dropbox_app_secret: string; 
+/**
+ * Refresh token of the DropBox collector.
+ */
+dropbox_refresh_token: string; 
+/**
+ * Folder path of the DropBox collector.
+ */
+folder_path: string; 
+/**
+ * Id for the collector
+ */
+id: string }
 /**
  * EmailCollectorConfig is a message to hold configuration for an Email collector.
  */
-export type EmailCollectorConfig = {
-	/**
-	 * Server of the Email collector.
-	 */
-	imap_server: string;
-	/**
-	 * Port of the Email collector.
-	 */
-	imap_port: number;
-	/**
-	 * Username of the Email collector.
-	 */
-	imap_username: string;
-	/**
-	 * Password of the Email collector.
-	 */
-	imap_password: string;
-	/**
-	 * Folder of the Email collector.
-	 */
-	imap_folder: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
+export type EmailCollectorConfig = { 
+/**
+ * Server of the Email collector.
+ */
+imap_server: string; 
+/**
+ * Port of the Email collector.
+ */
+imap_port: number; 
+/**
+ * Username of the Email collector.
+ */
+imap_username: string; 
+/**
+ * Password of the Email collector.
+ */
+imap_password: string; 
+/**
+ * Folder of the Email collector.
+ */
+imap_folder: string; 
+/**
+ * Id for the collector
+ */
+id: string }
 /**
  * FileCollectorConfig is a message to hold configuration for a file collector.
  */
-export type FileCollectorConfig = {
-	root_path: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
-export type FixedEntities = { entities: string[] };
+export type FileCollectorConfig = { root_path: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type FixedEntities = { entities: string[] }
 /**
  * GCSCollectorConfig is a message to hold configuration for a GCS collector.
  */
-export type GcsCollectorConfig = {
-	/**
-	 * Bucket of the GCS collector.
-	 */
-	bucket: string;
-	/**
-	 * Credentials of the GCS collector.
-	 */
-	credentials: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
+export type GcsCollectorConfig = { 
+/**
+ * Bucket of the GCS collector.
+ */
+bucket: string; 
+/**
+ * Credentials of the GCS collector.
+ */
+credentials: string; 
+/**
+ * Id for the collector
+ */
+id: string }
 /**
  * GithubCollectorConfig is a message to hold configuration for a Github collector.
  */
-export type GithubCollectorConfig = {
-	/**
-	 * Username of the Github collector.
-	 */
-	github_username: string;
-	/**
-	 * Access token of the Github collector.
-	 */
-	github_access_token: string;
-	/**
-	 * Repository of the Github collector.
-	 */
-	repository: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
+export type GithubCollectorConfig = { 
+/**
+ * Username of the Github collector.
+ */
+github_username: string; 
+/**
+ * Access token of the Github collector.
+ */
+github_access_token: string; 
+/**
+ * Repository of the Github collector.
+ */
+repository: string; 
+/**
+ * Id for the collector
+ */
+id: string }
 /**
  * GoogleDriveCollectorConfig is a message to hold configuration for a Google Drive collector.
  */
-export type GoogleDriveCollectorConfig = {
-	/**
-	 * Client ID of the Google Drive collector.
-	 */
-	drive_client_id: string;
-	/**
-	 * Client secret of the Google Drive collector.
-	 */
-	drive_client_secret: string;
-	/**
-	 * Refresh token of the Google Drive collector.
-	 */
-	drive_refresh_token: string;
-	/**
-	 * Folder to crawl of the Google Drive collector.
-	 */
-	folder_to_crawl: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
-export type IndexingStatistics = {
-	total_docs: number;
-	total_events: number;
-	total_events_processed: number;
-	total_events_received: number;
-	total_events_sent: number;
-	total_batches: number;
-	total_sentences: number;
-	total_subjects: number;
-	total_predicates: number;
-	total_objects: number;
-	total_graph_events: number;
-	total_vector_events: number;
-	total_data_processed_size: number;
-};
-export type IngestedTokens = {
-	file: string;
-	data: string[];
-	is_token_stream: boolean;
-	doc_source: string;
-	source_id: string;
-	image_id: string | null;
-};
+export type GoogleDriveCollectorConfig = { 
+/**
+ * Client ID of the Google Drive collector.
+ */
+drive_client_id: string; 
+/**
+ * Client secret of the Google Drive collector.
+ */
+drive_client_secret: string; 
+/**
+ * Refresh token of the Google Drive collector.
+ */
+drive_refresh_token: string; 
+/**
+ * Folder to crawl of the Google Drive collector.
+ */
+folder_to_crawl: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type IndexingStatistics = { total_docs: number; total_events: number; total_events_processed: number; total_events_received: number; total_events_sent: number; total_batches: number; total_sentences: number; total_subjects: number; total_predicates: number; total_objects: number; total_graph_events: number; total_vector_events: number; total_data_processed_size: number }
+export type IngestedTokens = { file: string; data: string[]; is_token_stream: boolean; doc_source: string; source_id: string; image_id: string | null }
 /**
  * Represents an insight discovered from the data
  */
-export type Insight = {
-	/**
-	 * The document id of the search result
-	 */
-	document: string;
-	/**
-	 * The document source
-	 */
-	source: string;
-	/**
-	 * The attention score retrieved from the search result
-	 */
-	relationship_strength: string;
-	/**
-	 * The sentence retrieved from the search resulty
-	 */
-	sentence: string;
-	/**
-	 * The tags of the search result, comma separated subject, object , predicate
-	 */
-	tags: string;
-	/**
-	 * The top 10 subject_object_pairs, comma separated e.g. subject 1 - object 1, subject 2 - object 2 etc.
-	 */
-	top_pairs: string[];
-};
-export type InsightAnalystRequest = {
-	/**
-	 * Registered ID of the insight; call /insights endpoint for available insights
-	 */
-	id: string;
-	/**
-	 * Optional discovery session ID
-	 */
-	discovery_session_id: string | null;
-	/**
-	 * Optional semantic pipeline ID
-	 */
-	semantic_pipeline_id: string | null;
-	/**
-	 * Additional insight-specific parameters corresponding to the ID
-	 */
-	additional_options: { [key in string]: string };
-};
-export type InsightAnalystResponse = {
-	/**
-	 * The ID of the insight session
-	 */
-	session_id: string;
-};
+export type Insight = { 
+/**
+ * The document id of the search result
+ */
+document: string; 
+/**
+ * The document source
+ */
+source: string; 
+/**
+ * The attention score retrieved from the search result
+ */
+relationship_strength: string; 
+/**
+ * The sentence retrieved from the search resulty
+ */
+sentence: string; 
+/**
+ * The tags of the search result, comma separated subject, object , predicate
+ */
+tags: string; 
+/**
+ * The top 10 subject_object_pairs, comma separated e.g. subject 1 - object 1, subject 2 - object 2 etc.
+ */
+top_pairs: string[] }
+export type InsightAnalystRequest = { 
+/**
+ * Registered ID of the insight; call /insights endpoint for available insights
+ */
+id: string; 
+/**
+ * Optional discovery session ID
+ */
+discovery_session_id: string | null; 
+/**
+ * Optional semantic pipeline ID
+ */
+semantic_pipeline_id: string | null; 
+/**
+ * Additional insight-specific parameters corresponding to the ID
+ */
+additional_options: { [key in string]: string } }
+export type InsightAnalystResponse = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string }
 /**
  * Possible custom option values for insights.
  */
-export type InsightCustomOptionValue =
-	/**
-	 * Boolean switch.
-	 */
-	| { type: 'boolean'; value: boolean }
-	/**
-	 * Numeric slider.
-	 */
-	| { type: 'number'; min: number; max: number; step: number; value: number }
-	/**
-	 * Text input field.
-	 */
-	| { type: 'string'; value: string; hidden: boolean | null }
-	/**
-	 * Dropdown select option.
-	 */
-	| { type: 'option'; values: string[]; value: string }
-	/**
-	 * Callback button.
-	 */
-	| { type: 'button' };
+export type InsightCustomOptionValue = 
+/**
+ * Boolean switch.
+ */
+{ type: "boolean"; value: boolean } | 
+/**
+ * Numeric slider.
+ */
+{ type: "number"; min: number; max: number; step: number; value: number } | 
+/**
+ * Text input field.
+ */
+{ type: "string"; value: string; hidden: boolean | null } | 
+/**
+ * Dropdown select option.
+ */
+{ type: "option"; values: string[]; value: string } | 
+/**
+ * Callback button.
+ */
+{ type: "button" }
 /**
  * Insight Information.
  */
-export type InsightInfo = {
-	/**
-	 * ID is  namespaced which is used to identify the insight.
-	 */
-	id: string;
-	/**
-	 * Insight name.
-	 */
-	name: string;
-	/**
-	 * Insight description.
-	 */
-	description: string;
-	/**
-	 * Insight version.
-	 */
-	version: string;
-	/**
-	 * Is this insight conversational.
-	 */
-	conversational: boolean;
-	/**
-	 * Insight author.
-	 */
-	author: string;
-	/**
-	 * Insight license.
-	 */
-	license: string;
-	/**
-	 * Insight icon. // standard icon size for plugins is 32x32
-	 * https://iconify.design/
-	 */
-	iconifyIcon: string;
-	/**
-	 * Insight options
-	 */
-	additionalOptions: { [key in string]: CustomInsightOption };
-	/**
-	 * Is a premium insight.
-	 */
-	premium: boolean;
-};
-export type InsightQuery = {
-	/**
-	 * The ID of the insight session
-	 */
-	session_id: string;
-	/**
-	 * The query to be used for the insight
-	 */
-	query: string;
-};
-export type InsightQueryResponse = {
-	/**
-	 * The ID of the insight session
-	 */
-	session_id: string;
-	/**
-	 * Hash of the query
-	 */
-	query: string;
-	/**
-	 * The response from the insight
-	 */
-	response: string;
-};
-export type InsightRequestInfo = { session_id: string; request: InsightAnalystRequest | null };
-export type InsightRequestInfoList = { requests: InsightRequestInfo[] };
+export type InsightInfo = { 
+/**
+ * ID is  namespaced which is used to identify the insight.
+ */
+id: string; 
+/**
+ * Insight name.
+ */
+name: string; 
+/**
+ * Insight description.
+ */
+description: string; 
+/**
+ * Insight version.
+ */
+version: string; 
+/**
+ * Is this insight conversational.
+ */
+conversational: boolean; 
+/**
+ * Insight author.
+ */
+author: string; 
+/**
+ * Insight license.
+ */
+license: string; 
+/**
+ * Insight icon. // standard icon size for plugins is 32x32
+ * https://iconify.design/
+ */
+iconifyIcon: string; 
+/**
+ * Insight options
+ */
+additionalOptions: { [key in string]: CustomInsightOption }; 
+/**
+ * Is a premium insight.
+ */
+premium: boolean }
+export type InsightQuery = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string; 
+/**
+ * The query to be used for the insight
+ */
+query: string }
+export type InsightQueryResponse = { 
+/**
+ * The ID of the insight session
+ */
+session_id: string; 
+/**
+ * Hash of the query
+ */
+query: string; 
+/**
+ * The response from the insight
+ */
+response: string }
+export type InsightRequestInfo = { session_id: string; request: InsightAnalystRequest | null }
+export type InsightRequestInfoList = { requests: InsightRequestInfo[] }
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
  */
-export type JiraCollectorConfig = {
-	/**
-	 * Server of the Jira collector.
-	 */
-	jira_server: string;
-	/**
-	 * Username of the Jira collector.
-	 */
-	jira_username: string;
-	/**
-	 * Password of the Jira collector.
-	 */
-	jira_password: string;
-	/**
-	 * API token of the Jira collector.
-	 */
-	jira_api_token: string;
-	/**
-	 * Certificate file of the Jira collector.
-	 */
-	jira_certfile: string;
-	/**
-	 * Key file of the Jira collector.
-	 */
-	jira_keyfile: string;
-	/**
-	 * Verify of the Jira collector.
-	 */
-	jira_verify: boolean;
-	/**
-	 * Project of the Jira collector.
-	 */
-	jira_project: string;
-	/**
-	 * Query of the Jira collector.
-	 */
-	jira_query: string;
-	/**
-	 * Start at of the Jira collector.
-	 */
-	jira_start_at: number;
-	/**
-	 * Max results of the Jira collector.
-	 */
-	jira_max_results: number;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
-export type ListCollectorConfig = { config: CollectorConfig[] };
+export type JiraCollectorConfig = { 
+/**
+ * URL of the server, for example :- <https://querent.atlassian.net>
+ */
+jira_server: string; 
+/**
+ * Email associated with the API key
+ */
+jira_email: string; 
+/**
+ * Jira API key
+ */
+jira_api_key: string; 
+/**
+ * Project of the Jira collector.
+ */
+jira_project: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type ListCollectorConfig = { config: CollectorConfig[] }
 /**
  * NewsCollectorConfig is a message to hold configuration for a News collector.
  */
-export type NewsCollectorConfig = {
-	/**
-	 * API key of the News collector.
-	 */
-	api_key: string;
-	/**
-	 * Query of the News collector.
-	 */
-	query: string | null;
-	/**
-	 * Query type of the News collector.
-	 */
-	query_type: number;
-	/**
-	 * Comma separated sources of the news representing news sources or blogs
-	 */
-	sources: string | null;
-	/**
-	 * From date of the News collector.
-	 */
-	from_date: string | null;
-	/**
-	 * To date of the News collector.
-	 */
-	to_date: string | null;
-	/**
-	 * Language of the News collector.
-	 */
-	language: string | null;
-	/**
-	 * Sort by for the News Collector
-	 */
-	sort_by: number | null;
-	/**
-	 * Comma-seperated string of Domains of the News Collector
-	 */
-	domains: string | null;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-	/**
-	 * A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
-	 */
-	exclude_domains: string | null;
-	/**
-	 * The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
-	 */
-	search_in: string | null;
-	/**
-	 * Page Size of the News Response
-	 */
-	page_size: number | null;
-	/**
-	 * The 2-letter ISO 3166-1 code of the country you want to get headlines for. Possible options: us. Note: you can't mix this param with the sources param.
-	 */
-	country: string | null;
-	/**
-	 * The category you want to get headlines for. Possible options: business, entertainment, general, health, science, sports, technology. Note: you can't mix this param with the sources param.
-	 */
-	category: string | null;
-};
-export type NotionConfig = {
-	/**
-	 * API key of the notion
-	 */
-	api_key: string;
-	/**
-	 * Query id to the notion API/ either page id or database id
-	 */
-	page_ids: string[];
-	/**
-	 * / Id for the collector
-	 */
-	id: string;
-};
-export type OneDriveConfig = {
-	/**
-	 * Client ID of the app
-	 */
-	client_id: string;
-	/**
-	 * Client secret of the app
-	 */
-	client_secret: string;
-	/**
-	 * Redirect URI
-	 */
-	redirect_uri: string;
-	/**
-	 * Refresh token of the app
-	 */
-	refresh_token: string;
-	/**
-	 * / Folder path of the app
-	 */
-	folder_path: string;
-	/**
-	 * / Id for the collector
-	 */
-	id: string;
-};
-export type PinnedFromWindowEvent = { pinned: boolean };
-export type PipelineRequestInfo = { pipeline_id: string; request: SemanticPipelineRequest | null };
-export type PipelineRequestInfoList = { requests: PipelineRequestInfo[] };
+export type NewsCollectorConfig = { 
+/**
+ * API key of the News collector.
+ */
+api_key: string; 
+/**
+ * Query of the News collector.
+ */
+query: string | null; 
+/**
+ * Query type of the News collector.
+ */
+query_type: number; 
+/**
+ * Comma separated sources of the news representing news sources or blogs
+ */
+sources: string | null; 
+/**
+ * From date of the News collector.
+ */
+from_date: string | null; 
+/**
+ * To date of the News collector.
+ */
+to_date: string | null; 
+/**
+ * Language of the News collector.
+ */
+language: string | null; 
+/**
+ * Sort by for the News Collector
+ */
+sort_by: number | null; 
+/**
+ * Comma-seperated string of Domains of the News Collector
+ */
+domains: string | null; 
+/**
+ * Id for the collector
+ */
+id: string; 
+/**
+ * A comma-seperated string of domains (eg bbc.co.uk, techcrunch.com, engadget.com) to remove from the results.
+ */
+exclude_domains: string | null; 
+/**
+ * The fields to restrict your q search to. The possible options are: title, description, content. Multiple options can be specified by separating them with a comma, for example: title,content.
+ */
+search_in: string | null; 
+/**
+ * Page Size of the News Response
+ */
+page_size: number | null; 
+/**
+ * The 2-letter ISO 3166-1 code of the country you want to get headlines for. Possible options: us. Note: you can't mix this param with the sources param.
+ */
+country: string | null; 
+/**
+ * The category you want to get headlines for. Possible options: business, entertainment, general, health, science, sports, technology. Note: you can't mix this param with the sources param.
+ */
+category: string | null }
+export type NotionConfig = { 
+/**
+ * API key of the notion
+ */
+api_key: string; 
+/**
+ * Query id to the notion API/ either page id or database id
+ */
+page_ids: string[]; 
+/**
+ * / Id for the collector
+ */
+id: string }
+export type OneDriveConfig = { 
+/**
+ * Client ID of the app
+ */
+client_id: string; 
+/**
+ * Client secret of the app
+ */
+client_secret: string; 
+/**
+ * Redirect URI
+ */
+redirect_uri: string; 
+/**
+ * Refresh token of the app
+ */
+refresh_token: string; 
+/**
+ * / Folder path of the app
+ */
+folder_path: string; 
+/**
+ * / Id for the collector
+ */
+id: string }
+export type PinnedFromWindowEvent = { pinned: boolean }
+export type PipelineRequestInfo = { pipeline_id: string; request: SemanticPipelineRequest | null }
+export type PipelineRequestInfoList = { requests: PipelineRequestInfo[] }
 /**
  * S3CollectorConfig is a message to hold configuration for an S3 collector.
  */
-export type S3CollectorConfig = {
-	/**
-	 * Access key of the S3 collector.
-	 */
-	access_key: string;
-	/**
-	 * Secret key of the S3 collector.
-	 */
-	secret_key: string;
-	/**
-	 * Region of the S3 collector.
-	 */
-	region: string;
-	/**
-	 * Bucket of the S3 collector.
-	 */
-	bucket: string;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
-export type SampleEntities = { entities: string[] };
-export type SemanticPipelineRequest = {
-	collectors: string[];
-	fixed_entities: FixedEntities | null;
-	sample_entities: SampleEntities | null;
-	model: number | null;
-};
-export type SemanticPipelineResponse = { pipeline_id: string };
+export type S3CollectorConfig = { 
+/**
+ * Access key of the S3 collector.
+ */
+access_key: string; 
+/**
+ * Secret key of the S3 collector.
+ */
+secret_key: string; 
+/**
+ * Region of the S3 collector.
+ */
+region: string; 
+/**
+ * Bucket of the S3 collector.
+ */
+bucket: string; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type SampleEntities = { entities: string[] }
+export type SemanticPipelineRequest = { collectors: string[]; fixed_entities: FixedEntities | null; sample_entities: SampleEntities | null; model: number | null }
+export type SemanticPipelineResponse = { pipeline_id: string }
 /**
  * SlackCollectorConfig is a message to hold configuration for a Slack collector.
  */
-export type SlackCollectorConfig = {
-	/**
-	 * Access token of the Slack collector.
-	 */
-	access_token: string;
-	/**
-	 * Channel name of the Slack collector.
-	 */
-	channel_name: string;
-	/**
-	 * Specify the beginning of the time range for messages
-	 */
-	oldest: string | null;
-	/**
-	 * Inclusive of the Slack collector.
-	 */
-	inclusive: boolean | null;
-	/**
-	 * Specify the end of the time range for messages
-	 */
-	latest: string | null;
-	/**
-	 * Id for the collector
-	 */
-	id: string;
-};
-export type UpdateResult = { version: string; currentVersion: string; body: string | null };
+export type SlackCollectorConfig = { 
+/**
+ * Access token of the Slack collector.
+ */
+access_token: string; 
+/**
+ * Channel name of the Slack collector.
+ */
+channel_name: string; 
+/**
+ * Specify the beginning of the time range for messages
+ */
+oldest: string | null; 
+/**
+ * Inclusive of the Slack collector.
+ */
+inclusive: boolean | null; 
+/**
+ * Specify the end of the time range for messages
+ */
+latest: string | null; 
+/**
+ * Id for the collector
+ */
+id: string }
+export type UpdateResult = { version: string; currentVersion: string; body: string | null }
 
 /** tauri-specta globals **/
 
-import { invoke as TAURI_INVOKE, Channel as TAURI_CHANNEL } from '@tauri-apps/api/core';
-import * as TAURI_API_EVENT from '@tauri-apps/api/event';
-import { type WebviewWindow as __WebviewWindow__ } from '@tauri-apps/api/webviewWindow';
+import {
+	invoke as TAURI_INVOKE,
+	Channel as TAURI_CHANNEL,
+} from "@tauri-apps/api/core";
+import * as TAURI_API_EVENT from "@tauri-apps/api/event";
+import { type WebviewWindow as __WebviewWindow__ } from "@tauri-apps/api/webviewWindow";
 
 type __EventObj__<T> = {
-	listen: (cb: TAURI_API_EVENT.EventCallback<T>) => ReturnType<typeof TAURI_API_EVENT.listen<T>>;
-	once: (cb: TAURI_API_EVENT.EventCallback<T>) => ReturnType<typeof TAURI_API_EVENT.once<T>>;
+	listen: (
+		cb: TAURI_API_EVENT.EventCallback<T>,
+	) => ReturnType<typeof TAURI_API_EVENT.listen<T>>;
+	once: (
+		cb: TAURI_API_EVENT.EventCallback<T>,
+	) => ReturnType<typeof TAURI_API_EVENT.once<T>>;
 	emit: null extends T
 		? (payload?: T) => ReturnType<typeof TAURI_API_EVENT.emit>
 		: (payload: T) => ReturnType<typeof TAURI_API_EVENT.emit>;
 };
 
-export type Result<T, E> = { status: 'ok'; data: T } | { status: 'error'; error: E };
+export type Result<T, E> =
+	| { status: "ok"; data: T }
+	| { status: "error"; error: E };
 
-function __makeEvents__<T extends Record<string, any>>(mappings: Record<keyof T, string>) {
+function __makeEvents__<T extends Record<string, any>>(
+	mappings: Record<keyof T, string>,
+) {
 	return new Proxy(
 		{} as unknown as {
 			[K in keyof T]: __EventObj__<T[K]> & {
@@ -807,20 +721,20 @@ function __makeEvents__<T extends Record<string, any>>(mappings: Record<keyof T,
 					apply: (_, __, [window]: [__WebviewWindow__]) => ({
 						listen: (arg: any) => window.listen(name, arg),
 						once: (arg: any) => window.once(name, arg),
-						emit: (arg: any) => window.emit(name, arg)
+						emit: (arg: any) => window.emit(name, arg),
 					}),
 					get: (_, command: keyof __EventObj__<any>) => {
 						switch (command) {
-							case 'listen':
+							case "listen":
 								return (arg: any) => TAURI_API_EVENT.listen(name, arg);
-							case 'once':
+							case "once":
 								return (arg: any) => TAURI_API_EVENT.once(name, arg);
-							case 'emit':
+							case "emit":
 								return (arg: any) => TAURI_API_EVENT.emit(name, arg);
 						}
-					}
+					},
 				});
-			}
-		}
+			},
+		},
 	);
 }
