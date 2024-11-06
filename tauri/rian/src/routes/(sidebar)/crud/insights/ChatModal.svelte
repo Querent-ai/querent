@@ -75,12 +75,20 @@
 					insightSessionId.set(res.data.session_id);
 					sessionId = res.data.session_id;
 				} else {
-					errorMessage = 'Error while starting insights:' + res.error;
+					let err = res.error as string;
+					if (typeof err === 'string' && err.startsWith('Error: ')) {
+						err = err.replace('Error: ', '');
+					}
+					errorMessage = 'Error while starting insights:' + err;
 					showErrorModal = true;
 				}
 			}
 		} catch (error) {
-			errorMessage = 'Unexpected error while initializing chat:' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Unexpected error while initializing chat:' + err;
 			showErrorModal = true;
 		} finally {
 			isLoadingInsight.set(false);
@@ -113,13 +121,21 @@
 
 						messagesList.update((list) => [...list, { text: text, isUser: false }]);
 					} else {
-						errorMessage = 'Error while processing the insight query: ' + res.error;
+						let err = res.error as string;
+						if (typeof err === 'string' && err.startsWith('Error: ')) {
+							err = err.replace('Error: ', '');
+						}
+						errorMessage = 'Error while processing the insight query: ' + err;
 						showErrorModal = true;
 					}
 				}, 100);
 				inputMessage = '';
 			} catch (error) {
-				errorMessage = 'Unexpected error while sending message:' + error;
+				let err = error instanceof Error ? error.message : String(error);
+				if (typeof err === 'string' && err.startsWith('Error: ')) {
+					err = err.replace('Error: ', '');
+				}
+				errorMessage = 'Unexpected error while sending message:' + err;
 				isLoadingInsight.set(false);
 				showErrorModal = true;
 			} finally {
@@ -247,15 +263,5 @@
 		margin-left: 1rem;
 		color: #666;
 		font-size: 0.9rem;
-	}
-
-	.form-container Button {
-		background-color: #3498db;
-		color: white;
-		border-radius: 5px;
-	}
-
-	.form-container Button:hover {
-		background-color: #2c80b4;
 	}
 </style>

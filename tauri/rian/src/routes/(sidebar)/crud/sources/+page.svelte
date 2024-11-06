@@ -91,7 +91,11 @@
 				$dataSources = sources.config;
 			}
 		} catch (error) {
-			errorMessage = 'Error deleting source:' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Error deleting source:' + err;
 			showErrorModal = true;
 		}
 	}
@@ -103,7 +107,11 @@
 				$dataSources = sources.config;
 			}
 		} catch (error) {
-			errorMessage = 'Error fetching sources:' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Error fetching sources:' + err;
 			showErrorModal = true;
 		}
 	});

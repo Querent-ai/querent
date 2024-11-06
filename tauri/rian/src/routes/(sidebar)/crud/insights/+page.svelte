@@ -40,11 +40,19 @@
 			if (res.status === 'ok') {
 				insightList = res.data.sort((a, b) => (a.premium ? 1 : 0) - (b.premium ? 1 : 0));
 			} else {
-				errorMessage = 'Error fetching insights:' + res.error;
+				let error = res.error;
+				if (typeof error === 'string' && error.startsWith('Error: ')) {
+					error = error.replace('Error: ', '');
+				}
+				errorMessage = 'Error fetching insights:' + error;
 				showErrorModal = true;
 			}
 		} catch (error) {
-			errorMessage = 'Unexpected error fetching insights:' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Unexpected error fetching insights:' + err;
 			showErrorModal = true;
 		}
 	});
@@ -60,7 +68,11 @@
 			insightSessionId.set('');
 			messagesList.set([]);
 		} catch (error) {
-			errorMessage = 'Unexpected error stopping the Insight:' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Unexpected error stopping the Insight:' + err;
 			showErrorModal = true;
 			messagesList.set([]);
 		}
@@ -261,15 +273,6 @@
 		right: 30px;
 		display: flex;
 		gap: 10px;
-	}
-
-	.modal-close-button {
-		background: #007bff;
-		color: white;
-		padding: 0.5rem 1rem;
-		border-radius: 5px;
-		margin-top: 1rem;
-		cursor: pointer;
 	}
 
 	.stop-button,

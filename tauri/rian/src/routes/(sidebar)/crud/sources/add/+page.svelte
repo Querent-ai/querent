@@ -61,7 +61,11 @@
 				setIsVisible();
 			}
 		} catch (error) {
-			errorMessage = 'Error getting the token  ' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Error getting the token  ' + err;
 			showErrorModal = true;
 		}
 	}

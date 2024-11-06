@@ -81,7 +81,11 @@
 				});
 			}
 		} catch (error) {
-			errorMessage = 'Error loading pipelines:' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Error loading pipelines:' + err;
 			showErrorModal = true;
 		}
 	});
@@ -90,7 +94,11 @@
 		try {
 			let res = await commands.stopAgnFabric(pipelineId);
 			if (res.status == 'error') {
-				errorMessage = 'Error while stopping the pipeline:' + res.error;
+				let err = res.error as string;
+				if (typeof err === 'string' && err.startsWith('Error: ')) {
+					err = err.replace('Error: ', '');
+				}
+				errorMessage = 'Error while stopping the pipeline:' + err;
 				showErrorModal = true;
 				return;
 			}
@@ -100,7 +108,11 @@
 				)
 			);
 		} catch (error) {
-			errorMessage = 'Unexpected error while stopping the pipeline: ' + error;
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Unexpected error while stopping the pipeline: ' + err;
 			showErrorModal = true;
 		}
 	}
