@@ -34,8 +34,9 @@
 			const urlWithMessage = `http://localhost:5173/error?error=${message}`;
 
 			const appWindow = new Window('error-window', {
-				height: 250,
-				width: 500
+				height: 400,
+				width: 600,
+				title: 'Error'
 			});
 
 			const webview = new Webview(appWindow, 'error-window', {
