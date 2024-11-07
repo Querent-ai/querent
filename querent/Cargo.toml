@@ -239,7 +239,7 @@ hf-hub = "0.3.2"
 ordered-float = "4.2.0"
 records = "0.2.0"
 unicode-segmentation = "1.7"
-xlsx_reader =  { git = "https://github.com/Ansh5461/xlsx_reader.git" }
+xlsx_reader = "3.1.1"
 xml = "0.8.20"
 rusty-tesseract = { git = "https://github.com/louis030195/rusty-tesseract.git", branch = "main" }
 imap = "2.4.1"
@@ -290,6 +290,7 @@ flate2 = "1.0.34"
 bip39 = { git = "https://github.com/saraswatpuneet/rust-bip39", branch = "master" }
 rust_decimal = { git = 'https://github.com/paupino/rust-decimal.git' }
 esaxx-rs = { git = "https://github.com/Querent-ai/esaxx-rs" }
+xlsx_reader = { git = "https://github.com/Ansh5461/xlsx_reader.git" }
 
 [profile.release]
 panic = "unwind"
