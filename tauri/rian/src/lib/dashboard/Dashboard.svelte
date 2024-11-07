@@ -4,6 +4,12 @@
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
 	import { commands } from '../../service/bindings';
+	import ErrorModal from './ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	import TopPairs from './TopPairs.svelte';
 	import {
@@ -185,27 +191,3 @@
 		</div>
 	</div>
 </div>
-
-<style>
-	@keyframes blink {
-		0% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0;
-		}
-		100% {
-			opacity: 1;
-		}
-	}
-
-	.blinking-dot {
-		display: inline-block;
-		width: 12px;
-		height: 12px;
-		margin-left: 10px;
-		background-color: #ff6384;
-		border-radius: 50%;
-		animation: blink 1.5s infinite;
-	}
-</style>

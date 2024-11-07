@@ -3,6 +3,12 @@
 	import { commands, type IndexingStatistics } from '../../service/bindings';
 	import { onDestroy, onMount } from 'svelte';
 	import { describeStats } from '../../stores/appState';
+	import ErrorModal from './ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let selectedPipeline: string;
 	let runningPipelines: string[] = [];
@@ -21,8 +27,8 @@
 				fetchPipelineData(selectedPipeline);
 			}
 		} catch (error) {
-			console.error('Error fetching running pipelines:', error);
-			alert(`Failed to fetch running pipelines: ${error.message || error}`);
+			errorMessage = 'Error fetching running pipelines: ' + error;
+			showErrorModal = true;
 		}
 	});
 
@@ -63,7 +69,6 @@
 				throw new Error(`Unexpected response status: ${response.status}`);
 			}
 		} catch (error) {
-			isLive = false;
 			console.error('Error fetching pipeline data:', error);
 		}
 	}
@@ -154,28 +159,3 @@
 		{/each}
 	</div>
 </Card>
-
-<!-- Add the style block for pulsating dot directly in the component -->
-<style>
-	@keyframes blink {
-		0% {
-			opacity: 1;
-		}
-		50% {
-			opacity: 0;
-		}
-		100% {
-			opacity: 1;
-		}
-	}
-
-	.blinking-dot {
-		display: inline-block;
-		width: 12px;
-		height: 12px;
-		margin-left: 10px;
-		background-color: #ff6384;
-		border-radius: 50%;
-		animation: blink 1.5s infinite;
-	}
-</style>

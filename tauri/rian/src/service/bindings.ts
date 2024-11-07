@@ -555,49 +555,21 @@ export type InsightRequestInfoList = { requests: InsightRequestInfo[] };
  */
 export type JiraCollectorConfig = {
 	/**
-	 * Server of the Jira collector.
+	 * URL of the server, for example :- <https://querent.atlassian.net>
 	 */
 	jira_server: string;
 	/**
-	 * Username of the Jira collector.
+	 * Email associated with the API key
 	 */
-	jira_username: string;
+	jira_email: string;
 	/**
-	 * Password of the Jira collector.
+	 * Jira API key
 	 */
-	jira_password: string;
-	/**
-	 * API token of the Jira collector.
-	 */
-	jira_api_token: string;
-	/**
-	 * Certificate file of the Jira collector.
-	 */
-	jira_certfile: string;
-	/**
-	 * Key file of the Jira collector.
-	 */
-	jira_keyfile: string;
-	/**
-	 * Verify of the Jira collector.
-	 */
-	jira_verify: boolean;
+	jira_api_key: string;
 	/**
 	 * Project of the Jira collector.
 	 */
 	jira_project: string;
-	/**
-	 * Query of the Jira collector.
-	 */
-	jira_query: string;
-	/**
-	 * Start at of the Jira collector.
-	 */
-	jira_start_at: number;
-	/**
-	 * Max results of the Jira collector.
-	 */
-	jira_max_results: number;
 	/**
 	 * Id for the collector
 	 */

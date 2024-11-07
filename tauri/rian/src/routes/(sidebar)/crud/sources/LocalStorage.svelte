@@ -9,6 +9,12 @@
 	import { addDataSource, isVisible } from '../../../../stores/appState';
 	// Import the Tauri fs plugin
 	import { open } from '@tauri-apps/plugin-dialog';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let file_collector_config: FileCollectorConfig = {
 		root_path: '',
@@ -28,7 +34,6 @@
 	let name = '';
 
 	async function selectDirectory() {
-		// Use Tauri fs plugin to open folder selection dialog
 		const selected = await open({
 			directory: true,
 			multiple: false,
@@ -38,7 +43,8 @@
 		if (selected) {
 			root_path = selected as string;
 		} else {
-			console.log('No directory selected.');
+			errorMessage = 'No directory selected.';
+			showErrorModal = true;
 		}
 	}
 
@@ -106,4 +112,8 @@
 			</div>
 		</form>
 	</div>
+{/if}
+
+{#if showErrorModal}
+	<ErrorModal {errorMessage} closeModal={closeErrorModal} />
 {/if}
