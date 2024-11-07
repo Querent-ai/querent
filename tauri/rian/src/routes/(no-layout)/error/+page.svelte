@@ -16,6 +16,11 @@
 	<div class="error-icon">⚠️</div>
 	<h2 class="error-title">Something went wrong</h2>
 	<p class="error-message">{message}</p>
+	<a
+		href="https://github.com/Querent-ai/support/issues/new?assignees=&labels=&projects=&template=support_help.md&title="
+		target="_blank"
+		class="report-link">Report this issue</a
+	>
 </div>
 
 <style>
@@ -51,5 +56,17 @@
 		font-size: 1.4em;
 		color: #555;
 		margin: 1em 0;
+	}
+
+	.report-link {
+		font-size: 1em;
+		color: #0073e6;
+		text-decoration: underline;
+		margin-top: 1em;
+		cursor: pointer;
+	}
+
+	.report-link:hover {
+		color: #005bb5;
 	}
 </style>
