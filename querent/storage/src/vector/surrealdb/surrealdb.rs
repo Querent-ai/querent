@@ -216,6 +216,10 @@ impl FabricStorage for SurrealDB {
 			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
+			})?
+			.ok_or_else(|| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 			})?;
 		log::debug!("Created: {:?}", created);
 
@@ -240,6 +244,10 @@ impl FabricStorage for SurrealDB {
 						kind: StorageErrorKind::Internal,
 						source: Arc::new(anyhow::Error::from(e)),
 					}
+				})?
+				.ok_or_else(|| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 				})?;
 			log::debug!("Created: {:?}", created);
 		}
@@ -259,6 +267,10 @@ impl FabricStorage for SurrealDB {
 						kind: StorageErrorKind::Internal,
 						source: Arc::new(anyhow::Error::from(e)),
 					}
+				})?
+				.ok_or_else(|| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 				})?;
 			log::debug!("Created: {:?}", created);
 		}
@@ -287,7 +299,7 @@ impl FabricStorage for SurrealDB {
 			results.extend(
 				fetch_documents_for_embedding(
 					&self.db,
-					&embedding,
+					embedding,
 					offset,
 					max_results as i64,
 					&session_id,
@@ -308,7 +320,7 @@ impl FabricStorage for SurrealDB {
 				results.extend(
 					fetch_documents_for_embedding(
 						&self.db,
-						embedding,
+						embedding.to_vec(),
 						adjusted_offset,
 						1,
 						&session_id,
@@ -349,6 +361,10 @@ impl FabricStorage for SurrealDB {
 						kind: StorageErrorKind::Internal,
 						source: Arc::new(anyhow::Error::from(e)),
 					}
+				})?
+				.ok_or_else(|| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 				})?;
 		}
 		Ok(())
