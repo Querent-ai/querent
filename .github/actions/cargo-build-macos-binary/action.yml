@@ -18,9 +18,9 @@ runs:
     - name: Import Apple Developer Certificate
       shell: bash
       env:
-        APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-        APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        APPLE_CERTIFICATE: ${{ env.APPLE_CERTIFICATE }}
+        APPLE_CERTIFICATE_PASSWORD: ${{ env.APPLE_CERTIFICATE_PASSWORD }}
+        KEYCHAIN_PASSWORD: ${{ env.KEYCHAIN_PASSWORD }}
       run: |
         echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
         security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
