@@ -16,7 +16,7 @@ on:
     branches:
       - main
 env:
-  INPUT_RELEASE_VERSION: v0.0.1-rc1
+  INPUT_RELEASE_VERSION: v0.0.1-rc2
   APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
   APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
   APPLE_ID: ${{ secrets.APPLE_ID }}
