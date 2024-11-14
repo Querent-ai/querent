@@ -14,10 +14,6 @@ on:
         required: true
 env:
   INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
-  APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-  APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-  KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-  APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
 jobs:
   build-tauri-rian-ui:
     permissions:
@@ -75,9 +71,14 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -129,9 +130,14 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -178,7 +184,7 @@ jobs:
         env:
           SIGN: 1
           APPIMAGETOOL_FORCE_SIGN: 1
-          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ env.APPIMAGETOOL_SIGN_PASSPHRASE }}
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
