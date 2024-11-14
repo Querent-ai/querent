@@ -16,7 +16,7 @@ on:
     branches:
       - main
 env:
-  INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
+  INPUT_RELEASE_VERSION: v0.0.3-rc1
 jobs:
   build-tauri-rian-ui:
     permissions:
@@ -66,6 +66,10 @@ jobs:
           target: ${{ matrix.target }}
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
       - name: Install Cargo Tauri for info
         run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
@@ -126,6 +130,10 @@ jobs:
   #         target: ${{ matrix.target }}
   #         version: ${{ env.INPUT_RELEASE_VERSION }}
   #         token: ${{ secrets.GITHUB_TOKEN }}
+  #       env:
+  #         APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+  #         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+  #         KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
   #     - name: Install Cargo Tauri for info
   #       run: cargo install tauri-cli --version "=2.0.1" --locked
   #     - name: Tauri info
