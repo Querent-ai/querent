@@ -78,6 +78,7 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -141,6 +142,7 @@ jobs:
   #       uses: tauri-apps/tauri-action@v0
   #       env:
   #         APPLE_ID: ${{ secrets.APPLE_ID }}
+  #         APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
   #         APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
   #         APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
   #         APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
