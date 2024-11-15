@@ -77,7 +77,6 @@ jobs:
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
-          APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
@@ -141,7 +140,6 @@ jobs:
   #     - name: Build Tauri App (macOS aarch64)
   #       uses: tauri-apps/tauri-action@v0
   #       env:
-  #         APPLE_SIGNING_IDENTITY: ${{ env.CERT_ID }}
   #         APPLE_ID: ${{ secrets.APPLE_ID }}
   #         APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
   #         APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
