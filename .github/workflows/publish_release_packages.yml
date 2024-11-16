@@ -42,6 +42,7 @@ jobs:
         with:
           name: tauri-rian
           path: tauri/rian/build
+
   build-macos-binaries-x86_64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
