@@ -47,11 +47,11 @@
 		],
 		"longDescription": "R!AN: Realtime Information Aggregator Network",
 		"macOS": {
-			"entitlements": null,
+			"entitlements": "entitlements.plist",
 			"exceptionDomain": "",
 			"frameworks": [],
 			"providerShortName": null,
-			"signingIdentity": null
+			"signingIdentity": "Developer ID Application: Puneet Saraswat (PTWHL85RXB)"
 		},
 		"resources": [],
 		"shortDescription": "R!AN: Realtime Information Aggregator Network",
