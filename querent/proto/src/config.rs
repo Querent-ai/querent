@@ -98,6 +98,7 @@ pub struct NodeConfig {
 	pub grpc_config: GrpcConfig,
 	pub peer_seeds: Vec<String>,
 	pub cpu_capacity: u32,
+	pub memory_capacity: u32,
 	pub storage_configs: StorageConfigs,
 	pub tracing: Tracing,
 }
@@ -121,6 +122,7 @@ impl Default for NodeConfig {
 			grpc_config,
 			peer_seeds: Vec::new(),
 			cpu_capacity: 5,
+			memory_capacity: 1000,
 			storage_configs: StorageConfigs(Vec::new()),
 			tracing: Tracing { jaeger: JaegerConfig::default() },
 		}

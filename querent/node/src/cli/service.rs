@@ -1,9 +1,12 @@
 use clap::{ArgMatches, Command};
 pub use common::{initialize_runtimes, RuntimesConfig};
+use rian_core::MAX_DATA_SIZE_IN_MEMORY;
 use tokio::signal;
 use tracing::{debug, info};
 
 use crate::{cli::load_node_config, config_cli_arg, serve_quester};
+
+pub const MB: u32 = 1_000_000;
 
 pub fn build_serve_command() -> Command {
 	Command::new("serve")
@@ -99,7 +102,10 @@ impl Serve {
 		debug!(args = ?self, "run-querent-service");
 		busy_detector::set_enabled(true);
 		let node_config = load_node_config(&self.node_config_uri).await.unwrap_or_default();
-
+		let res = MAX_DATA_SIZE_IN_MEMORY.set((node_config.memory_capacity * MB) as usize);
+		if res.is_err() {
+			info!("MAX_DATA_SIZE_IN_MEMORY is already set");
+		}
 		let runtimes_config = RuntimesConfig::default();
 		initialize_runtimes(runtimes_config)?;
 		let shutdown_signal = Box::pin(async move {

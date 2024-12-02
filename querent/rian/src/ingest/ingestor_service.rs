@@ -117,7 +117,9 @@ impl Handler<CollectionBatch> for IngestorService {
 		message: CollectionBatch,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
-		if self.counters.get_current_memory_usage() as usize > MAX_DATA_SIZE_IN_MEMORY ||
+		if MAX_DATA_SIZE_IN_MEMORY.get().is_some() &&
+			self.counters.get_current_memory_usage() as usize >
+				*MAX_DATA_SIZE_IN_MEMORY.get().unwrap() ||
 			message._permit.is_none() ||
 			self.workflow_semaphore.available_permits() == 0
 		{
