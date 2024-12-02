@@ -122,7 +122,7 @@ impl Default for NodeConfig {
 			grpc_config,
 			peer_seeds: Vec::new(),
 			cpu_capacity: 5,
-			memory_capacity: 16,
+			memory_capacity: 1000,
 			storage_configs: StorageConfigs(Vec::new()),
 			tracing: Tracing { jaeger: JaegerConfig::default() },
 		}
