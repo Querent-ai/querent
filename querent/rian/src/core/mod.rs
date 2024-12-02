@@ -3,6 +3,7 @@ use std::time::Duration;
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, MessageBus};
 use async_trait::async_trait;
 use common::RuntimeType;
+use once_cell::sync::OnceCell;
 use serde_json::Value as JsonValue;
 use tokio::runtime::Handle;
 
@@ -18,7 +19,7 @@ pub type SourceContext = ActorContext<SourceActor>;
 
 pub const NUMBER_FILES_IN_MEMORY: usize = 100;
 
-pub const MAX_DATA_SIZE_IN_MEMORY: usize = 1_000_000 * 1 * 1000; // 1000 MB
+pub const MAX_DATA_SIZE_IN_MEMORY: OnceCell<usize> = OnceCell::new();
 
 pub const BATCH_NUM_EVENTS_LIMIT: usize = 10;
 
