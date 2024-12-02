@@ -9,6 +9,8 @@ use tracing::warn;
 
 pub const DEFAULT_CONFIG_PATH: &str = "config/querent.config.yaml";
 
+pub const MB: u64 = 1_000_000;
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct JaegerConfig {
@@ -122,7 +124,7 @@ impl Default for NodeConfig {
 			grpc_config,
 			peer_seeds: Vec::new(),
 			cpu_capacity: 5,
-			memory_capacity: 1000,
+			memory_capacity: 1000 * MB as u32,
 			storage_configs: StorageConfigs(Vec::new()),
 			tracing: Tracing { jaeger: JaegerConfig::default() },
 		}
