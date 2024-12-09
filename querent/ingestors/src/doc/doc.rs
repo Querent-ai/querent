@@ -12,7 +12,7 @@ use std::{
 	sync::Arc,
 };
 use tokio::io::AsyncReadExt;
-use tracing::{error, info};
+use tracing::info;
 use xml::reader::{EventReader, XmlEvent};
 use zip::ZipArchive;
 
@@ -63,7 +63,10 @@ impl BaseIngestor for DocIngestor {
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
-					data.read_to_end(&mut buf).await.unwrap();
+					if let Err(e) = data.read_to_end(&mut buf).await {
+						tracing::error!("Failed to read doc: {:?}", e);
+						continue;
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
@@ -71,39 +74,79 @@ impl BaseIngestor for DocIngestor {
 			let cursor = Cursor::new(buffer);
 			let mut archive = match ZipArchive::new(cursor) {
 				Ok(archive) => archive,
-				Err(e) => {
-					error!("Failed to read zip archive: {:?}", e);
+				Err(_e) => {
+					yield Ok(IngestedTokens {
+						data: vec![],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+						image_id: None,
+					});
 					return;
 				}
 			};
 			let mut xml_data = String::new();
 			let mut images: HashMap<String, Vec<u8>> = HashMap::new();
+			let file_name: String = file.clone();
+			let mut tokens_to_yield: Vec<IngestedTokens> = Vec::new();
 			for i in 0..archive.len() {
 				let mut file = match archive.by_index(i) {
 					Ok(file) => file,
-					Err(e) => {
-						error!("Failed to access file in archive: {:?}", e);
-						return;
+					Err(_e) => {
+						tokens_to_yield.push(IngestedTokens {
+							data: vec![],
+							file: file_name.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+							image_id: None,
+						});
+						continue;
 					}
 				};
 				if file.name() == "word/document.xml" {
-					if let Err(e) = file.read_to_string(&mut xml_data) {
-						error!("Failed to read XML data: {:?}", e);
-						return;
+					if let Err(_e) = file.read_to_string(&mut xml_data) {
+						tokens_to_yield.push(IngestedTokens {
+							data: vec![],
+							file: file_name.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+							image_id: None,
+						});
+						continue;
 					}
 				}
 
 				if file.name().starts_with("word/media/") {
 					let mut buf = Vec::new();
-					if let Err(e) = file.read_to_end(&mut buf) {
-						error!("Failed to read image data: {:?}", e);
-						return;
+					if let Err(_e) = file.read_to_end(&mut buf) {
+						tokens_to_yield.push(IngestedTokens {
+							data: vec![],
+							file: file_name.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+							image_id: None,
+						});
+						continue;
 					}
 					images.insert(file.name().to_string(), buf);
 				}
 			}
+			for token in tokens_to_yield {
+				yield Ok(token);
+			}
 			if xml_data.is_empty() {
-				error!("No document.xml found in the archive or the file is empty");
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				});
 				return;
 			}
 			let reader = EventReader::from_str(&xml_data);
@@ -127,8 +170,15 @@ impl BaseIngestor for DocIngestor {
 							text.push_str("\n\n");
 						}
 					}
-					Err(e) => {
-						error!("Error reading XML: {:?}", e);
+					Err(_e) => {
+						yield Ok(IngestedTokens {
+								data: vec![],
+								file: file.clone(),
+								doc_source: doc_source.clone(),
+								is_token_stream: false,
+								source_id: source_id.clone(),
+								image_id: None,
+							});
 						return;
 					}
 					_ => {}
@@ -215,7 +265,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/Decline curve analysis of shale oil production_ The case of Eagle Ford.doc");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(
@@ -233,10 +282,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = DocIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 		let mut has_found_image_data = false;
 		let mut stream = result_stream;
@@ -257,5 +304,43 @@ mod tests {
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest DOC file");
 		assert!(has_found_image_data, "Not found image data in DOC file");
+	}
+
+	#[tokio::test]
+	async fn test_doc_ingestor_with_corrupt_data() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.doc");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.doc").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("doc".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = DocIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						if tokens.image_id.is_some() {}
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		println!("Here");
+		assert!(all_data.len() == 0, "Should not have ingested DOC file");
 	}
 }

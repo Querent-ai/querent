@@ -10,7 +10,7 @@ use regex::Regex;
 use serde::Serialize;
 use unicode_segmentation::UnicodeSegmentation;
 /// Represents a classified sentence with identified entities.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, PartialEq)]
 pub struct ClassifiedSentence {
 	/// The classified sentence as a string.
 	pub sentence: String,
@@ -20,7 +20,7 @@ pub struct ClassifiedSentence {
 }
 
 /// Represents a classified sentence with identified entity pairs.
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, PartialEq)]
 pub struct ClassifiedSentenceWithPairs {
 	/// The classified sentence as a string.
 	pub sentence: String,
@@ -42,7 +42,7 @@ pub struct ClassifiedSentenceWithAttention {
 }
 
 /// Represents a classified sentence with identified relations and attention matrix.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ClassifiedSentenceWithRelations {
 	/// The classified sentence with pairs.
 	pub classified_sentence: ClassifiedSentenceWithPairs,
@@ -308,14 +308,10 @@ pub fn create_binary_pairs(
 }
 
 /// Selects the relationship with the highest score for an entity pair
-/// Selects the relationship with the highest score for an entity pair
 pub fn select_highest_score_relation(head_tail_relations: &HeadTailRelations) -> HeadTailRelations {
-	// Check if the relations vector is empty
 	if head_tail_relations.relations.is_empty() {
 		return head_tail_relations.clone();
 	}
-
-	// Find the relation with the highest score
 	let highest_relation = head_tail_relations
 		.relations
 		.iter()
@@ -506,4 +502,279 @@ pub fn extract_entities_and_types(
 	}
 
 	(entities, sample_entities)
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::{
+		agn::Entity,
+		utils::{ClassifiedSentence, ClassifiedSentenceWithPairs},
+	};
+
+	#[test]
+	fn test_remove_newlines_special_characters() {
+		let input = "Special chars:\n\n\t\n\rTest.";
+		let expected = "Special chars: \t \rTest.";
+		assert_eq!(remove_newlines(input), expected);
+	}
+
+	#[test]
+	fn test_split_into_sentences_special() {
+		let input = "Wait... What?! No way!!!";
+		let expected = vec!["Wait...", "What?!", "No way!!!"];
+		assert_eq!(split_into_sentences(input), expected);
+	}
+
+	#[test]
+	fn test_split_into_chunks_special_long_sentence() {
+		let input = "A".repeat(50);
+		let max_tokens = 10;
+		let expected = vec!["AAAAAAAAAA", "AAAAAAAAAA", "AAAAAAAAAA", "AAAAAAAAAA", "AAAAAAAAAA"];
+		assert_eq!(split_into_chunks(max_tokens, &input), expected);
+	}
+
+	#[test]
+	fn test_label_entities_in_sentences_positive() {
+		let entities = vec!["test".to_string(), "sentence".to_string()];
+		let sentences = vec!["This is a test sentence.".to_string()];
+		let expected = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![
+				("test".to_string(), "Unlabelled".to_string(), 10, 14),
+				("sentence".to_string(), "Unlabelled".to_string(), 15, 23),
+			],
+		}];
+		assert_eq!(label_entities_in_sentences(&entities, &sentences), expected);
+	}
+
+	#[test]
+	fn test_label_entities_in_sentences_negative() {
+		let entities = vec!["nonexistent".to_string()];
+		let sentences = vec!["This sentence has no entities.".to_string()];
+		let expected = vec![ClassifiedSentence {
+			sentence: "This sentence has no entities.".to_string(),
+			entities: vec![],
+		}];
+		assert_eq!(label_entities_in_sentences(&entities, &sentences), expected);
+	}
+
+	#[test]
+	fn test_label_entities_in_sentences_special_overlapping_entities() {
+		let entities = vec!["test".to_string(), "test sentence".to_string()];
+		let sentences = vec!["This is a test sentence.".to_string()];
+		let expected = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![
+				("test".to_string(), "Unlabelled".to_string(), 10, 14),
+				("test sentence".to_string(), "Unlabelled".to_string(), 10, 23),
+			],
+		}];
+		assert_eq!(label_entities_in_sentences(&entities, &sentences), expected);
+	}
+	#[test]
+	fn test_find_entity_indices_special_multiple_occurrences() {
+		let sentence = "Test this test sentence with test cases.";
+		let entity = "test";
+		let expected = vec![(0, 4), (10, 14), (29, 33)];
+		assert_eq!(find_entity_indices(sentence, entity), expected);
+	}
+
+	#[test]
+	fn test_match_entities_with_tokens_positive() {
+		let tokenized_sentences = vec![vec![
+			"This".to_string(),
+			"is".to_string(),
+			"a".to_string(),
+			"test".to_string(),
+			"sentence.".to_string(),
+		]];
+		let classified_sentences = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![("test".to_string(), "Unlabelled".to_string(), 10, 14)],
+		}];
+		let expected = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![("test".to_string(), "Unlabelled".to_string(), 3, 3)],
+		}];
+		assert_eq!(
+			match_entities_with_tokens(&tokenized_sentences, &classified_sentences),
+			expected
+		);
+	}
+
+	#[test]
+	fn test_match_entities_with_tokens_negative() {
+		let tokenized_sentences = vec![vec![
+			"This".to_string(),
+			"is".to_string(),
+			"a".to_string(),
+			"test".to_string(),
+			"sentence.".to_string(),
+		]];
+		let classified_sentences = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![("nonexistent".to_string(), "Unlabelled".to_string(), 0, 10)],
+		}];
+		let expected = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![],
+		}];
+		assert_eq!(
+			match_entities_with_tokens(&tokenized_sentences, &classified_sentences),
+			expected
+		);
+	}
+
+	#[test]
+	fn test_match_entities_with_tokens_special_overlapping_entities() {
+		let tokenized_sentences = vec![vec![
+			"This".to_string(),
+			"is".to_string(),
+			"a".to_string(),
+			"test".to_string(),
+			"sentence".to_string(),
+			".".to_string(),
+		]];
+		let classified_sentences = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![
+				("test".to_string(), "Unlabelled".to_string(), 10, 14),
+				("test sentence".to_string(), "Unlabelled".to_string(), 10, 23),
+			],
+		}];
+		let expected = vec![ClassifiedSentence {
+			sentence: "This is a test sentence.".to_string(),
+			entities: vec![
+				("test".to_string(), "Unlabelled".to_string(), 3, 3),
+				("test sentence".to_string(), "Unlabelled".to_string(), 3, 4),
+			],
+		}];
+		assert_eq!(
+			match_entities_with_tokens(&tokenized_sentences, &classified_sentences),
+			expected
+		);
+	}
+
+	#[test]
+	fn test_create_binary_pairs_positive() {
+		let classified_sentences = vec![ClassifiedSentence {
+			sentence: "Alice knows Bob.".to_string(),
+			entities: vec![
+				("Alice".to_string(), "Person".to_string(), 0, 5),
+				("Bob".to_string(), "Person".to_string(), 12, 15),
+			],
+		}];
+		let expected = vec![ClassifiedSentenceWithPairs {
+			sentence: "Alice knows Bob.".to_string(),
+			entities: vec![
+				("Alice".to_string(), "Person".to_string(), 0, 5),
+				("Bob".to_string(), "Person".to_string(), 12, 15),
+			],
+			pairs: vec![("Alice".to_string(), 0, 5, "Bob".to_string(), 12, 15)],
+		}];
+		assert_eq!(create_binary_pairs(&classified_sentences), expected);
+	}
+
+	#[test]
+	fn test_create_binary_pairs_negative() {
+		let classified_sentences = vec![ClassifiedSentence {
+			sentence: "No entities here.".to_string(),
+			entities: vec![],
+		}];
+		let expected = vec![ClassifiedSentenceWithPairs {
+			sentence: "No entities here.".to_string(),
+			entities: vec![],
+			pairs: vec![],
+		}];
+		assert_eq!(create_binary_pairs(&classified_sentences), expected);
+	}
+
+	#[test]
+	fn test_select_highest_score_relation_positive() {
+		let input = HeadTailRelations {
+			head: Entity { name: "Alice".to_string(), start_idx: 0, end_idx: 5 },
+			tail: Entity { name: "Bob".to_string(), start_idx: 10, end_idx: 13 },
+			relations: vec![("friend".to_string(), 0.8), ("colleague".to_string(), 0.5)],
+		};
+		let expected = HeadTailRelations {
+			head: Entity { name: "Alice".to_string(), start_idx: 0, end_idx: 5 },
+			tail: Entity { name: "Bob".to_string(), start_idx: 10, end_idx: 13 },
+			relations: vec![("friend".to_string(), 0.8)],
+		};
+		assert_eq!(select_highest_score_relation(&input), expected);
+	}
+
+	#[test]
+	fn test_select_highest_score_relation_special_same_score() {
+		let mut input = HeadTailRelations {
+			head: Entity { name: "Alice".to_string(), start_idx: 0, end_idx: 5 },
+			tail: Entity { name: "Bob".to_string(), start_idx: 10, end_idx: 13 },
+			relations: vec![("friend".to_string(), 0.8), ("colleague".to_string(), 0.8)],
+		};
+		input = select_highest_score_relation(&input);
+		assert!(input.relations.len() == 1);
+	}
+
+	#[test]
+	fn test_merge_similar_relations_positive() {
+		let mut sentences_with_relations = vec![ClassifiedSentenceWithRelations {
+			classified_sentence: ClassifiedSentenceWithPairs {
+				sentence: "Alice and Bob are colleagues.".to_string(),
+				entities: vec![
+					("Alice".to_string(), "Person".to_string(), 0, 5),
+					("Bob".to_string(), "Person".to_string(), 10, 13),
+				],
+				pairs: vec![],
+			},
+			attention_matrix: None,
+			relations: vec![HeadTailRelations {
+				head: Entity { name: "Alice".to_string(), start_idx: 0, end_idx: 5 },
+				tail: Entity { name: "Bob".to_string(), start_idx: 10, end_idx: 13 },
+				relations: vec![("colleague".to_string(), 0.7), ("colleagues".to_string(), 0.6)],
+			}],
+		}];
+
+		merge_similar_relations(&mut sentences_with_relations);
+
+		let expected = vec![ClassifiedSentenceWithRelations {
+			classified_sentence: ClassifiedSentenceWithPairs {
+				sentence: "Alice and Bob are colleagues.".to_string(),
+				entities: vec![
+					("Alice".to_string(), "Person".to_string(), 0, 5),
+					("Bob".to_string(), "Person".to_string(), 10, 13),
+				],
+				pairs: vec![],
+			},
+			attention_matrix: None,
+			relations: vec![HeadTailRelations {
+				head: Entity { name: "Alice".to_string(), start_idx: 0, end_idx: 5 },
+				tail: Entity { name: "Bob".to_string(), start_idx: 10, end_idx: 13 },
+				relations: vec![("colleagues".to_string(), 1.3)],
+			}],
+		}];
+
+		assert_eq!(sentences_with_relations, expected);
+	}
+
+	#[test]
+	fn test_extract_entities_and_types_special_duplicate_entities() {
+		let sentences_with_relations = vec![ClassifiedSentenceWithRelations {
+			classified_sentence: ClassifiedSentenceWithPairs {
+				sentence: "Alice knows Alice.".to_string(),
+				entities: vec![
+					("Alice".to_string(), "Person".to_string(), 0, 5),
+					("Alice".to_string(), "Person".to_string(), 12, 17),
+				],
+				pairs: vec![],
+			},
+			attention_matrix: None,
+			relations: vec![],
+		}];
+		let (entities, types) = extract_entities_and_types(sentences_with_relations);
+		let expected_entities = vec!["Alice".to_string(), "Alice".to_string()];
+		let expected_types = vec!["Person".to_string(), "Person".to_string()];
+		assert_eq!(entities, expected_entities);
+		assert_eq!(types, expected_types);
+	}
 }

@@ -224,7 +224,7 @@ pub async fn resolve_ingestor_with_extension(
 		"webp" => Ok(Arc::new(ImageIngestor::new())),
 		"ff" => Ok(Arc::new(ImageIngestor::new())),
 		"dds" => Ok(Arc::new(ImageIngestor::new())),
-		"news" | "email" | "notion" | "txt" | "" | "md" | "slack" =>
+		"news" | "email" | "notion" | "txt" | "" | "md" | "slack" | "jira" =>
 			Ok(Arc::new(TxtIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 	}

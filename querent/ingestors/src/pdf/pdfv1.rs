@@ -57,7 +57,10 @@ impl BaseIngestor for PdfIngestor {
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
-					data.read_to_end(&mut buf).await.unwrap();
+					if let Err(e) = data.read_to_end(&mut buf).await {
+						tracing::error!("Failed to read pdf: {:?}", e);
+						continue;
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
@@ -99,10 +102,21 @@ impl BaseIngestor for PdfIngestor {
 						let file_path = PathBuf::from(file.clone());
 						// Guess the format of the image data
 						let format = guess_format(&img_data);
-						let mut ext = "jpeg";
+						let mut ext;
 						if let Ok(f) = format {
 							ext = f.to_mime_type();
 							ext = ext.split("/").last().unwrap_or("jpeg");
+						} else {
+							log::debug!("Failed to load image from memory with image id as  {:?}", image_id);
+							yield Ok(IngestedTokens {
+								data: vec![],
+								file: file.clone(),
+								doc_source: doc_source.clone(),
+								is_token_stream: false,
+								source_id: source_id.clone(),
+								image_id: None,
+							});
+							continue;
 						}
 						let collected_bytes = CollectedBytes {
 							data: Some(Box::pin(std::io::Cursor::new(img_data.clone()))),
@@ -267,7 +281,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/Demo.pdf");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("dummy.pdf").to_path_buf()),
@@ -280,10 +293,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = PdfIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
 		let mut stream = result_stream;
@@ -307,7 +318,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/scanned.pdf");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("GeoExProQuerent.pdf").to_path_buf()),
@@ -320,10 +330,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = PdfIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
 		let mut stream = result_stream;
@@ -346,5 +354,43 @@ mod tests {
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest PDF file");
 		assert!(is_image_found, "Unable to ingest PDF file with images");
+	}
+
+	#[tokio::test]
+	async fn test_pdf_ingestor_with_corrupt_file() {
+		let included_bytes =
+			include_bytes!("../../../../test_data/corrupt-data/sample-document.pdf");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("sample-document.pdf").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pdf".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = PdfIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() == 0, "Shouldn't have ingested PDF file");
 	}
 }

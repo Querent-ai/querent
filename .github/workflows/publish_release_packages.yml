@@ -12,8 +12,11 @@ on:
       release-version:
         description: "Release version (v#.#.#[-rc#])"
         required: true
+  # pull_request:
+  #   branches:
+  #     - main
 env:
-  INPUT_RELEASE_VERSION: ${{ github.event.inputs.release-version || github.ref_name }}
+  INPUT_RELEASE_VERSION: v0.0.3-rc1
 jobs:
   build-tauri-rian-ui:
     permissions:
@@ -39,6 +42,7 @@ jobs:
         with:
           name: tauri-rian
           path: tauri/rian/build
+
   build-macos-binaries-x86_64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
@@ -63,6 +67,10 @@ jobs:
           target: ${{ matrix.target }}
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
       - name: Install Cargo Tauri for info
         run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
@@ -70,6 +78,15 @@ jobs:
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -89,6 +106,7 @@ jobs:
             tauri/rian/src-tauri/target/release/bundle/**/nsis/*.exe
             tauri/rian/src-tauri/target/release/bundle/macos/*.tar.gz
             tauri/rian/src-tauri/target/release/bundle/**/*.sig
+
   build-macos-binaries-aarch64:
     needs: [build-tauri-rian-ui]
     name: Build ${{ matrix.target }}
@@ -113,6 +131,10 @@ jobs:
           target: ${{ matrix.target }}
           version: ${{ env.INPUT_RELEASE_VERSION }}
           token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
       - name: Install Cargo Tauri for info
         run: cargo install tauri-cli --version "=2.0.1" --locked
       - name: Tauri info
@@ -120,6 +142,15 @@ jobs:
       - name: Build Tauri App (macOS aarch64)
         uses: tauri-apps/tauri-action@v0
         env:
+          ENABLE_CODE_SIGNING: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.APPLE_API_KEY_PATH }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -164,6 +195,9 @@ jobs:
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
+          SIGN: 1
+          APPIMAGETOOL_FORCE_SIGN: 1
+          APPIMAGETOOL_SIGN_PASSPHRASE: ${{ secrets.APPIMAGETOOL_SIGN_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}

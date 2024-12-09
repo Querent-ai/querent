@@ -117,7 +117,14 @@ impl BaseIngestor for PptxIngestor {
 			},
 			Err(e) => {
 				eprintln!("Error: {:?}", e);
-				yield Err(e);
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				});
 			}
 		}
 		yield Ok(IngestedTokens {
@@ -187,5 +194,41 @@ mod tests {
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest DOC file");
 		assert!(is_image_included, "Image not included in the ingestor output");
+	}
+
+	#[tokio::test]
+	async fn test_pptx_ingestor_with_corrupt_data() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.pptx");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.pptx").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("pptx".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = PptxIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() == 0, "Should not have ingested DOC file");
 	}
 }

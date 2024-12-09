@@ -15,7 +15,8 @@ node_id: querent-node
 listen_address: 0.0.0.0
 advertise_address: 0.0.0.0
 gossip_listen_port: 2222
-cpu_capacity: 5
+cpu_capacity: 5 # number of cores
+memory_capacity: 1000 #MB
 peer_seeds:
 
 # -------------------------------- Restful Configuration --------------------------------

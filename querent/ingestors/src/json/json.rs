@@ -50,15 +50,46 @@ impl BaseIngestor for JsonIngestor {
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
-					data.read_to_end(&mut buf).await.unwrap();
+					if let Err(e) = data.read_to_end(&mut buf).await {
+						tracing::error!("Failed to read json: {:?}", e);
+						continue;
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
 			}
 			let mut reader = BufReader::new(buffer.as_slice());
 			let mut content = String::new();
-			reader.read_to_string(&mut content).await.expect("Failed to read file");
-			let json: serde_json::Value = serde_json::from_str(&content).expect("JSON was not well-formatted");
+			let read_res = reader.read_to_string(&mut content).await;
+			if read_res.is_err() {
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				})
+			}
+			let json: serde_json::Value;
+			let json_res: Result<serde_json::Value, serde_json::Error> = serde_json::from_str(&content);
+			match json_res {
+				Ok(res) => {
+					json = res;
+				},
+				Err(_e) => {
+					yield Ok(IngestedTokens {
+						data: vec![],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+						image_id: None,
+					});
+					return;
+				}
+			}
+
 			for (key, value) in json.as_object().expect("Failed to get object").iter() {
 				let res = format!("{:?}   {:?}", key, value).to_string();
 				let ingested_tokens = IngestedTokens {
@@ -100,7 +131,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/dc_universe.json");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("dc_universe.json").to_path_buf()),
@@ -113,10 +143,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = JsonIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
 		let mut stream = result_stream;
@@ -133,5 +161,42 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
+	}
+
+	#[tokio::test]
+	async fn test_json_ingestor_with_corrupt_file() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.json");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.json").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("json".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = JsonIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					tracing::error!("Failed to get tokens from images: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() == 0, "Should not have ingested JSON file");
 	}
 }

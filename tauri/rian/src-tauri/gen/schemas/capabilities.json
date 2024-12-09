@@ -3,7 +3,7 @@
 		"identifier": "rian-main-capability",
 		"description": "Capability for the core rian application",
 		"local": true,
-		"windows": ["main", "google-oauth"],
+		"windows": ["main", "error-window"],
 		"permissions": [
 			"dialog:allow-ask",
 			"dialog:allow-save",
@@ -22,7 +22,10 @@
 			"notification:allow-is-permission-granted",
 			"notification:default",
 			"core:event:allow-unlisten",
-			"shell:default"
+			"shell:default",
+			"core:webview:allow-create-webview",
+			"core:webview:allow-create-webview-window",
+			"core:window:allow-create"
 		]
 	}
 }

@@ -14,6 +14,12 @@
 		type GoogleDriveCollectorConfig
 	} from '../../../../service/bindings';
 	import Modal from './add/Modal.svelte';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let drive_config: GoogleDriveCollectorConfig = {
 		drive_client_id: '',
@@ -71,7 +77,8 @@
 
 			goto('/crud/sources');
 		} else {
-			console.error('Please fill in all required fields.');
+			errorMessage = 'Please fill in all required fields.';
+			showErrorModal = true;
 		}
 	}
 </script>
@@ -119,4 +126,8 @@
 	</div>
 
 	<Modal bind:show={showModal} message={modalMessage} />
+
+	{#if showErrorModal}
+		<ErrorModal {errorMessage} closeModal={closeErrorModal} />
+	{/if}
 {/if}

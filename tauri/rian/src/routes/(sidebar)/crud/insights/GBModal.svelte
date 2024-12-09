@@ -149,6 +149,9 @@
 	}
 
 	function formatErrorMessage(error: string): string {
+		if (typeof error === 'string' && error.startsWith('Error: ')) {
+			error = error.replace('Error: ', '');
+		}
 		if (error.includes('Received empty response')) {
 			return 'No data was returned from the insight. Please check your input and try again.';
 		}

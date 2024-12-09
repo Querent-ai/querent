@@ -51,7 +51,10 @@ impl BaseIngestor for XmlIngestor {
 				}
 				if let Some(mut data) = collected_bytes.data {
 					let mut buf = Vec::new();
-					data.read_to_end(&mut buf).await.unwrap();
+					if let Err(e) = data.read_to_end(&mut buf).await {
+						tracing::error!("Failed to read xml: {:?}", e);
+						continue;
+					}
 					buffer.extend_from_slice(&buf);
 				}
 				source_id = collected_bytes.source_id.clone();
@@ -71,7 +74,15 @@ impl BaseIngestor for XmlIngestor {
 					}
 					Err(e) => {
 						eprintln!("Error: {e}");
-						break;
+						yield Ok(IngestedTokens {
+							data: vec![],
+							file: file.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+							image_id: None,
+						});
+						return;
 					}
 					_ => {}
 				}
@@ -114,7 +125,6 @@ mod tests {
 		let included_bytes = include_bytes!("../../../../test_data/dc_universe.xml");
 		let bytes = included_bytes.to_vec();
 
-		// Create a CollectedBytes instance
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(Path::new("dc_universe.xml").to_path_buf()),
@@ -127,10 +137,8 @@ mod tests {
 			image_id: None,
 		};
 
-		// Create a TxtIngestor instance
 		let ingestor = XmlIngestor::new();
 
-		// Ingest the file
 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
 		let mut stream = result_stream;
@@ -147,5 +155,42 @@ mod tests {
 			}
 		}
 		assert!(all_data.len() >= 1, "Unable to ingest XML file");
+	}
+
+	#[tokio::test]
+	async fn test_xml_ingestor_with_corrupt_data() {
+		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.xml");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("Demo.xml").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("xml".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = XmlIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					eprintln!("Failed to get tokens: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() == 0, "Should not have ingested XML file");
 	}
 }

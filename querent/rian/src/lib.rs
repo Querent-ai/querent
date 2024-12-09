@@ -48,8 +48,8 @@ pub async fn start_semantic_service(
 pub async fn create_dynamic_sources(
 	licence_key: Option<String>,
 	collectors_configs: Vec<CollectorConfig>,
-) -> Result<Vec<Arc<dyn sources::Source>>, PipelineErrors> {
-	let mut sources: Vec<Arc<dyn sources::Source>> = vec![];
+) -> Result<Vec<Arc<dyn sources::DataSource>>, PipelineErrors> {
+	let mut sources: Vec<Arc<dyn sources::DataSource>> = vec![];
 	let licence_key = licence_key.unwrap_or_default();
 	if licence_key.is_empty() {
 		log::warn!("Missing License Key");
@@ -153,7 +153,7 @@ pub async fn create_dynamic_sources(
 
 				match sources::news::news::NewsApiClient::new(config.clone()).await {
 					Ok(news_source) => {
-						sources.push(Arc::new(news_source) as Arc<dyn sources::Source>);
+						sources.push(Arc::new(news_source) as Arc<dyn sources::DataSource>);
 					},
 					Err(e) => {
 						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
@@ -175,7 +175,7 @@ pub async fn create_dynamic_sources(
 
 				match sources::notion::notion::NotionSource::new(config.clone()).await {
 					Ok(notion_source) => {
-						sources.push(Arc::new(notion_source) as Arc<dyn sources::Source>);
+						sources.push(Arc::new(notion_source) as Arc<dyn sources::DataSource>);
 					},
 					Err(e) => {
 						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
@@ -197,7 +197,7 @@ pub async fn create_dynamic_sources(
 
 				match sources::slack::slack::SlackApiClient::new(config.clone()).await {
 					Ok(slack_source) => {
-						sources.push(Arc::new(slack_source) as Arc<dyn sources::Source>);
+						sources.push(Arc::new(slack_source) as Arc<dyn sources::DataSource>);
 					},
 					Err(e) => {
 						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
@@ -207,6 +207,29 @@ pub async fn create_dynamic_sources(
 					},
 				}
 			},
+
+			Some(proto::semantics::Backend::Jira(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
+				match sources::jira::jira::JiraSource::new(config.clone()).await {
+					Ok(jira_source) => {
+						sources.push(Arc::new(jira_source) as Arc<dyn sources::DataSource>);
+					},
+					Err(e) => {
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+							"Failed to initialize Jira source: {:?} ",
+							e
+						)));
+					},
+				}
+			},
+
 			Some(proto::semantics::Backend::Email(config)) => {
 				#[cfg(feature = "license-check")]
 				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
@@ -218,7 +241,7 @@ pub async fn create_dynamic_sources(
 
 				match sources::email::email::EmailSource::new(config.clone()).await {
 					Ok(email_source) => {
-						sources.push(Arc::new(email_source) as Arc<dyn sources::Source>);
+						sources.push(Arc::new(email_source) as Arc<dyn sources::DataSource>);
 					},
 					Err(e) => {
 						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(

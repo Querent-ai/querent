@@ -14,6 +14,12 @@
 	import { commands } from '../../../../service/bindings';
 	import Modal from '../sources/add/Modal.svelte';
 	import LoadingModal from './LoadingModal.svelte';
+	import ErrorModal from '$lib/dashboard/ErrorModal.svelte';
+	let showErrorModal = false;
+	let errorMessage = '';
+	function closeErrorModal() {
+		showErrorModal = false;
+	}
 
 	let categoriesDropdown: string[] | null;
 	let currentCategory: {
@@ -73,10 +79,20 @@
 						discoveryApiResponseStore.set(insights);
 					}
 				} else {
-					console.error('Unable to start discovery session', res.error);
+					let error = res.error;
+					if (typeof error === 'string' && error.startsWith('Error: ')) {
+						error = error.replace('Error: ', '');
+					}
+					errorMessage = 'Unable to start discovery session' + error;
+					showErrorModal = true;
 				}
 			} catch (error) {
-				console.error('Error starting discovery session:', error);
+				let err = error instanceof Error ? error.message : String(error);
+				if (typeof err === 'string' && err.startsWith('Error: ')) {
+					err = err.replace('Error: ', '');
+				}
+				errorMessage = 'Error starting discovery session: ' + err;
+				showErrorModal = true;
 			} finally {
 				isLoading.set(false);
 			}
@@ -123,10 +139,20 @@
 					discoveryApiResponseStore.set(insights);
 				}
 			} else {
-				console.error('Error while sending API request', res.error);
+				let error = res.error;
+				if (typeof error === 'string' && error.startsWith('Error: ')) {
+					error = error.replace('Error: ', '');
+				}
+				errorMessage = 'Error while sending API request  ' + error;
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Error while toggling category:', error);
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Error while toggling category:  ' + err;
+			showErrorModal = true;
 		} finally {
 			isLoading.set(false);
 			selectedCategories = [];
@@ -174,10 +200,22 @@
 					discoveryApiResponseStore.set(insights);
 				}
 			} else {
-				console.error('Error while sending the request', res.error);
+				let error = res.error;
+				if (typeof error === 'string' && error.startsWith('Error: ')) {
+					error = error.replace('Error: ', '');
+				}
+				errorMessage = 'Error while sending the request  ' + error;
+				isLoading.set(false);
+				showErrorModal = true;
 			}
 		} catch (error) {
-			console.error('Error while performing search:', error);
+			let err = error instanceof Error ? error.message : String(error);
+			if (typeof err === 'string' && err.startsWith('Error: ')) {
+				err = err.replace('Error: ', '');
+			}
+			errorMessage = 'Error while performing search:  ' + err;
+			isLoading.set(false);
+			showErrorModal = true;
 		} finally {
 			isLoading.set(false);
 		}
@@ -442,6 +480,10 @@
 	<Modal bind:show={showModal} message={modalMessage} />
 	{#if $isLoading}
 		<LoadingModal message="Please wait while we get your data...." />
+	{/if}
+
+	{#if showErrorModal}
+		<ErrorModal {errorMessage} closeModal={closeErrorModal} />
 	{/if}
 </main>
 

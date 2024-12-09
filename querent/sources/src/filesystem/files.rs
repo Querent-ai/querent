@@ -1,4 +1,6 @@
-use crate::{SendableAsync, Source, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE};
+use crate::{
+	DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult, REQUEST_SEMAPHORE,
+};
 use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::{stream, Stream};
@@ -70,6 +72,7 @@ impl LocalFolderSource {
 		file_path: PathBuf,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send>>> {
 		let source_id = self.source_id.clone();
+
 		let stream = async_stream::stream! {
 			let _permit = REQUEST_SEMAPHORE.acquire().await.unwrap();
 			let file_metadata = fs::metadata(&file_path).await.map_err(SourceError::from)?;
@@ -84,7 +87,7 @@ impl LocalFolderSource {
 				true,
 				Some(file_name),
 				Some(file_size),
-				source_id,
+				source_id.clone(),
 				None,
 			);
 
@@ -96,7 +99,7 @@ impl LocalFolderSource {
 }
 
 #[async_trait]
-impl Source for LocalFolderSource {
+impl DataSource for LocalFolderSource {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
 		if !self.folder_path.exists() {
 			return Err(SourceError::new(
@@ -200,8 +203,9 @@ mod tests {
 	use std::{collections::HashSet, path::PathBuf};
 
 	use futures::StreamExt;
+	use tempfile::TempDir;
 
-	use crate::Source;
+	use crate::DataSource;
 
 	use super::LocalFolderSource;
 
@@ -213,7 +217,7 @@ mod tests {
 		);
 		let connectivity = local_storage.check_connectivity().await;
 
-		println!("Connectivity: {:?}", connectivity);
+		assert!(connectivity.is_ok(), "Got connectivity error");
 
 		let result = local_storage.poll_data().await;
 
@@ -231,5 +235,49 @@ mod tests {
 			}
 		}
 		println!("Files are --- {:?}", count_files);
+	}
+
+	#[tokio::test]
+	async fn test_local_file_collector_invalid_path() {
+		let local_storage = LocalFolderSource::new(
+			PathBuf::from("src/invalid_path/"),
+			"LocalFolderSource".to_string(),
+		);
+		let connectivity = local_storage.check_connectivity().await;
+
+		// println!("Error is  {:?}", connectivity.err());
+
+		assert!(connectivity.is_err(), "Expected connectivity check to fail with an invalid path");
+	}
+
+	#[tokio::test]
+	async fn test_local_file_collector_no_permissions() {
+		let local_storage =
+			LocalFolderSource::new(PathBuf::from("/root/"), "LocalFolderSource".to_string());
+		let connectivity = local_storage.check_connectivity().await;
+
+		// println!("Error is {:?}", connectivity.err());
+
+		assert!(
+			connectivity.is_err(),
+			"Expected connectivity check to fail due to lack of permissions"
+		);
+	}
+
+	#[tokio::test]
+	async fn test_local_file_collector_empty_directory() {
+		let temp_dir = TempDir::new().expect("Failed to create temp directory");
+		let temp_path = temp_dir.path().to_path_buf();
+
+		let local_storage = LocalFolderSource::new(temp_path, "LocalFolderSource".to_string());
+
+		let result = local_storage.poll_data().await;
+		assert!(result.is_ok(), "Expected successful connectivity");
+
+		let mut stream = result.unwrap();
+		assert!(
+			stream.next().await.is_none(),
+			"Expected no files to be collected in an empty directory"
+		);
 	}
 }

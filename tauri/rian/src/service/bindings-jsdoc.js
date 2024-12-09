@@ -362,7 +362,7 @@ export const universalConstant = 42;
 
 /**
  * JiraCollectorConfig is a message to hold configuration for a Jira collector.
- * @typedef { { jira_server: string; jira_username: string; jira_password: string; jira_api_token: string; jira_certfile: string; jira_keyfile: string; jira_verify: boolean; jira_project: string; jira_query: string; jira_start_at: number; jira_max_results: number; id: string } } JiraCollectorConfig
+ * @typedef { { jira_server: string; jira_email: string; jira_api_key: string; jira_project: string; id: string } } JiraCollectorConfig
  */
 
 /**
