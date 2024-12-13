@@ -14,13 +14,25 @@ use std::collections::HashMap;
 // Here is the list of the supported bulk standards in OSDU.
 // File - A record that describes the metadata about the digital files, but does not describe the business content of the file, such as the file size, checksum of a well log.
 
-pub struct Client {
+pub struct OSDUSource {
 	pub storage: StorageService,
 }
 
-impl Client {
-	pub async fn new(base_api_url: &str, access_token: &str) -> Client {
-		Client { storage: StorageService::new(base_api_url, access_token) }
+impl OSDUSource {
+	pub async fn new(
+		base_api_url: &str,
+		access_token: &str,
+		data_partition_id: &str,
+		x_collaboration: &str,
+	) -> OSDUSource {
+		OSDUSource {
+			storage: StorageService::new(
+				base_api_url,
+				access_token,
+				data_partition_id,
+				x_collaboration,
+			),
+		}
 	}
 }
 
@@ -30,10 +42,20 @@ pub struct StorageService {
 }
 
 impl StorageService {
-	pub fn new(base_api_url: &str, access_token: &str) -> StorageService {
+	pub fn new(
+		base_api_url: &str,
+		access_token: &str,
+		data_partition_id: &str,
+		x_collaboration: &str,
+	) -> StorageService {
 		StorageService {
 			service_path: "/api/storage/v2/records".to_string(),
-			http_client: BaseHttpClient::new(base_api_url, access_token),
+			http_client: BaseHttpClient::new(
+				base_api_url,
+				access_token,
+				data_partition_id,
+				x_collaboration,
+			),
 		}
 	}
 
@@ -51,14 +73,21 @@ pub struct BaseHttpClient {
 	pub base_api_url: String,
 	pub access_token: String,
 	pub data_partition_id: String,
+	pub x_collaboration: String,
 }
 
 impl BaseHttpClient {
-	pub fn new(base_api_url: &str, access_token: &str) -> BaseHttpClient {
+	pub fn new(
+		base_api_url: &str,
+		access_token: &str,
+		data_partition_id: &str,
+		x_collaboration: &str,
+	) -> BaseHttpClient {
 		BaseHttpClient {
 			base_api_url: base_api_url.to_string(),
 			access_token: access_token.to_string(),
-			data_partition_id: "osdu".to_string(),
+			data_partition_id: data_partition_id.to_string(),
+			x_collaboration: x_collaboration.to_string(),
 		}
 	}
 
@@ -68,6 +97,7 @@ impl BaseHttpClient {
 		headers.insert("CONTENT_TYPE", "application/json".parse().unwrap());
 		headers.insert("ACCEPT", "application/json".parse().unwrap());
 		headers.insert("data-partition-id", self.data_partition_id.parse().unwrap());
+		headers.insert("x-collaboration", self.x_collaboration.parse().unwrap());
 		headers
 	}
 
