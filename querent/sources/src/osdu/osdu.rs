@@ -1,18 +1,26 @@
-use async_trait::async_trait;
-use aws_config::{meta::region::RegionProviderChain, Region};
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use std::collections::HashMap;
+
+// These are the main OSDU data types:
+
+// Reference Data - These are the standard naming for the data values. For example, the reference value for measured depth is MD and for elevation is ELEV. Whenever these values are being used, the reference data must be first loaded in the OSDU platform. There are 3 governance levels for the reference data:
+// Fixed - Pre-determined by agreement in OSDU forum and shall not be changed. This allows interoperability between companies.
+// Open - Agreed by OSDU forum but companies may extend with custom values. Custom values shall not conflict with Forum values. This allows some level of interoperability between companies.
+// Local - OSDU forum makes no declaration about the values and companies need to create their own list. This list does not benefit much from interoperability and agreed-upon values are hard to come by.
+// Master Data - A record of the information about business objects that we manage in the OSDU record catalog. For example, a list of field names with well names and their associated wellbore names.
+// Work Product - A record that ties together a set of work product components such as a group of well logs inside a wellbore.
+// Work Product Components - A record that describes the business content of a single well log, such as the log data information, top, bottom depth of the well log.
+// Here is the list of the supported bulk standards in OSDU.
+// File - A record that describes the metadata about the digital files, but does not describe the business content of the file, such as the file size, checksum of a well log.
 
 pub struct Client {
 	pub storage: StorageService,
 }
 
 impl Client {
-	pub async fn new(cloud_provider: &dyn CloudAuthProvider, base_api_url: &str) -> Client {
-		let access_token = cloud_provider.get_access_token().await;
-		Client { storage: StorageService::new(base_api_url, &access_token) }
+	pub async fn new(base_api_url: &str, access_token: &str) -> Client {
+		Client { storage: StorageService::new(base_api_url, access_token) }
 	}
 }
 
@@ -75,11 +83,25 @@ impl BaseHttpClient {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize)]
 pub struct RecordBase {
 	pub id: String,
+	pub version: u32,
 	pub kind: String,
-	pub data: HashMap<String, Value>,
+	pub acl: Acl,
+	pub legal: Legal,
+	pub data: serde_json::Value,
+}
+
+#[derive(Deserialize)]
+pub struct Acl {
+	pub viewers: Vec<String>,
+	pub owners: Vec<String>,
+}
+
+#[derive(Deserialize)]
+pub struct Legal {
+	pub status: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -103,94 +125,4 @@ fn get_url_params(param: Param) -> String {
 			.collect::<Vec<_>>()
 			.join("&"),
 	}
-}
-
-#[async_trait]
-pub trait CloudAuthProvider {
-	async fn get_access_token(&self) -> String;
-}
-
-// AWS Implementation
-pub struct AwsAuthProvider {
-	pub profile: String,
-	pub region: &'static str,
-	pub resource_prefix: String,
-}
-
-#[async_trait]
-impl CloudAuthProvider for AwsAuthProvider {
-	async fn get_access_token(&self) -> String {
-		let region_provider =
-			RegionProviderChain::default_provider().or_else(Region::new(self.region));
-		let config = aws_config::from_env().region(region_provider).load().await;
-
-		let client = aws_sdk_sts::Client::new(&config);
-
-		// Option 1: Assume a Role
-		let assumed_role = client
-			.assume_role()
-			.role_arn(format!("{}:role/{}", self.resource_prefix, "QuerentRole"))
-			.role_session_name("rian-session")
-			.send()
-			.await;
-
-		match assumed_role {
-			Ok(response) => response.credentials.unwrap().session_token,
-			Err(e) => {
-				eprintln!("Error fetching AWS token: {}", e);
-				"".to_string()
-			},
-		}
-
-		// Option 2: Fetch temporary session token directly
-		// let session_token = client.get_session_token().send().await.unwrap();
-		// session_token.credentials.unwrap().session_token.unwrap_or_default()
-	}
-}
-
-// Azure Implementation
-pub struct AzureAuthProvider {
-	pub client_id: String,
-	pub client_secret: String,
-	pub tenant_id: String,
-}
-
-#[async_trait]
-impl CloudAuthProvider for AzureAuthProvider {
-	async fn get_access_token(&self) -> String {
-		let token_url =
-			format!("https://login.microsoftonline.com/{}/oauth2/v2.0/token", self.tenant_id);
-
-		let params = [
-			("grant_type", "client_credentials"),
-			("client_id", &self.client_id),
-			("client_secret", &self.client_secret),
-			("scope", "https://management.azure.com/.default"),
-		];
-
-		let client = HttpClient::new();
-		let response = client.post(&token_url).form(&params).send().await.unwrap();
-
-		let token_response: TokenResponse = response.json().await.unwrap();
-		token_response.access_token
-	}
-}
-
-// GCP Implementation
-pub struct GcpAuthProvider {
-	pub service_account_key: String,
-}
-
-#[async_trait]
-impl CloudAuthProvider for GcpAuthProvider {
-	async fn get_access_token(&self) -> String {
-		// Implement GCP token retrieval logic here
-		"gcp_access_token_placeholder".to_string() // Replace with real token
-	}
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct TokenResponse {
-	pub access_token: String,
-	pub expires_in: i32,
 }
