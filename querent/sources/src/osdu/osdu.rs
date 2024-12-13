@@ -14,61 +14,6 @@ use std::collections::HashMap;
 // Here is the list of the supported bulk standards in OSDU.
 // File - A record that describes the metadata about the digital files, but does not describe the business content of the file, such as the file size, checksum of a well log.
 
-pub struct OSDUSource {
-	pub storage: StorageService,
-}
-
-impl OSDUSource {
-	pub async fn new(
-		base_api_url: &str,
-		access_token: &str,
-		data_partition_id: &str,
-		x_collaboration: &str,
-	) -> OSDUSource {
-		OSDUSource {
-			storage: StorageService::new(
-				base_api_url,
-				access_token,
-				data_partition_id,
-				x_collaboration,
-			),
-		}
-	}
-}
-
-pub struct StorageService {
-	pub service_path: String,
-	pub http_client: BaseHttpClient,
-}
-
-impl StorageService {
-	pub fn new(
-		base_api_url: &str,
-		access_token: &str,
-		data_partition_id: &str,
-		x_collaboration: &str,
-	) -> StorageService {
-		StorageService {
-			service_path: "/api/storage/v2/records".to_string(),
-			http_client: BaseHttpClient::new(
-				base_api_url,
-				access_token,
-				data_partition_id,
-				x_collaboration,
-			),
-		}
-	}
-
-	pub async fn get_record(&self, record_id: &str) -> Result<RecordBase, reqwest::Error> {
-		let response = self
-			.http_client
-			.get_request(&self.service_path, Param::Path(record_id.to_string()))
-			.await?;
-
-		response.json::<RecordBase>().await
-	}
-}
-
 pub struct BaseHttpClient {
 	pub base_api_url: String,
 	pub access_token: String,
@@ -91,7 +36,7 @@ impl BaseHttpClient {
 		}
 	}
 
-	fn construct_headers(&self) -> HeaderMap {
+	pub fn construct_headers(&self) -> HeaderMap {
 		let mut headers = HeaderMap::new();
 		headers.insert("AUTHORIZATION", format!("Bearer {}", self.access_token).parse().unwrap());
 		headers.insert("CONTENT_TYPE", "application/json".parse().unwrap());
@@ -101,7 +46,7 @@ impl BaseHttpClient {
 		headers
 	}
 
-	async fn get_request(
+	pub async fn get_request(
 		&self,
 		service_path: &str,
 		param: Param,
@@ -141,7 +86,7 @@ pub struct StoreRecordResponse {
 	pub record_ids: Vec<String>,
 }
 
-enum Param {
+pub enum Param {
 	Path(String),
 	Query(HashMap<String, String>),
 }
