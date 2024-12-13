@@ -78,3 +78,4 @@ jira_query = { workspace = true }
 tar = { workspace = true }
 flate2 = { workspace = true }
 serial_test = { workspace = true }
+aws-sdk-sts = { workspace = true }
