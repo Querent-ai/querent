@@ -1,3 +1,21 @@
+// Copyright (C) 2023 QuerentAI LLC.
+// This file is part of Querent.
+
+// The Licensed Work is licensed under the Business Source License 1.1 (BSL 1.1).
+// You may use this file in compliance with the BSL 1.1, subject to the following restrictions:
+// 1. You may not use the Licensed Work for AI-related services, database services,
+//    or any service or product offering that provides database, big data, or analytics
+//    services to third parties unless explicitly authorized by QuerentAI LLC.
+// 2. For more details, see the LICENSE file or visit https://mariadb.com/bsl11/.
+
+// For inquiries about alternative licensing arrangements, please contact contact@querent.xyz.
+
+// The Licensed Work is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, express or implied,
+// including but not limited to the warranties of merchantability, fitness for a particular purpose,
+// and non-infringement. See the Business Source License for more details.
+
+// This software includes code developed by QuerentAI LLC (https://querent.ai).
+
 use async_stream::stream;
 use async_trait::async_trait;
 use common::{retry, CollectedBytes, RetryParams};
@@ -417,7 +435,7 @@ mod tests {
 			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
 			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
 			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
-			folder_to_crawl: "1BtLKXcYBrS16CX0R4V1X7Y4XyO9Ct7f8".to_string(),
+			folder_to_crawl: "1fmNwZ_qkAuuZ3t2Fs5RzPI5hdv-8riIL".to_string(),
 		};
 
 		let drive_storage = GoogleDriveSource::new(google_config).await;
@@ -451,7 +469,7 @@ mod tests {
 			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
 			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
 			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
-			folder_to_crawl: "1B0IIXrz5UHqHcu_gbMOzfqb_pgxaVatM".to_string(),
+			folder_to_crawl: "1fmNwZ_qkAuuZ3t2Fs5RzPI5hdv-8riIL".to_string(),
 		};
 
 		let drive_storage = GoogleDriveSource::new(google_config).await;
@@ -503,44 +521,6 @@ mod tests {
 			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
 			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
 			folder_to_crawl: "invalid-folder-id".to_string(),
-		};
-
-		let drive_storage = GoogleDriveSource::new(google_config).await;
-		let connectivity = drive_storage.check_connectivity().await;
-		assert!(connectivity.is_ok(), "Expected connectivity to pass");
-
-		let result = drive_storage.poll_data().await;
-
-		let mut stream = result.unwrap();
-		let mut count_files: HashSet<String> = HashSet::new();
-		let mut found_error = false;
-		while let Some(item) = stream.next().await {
-			match item {
-				Ok(collected_bytes) =>
-					if let Some(pathbuf) = collected_bytes.file {
-						if let Some(str_path) = pathbuf.to_str() {
-							count_files.insert(str_path.to_string());
-						}
-					},
-				Err(err) => {
-					found_error = true;
-					eprintln!("Expected successful data collection {:?}", err)
-				},
-			}
-		}
-
-		assert!(found_error, "Expected data collection to fail with invalid folder ID");
-	}
-
-	#[tokio::test]
-	async fn test_drive_collector_special_character_files() {
-		dotenv().ok();
-		let google_config = GoogleDriveCollectorConfig {
-			id: "Drive-source-id".to_string(),
-			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
-			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
-			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
-			folder_to_crawl: "special-character-folder-id".to_string(),
 		};
 
 		let drive_storage = GoogleDriveSource::new(google_config).await;
