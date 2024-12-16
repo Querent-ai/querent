@@ -363,9 +363,9 @@ mod tests {
 
 		let jira_config: JiraCollectorConfig = JiraCollectorConfig {
 			jira_server: "https://querent.atlassian.net".to_string(),
-			jira_email: "ansh@querent.xyz".to_string(),
+			jira_email: "nishant@querent.xyz".to_string(),
 			jira_api_key: env::var("JIRA_API_TOKEN").unwrap_or("".to_string()),
-			jira_project: "SCRUM".to_string(),
+			jira_project: "Querent1".to_string(),
 			id: "Jira-source".to_string(),
 		};
 
@@ -397,7 +397,7 @@ mod tests {
 
 		let jira_config: JiraCollectorConfig = JiraCollectorConfig {
 			jira_server: "https://querent.atlassian.net".to_string(),
-			jira_email: "ansh@querent.xyz".to_string(),
+			jira_email: "nishant@querent.xyz".to_string(),
 			jira_api_key: "Invalid_key".to_string(),
 			jira_project: "SCRUM".to_string(),
 			id: "Jira-source".to_string(),
@@ -415,7 +415,7 @@ mod tests {
 
 		let jira_config: JiraCollectorConfig = JiraCollectorConfig {
 			jira_server: "https://querent.atlassian.net".to_string(),
-			jira_email: "ansh@querent.xyz".to_string(),
+			jira_email: "nishant@querent.xyz".to_string(),
 			jira_api_key: env::var("JIRA_API_TOKEN").unwrap_or("".to_string()),
 			jira_project: "Invalid project".to_string(),
 			id: "Jira-source".to_string(),
