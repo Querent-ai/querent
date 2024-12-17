@@ -111,33 +111,14 @@
 	let showNewEntityForm = false;
 	let searchTerm = '';
 
-	let models = [
-		{
-			id: 0,
-			value: 'english',
-			name: 'Davlan/xlm-roberta-base-wikiann-ner',
-			info: 'First Named Entity Recognition model for 20 languages based on a fine-tuned XLM-RoBERTa large model'
-		},
-		{
-			id: 1,
-			value: 'geobert',
-			name: 'botryan96/GeoBERT',
-			info: 'An NER model that was fine-tuned from SciBERT on the Geoscientific Corpus dataset. The model was trained on the Labeled Geoscientific Corpus dataset'
-		}
-	];
-
-	$: selectedModelName =
-		selectedModel !== null
-			? models.find((m) => m.id === selectedModel)?.name
-			: '-- Choose Model --';
-
 	const handleSubmit = async (event: Event) => {
 		event.preventDefault();
 		try {
 			const nonEmptyRows = entityTable.filter((row) => row.entity !== '' && row.entityType !== '');
 
 			if ((selectedModel == null || selectedModel == -1) && nonEmptyRows.length == 0) {
-				modalMessage = 'Please either choose model or enter some entities';
+				modalMessage =
+					'Please define your search space by entering entities and their respective types';
 				showModal = true;
 				return;
 			}
@@ -148,7 +129,7 @@
 
 			let request: SemanticPipelineRequest = {
 				collectors: selectedSources,
-				model: selectedModel,
+				model: null,
 				fixed_entities: {
 					entities: nonEmptyRows.map((row) => row.entity)
 				},
@@ -206,16 +187,6 @@
 		select.value = '';
 	};
 
-	const handleAddModel = (model: Model) => {
-		if (model.value === 'geobert') {
-			modalMessage = 'This feature is available only in premium';
-			showModal = true;
-			selectedModel = null;
-		} else if (model.value === 'english') {
-			selectedModel = modelsList[model.value];
-		}
-		isDropdownOpen = false;
-	};
 	const toggleDropdown = (event: MouseEvent) => {
 		event.preventDefault();
 		event.stopPropagation();
@@ -457,38 +428,6 @@
 						style="display: none;"
 						on:change={handleFileUpload}
 					/>
-				</div>
-			</div>
-
-			<div class="divider"></div>
-
-			<div class="section">
-				<label for="model">
-					Model
-					<span class="tooltip">
-						<span class="icon-info">i</span>
-						<span class="tooltiptext">Choose the model to use for Named Entity Recognition.</span>
-					</span>
-				</label>
-
-				<div class="custom-dropdown">
-					<button on:click={toggleDropdown} class="dropdown-toggle">
-						{selectedModelName}
-					</button>
-
-					{#if isDropdownOpen}
-						<div class="dropdown-menu">
-							{#each models as model}
-								<button type="button" class="model-item" on:click={() => handleAddModel(model)}>
-									<Huggingface height="30px" width="30px" />
-									<div class="model-details">
-										<div class="model-name">{model.name}</div>
-										<div class="model-description">{model.info}</div>
-									</div>
-								</button>
-							{/each}
-						</div>
-					{/if}
 				</div>
 			</div>
 
