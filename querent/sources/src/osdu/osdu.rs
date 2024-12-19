@@ -1,6 +1,10 @@
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use yup_oauth2::{
+	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
+	AccessToken, ServiceAccountAuthenticator,
+};
 
 // These are the main OSDU data types:
 
@@ -16,45 +20,70 @@ use std::collections::HashMap;
 
 pub struct BaseHttpClient {
 	pub base_api_url: String,
-	pub access_token: String,
 	pub data_partition_id: String,
 	pub x_collaboration: String,
+	pub correlation_id: String,
+	pub scopes: Vec<String>,
+	access_token: Option<AccessToken>,
+	auth: Authenticator<HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>>,
 }
 
 impl BaseHttpClient {
-	pub fn new(
+	pub async fn new(
 		base_api_url: &str,
-		access_token: &str,
 		data_partition_id: &str,
 		x_collaboration: &str,
+		correlation_id: &str,
+		svc_access_key: &str,
+		scopes: Vec<String>,
 	) -> BaseHttpClient {
+		let service_account_key = parse_service_account_key(svc_access_key).unwrap();
+		let auth: Authenticator<
+			HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
+		> = ServiceAccountAuthenticator::builder(service_account_key)
+			.build()
+			.await
+			.expect("Failed to create authenticator");
 		BaseHttpClient {
 			base_api_url: base_api_url.to_string(),
-			access_token: access_token.to_string(),
 			data_partition_id: data_partition_id.to_string(),
 			x_collaboration: x_collaboration.to_string(),
+			correlation_id: correlation_id.to_string(),
+			auth,
+			scopes,
+			access_token: None,
 		}
 	}
 
-	pub fn construct_headers(&self) -> HeaderMap {
+	pub async fn construct_headers(&mut self) -> HeaderMap {
+		// Note: many unwraps here assuming tokens work
 		let mut headers = HeaderMap::new();
-		headers.insert("AUTHORIZATION", format!("Bearer {}", self.access_token).parse().unwrap());
+		if self.access_token.is_none() || self.access_token.as_ref().unwrap().is_expired() {
+			self.access_token = Some(self.auth.token(self.scopes.as_slice()).await.unwrap());
+		}
+		headers.insert(
+			"AUTHORIZATION",
+			format!("Bearer {}", self.access_token.as_ref().unwrap().token().unwrap())
+				.parse()
+				.unwrap(),
+		);
 		headers.insert("CONTENT_TYPE", "application/json".parse().unwrap());
 		headers.insert("ACCEPT", "application/json".parse().unwrap());
 		headers.insert("data-partition-id", self.data_partition_id.parse().unwrap());
 		headers.insert("x-collaboration", self.x_collaboration.parse().unwrap());
+		headers.insert("Correlation-Id", self.correlation_id.parse().unwrap());
 		headers
 	}
 
 	pub async fn get_request(
-		&self,
+		&mut self,
 		service_path: &str,
 		param: Param,
 	) -> Result<Response, reqwest::Error> {
 		let request_url =
 			format!("{}{}/{}", self.base_api_url, service_path, get_url_params(param));
 		let client = HttpClient::new();
-		client.get(&request_url).headers(self.construct_headers()).send().await
+		client.get(&request_url).headers(self.construct_headers().await).send().await
 	}
 }
 
