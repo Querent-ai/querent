@@ -226,7 +226,7 @@ impl FabricStorage for SurrealDB {
 			response: response.clone(),
 		};
 
-		let created: Vec<Record> = self
+		let created: Record = self
 			.db
 			.create("insight_knowledge")
 			.content(form)
@@ -234,6 +234,10 @@ impl FabricStorage for SurrealDB {
 			.map_err(|e| StorageError {
 				kind: StorageErrorKind::Internal,
 				source: Arc::new(anyhow::Error::from(e)),
+			})?
+			.ok_or_else(|| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 			})?;
 		log::debug!("Created: {:?}", created);
 
@@ -252,12 +256,18 @@ impl FabricStorage for SurrealDB {
 				event_id: item.event_id.clone(),
 			};
 
-			let created: Vec<Record> =
-				self.db.create("embedded_knowledge").content(form).await.map_err(|e| {
-					StorageError {
-						kind: StorageErrorKind::Internal,
-						source: Arc::new(anyhow::Error::from(e)),
-					}
+			let created: Record = self
+				.db
+				.create("embedded_knowledge")
+				.content(form)
+				.await
+				.map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?
+				.ok_or_else(|| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 				})?;
 			log::debug!("Created: {:?}", created);
 		}
@@ -271,12 +281,18 @@ impl FabricStorage for SurrealDB {
 		for item in payload {
 			let form = DiscoveredKnowledgeSurrealDb::from_document_payload(item.clone());
 
-			let created: Vec<Record> =
-				self.db.create("discovered_knowledge").content(form).await.map_err(|e| {
-					StorageError {
-						kind: StorageErrorKind::Internal,
-						source: Arc::new(anyhow::Error::from(e)),
-					}
+			let created: Record = self
+				.db
+				.create("discovered_knowledge")
+				.content(form)
+				.await
+				.map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?
+				.ok_or_else(|| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 				})?;
 			log::debug!("Created: {:?}", created);
 		}
@@ -305,7 +321,7 @@ impl FabricStorage for SurrealDB {
 			results.extend(
 				fetch_documents_for_embedding(
 					&self.db,
-					&embedding,
+					embedding,
 					offset,
 					max_results as i64,
 					&session_id,
@@ -326,7 +342,7 @@ impl FabricStorage for SurrealDB {
 				results.extend(
 					fetch_documents_for_embedding(
 						&self.db,
-						embedding,
+						embedding.to_vec(),
 						adjusted_offset,
 						1,
 						&session_id,
@@ -361,12 +377,18 @@ impl FabricStorage for SurrealDB {
 				event_id: item.event_id.clone(),
 				source_id: item.source_id.clone(),
 			};
-			let _created: Vec<Record> =
-				self.db.create("semantic_knowledge").content(form).await.map_err(|e| {
-					StorageError {
-						kind: StorageErrorKind::Internal,
-						source: Arc::new(anyhow::Error::from(e)),
-					}
+			let _created: Record = self
+				.db
+				.create("semantic_knowledge")
+				.content(form)
+				.await
+				.map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?
+				.ok_or_else(|| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::msg("Expected record creation but failed")),
 				})?;
 		}
 		Ok(())

@@ -26,7 +26,7 @@ use super::surrealdb::{QueryResultEmbedded, QueryResultSemantic};
 
 pub async fn fetch_documents_for_embedding(
 	db: &Surreal<Db>,
-	embedding: &Vec<f32>,
+	embedding: Vec<f32>,
 	adjusted_offset: i64,
 	limit: i64,
 	session_id: &String,
