@@ -1,9 +1,30 @@
+// Copyright (C) 2023 QuerentAI LLC.
+// This file is part of Querent.
+
+// The Licensed Work is licensed under the Business Source License 1.1 (BSL 1.1).
+// You may use this file in compliance with the BSL 1.1, subject to the following restrictions:
+// 1. You may not use the Licensed Work for AI-related services, database services,
+//    or any service or product offering that provides database, big data, or analytics
+//    services to third parties unless explicitly authorized by QuerentAI LLC.
+// 2. For more details, see the LICENSE file or visit https://mariadb.com/bsl11/.
+
+// For inquiries about alternative licensing arrangements, please contact contact@querent.xyz.
+
+// The Licensed Work is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, express or implied,
+// including but not limited to the warranties of merchantability, fitness for a particular purpose,
+// and non-infringement. See the Business Source License for more details.
+
+// This software includes code developed by QuerentAI LLC (https://querent.ai).
+
 use clap::{ArgMatches, Command};
 pub use common::{initialize_runtimes, RuntimesConfig};
+use rian_core::MAX_DATA_SIZE_IN_MEMORY;
 use tokio::signal;
 use tracing::{debug, info};
 
 use crate::{cli::load_node_config, config_cli_arg, serve_quester};
+
+pub const MB: u32 = 1_000_000;
 
 pub fn build_serve_command() -> Command {
 	Command::new("serve")
@@ -99,7 +120,10 @@ impl Serve {
 		debug!(args = ?self, "run-querent-service");
 		busy_detector::set_enabled(true);
 		let node_config = load_node_config(&self.node_config_uri).await.unwrap_or_default();
-
+		let res = MAX_DATA_SIZE_IN_MEMORY.set((node_config.memory_capacity * MB) as usize);
+		if res.is_err() {
+			info!("MAX_DATA_SIZE_IN_MEMORY is already set");
+		}
 		let runtimes_config = RuntimesConfig::default();
 		initialize_runtimes(runtimes_config)?;
 		let shutdown_signal = Box::pin(async move {
