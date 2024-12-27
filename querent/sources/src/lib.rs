@@ -18,10 +18,11 @@
 
 pub mod source;
 use std::{
-	io::{self, ErrorKind},
+	io::{self, Cursor, ErrorKind},
 	path::{Path, PathBuf},
 };
 use tempfile::TempPath;
+use tokio::io::AsyncRead;
 use tracing::error;
 
 pub use source::*;
@@ -108,4 +109,8 @@ impl AsMut<File> for DownloadTempFile {
 	fn as_mut(&mut self) -> &mut File {
 		&mut self.file
 	}
+}
+
+pub fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
+	Cursor::new(description.into_bytes())
 }

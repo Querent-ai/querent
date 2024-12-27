@@ -1,10 +1,16 @@
+use async_trait::async_trait;
+use common::CollectedBytes;
+use futures::Stream;
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Debug, ops::Range, path::Path, pin::Pin};
+use tokio::io::AsyncRead;
 use yup_oauth2::{
 	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
 	AccessToken, ServiceAccountAuthenticator,
 };
+
+use crate::{string_to_async_read, DataSource, SendableAsync, SourceResult};
 
 // These are the main OSDU data types:
 
@@ -17,8 +23,7 @@ use yup_oauth2::{
 // Work Product Components - A record that describes the business content of a single well log, such as the log data information, top, bottom depth of the well log.
 // Here is the list of the supported bulk standards in OSDU.
 // File - A record that describes the metadata about the digital files, but does not describe the business content of the file, such as the file size, checksum of a well log.
-
-pub struct BaseHttpClient {
+pub struct OSDUClient {
 	pub base_api_url: String,
 	pub data_partition_id: String,
 	pub x_collaboration: String,
@@ -28,7 +33,13 @@ pub struct BaseHttpClient {
 	auth: Authenticator<HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>>,
 }
 
-impl BaseHttpClient {
+impl Debug for OSDUClient {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "OSDUClient")
+	}
+}
+
+impl OSDUClient {
 	pub async fn new(
 		base_api_url: &str,
 		data_partition_id: &str,
@@ -36,7 +47,7 @@ impl BaseHttpClient {
 		correlation_id: &str,
 		svc_access_key: &str,
 		scopes: Vec<String>,
-	) -> BaseHttpClient {
+	) -> OSDUClient {
 		let service_account_key = parse_service_account_key(svc_access_key).unwrap();
 		let auth: Authenticator<
 			HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
@@ -44,7 +55,7 @@ impl BaseHttpClient {
 			.build()
 			.await
 			.expect("Failed to create authenticator");
-		BaseHttpClient {
+		OSDUClient {
 			base_api_url: base_api_url.to_string(),
 			data_partition_id: data_partition_id.to_string(),
 			x_collaboration: x_collaboration.to_string(),
@@ -58,7 +69,10 @@ impl BaseHttpClient {
 	pub async fn construct_headers(&mut self) -> HeaderMap {
 		// Note: many unwraps here assuming tokens work
 		let mut headers = HeaderMap::new();
-		if self.access_token.is_none() || self.access_token.as_ref().unwrap().is_expired() {
+		// if self.access_token.is_none() || self.access_token.as_ref().unwrap().is_expired() {
+		// 	self.access_token = Some(self.auth.token(self.scopes.as_slice()).await.unwrap());
+		// }
+		if self.access_token.is_none() {
 			self.access_token = Some(self.auth.token(self.scopes.as_slice()).await.unwrap());
 		}
 		headers.insert(
@@ -128,5 +142,41 @@ fn get_url_params(param: Param) -> String {
 			.map(|(key, value)| format!("{}={}", key, value))
 			.collect::<Vec<_>>()
 			.join("&"),
+	}
+}
+
+#[async_trait]
+impl DataSource for OSDUClient {
+	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		Ok(())
+	}
+
+	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
+		Ok(vec![])
+	}
+
+	async fn get_slice_stream(
+		&self,
+		_path: &Path,
+		_range: Range<usize>,
+	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
+		Ok(Box::new(string_to_async_read("".to_string())))
+	}
+
+	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
+		Ok(vec![])
+	}
+
+	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
+		Ok(0)
+	}
+
+	async fn copy_to(&self, _path: &Path, _output: &mut dyn SendableAsync) -> SourceResult<()> {
+		Ok(())
+	}
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
+		panic!("Not implemented")
 	}
 }

@@ -29,11 +29,12 @@ use futures::Stream;
 use proto::semantics::NotionConfig;
 use tokio::io::AsyncRead;
 
-use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
+use crate::{
+	string_to_async_read, DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult,
+};
 
 use super::utils::{
 	extract_file_extension, fetch_all_page_ids, fetch_page, format_page, get_images_from_page,
-	string_to_async_read,
 };
 
 #[derive(Clone, Debug)]
