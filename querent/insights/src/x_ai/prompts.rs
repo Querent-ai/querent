@@ -14,7 +14,7 @@
 // including but not limited to the warranties of merchantability, fitness for a particular purpose,
 // and non-infringement. See the Business Source License for more details.
 
-// This software includes code developed by QuerentAI LLC (https://querent.ai).
+// This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 pub fn get_suggestions_prompt(suggestion_texts: &[&str]) -> String {
 	format!(

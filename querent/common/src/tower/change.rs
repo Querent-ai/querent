@@ -14,7 +14,7 @@
 // including but not limited to the warranties of merchantability, fitness for a particular purpose,
 // and non-infringement. See the Business Source License for more details.
 
-// This software includes code developed by QuerentAI LLC (https://querent.ai).
+// This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 /// A change enum similar to `tower::discover::Change` but cloneable.
 // TODO: Remove when the next version of tower (0.4.14?) is released.

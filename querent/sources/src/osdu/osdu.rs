@@ -14,10 +14,9 @@
 // including but not limited to the warranties of merchantability, fitness for a particular purpose,
 // and non-infringement. See the Business Source License for more details.
 
-// This software includes code developed by QuerentAI LLC (https://querent.ai).
+// This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
-use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug};
 use yup_oauth2::{
 	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
@@ -110,34 +109,6 @@ impl OSDUClient {
 		let client = HttpClient::new();
 		client.get(&request_url).headers(self.construct_headers().await).send().await
 	}
-}
-
-#[derive(Deserialize)]
-pub struct RecordBase {
-	pub id: String,
-	pub version: u32,
-	pub kind: String,
-	pub acl: Acl,
-	pub legal: Legal,
-	pub data: serde_json::Value,
-}
-
-#[derive(Deserialize)]
-pub struct Acl {
-	pub viewers: Vec<String>,
-	pub owners: Vec<String>,
-}
-
-#[derive(Deserialize)]
-pub struct Legal {
-	pub status: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct StoreRecordResponse {
-	pub record_count: i16,
-	pub record_ids: Vec<String>,
 }
 
 pub enum Param {
