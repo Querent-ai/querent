@@ -1,16 +1,28 @@
-use async_trait::async_trait;
-use common::CollectedBytes;
-use futures::Stream;
+// Copyright (C) 2023 QuerentAI LLC.
+// This file is part of Querent.
+
+// The Licensed Work is licensed under the Business Source License 1.1 (BSL 1.1).
+// You may use this file in compliance with the BSL 1.1, subject to the following restrictions:
+// 1. You may not use the Licensed Work for AI-related services, database services,
+//    or any service or product offering that provides database, big data, or analytics
+//    services to third parties unless explicitly authorized by QuerentAI LLC.
+// 2. For more details, see the LICENSE file or visit https://mariadb.com/bsl11/.
+
+// For inquiries about alternative licensing arrangements, please contact contact@querent.xyz.
+
+// The Licensed Work is provided "AS IS", WITHOUT WARRANTY OF ANY KIND, express or implied,
+// including but not limited to the warranties of merchantability, fitness for a particular purpose,
+// and non-infringement. See the Business Source License for more details.
+
+// This software includes code developed by QuerentAI LLC (https://querent.ai).
+
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Debug, ops::Range, path::Path, pin::Pin};
-use tokio::io::AsyncRead;
+use std::{collections::HashMap, fmt::Debug};
 use yup_oauth2::{
 	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
 	AccessToken, ServiceAccountAuthenticator,
 };
-
-use crate::{string_to_async_read, DataSource, SendableAsync, SourceResult};
 
 // These are the main OSDU data types:
 
@@ -25,6 +37,7 @@ use crate::{string_to_async_read, DataSource, SendableAsync, SourceResult};
 // File - A record that describes the metadata about the digital files, but does not describe the business content of the file, such as the file size, checksum of a well log.
 pub struct OSDUClient {
 	pub base_api_url: String,
+	pub service_path: String,
 	pub data_partition_id: String,
 	pub x_collaboration: String,
 	pub correlation_id: String,
@@ -42,6 +55,7 @@ impl Debug for OSDUClient {
 impl OSDUClient {
 	pub async fn new(
 		base_api_url: &str,
+		service_path: &str,
 		data_partition_id: &str,
 		x_collaboration: &str,
 		correlation_id: &str,
@@ -57,6 +71,7 @@ impl OSDUClient {
 			.expect("Failed to create authenticator");
 		OSDUClient {
 			base_api_url: base_api_url.to_string(),
+			service_path: service_path.to_string(),
 			data_partition_id: data_partition_id.to_string(),
 			x_collaboration: x_collaboration.to_string(),
 			correlation_id: correlation_id.to_string(),
@@ -89,13 +104,9 @@ impl OSDUClient {
 		headers
 	}
 
-	pub async fn get_request(
-		&mut self,
-		service_path: &str,
-		param: Param,
-	) -> Result<Response, reqwest::Error> {
+	pub async fn get_request(&mut self, param: Param) -> Result<Response, reqwest::Error> {
 		let request_url =
-			format!("{}{}/{}", self.base_api_url, service_path, get_url_params(param));
+			format!("{}{}/{}", self.base_api_url, self.service_path, get_url_params(param));
 		let client = HttpClient::new();
 		client.get(&request_url).headers(self.construct_headers().await).send().await
 	}
@@ -142,41 +153,5 @@ fn get_url_params(param: Param) -> String {
 			.map(|(key, value)| format!("{}={}", key, value))
 			.collect::<Vec<_>>()
 			.join("&"),
-	}
-}
-
-#[async_trait]
-impl DataSource for OSDUClient {
-	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		Ok(())
-	}
-
-	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
-		Ok(vec![])
-	}
-
-	async fn get_slice_stream(
-		&self,
-		_path: &Path,
-		_range: Range<usize>,
-	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
-		Ok(Box::new(string_to_async_read("".to_string())))
-	}
-
-	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
-		Ok(vec![])
-	}
-
-	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
-		Ok(0)
-	}
-
-	async fn copy_to(&self, _path: &Path, _output: &mut dyn SendableAsync) -> SourceResult<()> {
-		Ok(())
-	}
-	async fn poll_data(
-		&self,
-	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
-		panic!("Not implemented")
 	}
 }
