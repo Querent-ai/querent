@@ -83,10 +83,7 @@ impl OSDUClient {
 	pub async fn construct_headers(&mut self) -> HeaderMap {
 		// Note: many unwraps here assuming tokens work
 		let mut headers = HeaderMap::new();
-		// if self.access_token.is_none() || self.access_token.as_ref().unwrap().is_expired() {
-		// 	self.access_token = Some(self.auth.token(self.scopes.as_slice()).await.unwrap());
-		// }
-		if self.access_token.is_none() {
+		if self.access_token.is_none() || self.access_token.as_ref().unwrap().is_expired() {
 			self.access_token = Some(self.auth.token(self.scopes.as_slice()).await.unwrap());
 		}
 		headers.insert(
