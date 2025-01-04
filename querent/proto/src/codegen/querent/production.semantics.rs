@@ -598,6 +598,64 @@ pub struct NotionConfig {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
+pub struct OsduServiceConfig {
+    /// Base Host URL of the OSDU Storage Service
+    #[prost(string, tag = "1")]
+    pub base_url: ::prost::alloc::string::String,
+    /// Service Type of the OSDU Service
+    #[prost(enumeration = "ServiceType", tag = "2")]
+    pub service_type: i32,
+    /// Version of the OSDU Storage Service
+    #[prost(string, tag = "3")]
+    pub version: ::prost::alloc::string::String,
+    /// Data partition id to query
+    #[prost(string, tag = "4")]
+    pub data_partition_id: ::prost::alloc::string::String,
+    /// Service Account Key for token generation
+    #[prost(string, tag = "5")]
+    pub service_account_key: ::prost::alloc::string::String,
+    /// Scopes for the OSDU Service
+    #[prost(string, tag = "6")]
+    pub scopes: ::prost::alloc::string::String,
+    /// Optional x-correlation-id header
+    #[prost(string, optional, tag = "7")]
+    pub x_correlation_id: ::core::option::Option<::prost::alloc::string::String>,
+}
+
+/// Enum for OSDU Service Type
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ServiceType {
+    Storage = 0,
+    File = 1,
+}
+
+impl ServiceType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            ServiceType::Storage => "STORAGE",
+            ServiceType::File => "FILE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "STORAGE" => Some(Self::Storage),
+            "FILE" => Some(Self::File),
+            _ => None,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

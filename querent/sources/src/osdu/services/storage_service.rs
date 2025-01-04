@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 use crate::osdu::osdu::OSDUClient;
 
 #[derive(Debug)]
-pub struct StorageService {
+pub struct OSDUStorageService {
 	pub osdu_client: OSDUClient,
 	pub retry_params: common::RetryParams,
 }

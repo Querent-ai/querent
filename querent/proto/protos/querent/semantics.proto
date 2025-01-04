@@ -355,3 +355,27 @@ message NotionConfig {
   /// Id for the collector
   string id = 3;
 }
+
+message OSDUServiceConfig {
+  // Base Host URL of the OSDU Storage Service
+  string base_url = 1;
+  // Service Type of the OSDU Service
+  SERVICE_TYPE service_type = 2;
+  // Version of the OSDU Storage Service
+  string version = 3;
+  // Data partition id to query
+  string data_partition_id = 4;
+  // Service Account Key for token generation
+  string service_account_key = 5;
+  // Scopes for the OSDU Service
+  string scopes = 6;
+  // Optional x-correlation-id header
+  optional string x_correlation_id = 7;
+}
+
+/// Enum for OSDU Service Type
+enum SERVICE_TYPE {
+  STORAGE = 0;
+  FILE = 1;
+}
+
