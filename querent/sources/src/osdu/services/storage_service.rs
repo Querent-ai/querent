@@ -16,14 +16,38 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
+use proto::semantics::OsduServiceConfig;
 use serde::{Deserialize, Serialize};
 
 use crate::osdu::osdu::OSDUClient;
 
 #[derive(Debug)]
 pub struct OSDUStorageService {
+	pub config: OsduServiceConfig,
 	pub osdu_client: OSDUClient,
 	pub retry_params: common::RetryParams,
+}
+
+impl OSDUStorageService {
+	pub async fn new(config: OsduServiceConfig) -> anyhow::Result<Self> {
+		let service_path = format!("/api/{}/{}/", "storage", config.version);
+		let osdu_client = OSDUClient::new(
+			&config.base_url,
+			&service_path,
+			&config.data_partition_id,
+			&config.x_collaboration.clone().unwrap_or_default(),
+			&config.correlation_id.clone().unwrap_or_default(),
+			&config.service_account_key,
+			config.scopes.clone(),
+		)
+		.await;
+
+		Ok(OSDUStorageService {
+			config,
+			osdu_client,
+			retry_params: common::RetryParams::aggressive(),
+		})
+	}
 }
 
 #[derive(Deserialize)]

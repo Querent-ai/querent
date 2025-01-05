@@ -596,11 +596,14 @@ pub struct OsduServiceConfig {
     #[prost(string, tag = "5")]
     pub service_account_key: ::prost::alloc::string::String,
     /// Scopes for the OSDU Service
-    #[prost(string, tag = "6")]
-    pub scopes: ::prost::alloc::string::String,
-    /// Optional x-correlation-id header
+    #[prost(string, repeated, tag = "6")]
+    pub scopes: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Optional x-collaboration
     #[prost(string, optional, tag = "7")]
-    pub x_correlation_id: ::core::option::Option<::prost::alloc::string::String>,
+    pub x_collaboration: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional correlation id
+    #[prost(string, optional, tag = "8")]
+    pub correlation_id: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

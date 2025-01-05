@@ -368,9 +368,11 @@ message OSDUServiceConfig {
   // Service Account Key for token generation
   string service_account_key = 5;
   // Scopes for the OSDU Service
-  string scopes = 6;
-  // Optional x-correlation-id header
-  optional string x_correlation_id = 7;
+  repeated string scopes = 6;
+  // Optional x-collaboration
+  optional string x_collaboration = 7;
+  // Optional correlation id
+  optional string correlation_id = 8;
 }
 
 /// Enum for OSDU Service Type
