@@ -16,10 +16,16 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
+use crate::{
+	osdu::osdu::OSDUClient, string_to_async_read, DataSource, SendableAsync, SourceResult,
+};
+use async_trait::async_trait;
+use common::CollectedBytes;
+use futures::Stream;
 use proto::semantics::OsduServiceConfig;
 use serde::{Deserialize, Serialize};
-
-use crate::osdu::osdu::OSDUClient;
+use std::{ops::Range, path::Path, pin::Pin};
+use tokio::io::AsyncRead;
 
 #[derive(Debug)]
 pub struct OSDUStorageService {
@@ -76,4 +82,41 @@ pub struct Legal {
 pub struct StoreRecordResponse {
 	pub record_count: i16,
 	pub record_ids: Vec<String>,
+}
+
+#[async_trait]
+impl DataSource for OSDUStorageService {
+	async fn check_connectivity(&self) -> anyhow::Result<()> {
+		panic!("Not implemented")
+	}
+
+	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {
+		Ok(vec![])
+	}
+
+	async fn get_slice_stream(
+		&self,
+		_path: &Path,
+		_range: Range<usize>,
+	) -> SourceResult<Box<dyn AsyncRead + Send + Unpin>> {
+		Ok(Box::new(string_to_async_read("".to_string())))
+	}
+
+	async fn get_all(&self, _path: &Path) -> SourceResult<Vec<u8>> {
+		Ok(vec![])
+	}
+
+	async fn file_num_bytes(&self, _path: &Path) -> SourceResult<u64> {
+		Ok(0)
+	}
+
+	async fn copy_to(&self, _path: &Path, _output: &mut dyn SendableAsync) -> SourceResult<()> {
+		Ok(())
+	}
+
+	async fn poll_data(
+		&self,
+	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
+		panic!("Not implemented")
+	}
 }

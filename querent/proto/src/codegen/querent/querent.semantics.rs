@@ -604,6 +604,9 @@ pub struct OsduServiceConfig {
     /// Optional correlation id
     #[prost(string, optional, tag = "8")]
     pub correlation_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional specify record kinds to model
+    #[prost(string, repeated, tag = "9")]
+    pub record_kinds: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

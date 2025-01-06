@@ -373,6 +373,8 @@ message OSDUServiceConfig {
   optional string x_collaboration = 7;
   // Optional correlation id
   optional string correlation_id = 8;
+  // Optional specify record kinds to model 
+  repeated string record_kinds = 9;
 }
 
 /// Enum for OSDU Service Type
