@@ -359,8 +359,6 @@ message NotionConfig {
 message OSDUServiceConfig {
   // Base Host URL of the OSDU Storage Service
   string base_url = 1;
-  // Service Type of the OSDU Service
-  SERVICE_TYPE service_type = 2;
   // Version of the OSDU Storage Service
   string version = 3;
   // Data partition id to query
@@ -376,10 +374,3 @@ message OSDUServiceConfig {
   // Optional specify record kinds to model 
   repeated string record_kinds = 9;
 }
-
-/// Enum for OSDU Service Type
-enum SERVICE_TYPE {
-  STORAGE = 0;
-  FILE = 1;
-}
-

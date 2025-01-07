@@ -604,9 +604,6 @@ pub struct OsduServiceConfig {
     /// Base Host URL of the OSDU Storage Service
     #[prost(string, tag = "1")]
     pub base_url: ::prost::alloc::string::String,
-    /// Service Type of the OSDU Service
-    #[prost(enumeration = "ServiceType", tag = "2")]
-    pub service_type: i32,
     /// Version of the OSDU Storage Service
     #[prost(string, tag = "3")]
     pub version: ::prost::alloc::string::String,
@@ -628,37 +625,6 @@ pub struct OsduServiceConfig {
     /// Optional specify record kinds to model
     #[prost(string, repeated, tag = "9")]
     pub record_kinds: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
-
-/// Enum for OSDU Service Type
-#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
-#[serde(rename_all = "snake_case")]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
-#[repr(i32)]
-pub enum ServiceType {
-    Storage = 0,
-    File = 1,
-}
-
-impl ServiceType {
-    /// String value of the enum field names used in the ProtoBuf definition.
-    ///
-    /// The values are not transformed in any way and thus are considered stable
-    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
-    pub fn as_str_name(&self) -> &'static str {
-        match self {
-            ServiceType::Storage => "STORAGE",
-            ServiceType::File => "FILE",
-        }
-    }
-    /// Creates an enum from field names used in the ProtoBuf definition.
-    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
-        match value {
-            "STORAGE" => Some(Self::Storage),
-            "FILE" => Some(Self::File),
-            _ => None,
-        }
-    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
