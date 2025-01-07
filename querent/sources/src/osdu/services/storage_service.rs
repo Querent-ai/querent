@@ -32,6 +32,7 @@ pub struct OSDUStorageService {
 	pub config: OsduServiceConfig,
 	pub osdu_storage_client: OSDUClient,
 	pub osdu_schema_client: OSDUClient,
+	pub osdu_file_client: OSDUClient,
 	pub retry_params: common::RetryParams,
 }
 
@@ -61,10 +62,23 @@ impl OSDUStorageService {
 		)
 		.await;
 
+		let file_service_path = format!("/api/{}/{}/", "file", config.version);
+		let osdu_file_client = OSDUClient::new(
+			&config.base_url,
+			&file_service_path,
+			&config.data_partition_id,
+			&config.x_collaboration.clone().unwrap_or_default(),
+			&config.correlation_id.clone().unwrap_or_default(),
+			&config.service_account_key,
+			config.scopes.clone(),
+		)
+		.await;
+
 		Ok(OSDUStorageService {
 			config,
 			osdu_storage_client,
 			osdu_schema_client,
+			osdu_file_client,
 			retry_params: common::RetryParams::aggressive(),
 		})
 	}
