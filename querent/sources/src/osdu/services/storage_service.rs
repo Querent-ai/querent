@@ -25,14 +25,14 @@ use futures::Stream;
 use proto::semantics::OsduServiceConfig;
 use serde::{Deserialize, Serialize};
 use std::{ops::Range, path::Path, pin::Pin};
-use tokio::io::AsyncRead;
+use tokio::{io::AsyncRead, sync::Mutex};
 
 #[derive(Debug)]
 pub struct OSDUStorageService {
 	pub config: OsduServiceConfig,
-	pub osdu_storage_client: OSDUClient,
-	pub osdu_schema_client: OSDUClient,
-	pub osdu_file_client: OSDUClient,
+	pub osdu_storage_client: Mutex<OSDUClient>,
+	pub osdu_schema_client: Mutex<OSDUClient>,
+	pub osdu_file_client: Mutex<OSDUClient>,
 	pub retry_params: common::RetryParams,
 }
 
@@ -50,7 +50,7 @@ impl OSDUStorageService {
 		)
 		.await;
 
-		let schema_service_path = format!("/api/{}/{}/", "schema", config.version);
+		let schema_service_path = format!("/api/{}/{}/", "schema-service", config.version);
 		let osdu_schema_client = OSDUClient::new(
 			&config.base_url,
 			&schema_service_path,
@@ -76,9 +76,9 @@ impl OSDUStorageService {
 
 		Ok(OSDUStorageService {
 			config,
-			osdu_storage_client,
-			osdu_schema_client,
-			osdu_file_client,
+			osdu_storage_client: Mutex::new(osdu_storage_client),
+			osdu_schema_client: Mutex::new(osdu_schema_client),
+			osdu_file_client: Mutex::new(osdu_file_client),
 			retry_params: common::RetryParams::aggressive(),
 		})
 	}
@@ -115,7 +115,13 @@ pub struct StoreRecordResponse {
 #[async_trait]
 impl DataSource for OSDUStorageService {
 	async fn check_connectivity(&self) -> anyhow::Result<()> {
-		panic!("Not implemented")
+		self.osdu_storage_client.lock().await.get_info().await?;
+		if self.config.record_kinds.len() == 0 {
+			// Only need schema client if no record kinds are specified
+			self.osdu_schema_client.lock().await.get_info().await?;
+		}
+		self.osdu_file_client.lock().await.get_info().await?;
+		Ok(())
 	}
 
 	async fn get_slice(&self, _path: &Path, _range: Range<usize>) -> SourceResult<Vec<u8>> {

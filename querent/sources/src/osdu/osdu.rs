@@ -17,6 +17,7 @@
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
+use serde::Deserialize;
 use std::{collections::HashMap, fmt::Debug};
 use yup_oauth2::{
 	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
@@ -61,7 +62,8 @@ impl OSDUClient {
 		svc_access_key: &str,
 		scopes: Vec<String>,
 	) -> OSDUClient {
-		let service_account_key = parse_service_account_key(svc_access_key).unwrap();
+		let service_account_key =
+			parse_service_account_key(svc_access_key).expect("Failed to parse service account key");
 		let auth: Authenticator<
 			HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
 		> = ServiceAccountAuthenticator::builder(service_account_key)
@@ -106,6 +108,39 @@ impl OSDUClient {
 		let client = HttpClient::new();
 		client.get(&request_url).headers(self.construct_headers().await).send().await
 	}
+
+	// For deployment available public /info endpoint, which provides build and git related information.
+	pub async fn get_info(&mut self) -> Result<Response, reqwest::Error> {
+		self.get_request(Param::Path("info".to_string())).await
+	}
+
+	// Page through all schemas in the OSDU service
+	pub async fn get_paginated_schemas(&mut self) -> Result<Vec<SchemaInfo>, reqwest::Error> {
+		let mut schemas = Vec::new();
+		let mut offset = 0;
+		let page_size = 100;
+
+		loop {
+			let request_url = format!(
+				"{}{}/schema?offset={}&limit={}",
+				self.base_api_url, self.service_path, offset, page_size
+			);
+			let client = HttpClient::new();
+			let response =
+				client.get(&request_url).headers(self.construct_headers().await).send().await?;
+
+			let schema_response: SchemaResponse = response.json().await?;
+			schemas.extend(schema_response.schema_infos.clone());
+
+			if schema_response.schema_infos.len() < page_size {
+				break;
+			}
+
+			offset += page_size;
+		}
+
+		Ok(schemas)
+	}
 }
 
 pub enum Param {
@@ -122,4 +157,33 @@ fn get_url_params(param: Param) -> String {
 			.collect::<Vec<_>>()
 			.join("&"),
 	}
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SchemaIdentity {
+	pub authority: String,
+	pub source: String,
+	pub entity_type: String,
+	pub schema_version_major: u32,
+	pub schema_version_minor: u32,
+	pub schema_version_patch: u32,
+	pub id: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SchemaInfo {
+	pub schema_identity: SchemaIdentity,
+	pub created_by: String,
+	pub date_created: String,
+	pub status: String,
+	pub scope: String,
+	pub superseded_by: Option<SchemaIdentity>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct SchemaResponse {
+	pub schema_infos: Vec<SchemaInfo>,
+	pub offset: usize,
+	pub count: usize,
+	pub total_count: usize,
 }
