@@ -14,7 +14,7 @@
 // including but not limited to the warranties of merchantability, fitness for a particular purpose,
 // and non-infringement. See the Business Source License for more details.
 
-// This software includes code developed by QuerentAI LLC (https://querent.ai).
+// This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 use std::{
 	ops::Range,
@@ -29,11 +29,12 @@ use futures::Stream;
 use proto::semantics::NotionConfig;
 use tokio::io::AsyncRead;
 
-use crate::{DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult};
+use crate::{
+	string_to_async_read, DataSource, SendableAsync, SourceError, SourceErrorKind, SourceResult,
+};
 
 use super::utils::{
 	extract_file_extension, fetch_all_page_ids, fetch_page, format_page, get_images_from_page,
-	string_to_async_read,
 };
 
 #[derive(Clone, Debug)]

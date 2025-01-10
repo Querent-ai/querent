@@ -14,14 +14,15 @@
 // including but not limited to the warranties of merchantability, fitness for a particular purpose,
 // and non-infringement. See the Business Source License for more details.
 
-// This software includes code developed by QuerentAI LLC (https://querent.ai).
+// This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 pub mod source;
 use std::{
-	io::{self, ErrorKind},
+	io::{self, Cursor, ErrorKind},
 	path::{Path, PathBuf},
 };
 use tempfile::TempPath;
+use tokio::io::AsyncRead;
 use tracing::error;
 
 pub use source::*;
@@ -35,6 +36,7 @@ pub mod jira;
 pub mod news;
 pub mod notion;
 pub mod onedrive;
+pub mod osdu;
 pub mod s3;
 pub mod slack;
 pub mod zip;
@@ -107,4 +109,8 @@ impl AsMut<File> for DownloadTempFile {
 	fn as_mut(&mut self) -> &mut File {
 		&mut self.file
 	}
+}
+
+pub fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
+	Cursor::new(description.into_bytes())
 }

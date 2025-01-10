@@ -577,6 +577,36 @@ pub struct NotionConfig {
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OsduServiceConfig {
+    /// Base Host URL of the OSDU Storage Service
+    #[prost(string, tag = "1")]
+    pub base_url: ::prost::alloc::string::String,
+    /// Version of the OSDU Storage Service
+    #[prost(string, tag = "3")]
+    pub version: ::prost::alloc::string::String,
+    /// Data partition id to query
+    #[prost(string, tag = "4")]
+    pub data_partition_id: ::prost::alloc::string::String,
+    /// Service Account Key for token generation
+    #[prost(string, tag = "5")]
+    pub service_account_key: ::prost::alloc::string::String,
+    /// Scopes for the OSDU Service
+    #[prost(string, repeated, tag = "6")]
+    pub scopes: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Optional x-collaboration
+    #[prost(string, optional, tag = "7")]
+    pub x_collaboration: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional correlation id
+    #[prost(string, optional, tag = "8")]
+    pub correlation_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Optional specify record kinds to model
+    #[prost(string, repeated, tag = "9")]
+    pub record_kinds: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]

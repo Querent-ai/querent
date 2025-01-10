@@ -14,9 +14,9 @@
 // including but not limited to the warranties of merchantability, fitness for a particular purpose,
 // and non-infringement. See the Business Source License for more details.
 
-// This software includes code developed by QuerentAI LLC (https://querent.ai).
+// This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use std::{collections::HashMap, io::Cursor, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf};
 
 use chrono::{DateTime, Utc};
 use common::retry;
@@ -30,7 +30,6 @@ use notion::{
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tokio::io::AsyncRead;
 
 use crate::{SourceError, SourceErrorKind};
 
@@ -46,10 +45,6 @@ pub struct Page {
 	pub properties: Properties,
 	pub parent: serde_json::Value,
 	pub url: String,
-}
-
-pub fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
-	Cursor::new(description.into_bytes())
 }
 
 pub fn format_properties(properties: &HashMap<String, PropertyConfiguration>) -> String {

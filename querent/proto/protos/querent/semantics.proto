@@ -355,3 +355,22 @@ message NotionConfig {
   /// Id for the collector
   string id = 3;
 }
+
+message OSDUServiceConfig {
+  // Base Host URL of the OSDU Storage Service
+  string base_url = 1;
+  // Version of the OSDU Storage Service
+  string version = 3;
+  // Data partition id to query
+  string data_partition_id = 4;
+  // Service Account Key for token generation
+  string service_account_key = 5;
+  // Scopes for the OSDU Service
+  repeated string scopes = 6;
+  // Optional x-collaboration
+  optional string x_collaboration = 7;
+  // Optional correlation id
+  optional string correlation_id = 8;
+  // Optional specify record kinds to model 
+  repeated string record_kinds = 9;
+}
