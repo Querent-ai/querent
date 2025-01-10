@@ -16,7 +16,7 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use common::retry;
+use common::{retry, Record};
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug};
@@ -463,34 +463,6 @@ pub struct SchemaResponse {
 	pub offset: usize,
 	pub count: usize,
 	pub total_count: usize,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Acl {
-	pub viewers: Vec<String>,
-	pub owners: Vec<String>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Legal {
-	pub status: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Record {
-	id: String,
-	version: u32,
-	kind: String,
-	acl: Acl,
-	legal: Legal,
-	data: HashMap<String, serde_json::Value>,
-	ancestry: HashMap<String, Vec<String>>,
-	meta: Vec<HashMap<String, serde_json::Value>>,
-	tags: HashMap<String, String>,
-	create_user: String,
-	create_time: String,
-	modify_user: String,
-	modify_time: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

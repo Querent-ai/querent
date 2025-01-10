@@ -16,8 +16,9 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use std::{fmt::Debug, path::PathBuf, pin::Pin};
+use std::{collections::HashMap, fmt::Debug, path::PathBuf, pin::Pin};
 
+use serde::{Deserialize, Serialize};
 use tokio::io::AsyncRead;
 
 pub struct CollectedBytes {
@@ -89,4 +90,32 @@ impl CollectedBytes {
 			None => panic!("Tried to unwrap an error CollectedBytes"),
 		}
 	}
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Acl {
+	pub viewers: Vec<String>,
+	pub owners: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Legal {
+	pub status: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Record {
+	id: String,
+	version: u32,
+	kind: String,
+	acl: Acl,
+	legal: Legal,
+	data: HashMap<String, serde_json::Value>,
+	ancestry: HashMap<String, Vec<String>>,
+	meta: Vec<HashMap<String, serde_json::Value>>,
+	tags: HashMap<String, String>,
+	create_user: String,
+	create_time: String,
+	modify_user: String,
+	modify_time: String,
 }

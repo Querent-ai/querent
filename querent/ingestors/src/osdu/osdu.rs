@@ -18,7 +18,7 @@
 
 use async_stream::stream;
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, Record};
 use futures::{io::BufReader, AsyncReadExt as _, Stream};
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
@@ -89,11 +89,11 @@ impl BaseIngestor for OSDURecordIngestor {
 					image_id: None,
 				})
 			}
-			let json: serde_json::Value;
-			let osdu_res: Result<serde_json::Value, serde_json::Error> = serde_json::from_str(&content);
-			match osdu_res {
+			let record: Record;
+			let osdu_record: Result<Record, serde_json::Error> = serde_json::from_str(&content);
+			match osdu_record {
 				Ok(res) => {
-					json = res;
+					record = res;
 				},
 				Err(_e) => {
 					yield Ok(IngestedTokens {
@@ -107,20 +107,9 @@ impl BaseIngestor for OSDURecordIngestor {
 					return;
 				}
 			}
-
-			for (key, value) in json.as_object().expect("Failed to get object").iter() {
-				let res = format!("{:?}   {:?}", key, value).to_string();
-				let ingested_tokens = IngestedTokens {
-					data: vec![res.to_string()],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
-				};
-				yield Ok(ingested_tokens);
-				}
-
+			// TODO do something with the record like lat long to geojson etc.
+			let res = serde_json::to_string(&record);
+			if res.is_err() {
 				yield Ok(IngestedTokens {
 					data: vec![],
 					file: file.clone(),
@@ -128,6 +117,25 @@ impl BaseIngestor for OSDURecordIngestor {
 					is_token_stream: false,
 					source_id: source_id.clone(),
 					image_id: None,
+				});
+				return;
+			}
+			let ingested_tokens = IngestedTokens {
+				data: vec![res.unwrap()],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
+			};
+			yield Ok(ingested_tokens);
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 
