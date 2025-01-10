@@ -16,6 +16,7 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
+use common::retry;
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug};
@@ -24,6 +25,8 @@ use yup_oauth2::{
 	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
 	AccessToken, ServiceAccountAuthenticator,
 };
+
+use crate::{SourceError, SourceErrorKind};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -96,43 +99,110 @@ impl OSDUClient {
 		})
 	}
 
-	pub async fn construct_headers(&mut self) -> HeaderMap {
-		// Note: many unwraps here assuming tokens work
+	pub async fn construct_headers(&mut self) -> Result<HeaderMap, SourceError> {
 		let mut headers = HeaderMap::new();
-		if self.access_token.is_none() || self.access_token.as_ref().unwrap().is_expired() {
-			self.access_token = Some(self.auth.token(self.scopes.as_slice()).await.unwrap());
+
+		if self.access_token.is_none() ||
+			self.access_token.as_ref().map(|token| token.is_expired()).unwrap_or(true)
+		{
+			self.access_token = Some(self.auth.token(&self.scopes).await.map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Failed to get token: {:?}", e).into(),
+				)
+			})?);
 		}
+
+		if let Some(ref token) = self.access_token {
+			headers.insert(
+				"AUTHORIZATION",
+				format!("Bearer {}", token.token().unwrap_or_default()).parse().map_err(|e| {
+					SourceError::new(
+						SourceErrorKind::Io,
+						anyhow::anyhow!("Failed to parse token: {:?}", e).into(),
+					)
+				})?,
+			);
+		}
+
 		headers.insert(
-			"AUTHORIZATION",
-			format!("Bearer {}", self.access_token.as_ref().unwrap().token().unwrap())
-				.parse()
-				.unwrap(),
+			"CONTENT_TYPE",
+			"application/json".parse().map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Failed to parse token: {:?}", e).into(),
+				)
+			})?,
 		);
-		headers.insert("CONTENT_TYPE", "application/json".parse().unwrap());
-		headers.insert("ACCEPT", "application/json".parse().unwrap());
-		headers.insert("data-partition-id", self.data_partition_id.parse().unwrap());
-		headers.insert("x-collaboration", self.x_collaboration.parse().unwrap());
-		headers.insert("Correlation-Id", self.correlation_id.parse().unwrap());
-		headers
+		headers.insert(
+			"ACCEPT",
+			"application/json".parse().map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Failed to parse token: {:?}", e).into(),
+				)
+			})?,
+		);
+		headers.insert(
+			"data-partition-id",
+			self.data_partition_id.parse().map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Failed to parse token: {:?}", e).into(),
+				)
+			})?,
+		);
+		headers.insert(
+			"x-collaboration",
+			self.x_collaboration.parse().map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Failed to parse token: {:?}", e).into(),
+				)
+			})?,
+		);
+		headers.insert(
+			"Correlation-Id",
+			self.correlation_id.parse().map_err(|e| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Failed to parse token: {:?}", e).into(),
+				)
+			})?,
+		);
+
+		Ok(headers)
 	}
 
-	pub async fn get_request(&mut self, param: Param) -> Result<Response, reqwest::Error> {
+	pub async fn get_request(&mut self, param: Param) -> Result<Response, SourceError> {
 		let request_url =
 			format!("{}{}/{}", self.base_api_url, self.service_path, get_url_params(param));
 		let client = HttpClient::new();
-		client.get(&request_url).headers(self.construct_headers().await).send().await
+		let headers = self.construct_headers().await?;
+		client.get(&request_url).headers(headers).send().await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+			)
+		})
 	}
 
 	// For deployment available public /info endpoint, which provides build and git related information.
-	pub async fn get_info(&mut self) -> Result<Response, reqwest::Error> {
-		self.get_request(Param::Path("info".to_string())).await
+	pub async fn get_info(&mut self) -> Result<Response, SourceError> {
+		self.get_request(Param::Path("info".to_string())).await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+			)
+		})
 	}
 
 	pub async fn fetch_all_kinds(
 		&mut self,
 		kinds: Vec<String>,
 		filters: Option<HashMap<String, String>>,
-	) -> Result<mpsc::Receiver<String>, reqwest::Error> {
+		retry_params: common::RetryParams,
+	) -> Result<mpsc::Receiver<String>, SourceError> {
 		let mut offset = 0;
 		let page_size = 10;
 		let client: HttpClient = HttpClient::new();
@@ -149,12 +219,17 @@ impl OSDUClient {
 		tokio::spawn(async move {
 			loop {
 				let headers = self_clone.construct_headers().await;
+				if let Err(err) = headers {
+					eprintln!("Error while constructing OSDU headers: {:?}", err);
+					break;
+				}
+				let headers = headers.unwrap();
 				let request_url = format!(
 					"{}/schema?offset={}&limit={}&{}",
 					url,
 					offset,
 					page_size,
-					get_url_params(Param::Query(query_params.clone())) // Pass query params here
+					get_url_params(Param::Query(query_params.clone()))
 				);
 				if !kinds.is_empty() {
 					// sends kind back to the caller and returns
@@ -165,7 +240,17 @@ impl OSDUClient {
 					}
 					break;
 				}
-				match client.get(&request_url).headers(headers.clone()).send().await {
+				let response = retry(&retry_params, || async {
+					client.get(&request_url).headers(headers.clone()).send().await.map_err(|err| {
+						SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error while making request to Notion API: {:?}", err)
+								.into(),
+						)
+					})
+				})
+				.await;
+				match response {
 					Ok(response) => {
 						if !response.status().is_success() {
 							break;
@@ -204,7 +289,8 @@ impl OSDUClient {
 		&mut self,
 		kind_id: &str,
 		filters: Option<HashMap<String, String>>,
-	) -> Result<mpsc::Receiver<String>, reqwest::Error> {
+		retry_params: common::RetryParams,
+	) -> Result<mpsc::Receiver<String>, SourceError> {
 		let mut cursor = String::new();
 		let page_size = 10;
 		let client: HttpClient = HttpClient::new();
@@ -221,6 +307,11 @@ impl OSDUClient {
 		tokio::spawn(async move {
 			loop {
 				let headers = self_clone.construct_headers().await;
+				if let Err(err) = headers {
+					eprintln!("Error while constructing OSDU headers: {:?}", err);
+					break;
+				}
+				let headers = headers.unwrap();
 				let request_url = format!(
 					"{}/query/records?kind={}&cursor={}&limit={}&{}",
 					url,
@@ -229,11 +320,20 @@ impl OSDUClient {
 					page_size,
 					get_url_params(Param::Query(query_params.clone()))
 				);
-
-				match client.get(&request_url).headers(headers.clone()).send().await {
+				let response = retry(&retry_params, || async {
+					client.get(&request_url).headers(headers.clone()).send().await.map_err(|err| {
+						SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error while making request to Notion API: {:?}", err)
+								.into(),
+						)
+					})
+				})
+				.await;
+				match response {
 					Ok(response) => {
 						if !response.status().is_success() {
-							break;
+							continue;
 						}
 
 						match response.json::<RecordQueryResponse>().await {
@@ -244,7 +344,7 @@ impl OSDUClient {
 										break;
 									}
 								}
-								if count < page_size {
+								if count < page_size || record_response.cursor.is_empty() {
 									break;
 								}
 								cursor = record_response.cursor;
@@ -264,7 +364,8 @@ impl OSDUClient {
 		&mut self,
 		record_ids: Vec<String>,
 		attributes: Vec<String>,
-	) -> Result<mpsc::Receiver<Record>, reqwest::Error> {
+		retry_params: common::RetryParams,
+	) -> Result<mpsc::Receiver<Record>, SourceError> {
 		let client: HttpClient = HttpClient::new();
 		let (tx, rx) = mpsc::channel(100);
 		let url = format!("{}{}", self.base_api_url, self.service_path);
@@ -272,10 +373,31 @@ impl OSDUClient {
 
 		tokio::spawn(async move {
 			let headers = self_clone.construct_headers().await;
+			if let Err(err) = headers {
+				eprintln!("Error while constructing OSDU headers: {:?}", err);
+				return;
+			}
+			let headers = headers.unwrap();
 			let request_url = format!("{}/query/records", url);
 			let payload = FetchRecordsRequest { records: record_ids, attributes };
 			// Post the request
-			match client.post(&request_url).headers(headers.clone()).json(&payload).send().await {
+			let response = retry(&retry_params, || async {
+				client
+					.post(&request_url)
+					.headers(headers.clone())
+					.json(&payload)
+					.send()
+					.await
+					.map_err(|err| {
+						SourceError::new(
+							SourceErrorKind::Io,
+							anyhow::anyhow!("Error while making request to Notion API: {:?}", err)
+								.into(),
+						)
+					})
+			})
+			.await;
+			match response {
 				Ok(response) => {
 					if !response.status().is_success() {
 						return;

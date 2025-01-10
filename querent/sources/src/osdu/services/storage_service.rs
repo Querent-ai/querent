@@ -125,15 +125,16 @@ impl DataSource for OSDUStorageService {
 		let mut schema_client = self.osdu_schema_client.lock().await;
 		let mut storage_client = self.osdu_storage_client.lock().await;
 		let record_kinds = self.config.record_kinds.clone();
+		let retry_params = self.retry_params.clone();
 		let stream = async_stream::stream! {
 			let mut schema_fetch_receiver =
-				schema_client.fetch_all_kinds(record_kinds, None).await?;
+				schema_client.fetch_all_kinds(record_kinds, None, retry_params).await?;
 
 			while let Some(kind) = schema_fetch_receiver.recv().await {
 				let mut records_id_fetch_receiver =
-					storage_client.fetch_record_ids_from_kind(&kind.clone(), None).await?;
+					storage_client.fetch_record_ids_from_kind(&kind.clone(), None, retry_params).await?;
 				while let Some(record_id) = records_id_fetch_receiver.recv().await {
-					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![]).await?;
+					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
 					while let Some(record) = records.recv().await {
 						let record_json_str = serde_json::to_string(&record)?;
 						let collected_bytes = CollectedBytes::new(
