@@ -90,8 +90,8 @@ impl BaseIngestor for OSDURecordIngestor {
 				})
 			}
 			let json: serde_json::Value;
-			let json_res: Result<serde_json::Value, serde_json::Error> = serde_json::from_str(&content);
-			match json_res {
+			let osdu_res: Result<serde_json::Value, serde_json::Error> = serde_json::from_str(&content);
+			match osdu_res {
 				Ok(res) => {
 					json = res;
 				},
@@ -145,7 +145,7 @@ mod tests {
 	use std::{io::Cursor, path::Path};
 
 	#[tokio::test]
-	async fn test_json_ingestor() {
+	async fn test_osdu_ingestor() {
 		let included_bytes = include_bytes!("../../../../test_data/dc_universe.json");
 		let bytes = included_bytes.to_vec();
 
@@ -182,7 +182,44 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn test_json_ingestor_with_corrupt_file() {
+	async fn test_osdu_ingestor2() {
+		let included_bytes = include_bytes!("../../../../test_data/osdu_record.json");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("osdu_record.json").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: true,
+			extension: Some("osdu".to_string()),
+			size: Some(10),
+			source_id: "OSDU1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = OSDURecordIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					tracing::error!("Failed to get tokens from images: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
+	}
+
+	#[tokio::test]
+	async fn test_osdu_ingestor_with_corrupt_file() {
 		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.json");
 		let bytes = included_bytes.to_vec();
 
