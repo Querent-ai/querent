@@ -23,7 +23,12 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::OsduServiceConfig;
-use std::{ops::Range, path::Path, pin::Pin, sync::Arc};
+use std::{
+	ops::Range,
+	path::{Path, PathBuf},
+	pin::Pin,
+	sync::Arc,
+};
 use tokio::{io::AsyncRead, sync::Mutex};
 
 #[derive(Debug)]
@@ -137,8 +142,9 @@ impl DataSource for OSDUStorageService {
 					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
 					while let Some(record) = records.recv().await {
 						let record_json_str = serde_json::to_string(&record)?;
+						let record_id_with_osdu_ext = format!("{}.{}", record_id.clone(), "osdu");
 						let collected_bytes = CollectedBytes::new(
-							Some(record_id.clone().into()),
+							Some(PathBuf::from(record_id_with_osdu_ext)),
 							Some(Box::pin(string_to_async_read(record_json_str))),
 							true,
 							Some("osdu://record".to_string()),
