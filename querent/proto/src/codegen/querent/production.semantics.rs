@@ -212,7 +212,7 @@ pub struct CollectorConfig {
 	pub name: ::prost::alloc::string::String,
 	#[prost(
 		oneof = "collector_config::Backend",
-		tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14"
+		tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15"
 	)]
 	pub backend: ::core::option::Option<Backend>,
 }
@@ -250,6 +250,8 @@ pub mod collector_config {
 		Onedrive(OneDriveConfig),
 		#[prost(message, tag = "14")]
 		Notion(NotionConfig),
+		#[prost(message, tag = "15")]
+        Osdu(super::OsduServiceConfig),
 	}
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
