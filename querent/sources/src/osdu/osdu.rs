@@ -17,12 +17,27 @@
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug};
+use tokio::sync::mpsc;
 use yup_oauth2::{
 	authenticator::Authenticator, hyper_rustls::HttpsConnector, parse_service_account_key,
 	AccessToken, ServiceAccountAuthenticator,
 };
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct StoreRecordResponse {
+	pub record_count: i16,
+	pub record_ids: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordQueryResponse {
+	pub results: Vec<String>,
+	pub cursor: String,
+}
 
 // These are the main OSDU data types:
 
@@ -35,6 +50,8 @@ use yup_oauth2::{
 // Work Product Components - A record that describes the business content of a single well log, such as the log data information, top, bottom depth of the well log.
 // Here is the list of the supported bulk standards in OSDU.
 // File - A record that describes the metadata about the digital files, but does not describe the business content of the file, such as the file size, checksum of a well log.
+
+#[derive(Clone)]
 pub struct OSDUClient {
 	pub base_api_url: String,
 	pub service_path: String,
@@ -61,16 +78,13 @@ impl OSDUClient {
 		correlation_id: &str,
 		svc_access_key: &str,
 		scopes: Vec<String>,
-	) -> OSDUClient {
+	) -> anyhow::Result<OSDUClient> {
 		let service_account_key =
-			parse_service_account_key(svc_access_key).expect("Failed to parse service account key");
+			parse_service_account_key(svc_access_key).map_err(|e| anyhow::anyhow!(e))?;
 		let auth: Authenticator<
 			HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
-		> = ServiceAccountAuthenticator::builder(service_account_key)
-			.build()
-			.await
-			.expect("Failed to create authenticator");
-		OSDUClient {
+		> = ServiceAccountAuthenticator::builder(service_account_key).build().await?;
+		Ok(OSDUClient {
 			base_api_url: base_api_url.to_string(),
 			service_path: service_path.to_string(),
 			data_partition_id: data_partition_id.to_string(),
@@ -79,7 +93,7 @@ impl OSDUClient {
 			auth,
 			scopes,
 			access_token: None,
-		}
+		})
 	}
 
 	pub async fn construct_headers(&mut self) -> HeaderMap {
@@ -114,32 +128,173 @@ impl OSDUClient {
 		self.get_request(Param::Path("info".to_string())).await
 	}
 
-	// Page through all schemas in the OSDU service
-	pub async fn get_paginated_schemas(&mut self) -> Result<Vec<SchemaInfo>, reqwest::Error> {
-		let mut schemas = Vec::new();
+	pub async fn fetch_all_kinds(
+		&mut self,
+		kinds: Vec<String>,
+		filters: Option<HashMap<String, String>>,
+	) -> Result<mpsc::Receiver<String>, reqwest::Error> {
 		let mut offset = 0;
-		let page_size = 100;
+		let page_size = 10;
+		let client: HttpClient = HttpClient::new();
+		let (tx, rx) = mpsc::channel(100);
+		let url = format!("{}{}", self.base_api_url, self.service_path);
+		let mut query_params = HashMap::new();
 
-		loop {
-			let request_url = format!(
-				"{}{}/schema?offset={}&limit={}",
-				self.base_api_url, self.service_path, offset, page_size
-			);
-			let client = HttpClient::new();
-			let response =
-				client.get(&request_url).headers(self.construct_headers().await).send().await?;
-
-			let schema_response: SchemaResponse = response.json().await?;
-			schemas.extend(schema_response.schema_infos.clone());
-
-			if schema_response.schema_infos.len() < page_size {
-				break;
-			}
-
-			offset += page_size;
+		// Add the filters to the query parameters
+		if let Some(f) = filters {
+			query_params.extend(f);
 		}
+		let mut self_clone = self.clone();
 
-		Ok(schemas)
+		tokio::spawn(async move {
+			loop {
+				let headers = self_clone.construct_headers().await;
+				let request_url = format!(
+					"{}/schema?offset={}&limit={}&{}",
+					url,
+					offset,
+					page_size,
+					get_url_params(Param::Query(query_params.clone())) // Pass query params here
+				);
+				if !kinds.is_empty() {
+					// sends kind back to the caller and returns
+					for kind in &kinds {
+						if tx.send(kind.clone()).await.is_err() {
+							break;
+						}
+					}
+					break;
+				}
+				match client.get(&request_url).headers(headers.clone()).send().await {
+					Ok(response) => {
+						if !response.status().is_success() {
+							break;
+						}
+
+						match response.json::<SchemaResponse>().await {
+							Ok(schema_response) => {
+								let count = schema_response.schema_infos.len();
+								for schema_info in &schema_response.schema_infos {
+									if tx
+										.send(schema_info.schema_identity.id.clone())
+										.await
+										.is_err()
+									{
+										break;
+									}
+								}
+								if count < page_size {
+									break;
+								}
+							},
+							Err(_) => break,
+						}
+					},
+					Err(_) => break,
+				}
+
+				offset += page_size;
+			}
+		});
+
+		Ok(rx)
+	}
+
+	pub async fn fetch_record_ids_from_kind(
+		&mut self,
+		kind_id: &str,
+		filters: Option<HashMap<String, String>>,
+	) -> Result<mpsc::Receiver<String>, reqwest::Error> {
+		let mut cursor = String::new();
+		let page_size = 10;
+		let client: HttpClient = HttpClient::new();
+		let (tx, rx) = mpsc::channel(100);
+		let url = format!("{}{}", self.base_api_url, self.service_path);
+		let mut query_params = HashMap::new();
+		let kind_id = kind_id.to_string();
+		// Add the filters to the query parameters
+		if let Some(f) = filters {
+			query_params.extend(f);
+		}
+		let mut self_clone = self.clone();
+
+		tokio::spawn(async move {
+			loop {
+				let headers = self_clone.construct_headers().await;
+				let request_url = format!(
+					"{}/query/records?kind={}&cursor={}&limit={}&{}",
+					url,
+					kind_id.clone(),
+					cursor,
+					page_size,
+					get_url_params(Param::Query(query_params.clone()))
+				);
+
+				match client.get(&request_url).headers(headers.clone()).send().await {
+					Ok(response) => {
+						if !response.status().is_success() {
+							break;
+						}
+
+						match response.json::<RecordQueryResponse>().await {
+							Ok(record_response) => {
+								let count = record_response.results.len();
+								for record_id in &record_response.results {
+									if tx.send(record_id.clone()).await.is_err() {
+										break;
+									}
+								}
+								if count < page_size {
+									break;
+								}
+								cursor = record_response.cursor;
+							},
+							Err(_) => break,
+						}
+					},
+					Err(_) => break,
+				}
+			}
+		});
+
+		Ok(rx)
+	}
+
+	pub async fn fetch_records_by_ids(
+		&mut self,
+		record_ids: Vec<String>,
+		attributes: Vec<String>,
+	) -> Result<mpsc::Receiver<Record>, reqwest::Error> {
+		let client: HttpClient = HttpClient::new();
+		let (tx, rx) = mpsc::channel(100);
+		let url = format!("{}{}", self.base_api_url, self.service_path);
+		let mut self_clone = self.clone();
+
+		tokio::spawn(async move {
+			let headers = self_clone.construct_headers().await;
+			let request_url = format!("{}/query/records", url);
+			let payload = FetchRecordsRequest { records: record_ids, attributes };
+			// Post the request
+			match client.post(&request_url).headers(headers.clone()).json(&payload).send().await {
+				Ok(response) => {
+					if !response.status().is_success() {
+						return;
+					}
+
+					match response.json::<FetchRecordsResponse>().await {
+						Ok(record_response) =>
+							for record in record_response.records {
+								if tx.send(record).await.is_err() {
+									break;
+								}
+							},
+						Err(_) => return,
+					}
+				},
+				Err(_) => return,
+			}
+		});
+		Ok(rx)
 	}
 }
 
@@ -186,4 +341,45 @@ pub struct SchemaResponse {
 	pub offset: usize,
 	pub count: usize,
 	pub total_count: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Acl {
+	pub viewers: Vec<String>,
+	pub owners: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Legal {
+	pub status: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Record {
+	id: String,
+	version: u32,
+	kind: String,
+	acl: Acl,
+	legal: Legal,
+	data: HashMap<String, serde_json::Value>,
+	ancestry: HashMap<String, Vec<String>>,
+	meta: Vec<HashMap<String, serde_json::Value>>,
+	tags: HashMap<String, String>,
+	create_user: String,
+	create_time: String,
+	modify_user: String,
+	modify_time: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct FetchRecordsRequest {
+	records: Vec<String>,
+	attributes: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct FetchRecordsResponse {
+	records: Vec<Record>,
+	invalid_records: Vec<String>,
+	retry_records: Vec<String>,
 }

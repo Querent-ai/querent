@@ -23,16 +23,15 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::OsduServiceConfig;
-use serde::{Deserialize, Serialize};
-use std::{ops::Range, path::Path, pin::Pin};
+use std::{ops::Range, path::Path, pin::Pin, sync::Arc};
 use tokio::{io::AsyncRead, sync::Mutex};
 
 #[derive(Debug)]
 pub struct OSDUStorageService {
 	pub config: OsduServiceConfig,
-	pub osdu_storage_client: Mutex<OSDUClient>,
-	pub osdu_schema_client: Mutex<OSDUClient>,
-	pub osdu_file_client: Mutex<OSDUClient>,
+	pub osdu_storage_client: Arc<Mutex<OSDUClient>>,
+	pub osdu_schema_client: Arc<Mutex<OSDUClient>>,
+	pub osdu_file_client: Arc<Mutex<OSDUClient>>,
 	pub retry_params: common::RetryParams,
 }
 
@@ -48,7 +47,7 @@ impl OSDUStorageService {
 			&config.service_account_key,
 			config.scopes.clone(),
 		)
-		.await;
+		.await?;
 
 		let schema_service_path = format!("/api/{}/{}/", "schema-service", config.version);
 		let osdu_schema_client = OSDUClient::new(
@@ -60,7 +59,7 @@ impl OSDUStorageService {
 			&config.service_account_key,
 			config.scopes.clone(),
 		)
-		.await;
+		.await?;
 
 		let file_service_path = format!("/api/{}/{}/", "file", config.version);
 		let osdu_file_client = OSDUClient::new(
@@ -72,44 +71,16 @@ impl OSDUStorageService {
 			&config.service_account_key,
 			config.scopes.clone(),
 		)
-		.await;
+		.await?;
 
 		Ok(OSDUStorageService {
 			config,
-			osdu_storage_client: Mutex::new(osdu_storage_client),
-			osdu_schema_client: Mutex::new(osdu_schema_client),
-			osdu_file_client: Mutex::new(osdu_file_client),
+			osdu_storage_client: Arc::new(Mutex::new(osdu_storage_client)),
+			osdu_schema_client: Arc::new(Mutex::new(osdu_schema_client)),
+			osdu_file_client: Arc::new(Mutex::new(osdu_file_client)),
 			retry_params: common::RetryParams::aggressive(),
 		})
 	}
-}
-
-#[derive(Deserialize)]
-pub struct RecordBase {
-	pub id: String,
-	pub version: u32,
-	pub kind: String,
-	pub acl: Acl,
-	pub legal: Legal,
-	pub data: serde_json::Value,
-}
-
-#[derive(Deserialize)]
-pub struct Acl {
-	pub viewers: Vec<String>,
-	pub owners: Vec<String>,
-}
-
-#[derive(Deserialize)]
-pub struct Legal {
-	pub status: String,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct StoreRecordResponse {
-	pub record_count: i16,
-	pub record_ids: Vec<String>,
 }
 
 #[async_trait]
@@ -151,6 +122,34 @@ impl DataSource for OSDUStorageService {
 	async fn poll_data(
 		&self,
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
-		panic!("Not implemented")
+		let mut schema_client = self.osdu_schema_client.lock().await;
+		let mut storage_client = self.osdu_storage_client.lock().await;
+		let record_kinds = self.config.record_kinds.clone();
+		let stream = async_stream::stream! {
+			let mut schema_fetch_receiver =
+				schema_client.fetch_all_kinds(record_kinds, None).await?;
+
+			while let Some(kind) = schema_fetch_receiver.recv().await {
+				let mut records_id_fetch_receiver =
+					storage_client.fetch_record_ids_from_kind(&kind.clone(), None).await?;
+				while let Some(record_id) = records_id_fetch_receiver.recv().await {
+					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![]).await?;
+					while let Some(record) = records.recv().await {
+						let record_json_str = serde_json::to_string(&record)?;
+						let collected_bytes = CollectedBytes::new(
+							Some(record_id.clone().into()),
+							Some(Box::pin(string_to_async_read(record_json_str))),
+							true,
+							Some("osdu://record".to_string()),
+							None,
+							kind.clone(),
+							None,
+						);
+						yield Ok(collected_bytes);
+					}
+				}
+			}
+		};
+		Ok(Box::pin(stream))
 	}
 }
