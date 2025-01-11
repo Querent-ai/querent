@@ -251,7 +251,7 @@ pub mod collector_config {
 		#[prost(message, tag = "14")]
 		Notion(NotionConfig),
 		#[prost(message, tag = "15")]
-        Osdu(super::OsduServiceConfig),
+        Osdu(OsduServiceConfig),
 	}
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
