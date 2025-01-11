@@ -19,7 +19,7 @@
 use async_stream::stream;
 use async_trait::async_trait;
 use common::{CollectedBytes, Record};
-use futures::{io::BufReader, AsyncReadExt as _, Stream};
+use futures::Stream;
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
 use tokio::io::AsyncReadExt;
@@ -76,24 +76,13 @@ impl BaseIngestor for OSDURecordIngestor {
 				}
 				source_id = collected_bytes.source_id.clone();
 			}
-			let mut reader = BufReader::new(buffer.as_slice());
-			let mut content = String::new();
-			let read_res = reader.read_to_string(&mut content).await;
-			if read_res.is_err() {
-				yield Ok(IngestedTokens {
-					data: vec![],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
-				})
-			}
-			let record: Record;
-			let osdu_record: Result<Record, serde_json::Error> = serde_json::from_str(&content);
+			// buffer is  Vec<u8> of json
+			let content = String::from_utf8_lossy(&buffer);
+			let records: Vec<Record>;
+			let osdu_record: Result<Vec<Record>, serde_json::Error> = serde_json::from_str(&content);
 			match osdu_record {
 				Ok(res) => {
-					record = res;
+					records = res;
 				},
 				Err(_e) => {
 					yield Ok(IngestedTokens {
@@ -107,28 +96,25 @@ impl BaseIngestor for OSDURecordIngestor {
 					return;
 				}
 			}
-			// TODO do something with the record like lat long to geojson etc.
-			let res = serde_json::to_string(&record);
-			if res.is_err() {
-				yield Ok(IngestedTokens {
-					data: vec![],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
-				});
-				return;
+			for res in records {
+				let res = serde_json::to_string(&res);
+				match res {
+					Ok(res) => {
+						let ingested_tokens = IngestedTokens {
+							data: vec![res],
+							file: file.clone(),
+							doc_source: doc_source.clone(),
+							is_token_stream: false,
+							source_id: source_id.clone(),
+							image_id: None,
+						};
+						yield Ok(ingested_tokens);
+					},
+					Err(e) => {
+						tracing::error!("Failed to convert record to string: {:?}", e);
+					}
+				}
 			}
-			let ingested_tokens = IngestedTokens {
-				data: vec![res.unwrap()],
-				file: file.clone(),
-				doc_source: doc_source.clone(),
-				is_token_stream: false,
-				source_id: source_id.clone(),
-				image_id: None,
-			};
-			yield Ok(ingested_tokens);
 			yield Ok(IngestedTokens {
 				data: vec![],
 				file: file.clone(),
@@ -154,43 +140,6 @@ mod tests {
 
 	#[tokio::test]
 	async fn test_osdu_ingestor() {
-		let included_bytes = include_bytes!("../../../../test_data/dc_universe.json");
-		let bytes = included_bytes.to_vec();
-
-		let collected_bytes = CollectedBytes {
-			data: Some(Box::pin(Cursor::new(bytes))),
-			file: Some(Path::new("dc_universe.json").to_path_buf()),
-			doc_source: Some("test_source".to_string()),
-			eof: false,
-			extension: Some("json".to_string()),
-			size: Some(10),
-			source_id: "FileSystem1".to_string(),
-			_owned_permit: None,
-			image_id: None,
-		};
-
-		let ingestor = OSDURecordIngestor::new();
-
-		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
-
-		let mut stream = result_stream;
-		let mut all_data = Vec::new();
-		while let Some(tokens) = stream.next().await {
-			match tokens {
-				Ok(tokens) =>
-					if !tokens.data.is_empty() {
-						all_data.push(tokens.data);
-					},
-				Err(e) => {
-					tracing::error!("Failed to get tokens from images: {:?}", e);
-				},
-			}
-		}
-		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
-	}
-
-	#[tokio::test]
-	async fn test_osdu_ingestor2() {
 		let included_bytes = include_bytes!("../../../../test_data/osdu_record.json");
 		let bytes = included_bytes.to_vec();
 

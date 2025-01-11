@@ -142,16 +142,19 @@ impl DataSource for OSDUStorageService {
 					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
 					while let Some(record) = records.recv().await {
 						let record_json_str = serde_json::to_string(&record)?;
-						let record_id_with_osdu_ext = format!("{}.{}", record_id.clone(), "osdu");
-						let collected_bytes = CollectedBytes::new(
-							Some(PathBuf::from(record_id_with_osdu_ext)),
-							Some(Box::pin(string_to_async_read(record_json_str))),
-							true,
-							Some("osdu://record".to_string()),
-							None,
-							kind.clone(),
-							None,
-						);
+						let size = record_json_str.len();
+						let collected_bytes = CollectedBytes {
+							data: Some(Box::pin(string_to_async_read(record_json_str))),
+							file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
+							doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+							eof: true,
+							extension: Some("osdu".to_string()),
+							size: Some(size),
+							source_id: record_id.clone(),
+							_owned_permit: None,
+							image_id: None,
+						};
+
 						yield Ok(collected_bytes);
 					}
 				}
