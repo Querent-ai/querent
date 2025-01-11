@@ -76,13 +76,12 @@ impl BaseIngestor for OSDURecordIngestor {
 				}
 				source_id = collected_bytes.source_id.clone();
 			}
-			// buffer is  Vec<u8> of json
 			let content = String::from_utf8_lossy(&buffer);
-			let records: Vec<Record>;
-			let osdu_record: Result<Vec<Record>, serde_json::Error> = serde_json::from_str(&content);
+			let record: Record;
+			let osdu_record: Result<Record, serde_json::Error> = serde_json::from_str(&content);
 			match osdu_record {
 				Ok(res) => {
-					records = res;
+					record = res;
 				},
 				Err(_e) => {
 					yield Ok(IngestedTokens {
@@ -96,23 +95,22 @@ impl BaseIngestor for OSDURecordIngestor {
 					return;
 				}
 			}
-			for res in records {
-				let res = serde_json::to_string(&res);
-				match res {
-					Ok(res) => {
-						let ingested_tokens = IngestedTokens {
-							data: vec![res],
-							file: file.clone(),
-							doc_source: doc_source.clone(),
-							is_token_stream: false,
-							source_id: source_id.clone(),
-							image_id: None,
-						};
-						yield Ok(ingested_tokens);
-					},
-					Err(e) => {
-						tracing::error!("Failed to convert record to string: {:?}", e);
-					}
+
+			let res = serde_json::to_string(&record);
+			match res {
+				Ok(res) => {
+					let ingested_tokens = IngestedTokens {
+						data: vec![res],
+						file: file.clone(),
+						doc_source: doc_source.clone(),
+						is_token_stream: false,
+						source_id: source_id.clone(),
+						image_id: None,
+					};
+					yield Ok(ingested_tokens);
+				},
+				Err(e) => {
+					tracing::error!("Failed to convert record to string: {:?}", e);
 				}
 			}
 			yield Ok(IngestedTokens {
