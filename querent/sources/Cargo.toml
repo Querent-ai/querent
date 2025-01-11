@@ -79,3 +79,4 @@ tar = { workspace = true }
 flate2 = { workspace = true }
 serial_test = { workspace = true }
 aws-sdk-sts = { workspace = true }
+lazy_static = { workspace = true }

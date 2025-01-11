@@ -477,3 +477,42 @@ struct FetchRecordsResponse {
 	invalid_records: Vec<String>,
 	retry_records: Vec<String>,
 }
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	const JSON_DUMMY: &str = r#"
+ 	{
+ 		"type": "service_account",
+ 		"project_id": "querent-1",
+ 		"private_key_id": "3439139784fcbc82c21d9b8559cd4774401b74c5",
+ 		"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDHRJWvm6lIl2+i\nDqqj8/ywYCSFZS4xnAmerXtohR3+29+34jlRuSqs5tCr0pxE92SMXLOok+CbFs2f\nmQoQwJ01pXR8M/COzmQbJg7Y2SJ+mwbDfcZqGHShz2SLIydF1NsFC5p80/dC04j3\nQTe+QiTTej0VpmjL2hLg+XGtdaJI/ilf0nweVW9Rc1tEy7/Fg6WaAvvbMa9xq3cV\nTZXdUXSdwBI6HK9GLDAn66cfCXqBG2D8GfwhVp2oNvsiIKOIMxPHSYkdWgTUrM2x\n2jmUwAciJekIcfysowA9pFtr4kfAXHLDNW26GIXF0fzajmJ2JiWnFOSoj3BIkO9h\ngj7LqSeLAgMBAAECggEAFWsG8cX38esBCeNXWQxdETIhoCA/e6qWEshPzEIJTCmi\n8sIDP4hOZiDgYKTgZ2igleuoOIrofehQuAJRkCURNhZvc6LQ4kXx1u8wx629ukD8\nfvUHvMNIf1SU2IBcn3ILto+djnmUCUqbsq5/s4NVhPuNvEQo3ccLTMN9rKjJBYec\nnYeBCkbs0zfSNZJXWy5br3ja7jKtveAl9KrWvq3qDEH1uL6/8INk/LsqeB/UrATJ\nyKJqv1pgDXl5dA8mSbktGfec7Y+JAgQfW5yG2jygnDajAykRty0Y+vcFfCeyC8fS\n7DPgYWByNOzv2FUvIJIPaTE0IMduple1PjRxWyXZ6QKBgQD4NLldrVdKQ6pdizaW\nhtwhJjE+n/ceFbHCeWMnNynZ+uk9KfKfUAzGQqpRagUJRfz3mqxPiTxWJHMcp//T\nmxcb4ByQwHFgO7tkrxDzxE4VgNww3NJZiTwksbyyEkiQMjPdPWWp3xqk6EUrZJrw\n4kpD2UPlOrIyIduLSw5+hWbBowKBgQDNhnU4LfeOmrbuhQe1Q5t2dGreypgxgUQ0\n+eRPz+TXY0hXc4THF4oNtYtnpkmzG0QwvoLwSismzmL6PcEM2jNWL/3O1fKS8Hlu\nZjEzTOroe9D6AvQq4RvByKHvVqmMfy8qrpOajKmdul8ppCQHSrUftB/ZOmhbYm+a\n28PVtPrw+QKBgQDOzq98vEe1GzhChRJQzcFw5W+2rHas3IqmbZoOPMpkU8ovKlp8\nH6jlMPrUpy/XEDe832WfR8u8QtafE+P3Hoxcr5ldittswZhcRfosAm7FP/83v2aN\nL+mq8WU2QkGv1ASe3N9ucPS0XsvzYfovp30Vl1wZDZUYbFmPcFR9Ww3JXQKBgBet\nS8fDE+frzvM/hBnPxhMpaj5sXIgnejIYL8M6EgT2PRlGB5/gCFl39q1kLM1jcMGk\n0PTZtorr798gSiMu6Acf1D+FykI/Td34C+b7D3zk9rg2quZdtJLoiC9IbpPu+wIR\nxpNhbRDsrZXggP4ODzutxpWB8w/EEVNnyfHOvbIRAoGALbfAgMcULqPpb13iyqhk\ntJEsvZ6yPHDET/ZkzIckQZlLgseP9Pq4S9pfSQ/b4b1wFdnCesarq/amWV+210t5\n5GrvsWiOp2DZ72DSE5NjplMUXCrtfVrRkCKN+yNbGt57VDN4fHZe3SZKPFK7IbzV\nq0J+y+gWryyRPgbWhPJF31o=\n-----END PRIVATE KEY-----\n",
+ 		"client_email": "test-osdu@querent-1.iam.gserviceaccount.com",
+ 		"client_id": "101850325134921604649",
+ 		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+ 		"token_uri": "https://oauth2.googleapis.com/token",
+ 		"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+ 		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-osdu%40querent-1.iam.gserviceaccount.com",
+ 		"universe_domain": "googleapis.com"
+	}
+	"#;
+	#[tokio::test]
+	async fn test_new_osdu_client() {
+		// Initialize the crypto provider
+		rustls::crypto::ring::default_provider()
+			.install_default()
+			.expect("Failed to install ring as the default crypto provider");
+
+		let client = OSDUClient::new(
+			"https://example.com",
+			"/service",
+			"partition",
+			"collab",
+			"corr-id",
+			JSON_DUMMY,
+			vec!["scope".to_string()],
+		)
+		.await;
+		assert!(client.is_ok());
+	}
+}
