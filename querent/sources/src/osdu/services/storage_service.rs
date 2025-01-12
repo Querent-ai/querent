@@ -42,7 +42,7 @@ pub struct OSDUStorageService {
 
 impl OSDUStorageService {
 	pub async fn new(config: OsduServiceConfig) -> anyhow::Result<Self> {
-		let service_path = format!("/api/{}/{}", "storage", config.version);
+		let service_path = format!("/api/{}/{}", "storage", config.storage_version);
 		let osdu_storage_client = OSDUClient::new(
 			&config.base_url,
 			&service_path,
@@ -54,7 +54,7 @@ impl OSDUStorageService {
 		)
 		.await?;
 
-		let schema_service_path = format!("/api/{}/{}", "schema-service", config.version);
+		let schema_service_path = format!("/api/{}/{}", "schema-service", config.schema_version);
 		let osdu_schema_client = OSDUClient::new(
 			&config.base_url,
 			&schema_service_path,
@@ -66,7 +66,7 @@ impl OSDUStorageService {
 		)
 		.await?;
 
-		let file_service_path = format!("/api/{}/{}", "file", config.version);
+		let file_service_path = format!("/api/{}/{}", "file", config.file_version);
 		let osdu_file_client = OSDUClient::new(
 			&config.base_url,
 			&file_service_path,
