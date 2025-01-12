@@ -361,17 +361,21 @@ message OSDUServiceConfig {
   // Base Host URL of the OSDU Storage Service
   string base_url = 1;
   // Version of the OSDU Storage Service
-  string version = 3;
+  string storage_version = 2;
+  // Version of OSDU Schema Service
+  string schema_version = 3;
+  // Version of OSDU File Service
+  string file_version = 4;
   // Data partition id to query
-  string data_partition_id = 4;
+  string data_partition_id = 5;
   // Service Account Key for token generation
-  string service_account_key = 5;
+  string service_account_key = 6;
   // Scopes for the OSDU Service
-  repeated string scopes = 6;
+  repeated string scopes = 7;
   // Optional x-collaboration
-  optional string x_collaboration = 7;
+  optional string x_collaboration = 8;
   // Optional correlation id
-  optional string correlation_id = 8;
+  optional string correlation_id = 9;
   // Optional specify record kinds to model 
-  repeated string record_kinds = 9;
+  repeated string record_kinds = 10;
 }

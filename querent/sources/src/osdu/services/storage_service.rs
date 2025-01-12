@@ -42,7 +42,7 @@ pub struct OSDUStorageService {
 
 impl OSDUStorageService {
 	pub async fn new(config: OsduServiceConfig) -> anyhow::Result<Self> {
-		let service_path = format!("/api/{}/{}", "storage", config.version);
+		let service_path = format!("/api/{}/{}", "storage", config.storage_version);
 		let osdu_storage_client = OSDUClient::new(
 			&config.base_url,
 			&service_path,
@@ -54,7 +54,7 @@ impl OSDUStorageService {
 		)
 		.await?;
 
-		let schema_service_path = format!("/api/{}/{}", "schema-service", config.version);
+		let schema_service_path = format!("/api/{}/{}", "schema-service", config.schema_version);
 		let osdu_schema_client = OSDUClient::new(
 			&config.base_url,
 			&schema_service_path,
@@ -66,7 +66,7 @@ impl OSDUStorageService {
 		)
 		.await?;
 
-		let file_service_path = format!("/api/{}/{}", "file", config.version);
+		let file_service_path = format!("/api/{}/{}", "file", config.file_version);
 		let osdu_file_client = OSDUClient::new(
 			&config.base_url,
 			&file_service_path,
@@ -129,6 +129,7 @@ impl DataSource for OSDUStorageService {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let mut schema_client = self.osdu_schema_client.lock().await;
 		let mut storage_client = self.osdu_storage_client.lock().await;
+		let mut file_client = self.osdu_file_client.lock().await;
 		let record_kinds = self.config.record_kinds.clone();
 		let retry_params = self.retry_params.clone();
 		let stream = async_stream::stream! {
@@ -156,6 +157,14 @@ impl DataSource for OSDUStorageService {
 						};
 
 						yield Ok(collected_bytes);
+
+						// TODO Fetch the file signedurl and stream the file
+						let _signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
+						// Here we need to figure out few things
+						// 1. What types of files we are expecting, can we know any metadata about the file
+						// 2. Create async read stream from the signed url
+						// 3. Yield the stream
+						// 4. Support Ingestors for file types
 					}
 				}
 			}
