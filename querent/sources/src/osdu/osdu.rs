@@ -184,7 +184,7 @@ impl OSDUClient {
 		client.get(&request_url).headers(headers).send().await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+				anyhow::anyhow!("Error while making request to OSDU API: {:?}", err).into(),
 			)
 		})
 	}
@@ -194,7 +194,7 @@ impl OSDUClient {
 		self.get_request(Param::Path("info".to_string())).await.map_err(|err| {
 			SourceError::new(
 				SourceErrorKind::Io,
-				anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+				anyhow::anyhow!("Error while making request to OSDU API: {:?}", err).into(),
 			)
 		})
 	}
@@ -246,8 +246,11 @@ impl OSDUClient {
 					client.get(&request_url).headers(headers.clone()).send().await.map_err(|err| {
 						SourceError::new(
 							SourceErrorKind::Io,
-							anyhow::anyhow!("Error while making request to Notion API: {:?}", err)
-								.into(),
+							anyhow::anyhow!(
+								"Error while making request to OSDU Schema Service API: {:?}",
+								err
+							)
+							.into(),
 						)
 					})
 				})
@@ -326,8 +329,11 @@ impl OSDUClient {
 					client.get(&request_url).headers(headers.clone()).send().await.map_err(|err| {
 						SourceError::new(
 							SourceErrorKind::Io,
-							anyhow::anyhow!("Error while making request to Notion API: {:?}", err)
-								.into(),
+							anyhow::anyhow!(
+								"Error while making request to Storage Service API: {:?}",
+								err
+							)
+							.into(),
 						)
 					})
 				})
@@ -393,8 +399,11 @@ impl OSDUClient {
 					.map_err(|err| {
 						SourceError::new(
 							SourceErrorKind::Io,
-							anyhow::anyhow!("Error while making request to Notion API: {:?}", err)
-								.into(),
+							anyhow::anyhow!(
+								"Error while making request to Storage Service API: {:?}",
+								err
+							)
+							.into(),
 						)
 					})
 			})
@@ -441,7 +450,11 @@ impl OSDUClient {
 			client.get(&url).headers(headers.clone()).send().await.map_err(|err| {
 				SourceError::new(
 					SourceErrorKind::Io,
-					anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+					anyhow::anyhow!(
+						"Error while making request to OSDU File Service API: {:?}",
+						err
+					)
+					.into(),
 				)
 			})
 		})
