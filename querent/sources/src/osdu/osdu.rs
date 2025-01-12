@@ -502,17 +502,22 @@ mod tests {
 		rustls::crypto::ring::default_provider()
 			.install_default()
 			.expect("Failed to install ring as the default crypto provider");
-
-		let client = OSDUClient::new(
-			"https://example.com",
-			"/service",
-			"partition",
-			"collab",
-			"corr-id",
+		let service_path = format!("/api/{}/{}", "storage", "v2");
+		let storage_client = OSDUClient::new(
+			"https://osdu.core-dev.gcp.gnrg-osdu.projects.epam.com",
+			&service_path,
+			"partition-1",
+			"collab-querent",
+			"corr-id-rian",
 			JSON_DUMMY,
-			vec!["scope".to_string()],
+			vec!["https://www.googleapis.com/auth/cloud-platform".to_string()],
 		)
 		.await;
-		assert!(client.is_ok());
+		assert!(storage_client.is_ok());
+		let mut storage_client = storage_client.unwrap();
+		let info = storage_client.get_info().await;
+		assert!(info.is_ok());
+		let info = info.unwrap();
+		assert!(info.status().is_success());
 	}
 }
