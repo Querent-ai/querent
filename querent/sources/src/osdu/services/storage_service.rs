@@ -23,7 +23,12 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::OsduServiceConfig;
-use std::{ops::Range, path::Path, pin::Pin, sync::Arc};
+use std::{
+	ops::Range,
+	path::{Path, PathBuf},
+	pin::Pin,
+	sync::Arc,
+};
 use tokio::{io::AsyncRead, sync::Mutex};
 
 #[derive(Debug)]
@@ -37,7 +42,7 @@ pub struct OSDUStorageService {
 
 impl OSDUStorageService {
 	pub async fn new(config: OsduServiceConfig) -> anyhow::Result<Self> {
-		let service_path = format!("/api/{}/{}/", "storage", config.version);
+		let service_path = format!("/api/{}/{}", "storage", config.version);
 		let osdu_storage_client = OSDUClient::new(
 			&config.base_url,
 			&service_path,
@@ -49,7 +54,7 @@ impl OSDUStorageService {
 		)
 		.await?;
 
-		let schema_service_path = format!("/api/{}/{}/", "schema-service", config.version);
+		let schema_service_path = format!("/api/{}/{}", "schema-service", config.version);
 		let osdu_schema_client = OSDUClient::new(
 			&config.base_url,
 			&schema_service_path,
@@ -61,7 +66,7 @@ impl OSDUStorageService {
 		)
 		.await?;
 
-		let file_service_path = format!("/api/{}/{}/", "file", config.version);
+		let file_service_path = format!("/api/{}/{}", "file", config.version);
 		let osdu_file_client = OSDUClient::new(
 			&config.base_url,
 			&file_service_path,
@@ -137,15 +142,19 @@ impl DataSource for OSDUStorageService {
 					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
 					while let Some(record) = records.recv().await {
 						let record_json_str = serde_json::to_string(&record)?;
-						let collected_bytes = CollectedBytes::new(
-							Some(record_id.clone().into()),
-							Some(Box::pin(string_to_async_read(record_json_str))),
-							true,
-							Some("osdu://record".to_string()),
-							None,
-							kind.clone(),
-							None,
-						);
+						let size = record_json_str.len();
+						let collected_bytes = CollectedBytes {
+							data: Some(Box::pin(string_to_async_read(record_json_str))),
+							file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
+							doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+							eof: true,
+							extension: Some("osdu".to_string()),
+							size: Some(size),
+							source_id: record_id.clone(),
+							_owned_permit: None,
+							image_id: None,
+						};
+
 						yield Ok(collected_bytes);
 					}
 				}

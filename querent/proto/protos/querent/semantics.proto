@@ -152,6 +152,7 @@ message CollectorConfig {
     FileCollectorConfig files = 12;
     OneDriveConfig onedrive = 13;
     NotionConfig notion = 14;
+    OSDUServiceConfig osdu = 15;
   }
 }
 

@@ -27,6 +27,7 @@ pub mod html;
 pub mod image;
 pub mod json;
 pub mod odp;
+pub mod osdu;
 pub mod pdf;
 pub mod pptx;
 pub mod processors;

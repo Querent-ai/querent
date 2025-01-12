@@ -269,6 +269,27 @@ pub async fn create_dynamic_sources(
 					},
 				}
 			},
+			Some(proto::semantics::Backend::Osdu(config)) => {
+				#[cfg(feature = "license-check")]
+				if !is_data_source_allowed_by_product(licence_key.clone(), &collector).unwrap() {
+					return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+						"Data source not allowed by product: {}",
+						collector.name.clone(),
+					)));
+				}
+
+				match sources::osdu::services::OSDUStorageService::new(config.clone()).await {
+					Ok(osdu_source) => {
+						sources.push(Arc::new(osdu_source) as Arc<dyn sources::DataSource>);
+					},
+					Err(e) => {
+						return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
+							"Failed to initialize OSDU source: {:?} ",
+							e
+						)));
+					},
+				}
+			},
 			_ =>
 				return Err(PipelineErrors::InvalidParams(anyhow::anyhow!(
 					"Invalid source type: {}",

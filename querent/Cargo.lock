@@ -11743,6 +11743,7 @@ dependencies = [
  "imap",
  "ingestors",
  "jira_query",
+ "lazy_static",
  "log 0.4.22",
  "mailparse",
  "md5",
