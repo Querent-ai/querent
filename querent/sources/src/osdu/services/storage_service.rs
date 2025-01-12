@@ -129,6 +129,7 @@ impl DataSource for OSDUStorageService {
 	) -> SourceResult<Pin<Box<dyn Stream<Item = SourceResult<CollectedBytes>> + Send + 'life0>>> {
 		let mut schema_client = self.osdu_schema_client.lock().await;
 		let mut storage_client = self.osdu_storage_client.lock().await;
+		let mut file_client = self.osdu_file_client.lock().await;
 		let record_kinds = self.config.record_kinds.clone();
 		let retry_params = self.retry_params.clone();
 		let stream = async_stream::stream! {
@@ -156,6 +157,14 @@ impl DataSource for OSDUStorageService {
 						};
 
 						yield Ok(collected_bytes);
+
+						// TODO Fetch the file signedurl and stream the file
+						let _signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
+						// Here we need to figure out few things
+						// 1. What types of files we are expecting, can we know any metadata about the file
+						// 2. Create async read stream from the signed url
+						// 3. Yield the stream
+						// 4. Support Ingestors for file types
 					}
 				}
 			}

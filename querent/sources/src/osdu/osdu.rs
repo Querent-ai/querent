@@ -425,6 +425,7 @@ impl OSDUClient {
 		&mut self,
 		file_id: &str,
 		expiry_time: Option<&str>,
+		retry_params: common::RetryParams,
 	) -> Result<String, SourceError> {
 		let headers = self.construct_headers().await?;
 
@@ -436,12 +437,15 @@ impl OSDUClient {
 		}
 
 		let client = HttpClient::new();
-		let response = client.get(&url).headers(headers).send().await.map_err(|err| {
-			SourceError::new(
-				SourceErrorKind::Io,
-				anyhow::anyhow!("Failed to make request: {:?}", err).into(),
-			)
-		})?;
+		let response = retry(&retry_params, || async {
+			client.get(&url).headers(headers.clone()).send().await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!("Error while making request to Notion API: {:?}", err).into(),
+				)
+			})
+		})
+		.await?;
 
 		if !response.status().is_success() {
 			return Err(SourceError::new(
