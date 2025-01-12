@@ -422,50 +422,48 @@ impl OSDUClient {
 	}
 
 	pub async fn get_signed_url(
-        &mut self,
-        file_id: &str,
-        expiry_time: Option<&str>,
-    ) -> Result<String, SourceError> {
-        let headers = self.construct_headers().await?;
+		&mut self,
+		file_id: &str,
+		expiry_time: Option<&str>,
+	) -> Result<String, SourceError> {
+		let headers = self.construct_headers().await?;
 
-        let mut url = format!(
-            "{}/{}/files/{}/downloadURL",
-            self.base_api_url, self.service_path, file_id
-        );
+		let mut url =
+			format!("{}/{}/files/{}/downloadURL", self.base_api_url, self.service_path, file_id);
 
-        if let Some(expiry) = expiry_time {
-            url.push_str(&format!("?expiryTime={}", expiry));
-        }
+		if let Some(expiry) = expiry_time {
+			url.push_str(&format!("?expiryTime={}", expiry));
+		}
 
-        let client = HttpClient::new();
-        let response = client.get(&url).headers(headers).send().await.map_err(|err| {
-            SourceError::new(
-                SourceErrorKind::Io,
-                anyhow::anyhow!("Failed to make request: {:?}", err).into(),
-            )
-        })?;
+		let client = HttpClient::new();
+		let response = client.get(&url).headers(headers).send().await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed to make request: {:?}", err).into(),
+			)
+		})?;
 
-        if !response.status().is_success() {
-            return Err(SourceError::new(
-                SourceErrorKind::Io,
-                anyhow::anyhow!("Failed with status: {}", response.status()).into(),
-            ));
-        }
+		if !response.status().is_success() {
+			return Err(SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed with status: {}", response.status()).into(),
+			));
+		}
 
-        let response_body: serde_json::Value = response.json().await.map_err(|err| {
-            SourceError::new(
-                SourceErrorKind::Io,
-                anyhow::anyhow!("Failed to parse response: {:?}", err).into(),
-            )
-        })?;
+		let response_body: serde_json::Value = response.json().await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed to parse response: {:?}", err).into(),
+			)
+		})?;
 
-        response_body["SignedUrl"].as_str().map(String::from).ok_or_else(|| {
-            SourceError::new(
-                SourceErrorKind::Io,
-                anyhow::anyhow!("Signed URL not found in response").into(),
-            )
-        })
-    }
+		response_body["SignedUrl"].as_str().map(String::from).ok_or_else(|| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Signed URL not found in response").into(),
+			)
+		})
+	}
 }
 
 pub enum Param {
