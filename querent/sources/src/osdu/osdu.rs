@@ -87,8 +87,10 @@ impl OSDUClient {
 		let auth: Authenticator<
 			HttpsConnector<hyper_util::client::legacy::connect::HttpConnector>,
 		> = ServiceAccountAuthenticator::builder(service_account_key).build().await?;
+		let base_without_trailing_slash = base_api_url.trim_end_matches('/');
+		let service_path = service_path.trim_start_matches('/');
 		Ok(OSDUClient {
-			base_api_url: base_api_url.to_string(),
+			base_api_url: base_without_trailing_slash.to_string(),
 			service_path: service_path.to_string(),
 			data_partition_id: data_partition_id.to_string(),
 			x_collaboration: x_collaboration.to_string(),
@@ -176,7 +178,7 @@ impl OSDUClient {
 
 	pub async fn get_request(&mut self, param: Param) -> Result<Response, SourceError> {
 		let request_url =
-			format!("{}{}/{}", self.base_api_url, self.service_path, get_url_params(param));
+			format!("{}/{}/{}", self.base_api_url, self.service_path, get_url_params(param));
 		let client = HttpClient::new();
 		let headers = self.construct_headers().await?;
 		client.get(&request_url).headers(headers).send().await.map_err(|err| {
@@ -207,7 +209,7 @@ impl OSDUClient {
 		let page_size = 10;
 		let client: HttpClient = HttpClient::new();
 		let (tx, rx) = mpsc::channel(100);
-		let url = format!("{}{}", self.base_api_url, self.service_path);
+		let url = format!("{}/{}", self.base_api_url, self.service_path);
 		let mut query_params = HashMap::new();
 
 		// Add the filters to the query parameters
@@ -295,7 +297,7 @@ impl OSDUClient {
 		let page_size = 10;
 		let client: HttpClient = HttpClient::new();
 		let (tx, rx) = mpsc::channel(100);
-		let url = format!("{}{}", self.base_api_url, self.service_path);
+		let url = format!("{}/{}", self.base_api_url, self.service_path);
 		let mut query_params = HashMap::new();
 		let kind_id = kind_id.to_string();
 		// Add the filters to the query parameters
@@ -368,7 +370,7 @@ impl OSDUClient {
 	) -> Result<mpsc::Receiver<Record>, SourceError> {
 		let client: HttpClient = HttpClient::new();
 		let (tx, rx) = mpsc::channel(100);
-		let url = format!("{}{}", self.base_api_url, self.service_path);
+		let url = format!("{}/{}", self.base_api_url, self.service_path);
 		let mut self_clone = self.clone();
 
 		tokio::spawn(async move {
@@ -418,6 +420,52 @@ impl OSDUClient {
 		});
 		Ok(rx)
 	}
+
+	pub async fn get_signed_url(
+        &mut self,
+        file_id: &str,
+        expiry_time: Option<&str>,
+    ) -> Result<String, SourceError> {
+        let headers = self.construct_headers().await?;
+
+        let mut url = format!(
+            "{}/{}/files/{}/downloadURL",
+            self.base_api_url, self.service_path, file_id
+        );
+
+        if let Some(expiry) = expiry_time {
+            url.push_str(&format!("?expiryTime={}", expiry));
+        }
+
+        let client = HttpClient::new();
+        let response = client.get(&url).headers(headers).send().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Failed to make request: {:?}", err).into(),
+            )
+        })?;
+
+        if !response.status().is_success() {
+            return Err(SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Failed with status: {}", response.status()).into(),
+            ));
+        }
+
+        let response_body: serde_json::Value = response.json().await.map_err(|err| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Failed to parse response: {:?}", err).into(),
+            )
+        })?;
+
+        response_body["SignedUrl"].as_str().map(String::from).ok_or_else(|| {
+            SourceError::new(
+                SourceErrorKind::Io,
+                anyhow::anyhow!("Signed URL not found in response").into(),
+            )
+        })
+    }
 }
 
 pub enum Param {
