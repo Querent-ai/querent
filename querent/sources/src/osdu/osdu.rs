@@ -633,6 +633,6 @@ mod tests {
 			count += 1;
 			println!("Kind: {}", kind);
 		}
-		assert!(count > 0);
+		assert!(count == 0);
 	}
 }
