@@ -559,6 +559,22 @@ mod tests {
  		"universe_domain": "googleapis.com"
 	}
 	"#;
+
+	const REAL_JSON: &str = r#"
+	{
+	  "type": "service_account",
+	  "project_id": "querent-osdu-instance",
+	  "private_key_id": "13448eef737eadff2f673d280af5d4c85bb00067",
+	  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDiqlxQaAOpUjDK\n43T5dtErWUamBpkT+WI3q3uBxiBYDq9eFYPXEI40bLQ0avEtJkFfNXQXPCjVop9k\nmbY8eR+KExtB5ISjUkxwjEfy1KxwnmyfOXl/YFZ1kUfLJF63HELa8Az9GwUMGNyG\nB7/yiEIBJyRUs2H+bccQaYojSMYlXBGc1qTQGJiLMaAF7t2PsIzFbE6pv5cgkSre\n+3TMU2v0CECd1d5+RSPb31VayrnRxcu8mxlm7KNc7rU837wat2daK0JMzVG2msBs\nM/fZtk3YiJT74V8VRVG8fNRbbz69CywmE8wA/vQj/mlM+C6r+R5eK58VoAcWgl/i\n9wbPAeA9AgMBAAECggEACK6SUSEezMhBZrAOLbT7n4+wmVDk4aM6fBvlI+whFoZf\neLjVvzHa5I6qW1yiRsKxm9I6E17CSKaNOOb7WDciemEveNdmLjRLib8RzW8QeNLU\noceri/G2dhPdvl3zA8wBEo5BzRsRFyzHm5ml5EYMUyt65ISncv2k84+7Uw0pS8p3\nzR2tXIy4WHaJMXrR2jzI2A16ZQ9FtIRMgZUXJkJfp2g11uGj3RyZboXO8cg5HNBo\nXL9XCvz22Vl4Ue4zE/DdppZ4tG8yYZzYkL/pP27GfTbylWjMT+l93ljr9jqbWJLx\ngFen1AtvCljJUfqybcg9z+tPkoDHOoMDUGoT8XnhSQKBgQDxdhbABOAbvqo45oAr\n9rLZBIWywev2O/+NQRZiSapxdK5GBqNefkQBFZiaoVR32RX/02dLKnZdUIHGnuDY\nVb3/IFAJKU2rRcW/1K5eeIuaXI5l0eWWmrQ/5juQszHtnapCPKLeo2RM9MbCb2zG\nJsoNocrshTljP0Iw3ZtiAdMQKQKBgQDwUDUZRA+T9KU3cdUZxCqXZMdBQ+y9cZv9\ncNwmlzUCKyDYCO9E2bBCgQGQQ+kmqXhge5OjkwS1Ok9xKgPItFTZm+zJBOoCs+m2\nQ0mINidRdIn/ztlrCrzxuqOlL/7yhBTnb2df3vD/XsIz4RYwgkKPTfG9+sH9/RzD\nQk2cOsFB9QKBgQDGQUF4tAgWf7xgL9H5Rvud+HqWRWcqrCStpE1usjGCKl2VHYox\n4daQVV0RSXmDVfkcLkXXj6vT/nAv1u+icPQpcCyG+STOheFSGpx48N0fBvPcYjTy\nLV/mP3GU460Q/q126TaJOvr1vN0ddEOJhvvLqZZmERUHij8cxDf6hqj30QKBgBby\ncb+R4jLsn4Il2oV1V+PQ+b3fsJF+cbjHuB3vPl6Qo7g9Uiuu5cfT7cRK186bTCVa\nZ4StGzv6728M5gOaRKfq3bdsQrQzXdPLpQ/eq+55RFwq8lPoWJZ0jf/OD3g06JIY\n7zQWY8je0YiGq8nCBn0MolLTyQZpzv9OK38JlT6pAoGAIUkygqF1ToQhpC7SaW9P\nJ+Jku9RzoA2g4omwXw1n430IF6fjGDxhVqEYJfodeRcug6t5uD880x15BVM4Xz6u\nsatWhAyi3IAuAdHK4PerJdjpuyqDV4ZK20aMQbk9LQ+mrS2LsPHiKBqeXlVb4xgo\nDk1lwHjJJrQrqDsoKbKjmhU=\n-----END PRIVATE KEY-----\n",
+	  "client_email": "querent-coming-soon@querent-osdu-instance.iam.gserviceaccount.com",
+	  "client_id": "115865415468259465573",
+	  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+	  "token_uri": "https://oauth2.googleapis.com/token",
+	  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+	  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/querent-coming-soon%40querent-osdu-instance.iam.gserviceaccount.com",
+	  "universe_domain": "googleapis.com"
+	}
+	"#;
 	#[tokio::test]
 	async fn test_new_osdu_client() {
 		// Initialize the crypto provider
@@ -582,5 +598,41 @@ mod tests {
 		assert!(info.is_ok());
 		let info = info.unwrap();
 		assert!(info.status().is_success());
+	}
+
+	#[tokio::test]
+	async fn test_fetch_all_kinds() {
+		// Initialize the crypto provider
+		rustls::crypto::ring::default_provider()
+			.install_default()
+			.expect("Failed to install ring as the default crypto provider");
+		let service_path = format!("/api/{}/{}", "storage", "v2");
+		let mut storage_client = OSDUClient::new(
+			"https://osdu.endpoints.querent-osdu-instance.cloud.goog",
+			&service_path,
+			"osdu",
+			"",
+			"",
+			REAL_JSON,
+			vec![
+				" https://www.googleapis.com/auth/userinfo.email".to_string(),
+				"https://www.googleapis.com/auth/userinfo.profile".to_string(),
+				"openid".to_string(),
+			],
+		)
+		.await
+		.unwrap();
+		let kinds = vec![];
+		let filters = None;
+		let retry_params = common::RetryParams::default();
+		let kinds = storage_client.fetch_all_kinds(kinds, filters, retry_params).await;
+		assert!(kinds.is_ok());
+		let mut kinds = kinds.unwrap();
+		let mut count = 0;
+		while let Some(kind) = kinds.recv().await {
+			count += 1;
+			println!("Kind: {}", kind);
+		}
+		assert!(count == 0);
 	}
 }
