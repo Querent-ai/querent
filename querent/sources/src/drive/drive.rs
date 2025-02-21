@@ -103,7 +103,7 @@ impl GoogleDriveSource {
 			.acknowledge_abuse(false)
 			.param("fields", FIELDS)
 			.param("alt", "media")
-			.add_scope(Scope::Full)
+			.add_scope(Scope::Readonly)
 			.doit()
 			.await?;
 
