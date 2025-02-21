@@ -435,7 +435,7 @@ mod tests {
 			drive_client_secret: env::var("DRIVE_CLIENT_SECRET").unwrap_or_else(|_| "".to_string()),
 			drive_client_id: env::var("DRIVE_CLIENT_ID").unwrap_or_else(|_| "".to_string()),
 			drive_refresh_token: env::var("DRIVE_REFRESH_TOKEN").unwrap_or_else(|_| "".to_string()),
-			folder_to_crawl: "1fmNwZ_qkAuuZ3t2Fs5RzPI5hdv-8riIL".to_string(),
+			folder_to_crawl: "1DL5KV4NbjBZwRK-9fgacdFP-rBJaJOjE".to_string(),
 		};
 
 		let drive_storage = GoogleDriveSource::new(google_config).await;
