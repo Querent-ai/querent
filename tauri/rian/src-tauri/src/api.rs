@@ -16,11 +16,11 @@ use tiny_http::{Header, Response, Server};
 use lazy_static::lazy_static;
 lazy_static! {
     static ref DRIVE_CLIENT_ID: &'static str =
-        "400694410965-n2p8mud6m9sh1bso14r5hp7o6m4lnfug.apps.googleusercontent.com";
+        "400694410965-dt3vigiua2uroj369q9fe4l2hciej665.apps.googleusercontent.com";
 }
 
 lazy_static! {
-    static ref DRIVE_CLIENT_SECRET: &'static str = "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";
+    static ref DRIVE_CLIENT_SECRET: &'static str = "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";
 }
 
 #[tauri::command]
