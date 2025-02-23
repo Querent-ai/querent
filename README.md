@@ -44,17 +44,20 @@ Querent is an enterprise-grade Rust engine built on top of Querent, designed to 
 ## Why R!AN?
 
 ### 1. **Scalability for Large-Scale Problems**
+
    R!AN is optimized for large-scale data extraction, making it ideal for environments like **semantic fabrics**, where vast datasets need to be processed in real-time.
 
 ### 2. **Cost-Efficient Processing**
+
    By utilizing lightweight LLMs, R!AN provides a highly resource-efficient solution for real-time knowledge extraction without sacrificing much accuracy.
 
 ### 3. **Adaptable & Domain-Agnostic**
+
    While designed to extract general triples, R!AN can be adapted and fine-tuned for specific domains, making it highly flexible for different applications, from knowledge graphs to search optimization.
 
 ### 4. **Speed & Real-Time Application**
-   R!AN is built for real-time or near-real-time applications, processing massive streams of data in real-time environments without computational bottlenecks.
 
+   R!AN is built for real-time or near-real-time applications, processing massive streams of data in real-time environments without computational bottlenecks.
 
 ## Applications
 
