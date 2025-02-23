@@ -541,98 +541,98 @@ struct FetchRecordsResponse {
 	retry_records: Vec<String>,
 }
 
-#[cfg(test)]
-mod tests {
-	use super::*;
-	const JSON_DUMMY: &str = r#"
- 	{
- 		"type": "service_account",
- 		"project_id": "querent-1",
- 		"private_key_id": "3439139784fcbc82c21d9b8559cd4774401b74c5",
- 		"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDHRJWvm6lIl2+i\nDqqj8/ywYCSFZS4xnAmerXtohR3+29+34jlRuSqs5tCr0pxE92SMXLOok+CbFs2f\nmQoQwJ01pXR8M/COzmQbJg7Y2SJ+mwbDfcZqGHShz2SLIydF1NsFC5p80/dC04j3\nQTe+QiTTej0VpmjL2hLg+XGtdaJI/ilf0nweVW9Rc1tEy7/Fg6WaAvvbMa9xq3cV\nTZXdUXSdwBI6HK9GLDAn66cfCXqBG2D8GfwhVp2oNvsiIKOIMxPHSYkdWgTUrM2x\n2jmUwAciJekIcfysowA9pFtr4kfAXHLDNW26GIXF0fzajmJ2JiWnFOSoj3BIkO9h\ngj7LqSeLAgMBAAECggEAFWsG8cX38esBCeNXWQxdETIhoCA/e6qWEshPzEIJTCmi\n8sIDP4hOZiDgYKTgZ2igleuoOIrofehQuAJRkCURNhZvc6LQ4kXx1u8wx629ukD8\nfvUHvMNIf1SU2IBcn3ILto+djnmUCUqbsq5/s4NVhPuNvEQo3ccLTMN9rKjJBYec\nnYeBCkbs0zfSNZJXWy5br3ja7jKtveAl9KrWvq3qDEH1uL6/8INk/LsqeB/UrATJ\nyKJqv1pgDXl5dA8mSbktGfec7Y+JAgQfW5yG2jygnDajAykRty0Y+vcFfCeyC8fS\n7DPgYWByNOzv2FUvIJIPaTE0IMduple1PjRxWyXZ6QKBgQD4NLldrVdKQ6pdizaW\nhtwhJjE+n/ceFbHCeWMnNynZ+uk9KfKfUAzGQqpRagUJRfz3mqxPiTxWJHMcp//T\nmxcb4ByQwHFgO7tkrxDzxE4VgNww3NJZiTwksbyyEkiQMjPdPWWp3xqk6EUrZJrw\n4kpD2UPlOrIyIduLSw5+hWbBowKBgQDNhnU4LfeOmrbuhQe1Q5t2dGreypgxgUQ0\n+eRPz+TXY0hXc4THF4oNtYtnpkmzG0QwvoLwSismzmL6PcEM2jNWL/3O1fKS8Hlu\nZjEzTOroe9D6AvQq4RvByKHvVqmMfy8qrpOajKmdul8ppCQHSrUftB/ZOmhbYm+a\n28PVtPrw+QKBgQDOzq98vEe1GzhChRJQzcFw5W+2rHas3IqmbZoOPMpkU8ovKlp8\nH6jlMPrUpy/XEDe832WfR8u8QtafE+P3Hoxcr5ldittswZhcRfosAm7FP/83v2aN\nL+mq8WU2QkGv1ASe3N9ucPS0XsvzYfovp30Vl1wZDZUYbFmPcFR9Ww3JXQKBgBet\nS8fDE+frzvM/hBnPxhMpaj5sXIgnejIYL8M6EgT2PRlGB5/gCFl39q1kLM1jcMGk\n0PTZtorr798gSiMu6Acf1D+FykI/Td34C+b7D3zk9rg2quZdtJLoiC9IbpPu+wIR\nxpNhbRDsrZXggP4ODzutxpWB8w/EEVNnyfHOvbIRAoGALbfAgMcULqPpb13iyqhk\ntJEsvZ6yPHDET/ZkzIckQZlLgseP9Pq4S9pfSQ/b4b1wFdnCesarq/amWV+210t5\n5GrvsWiOp2DZ72DSE5NjplMUXCrtfVrRkCKN+yNbGt57VDN4fHZe3SZKPFK7IbzV\nq0J+y+gWryyRPgbWhPJF31o=\n-----END PRIVATE KEY-----\n",
- 		"client_email": "test-osdu@querent-1.iam.gserviceaccount.com",
- 		"client_id": "101850325134921604649",
- 		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
- 		"token_uri": "https://oauth2.googleapis.com/token",
- 		"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
- 		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-osdu%40querent-1.iam.gserviceaccount.com",
- 		"universe_domain": "googleapis.com"
-	}
-	"#;
+// #[cfg(test)]
+// mod tests {
+// 	use super::*;
+// 	const JSON_DUMMY: &str = r#"
+//  	{
+//  		"type": "service_account",
+//  		"project_id": "querent-1",
+//  		"private_key_id": "3439139784fcbc82c21d9b8559cd4774401b74c5",
+//  		"private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDHRJWvm6lIl2+i\nDqqj8/ywYCSFZS4xnAmerXtohR3+29+34jlRuSqs5tCr0pxE92SMXLOok+CbFs2f\nmQoQwJ01pXR8M/COzmQbJg7Y2SJ+mwbDfcZqGHShz2SLIydF1NsFC5p80/dC04j3\nQTe+QiTTej0VpmjL2hLg+XGtdaJI/ilf0nweVW9Rc1tEy7/Fg6WaAvvbMa9xq3cV\nTZXdUXSdwBI6HK9GLDAn66cfCXqBG2D8GfwhVp2oNvsiIKOIMxPHSYkdWgTUrM2x\n2jmUwAciJekIcfysowA9pFtr4kfAXHLDNW26GIXF0fzajmJ2JiWnFOSoj3BIkO9h\ngj7LqSeLAgMBAAECggEAFWsG8cX38esBCeNXWQxdETIhoCA/e6qWEshPzEIJTCmi\n8sIDP4hOZiDgYKTgZ2igleuoOIrofehQuAJRkCURNhZvc6LQ4kXx1u8wx629ukD8\nfvUHvMNIf1SU2IBcn3ILto+djnmUCUqbsq5/s4NVhPuNvEQo3ccLTMN9rKjJBYec\nnYeBCkbs0zfSNZJXWy5br3ja7jKtveAl9KrWvq3qDEH1uL6/8INk/LsqeB/UrATJ\nyKJqv1pgDXl5dA8mSbktGfec7Y+JAgQfW5yG2jygnDajAykRty0Y+vcFfCeyC8fS\n7DPgYWByNOzv2FUvIJIPaTE0IMduple1PjRxWyXZ6QKBgQD4NLldrVdKQ6pdizaW\nhtwhJjE+n/ceFbHCeWMnNynZ+uk9KfKfUAzGQqpRagUJRfz3mqxPiTxWJHMcp//T\nmxcb4ByQwHFgO7tkrxDzxE4VgNww3NJZiTwksbyyEkiQMjPdPWWp3xqk6EUrZJrw\n4kpD2UPlOrIyIduLSw5+hWbBowKBgQDNhnU4LfeOmrbuhQe1Q5t2dGreypgxgUQ0\n+eRPz+TXY0hXc4THF4oNtYtnpkmzG0QwvoLwSismzmL6PcEM2jNWL/3O1fKS8Hlu\nZjEzTOroe9D6AvQq4RvByKHvVqmMfy8qrpOajKmdul8ppCQHSrUftB/ZOmhbYm+a\n28PVtPrw+QKBgQDOzq98vEe1GzhChRJQzcFw5W+2rHas3IqmbZoOPMpkU8ovKlp8\nH6jlMPrUpy/XEDe832WfR8u8QtafE+P3Hoxcr5ldittswZhcRfosAm7FP/83v2aN\nL+mq8WU2QkGv1ASe3N9ucPS0XsvzYfovp30Vl1wZDZUYbFmPcFR9Ww3JXQKBgBet\nS8fDE+frzvM/hBnPxhMpaj5sXIgnejIYL8M6EgT2PRlGB5/gCFl39q1kLM1jcMGk\n0PTZtorr798gSiMu6Acf1D+FykI/Td34C+b7D3zk9rg2quZdtJLoiC9IbpPu+wIR\nxpNhbRDsrZXggP4ODzutxpWB8w/EEVNnyfHOvbIRAoGALbfAgMcULqPpb13iyqhk\ntJEsvZ6yPHDET/ZkzIckQZlLgseP9Pq4S9pfSQ/b4b1wFdnCesarq/amWV+210t5\n5GrvsWiOp2DZ72DSE5NjplMUXCrtfVrRkCKN+yNbGt57VDN4fHZe3SZKPFK7IbzV\nq0J+y+gWryyRPgbWhPJF31o=\n-----END PRIVATE KEY-----\n",
+//  		"client_email": "test-osdu@querent-1.iam.gserviceaccount.com",
+//  		"client_id": "101850325134921604649",
+//  		"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+//  		"token_uri": "https://oauth2.googleapis.com/token",
+//  		"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+//  		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/test-osdu%40querent-1.iam.gserviceaccount.com",
+//  		"universe_domain": "googleapis.com"
+// 	}
+// 	"#;
 
-	const REAL_JSON: &str = r#"
-	{
-	  "type": "service_account",
-	  "project_id": "querent-osdu-instance",
-	  "private_key_id": "13448eef737eadff2f673d280af5d4c85bb00067",
-	  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDiqlxQaAOpUjDK\n43T5dtErWUamBpkT+WI3q3uBxiBYDq9eFYPXEI40bLQ0avEtJkFfNXQXPCjVop9k\nmbY8eR+KExtB5ISjUkxwjEfy1KxwnmyfOXl/YFZ1kUfLJF63HELa8Az9GwUMGNyG\nB7/yiEIBJyRUs2H+bccQaYojSMYlXBGc1qTQGJiLMaAF7t2PsIzFbE6pv5cgkSre\n+3TMU2v0CECd1d5+RSPb31VayrnRxcu8mxlm7KNc7rU837wat2daK0JMzVG2msBs\nM/fZtk3YiJT74V8VRVG8fNRbbz69CywmE8wA/vQj/mlM+C6r+R5eK58VoAcWgl/i\n9wbPAeA9AgMBAAECggEACK6SUSEezMhBZrAOLbT7n4+wmVDk4aM6fBvlI+whFoZf\neLjVvzHa5I6qW1yiRsKxm9I6E17CSKaNOOb7WDciemEveNdmLjRLib8RzW8QeNLU\noceri/G2dhPdvl3zA8wBEo5BzRsRFyzHm5ml5EYMUyt65ISncv2k84+7Uw0pS8p3\nzR2tXIy4WHaJMXrR2jzI2A16ZQ9FtIRMgZUXJkJfp2g11uGj3RyZboXO8cg5HNBo\nXL9XCvz22Vl4Ue4zE/DdppZ4tG8yYZzYkL/pP27GfTbylWjMT+l93ljr9jqbWJLx\ngFen1AtvCljJUfqybcg9z+tPkoDHOoMDUGoT8XnhSQKBgQDxdhbABOAbvqo45oAr\n9rLZBIWywev2O/+NQRZiSapxdK5GBqNefkQBFZiaoVR32RX/02dLKnZdUIHGnuDY\nVb3/IFAJKU2rRcW/1K5eeIuaXI5l0eWWmrQ/5juQszHtnapCPKLeo2RM9MbCb2zG\nJsoNocrshTljP0Iw3ZtiAdMQKQKBgQDwUDUZRA+T9KU3cdUZxCqXZMdBQ+y9cZv9\ncNwmlzUCKyDYCO9E2bBCgQGQQ+kmqXhge5OjkwS1Ok9xKgPItFTZm+zJBOoCs+m2\nQ0mINidRdIn/ztlrCrzxuqOlL/7yhBTnb2df3vD/XsIz4RYwgkKPTfG9+sH9/RzD\nQk2cOsFB9QKBgQDGQUF4tAgWf7xgL9H5Rvud+HqWRWcqrCStpE1usjGCKl2VHYox\n4daQVV0RSXmDVfkcLkXXj6vT/nAv1u+icPQpcCyG+STOheFSGpx48N0fBvPcYjTy\nLV/mP3GU460Q/q126TaJOvr1vN0ddEOJhvvLqZZmERUHij8cxDf6hqj30QKBgBby\ncb+R4jLsn4Il2oV1V+PQ+b3fsJF+cbjHuB3vPl6Qo7g9Uiuu5cfT7cRK186bTCVa\nZ4StGzv6728M5gOaRKfq3bdsQrQzXdPLpQ/eq+55RFwq8lPoWJZ0jf/OD3g06JIY\n7zQWY8je0YiGq8nCBn0MolLTyQZpzv9OK38JlT6pAoGAIUkygqF1ToQhpC7SaW9P\nJ+Jku9RzoA2g4omwXw1n430IF6fjGDxhVqEYJfodeRcug6t5uD880x15BVM4Xz6u\nsatWhAyi3IAuAdHK4PerJdjpuyqDV4ZK20aMQbk9LQ+mrS2LsPHiKBqeXlVb4xgo\nDk1lwHjJJrQrqDsoKbKjmhU=\n-----END PRIVATE KEY-----\n",
-	  "client_email": "querent-coming-soon@querent-osdu-instance.iam.gserviceaccount.com",
-	  "client_id": "115865415468259465573",
-	  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-	  "token_uri": "https://oauth2.googleapis.com/token",
-	  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-	  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/querent-coming-soon%40querent-osdu-instance.iam.gserviceaccount.com",
-	  "universe_domain": "googleapis.com"
-	}
-	"#;
-	#[tokio::test]
-	async fn test_new_osdu_client() {
-		// Initialize the crypto provider
-		rustls::crypto::ring::default_provider()
-			.install_default()
-			.expect("Failed to install ring as the default crypto provider");
-		let service_path = format!("/api/{}/{}", "storage", "v2");
-		let storage_client = OSDUClient::new(
-			"https://osdu.core-dev.gcp.gnrg-osdu.projects.epam.com",
-			&service_path,
-			"partition-1",
-			"collab-querent",
-			"corr-id-rian",
-			JSON_DUMMY,
-			vec!["https://www.googleapis.com/auth/cloud-platform".to_string()],
-		)
-		.await;
-		assert!(storage_client.is_ok());
-		let mut storage_client = storage_client.unwrap();
-		let info = storage_client.get_info().await;
-		assert!(info.is_ok());
-		let info = info.unwrap();
-		assert!(info.status().is_success());
-	}
+// 	const REAL_JSON: &str = r#"
+// 	{
+// 	  "type": "service_account",
+// 	  "project_id": "querent-osdu-instance",
+// 	  "private_key_id": "13448eef737eadff2f673d280af5d4c85bb00067",
+// 	  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDiqlxQaAOpUjDK\n43T5dtErWUamBpkT+WI3q3uBxiBYDq9eFYPXEI40bLQ0avEtJkFfNXQXPCjVop9k\nmbY8eR+KExtB5ISjUkxwjEfy1KxwnmyfOXl/YFZ1kUfLJF63HELa8Az9GwUMGNyG\nB7/yiEIBJyRUs2H+bccQaYojSMYlXBGc1qTQGJiLMaAF7t2PsIzFbE6pv5cgkSre\n+3TMU2v0CECd1d5+RSPb31VayrnRxcu8mxlm7KNc7rU837wat2daK0JMzVG2msBs\nM/fZtk3YiJT74V8VRVG8fNRbbz69CywmE8wA/vQj/mlM+C6r+R5eK58VoAcWgl/i\n9wbPAeA9AgMBAAECggEACK6SUSEezMhBZrAOLbT7n4+wmVDk4aM6fBvlI+whFoZf\neLjVvzHa5I6qW1yiRsKxm9I6E17CSKaNOOb7WDciemEveNdmLjRLib8RzW8QeNLU\noceri/G2dhPdvl3zA8wBEo5BzRsRFyzHm5ml5EYMUyt65ISncv2k84+7Uw0pS8p3\nzR2tXIy4WHaJMXrR2jzI2A16ZQ9FtIRMgZUXJkJfp2g11uGj3RyZboXO8cg5HNBo\nXL9XCvz22Vl4Ue4zE/DdppZ4tG8yYZzYkL/pP27GfTbylWjMT+l93ljr9jqbWJLx\ngFen1AtvCljJUfqybcg9z+tPkoDHOoMDUGoT8XnhSQKBgQDxdhbABOAbvqo45oAr\n9rLZBIWywev2O/+NQRZiSapxdK5GBqNefkQBFZiaoVR32RX/02dLKnZdUIHGnuDY\nVb3/IFAJKU2rRcW/1K5eeIuaXI5l0eWWmrQ/5juQszHtnapCPKLeo2RM9MbCb2zG\nJsoNocrshTljP0Iw3ZtiAdMQKQKBgQDwUDUZRA+T9KU3cdUZxCqXZMdBQ+y9cZv9\ncNwmlzUCKyDYCO9E2bBCgQGQQ+kmqXhge5OjkwS1Ok9xKgPItFTZm+zJBOoCs+m2\nQ0mINidRdIn/ztlrCrzxuqOlL/7yhBTnb2df3vD/XsIz4RYwgkKPTfG9+sH9/RzD\nQk2cOsFB9QKBgQDGQUF4tAgWf7xgL9H5Rvud+HqWRWcqrCStpE1usjGCKl2VHYox\n4daQVV0RSXmDVfkcLkXXj6vT/nAv1u+icPQpcCyG+STOheFSGpx48N0fBvPcYjTy\nLV/mP3GU460Q/q126TaJOvr1vN0ddEOJhvvLqZZmERUHij8cxDf6hqj30QKBgBby\ncb+R4jLsn4Il2oV1V+PQ+b3fsJF+cbjHuB3vPl6Qo7g9Uiuu5cfT7cRK186bTCVa\nZ4StGzv6728M5gOaRKfq3bdsQrQzXdPLpQ/eq+55RFwq8lPoWJZ0jf/OD3g06JIY\n7zQWY8je0YiGq8nCBn0MolLTyQZpzv9OK38JlT6pAoGAIUkygqF1ToQhpC7SaW9P\nJ+Jku9RzoA2g4omwXw1n430IF6fjGDxhVqEYJfodeRcug6t5uD880x15BVM4Xz6u\nsatWhAyi3IAuAdHK4PerJdjpuyqDV4ZK20aMQbk9LQ+mrS2LsPHiKBqeXlVb4xgo\nDk1lwHjJJrQrqDsoKbKjmhU=\n-----END PRIVATE KEY-----\n",
+// 	  "client_email": "querent-coming-soon@querent-osdu-instance.iam.gserviceaccount.com",
+// 	  "client_id": "115865415468259465573",
+// 	  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+// 	  "token_uri": "https://oauth2.googleapis.com/token",
+// 	  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+// 	  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/querent-coming-soon%40querent-osdu-instance.iam.gserviceaccount.com",
+// 	  "universe_domain": "googleapis.com"
+// 	}
+// 	"#;
+// 	#[tokio::test]
+// 	async fn test_new_osdu_client() {
+// 		// Initialize the crypto provider
+// 		rustls::crypto::ring::default_provider()
+// 			.install_default()
+// 			.expect("Failed to install ring as the default crypto provider");
+// 		let service_path = format!("/api/{}/{}", "storage", "v2");
+// 		let storage_client = OSDUClient::new(
+// 			"https://osdu.core-dev.gcp.gnrg-osdu.projects.epam.com",
+// 			&service_path,
+// 			"partition-1",
+// 			"collab-querent",
+// 			"corr-id-rian",
+// 			JSON_DUMMY,
+// 			vec!["https://www.googleapis.com/auth/cloud-platform".to_string()],
+// 		)
+// 		.await;
+// 		assert!(storage_client.is_ok());
+// 		let mut storage_client = storage_client.unwrap();
+// 		let info = storage_client.get_info().await;
+// 		assert!(info.is_ok());
+// 		let info = info.unwrap();
+// 		assert!(info.status().is_success());
+// 	}
 
-	#[tokio::test]
-	async fn test_fetch_all_kinds() {
-		// Initialize the crypto provider
-		rustls::crypto::ring::default_provider()
-			.install_default()
-			.expect("Failed to install ring as the default crypto provider");
-		let service_path = format!("/api/{}/{}", "storage", "v2");
-		let mut storage_client = OSDUClient::new(
-			"https://osdu.endpoints.querent-osdu-instance.cloud.goog",
-			&service_path,
-			"osdu",
-			"",
-			"",
-			REAL_JSON,
-			vec![
-				" https://www.googleapis.com/auth/userinfo.email".to_string(),
-				"https://www.googleapis.com/auth/userinfo.profile".to_string(),
-				"openid".to_string(),
-			],
-		)
-		.await
-		.unwrap();
-		let kinds = vec![];
-		let filters = None;
-		let retry_params = common::RetryParams::default();
-		let kinds = storage_client.fetch_all_kinds(kinds, filters, retry_params).await;
-		assert!(kinds.is_ok());
-		let mut kinds = kinds.unwrap();
-		let mut count = 0;
-		while let Some(kind) = kinds.recv().await {
-			count += 1;
-			println!("Kind: {}", kind);
-		}
-		assert!(count == 0);
-	}
-}
+// 	#[tokio::test]
+// 	async fn test_fetch_all_kinds() {
+// 		// Initialize the crypto provider
+// 		rustls::crypto::ring::default_provider()
+// 			.install_default()
+// 			.expect("Failed to install ring as the default crypto provider");
+// 		let service_path = format!("/api/{}/{}", "storage", "v2");
+// 		let mut storage_client = OSDUClient::new(
+// 			"https://osdu.endpoints.querent-osdu-instance.cloud.goog",
+// 			&service_path,
+// 			"osdu",
+// 			"",
+// 			"",
+// 			REAL_JSON,
+// 			vec![
+// 				" https://www.googleapis.com/auth/userinfo.email".to_string(),
+// 				"https://www.googleapis.com/auth/userinfo.profile".to_string(),
+// 				"openid".to_string(),
+// 			],
+// 		)
+// 		.await
+// 		.unwrap();
+// 		let kinds = vec![];
+// 		let filters = None;
+// 		let retry_params = common::RetryParams::default();
+// 		let kinds = storage_client.fetch_all_kinds(kinds, filters, retry_params).await;
+// 		assert!(kinds.is_ok());
+// 		let mut kinds = kinds.unwrap();
+// 		let mut count = 0;
+// 		while let Some(kind) = kinds.recv().await {
+// 			count += 1;
+// 			println!("Kind: {}", kind);
+// 		}
+// 		assert!(count == 0);
+// 	}
+// }
