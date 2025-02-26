@@ -15,5 +15,5 @@
 // and non-infringement. See the Business Source License for more details.
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
-pub mod storage_service;
-pub use storage_service::*;
+pub mod semantic_service;
+pub use semantic_service::*;

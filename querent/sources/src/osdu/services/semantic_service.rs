@@ -149,7 +149,7 @@ impl DataSource for OSDUStorageService {
 							file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
 							doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
 							eof: true,
-							extension: Some("osdu".to_string()),
+							extension: Some("osdu_record".to_string()),
 							size: Some(size),
 							source_id: record_id.clone(),
 							_owned_permit: None,
@@ -159,12 +159,21 @@ impl DataSource for OSDUStorageService {
 						yield Ok(collected_bytes);
 
 						// TODO Fetch the file signedurl and stream the file
-						let _signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
-						// Here we need to figure out few things
-						// 1. What types of files we are expecting, can we know any metadata about the file
-						// 2. Create async read stream from the signed url
-						// 3. Yield the stream
-						// 4. Support Ingestors for file types
+						let signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
+						if signed_url_res.is_ok() {
+							let collected_bytes = CollectedBytes {
+								data: Some(Box::pin(string_to_async_read(signed_url_res.unwrap()))),
+								file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
+								doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+								eof: true,
+								extension: Some("osdu_file".to_string()),
+								size: Some(size),
+								source_id: record_id.clone(),
+								_owned_permit: None,
+								image_id: None,
+							};
+							yield Ok(collected_bytes);
+						}
 					}
 				}
 			}
