@@ -23,6 +23,7 @@ use async_trait::async_trait;
 use common::CollectedBytes;
 use futures::Stream;
 use proto::semantics::OsduServiceConfig;
+use reqwest::Client;
 use std::{
 	ops::Range,
 	path::{Path, PathBuf},
@@ -160,19 +161,51 @@ impl DataSource for OSDUStorageService {
 
 						// TODO Fetch the file signedurl and stream the file
 						let signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
-						if signed_url_res.is_ok() {
-							let collected_bytes = CollectedBytes {
-								data: Some(Box::pin(string_to_async_read(signed_url_res.unwrap()))),
-								file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
-								doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
-								eof: true,
-								extension: Some("osdu_file".to_string()),
-								size: Some(size),
-								source_id: record_id.clone(),
-								_owned_permit: None,
-								image_id: None,
-							};
-							yield Ok(collected_bytes);
+						if let Ok(signed_url_res) = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await {
+							if let Some(signed_url) = signed_url_res {
+								// Get file metadata if available from the record
+								let file_extension = extract_file_extension_from_record(&record).unwrap_or_else(|| "bin".to_string());
+								let file_mime_type = extract_mime_type_from_record(&record).unwrap_or_else(|| "application/octet-stream".to_string());
+
+								// Create a client to download the file
+								let client = Client::new();
+
+								// Start downloading the file as a stream
+								match client.get(&signed_url)
+									.send()
+									.await {
+									Ok(response) => {
+										if response.status().is_success() {
+											// Get file size if available in headers
+											let file_size = response.content_length().map(|size| size as usize);
+
+											// Convert the response body into an AsyncRead
+											let stream = response.bytes_stream();
+											let reader = common::BytesStreamReader::new(stream);
+
+											let file_collected_bytes = CollectedBytes {
+												data: Some(Box::pin(reader)),
+												file: Some(PathBuf::from(format!("osdu://file/{}.{}", record_id.clone(), file_extension))),
+												doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+												eof: true,
+												extension: Some(file_extension),
+												size: file_size,
+												source_id: format!("{}", record_id.clone()),
+												_owned_permit: None,
+												image_id: None,
+											};
+
+											yield Ok(file_collected_bytes);
+										} else {
+											log::warn!("Failed to download file from signed URL for record {}: HTTP {}",
+													   record_id, response.status());
+										}
+									},
+									Err(e) => {
+										log::error!("Error downloading file from signed URL for record {}: {}", record_id, e);
+									}
+								}
+							}
 						}
 					}
 				}
