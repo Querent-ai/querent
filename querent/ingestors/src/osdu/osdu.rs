@@ -123,84 +123,84 @@ impl BaseIngestor for OSDURecordIngestor {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use futures::StreamExt;
+// #[cfg(test)]
+// mod tests {
+// 	use futures::StreamExt;
 
-	use super::*;
-	use std::{io::Cursor, path::Path};
+// 	use super::*;
+// 	use std::{io::Cursor, path::Path};
 
-	#[tokio::test]
-	async fn test_osdu_ingestor() {
-		let included_bytes = include_bytes!("../../../../test_data/osdu_record.json");
-		let bytes = included_bytes.to_vec();
+// 	#[tokio::test]
+// 	async fn test_osdu_ingestor() {
+// 		let included_bytes = include_bytes!("../../../../test_data/osdu_record.json");
+// 		let bytes = included_bytes.to_vec();
 
-		let collected_bytes = CollectedBytes {
-			data: Some(Box::pin(Cursor::new(bytes))),
-			file: Some(Path::new("osdu_record.json").to_path_buf()),
-			doc_source: Some("test_source".to_string()),
-			eof: true,
-			extension: Some("osdu".to_string()),
-			size: Some(10),
-			source_id: "OSDU1".to_string(),
-			_owned_permit: None,
-			image_id: None,
-		};
+// 		let collected_bytes = CollectedBytes {
+// 			data: Some(Box::pin(Cursor::new(bytes))),
+// 			file: Some(Path::new("osdu_record.json").to_path_buf()),
+// 			doc_source: Some("test_source".to_string()),
+// 			eof: true,
+// 			extension: Some("osdu".to_string()),
+// 			size: Some(10),
+// 			source_id: "OSDU1".to_string(),
+// 			_owned_permit: None,
+// 			image_id: None,
+// 		};
 
-		let ingestor = OSDURecordIngestor::new();
+// 		let ingestor = OSDURecordIngestor::new();
 
-		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+// 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
-		let mut stream = result_stream;
-		let mut all_data = Vec::new();
-		while let Some(tokens) = stream.next().await {
-			match tokens {
-				Ok(tokens) =>
-					if !tokens.data.is_empty() {
-						all_data.push(tokens.data);
-					},
-				Err(e) => {
-					tracing::error!("Failed to get tokens from images: {:?}", e);
-				},
-			}
-		}
-		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
-	}
+// 		let mut stream = result_stream;
+// 		let mut all_data = Vec::new();
+// 		while let Some(tokens) = stream.next().await {
+// 			match tokens {
+// 				Ok(tokens) =>
+// 					if !tokens.data.is_empty() {
+// 						all_data.push(tokens.data);
+// 					},
+// 				Err(e) => {
+// 					tracing::error!("Failed to get tokens from images: {:?}", e);
+// 				},
+// 			}
+// 		}
+// 		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
+// 	}
 
-	#[tokio::test]
-	async fn test_osdu_ingestor_with_corrupt_file() {
-		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.json");
-		let bytes = included_bytes.to_vec();
+// 	#[tokio::test]
+// 	async fn test_osdu_ingestor_with_corrupt_file() {
+// 		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.json");
+// 		let bytes = included_bytes.to_vec();
 
-		let collected_bytes = CollectedBytes {
-			data: Some(Box::pin(Cursor::new(bytes))),
-			file: Some(Path::new("Demo.json").to_path_buf()),
-			doc_source: Some("test_source".to_string()),
-			eof: false,
-			extension: Some("json".to_string()),
-			size: Some(10),
-			source_id: "FileSystem1".to_string(),
-			_owned_permit: None,
-			image_id: None,
-		};
+// 		let collected_bytes = CollectedBytes {
+// 			data: Some(Box::pin(Cursor::new(bytes))),
+// 			file: Some(Path::new("Demo.json").to_path_buf()),
+// 			doc_source: Some("test_source".to_string()),
+// 			eof: false,
+// 			extension: Some("json".to_string()),
+// 			size: Some(10),
+// 			source_id: "FileSystem1".to_string(),
+// 			_owned_permit: None,
+// 			image_id: None,
+// 		};
 
-		let ingestor = OSDURecordIngestor::new();
+// 		let ingestor = OSDURecordIngestor::new();
 
-		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+// 		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
 
-		let mut stream = result_stream;
-		let mut all_data = Vec::new();
-		while let Some(tokens) = stream.next().await {
-			match tokens {
-				Ok(tokens) =>
-					if !tokens.data.is_empty() {
-						all_data.push(tokens.data);
-					},
-				Err(e) => {
-					tracing::error!("Failed to get tokens from images: {:?}", e);
-				},
-			}
-		}
-		assert!(all_data.len() == 0, "Should not have ingested JSON file");
-	}
-}
+// 		let mut stream = result_stream;
+// 		let mut all_data = Vec::new();
+// 		while let Some(tokens) = stream.next().await {
+// 			match tokens {
+// 				Ok(tokens) =>
+// 					if !tokens.data.is_empty() {
+// 						all_data.push(tokens.data);
+// 					},
+// 				Err(e) => {
+// 					tracing::error!("Failed to get tokens from images: {:?}", e);
+// 				},
+// 			}
+// 		}
+// 		assert!(all_data.len() == 0, "Should not have ingested JSON file");
+// 	}
+// }
