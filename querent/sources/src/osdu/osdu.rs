@@ -16,7 +16,7 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use common::{retry, OsduFileGeneric, Record};
+use common::{retry, OsduFileGeneric};
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug};
@@ -373,7 +373,7 @@ impl OSDUClient {
 		record_ids: Vec<String>,
 		attributes: Vec<String>,
 		retry_params: common::RetryParams,
-	) -> Result<mpsc::Receiver<Record>, SourceError> {
+	) -> Result<mpsc::Receiver<OsduFileGeneric>, SourceError> {
 		let client: HttpClient = HttpClient::new();
 		let (tx, rx) = mpsc::channel(100);
 		let url = format!("{}/{}", self.base_api_url, self.service_path);
@@ -578,7 +578,7 @@ struct FetchRecordsRequest {
 
 #[derive(Debug, Deserialize, Serialize)]
 struct FetchRecordsResponse {
-	records: Vec<Record>,
+	records: Vec<OsduFileGeneric>,
 	invalid_records: Vec<String>,
 	retry_records: Vec<String>,
 }

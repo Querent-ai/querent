@@ -93,32 +93,8 @@ impl CollectedBytes {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Acl {
-	pub viewers: Vec<String>,
-	pub owners: Vec<String>,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Legal {
 	pub status: String,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Record {
-	pub id: String,
-	pub version: u32,
-	pub kind: String,
-	pub acl: Acl,
-	pub legal: Legal,
-	pub data: HashMap<String, serde_json::Value>,
-	pub ancestry: HashMap<String, Vec<String>>,
-	pub meta: Vec<HashMap<String, serde_json::Value>>,
-	pub tags: HashMap<String, String>,
-	pub create_user: String,
-	pub create_time: String,
-	pub modify_user: String,
-	pub modify_time: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

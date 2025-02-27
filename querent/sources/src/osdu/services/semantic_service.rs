@@ -176,14 +176,13 @@ impl DataSource for OSDUStorageService {
 						};
 
 						yield Ok(collected_bytes);
-						let file_metadata = file_client.get_file_metadata(record_id.clone().as_str(), retry_params).await?;
 						// Get file metadata from the record
-						let mut file_extension = OSDUStorageService::extract_file_extension_from_record(&file_metadata)
+						let mut file_extension = OSDUStorageService::extract_file_extension_from_record(&record)
 						 .unwrap_or_else(|| "".to_string());
-						let file_size = OSDUStorageService::extract_file_size_from_record(&file_metadata);
+						let file_size = OSDUStorageService::extract_file_size_from_record(&record);
 						// If file extention is not known and size is less than 10MB then consider reading it as text
-						if file_extension == "" && file_size.unwrap_or(0) < 10 * 1024 * 1024 {
-							file_extension = "txt".to_string();
+						if file_extension == "" {
+							file_extension = format!("osdu_{:?}", record.data.encoding_format_type_id);
 						}
 						if let Ok(signed_url_res) = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await {
 							if !signed_url_res.is_empty() {

@@ -18,7 +18,7 @@
 
 use async_stream::stream;
 use async_trait::async_trait;
-use common::{CollectedBytes, Record};
+use common::{CollectedBytes, OsduFileGeneric};
 use futures::Stream;
 use proto::semantics::IngestedTokens;
 use std::{pin::Pin, sync::Arc};
@@ -77,26 +77,20 @@ impl BaseIngestor for OSDURecordIngestor {
 				source_id = collected_bytes.source_id.clone();
 			}
 			let content = String::from_utf8_lossy(&buffer);
-			let record: Record;
-			let osdu_record: Result<Record, serde_json::Error> = serde_json::from_str(&content);
-			match osdu_record {
-				Ok(res) => {
-					record = res;
-				},
-				Err(_e) => {
-					yield Ok(IngestedTokens {
-						data: vec![],
-						file: file.clone(),
-						doc_source: doc_source.clone(),
-						is_token_stream: false,
-						source_id: source_id.clone(),
-						image_id: None,
-					});
-					return;
-				}
+			let osdu_record: Result<OsduFileGeneric, serde_json::Error> = serde_json::from_str(&content);
+			if osdu_record.is_err() {
+				tracing::error!("Failed to parse record: {:?}", osdu_record.err());
+				yield Ok(IngestedTokens {
+					data: vec![],
+					file: file.clone(),
+					doc_source: doc_source.clone(),
+					is_token_stream: false,
+					source_id: source_id.clone(),
+					image_id: None,
+				});
+				return;
 			}
-
-			let res = serde_json::to_string(&record);
+			let res = serde_json::to_string(&osdu_record.unwrap());
 			match res {
 				Ok(res) => {
 					let ingested_tokens = IngestedTokens {
