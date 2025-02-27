@@ -120,3 +120,96 @@ pub struct Record {
 	pub modify_user: String,
 	pub modify_time: String,
 }
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OsduFileGeneric {
+	pub id: String,
+	pub kind: String,
+	pub legal: Legal,
+	pub data: FileData,
+	pub ancestry: Ancestry,
+	#[serde(default)]
+	pub meta: Vec<HashMap<String, serde_json::Value>>,
+	#[serde(default)]
+	pub tags: HashMap<String, String>,
+	pub acl: AccessControlList,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FileData {
+	#[serde(rename = "Name")]
+	pub name: String,
+	#[serde(rename = "Description")]
+	pub description: String,
+	#[serde(rename = "TotalSize")]
+	pub total_size: String,
+	#[serde(rename = "EncodingFormatTypeID")]
+	pub encoding_format_type_id: String,
+	#[serde(rename = "SchemaFormatTypeID")]
+	pub schema_format_type_id: String,
+	#[serde(rename = "ResourceHomeRegionID")]
+	pub resource_home_region_id: String,
+	#[serde(rename = "ResourceHostRegionIDs")]
+	pub resource_host_region_ids: Vec<String>,
+	#[serde(rename = "ResourceCurationStatus")]
+	pub resource_curation_status: String,
+	#[serde(rename = "ResourceLifecycleStatus")]
+	pub resource_lifecycle_status: String,
+	#[serde(rename = "ResourceSecurityClassification")]
+	pub resource_security_classification: String,
+	#[serde(rename = "Source")]
+	pub source: String,
+	#[serde(rename = "DatasetProperties")]
+	pub dataset_properties: DatasetProperties,
+	#[serde(rename = "ExistenceKind")]
+	pub existence_kind: String,
+	#[serde(rename = "Endian")]
+	pub endian: String,
+	#[serde(rename = "Checksum")]
+	pub checksum: String,
+	#[serde(rename = "ExtensionProperties", default)]
+	pub extension_properties: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct DatasetProperties {
+	#[serde(rename = "FileSourceInfo")]
+	pub file_source_info: FileSourceInfo,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FileSourceInfo {
+	#[serde(rename = "FileSource")]
+	pub file_source: String,
+	#[serde(rename = "PreloadFilePath")]
+	pub preload_file_path: String,
+	#[serde(rename = "PreloadFileCreateUser")]
+	pub preload_file_create_user: String,
+	#[serde(rename = "PreloadFileCreateDate")]
+	pub preload_file_create_date: String,
+	#[serde(rename = "PreloadFileModifyUser")]
+	pub preload_file_modify_user: String,
+	#[serde(rename = "PreloadFileModifyDate")]
+	pub preload_file_modify_date: String,
+	#[serde(rename = "Name")]
+	pub name: String,
+	#[serde(rename = "FileSize")]
+	pub file_size: String,
+	#[serde(rename = "EncodingFormatTypeID")]
+	pub encoding_format_type_id: String,
+	#[serde(rename = "Checksum")]
+	pub checksum: String,
+	#[serde(rename = "ChecksumAlgorithm")]
+	pub checksum_algorithm: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Ancestry {
+	pub parents: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AccessControlList {
+	pub viewers: Vec<String>,
+	pub owners: Vec<String>,
+}

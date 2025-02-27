@@ -16,7 +16,7 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use common::{retry, Record};
+use common::{retry, OsduFileGeneric, Record};
 use reqwest::{header::HeaderMap, Client as HttpClient, Response};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug};
@@ -480,6 +480,48 @@ impl OSDUClient {
 				anyhow::anyhow!("Signed URL not found in response").into(),
 			)
 		})
+	}
+
+	pub async fn get_file_metadata(
+		&mut self,
+		file_id: &str,
+		retry_params: common::RetryParams,
+	) -> Result<OsduFileGeneric, SourceError> {
+		let headers = self.construct_headers().await?;
+
+		let mut url =
+			format!("{}/{}/files/{}/metadata", self.base_api_url, self.service_path, file_id);
+		url.push_str(&format!("?id={}", file_id));
+
+		let client = HttpClient::new();
+		let response = retry(&retry_params, || async {
+			client.get(&url).headers(headers.clone()).send().await.map_err(|err| {
+				SourceError::new(
+					SourceErrorKind::Io,
+					anyhow::anyhow!(
+						"Error while making request to OSDU File Service API: {:?}",
+						err
+					)
+					.into(),
+				)
+			})
+		})
+		.await?;
+
+		if !response.status().is_success() {
+			return Err(SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed with status: {}", response.status()).into(),
+			));
+		}
+
+		let response_body: common::OsduFileGeneric = response.json().await.map_err(|err| {
+			SourceError::new(
+				SourceErrorKind::Io,
+				anyhow::anyhow!("Failed to parse response: {:?}", err).into(),
+			)
+		})?;
+		Ok(response_body)
 	}
 }
 

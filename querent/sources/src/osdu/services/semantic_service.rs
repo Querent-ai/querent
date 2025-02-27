@@ -17,10 +17,11 @@
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 use crate::{
-	osdu::osdu::OSDUClient, string_to_async_read, DataSource, SendableAsync, SourceResult,
+	osdu::osdu::OSDUClient, resolve_ingestor_with_extension, string_to_async_read, DataSource,
+	SendableAsync, SourceResult,
 };
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, OsduFileGeneric};
 use futures::Stream;
 use proto::semantics::OsduServiceConfig;
 use reqwest::Client;
@@ -85,6 +86,23 @@ impl OSDUStorageService {
 			osdu_schema_client: Arc::new(Mutex::new(osdu_schema_client)),
 			osdu_file_client: Arc::new(Mutex::new(osdu_file_client)),
 			retry_params: common::RetryParams::aggressive(),
+		})
+	}
+
+	pub fn extract_file_size_from_record(record: &OsduFileGeneric) -> Option<usize> {
+		// Try to parse TotalSize or FileSize as a number
+		record.data.total_size.parse::<usize>().ok().or_else(|| {
+			record.data.dataset_properties.file_source_info.file_size.parse::<usize>().ok()
+		})
+	}
+
+	pub fn extract_file_extension_from_record(record: &OsduFileGeneric) -> Option<String> {
+		// If no extension found from name, try to get it from EncodingFormatTypeID
+		// This would require mapping the EncodingFormatTypeID to common extensions
+		map_encoding_format_to_extension(&record.data.encoding_format_type_id).or_else(|| {
+			map_encoding_format_to_extension(
+				&record.data.dataset_properties.file_source_info.encoding_format_type_id,
+			)
 		})
 	}
 }
@@ -158,54 +176,52 @@ impl DataSource for OSDUStorageService {
 						};
 
 						yield Ok(collected_bytes);
+						let file_metadata = file_client.get_file_metadata(record_id.clone().as_str(), retry_params).await?;
+							// Get file metadata from the record
+							 let file_extension = OSDUStorageService::extract_file_extension_from_record(&file_metadata)
+							 .unwrap_or_else(|| "bin".to_string());
+							 let file_mime_type = OSDUStorageService::extract_file_extension_from_record(&file_metadata)
+							 .unwrap_or_else(|| "application/octet-stream".to_string());
+							 let file_size = OSDUStorageService::extract_file_size_from_record(&file_metadata);
+							if let Ok(signed_url_res) = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await {
+								if !signed_url_res.is_empty() {
+									// Create a client to download the file
+									let client = Client::new();
 
-						// TODO Fetch the file signedurl and stream the file
-						let signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
-						if let Ok(signed_url_res) = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await {
-							if let Some(signed_url) = signed_url_res {
-								// Get file metadata if available from the record
-								let file_extension = extract_file_extension_from_record(&record).unwrap_or_else(|| "bin".to_string());
-								let file_mime_type = extract_mime_type_from_record(&record).unwrap_or_else(|| "application/octet-stream".to_string());
+									// Start downloading the file as a stream
+									match client.get(&signed_url_res)
+										.send()
+										.await {
+										Ok(response) => {
+											if response.status().is_success() {
+												// Convert the response body into an AsyncRead
+												let stream = response.bytes_stream();
+												let reader = common::BytesStreamReader::new(stream);
 
-								// Create a client to download the file
-								let client = Client::new();
+												let file_collected_bytes = CollectedBytes {
+													data: Some(Box::pin(reader)),
+													file: Some(PathBuf::from(format!("osdu://file/{}.{}", record_id.clone(), file_extension))),
+													doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+													eof: true,
+													extension: Some(file_extension),
+													size: file_size,
+													source_id: format!("{}", record_id.clone()),
+													_owned_permit: None,
+													image_id: None,
+												};
 
-								// Start downloading the file as a stream
-								match client.get(&signed_url)
-									.send()
-									.await {
-									Ok(response) => {
-										if response.status().is_success() {
-											// Get file size if available in headers
-											let file_size = response.content_length().map(|size| size as usize);
-
-											// Convert the response body into an AsyncRead
-											let stream = response.bytes_stream();
-											let reader = common::BytesStreamReader::new(stream);
-
-											let file_collected_bytes = CollectedBytes {
-												data: Some(Box::pin(reader)),
-												file: Some(PathBuf::from(format!("osdu://file/{}.{}", record_id.clone(), file_extension))),
-												doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
-												eof: true,
-												extension: Some(file_extension),
-												size: file_size,
-												source_id: format!("{}", record_id.clone()),
-												_owned_permit: None,
-												image_id: None,
-											};
-
-											yield Ok(file_collected_bytes);
-										} else {
-											log::warn!("Failed to download file from signed URL for record {}: HTTP {}",
-													   record_id, response.status());
+												yield Ok(file_collected_bytes);
+											} else {
+												log::warn!("Failed to download file from signed URL for record {}: HTTP {}",
+														   record_id, response.status());
+											}
+										},
+										Err(e) => {
+											log::error!("Error downloading file from signed URL for record {}: {}", record_id, e);
 										}
-									},
-									Err(e) => {
-										log::error!("Error downloading file from signed URL for record {}: {}", record_id, e);
 									}
 								}
-							}
+
 						}
 					}
 				}
@@ -213,4 +229,12 @@ impl DataSource for OSDUStorageService {
 		};
 		Ok(Box::pin(stream))
 	}
+}
+
+fn map_encoding_format_to_extension(encoding_format_id: &str) -> Option<String> {
+	let support_format = resolve_ingestor_with_extension(encoding_format_id);
+	if support_format.is_ok() {
+		return Some(support_format.unwrap())
+	}
+	None
 }
