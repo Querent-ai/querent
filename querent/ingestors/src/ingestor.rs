@@ -217,6 +217,9 @@ pub async fn resolve_ingestor_with_extension(
 	if programming_languages.contains(&extension) {
 		return Ok(Arc::new(CodeIngestor::new()));
 	}
+	if extension.contains("osdu_") {
+		return Ok(Arc::new(OSDURecordIngestor::new()));
+	}
 	match extension {
 		"pdf" => Ok(Arc::new(PdfIngestor::new())),
 		"html" => Ok(Arc::new(HtmlIngestor::new())),
@@ -244,7 +247,6 @@ pub async fn resolve_ingestor_with_extension(
 		"dds" => Ok(Arc::new(ImageIngestor::new())),
 		"news" | "email" | "notion" | "txt" | "" | "md" | "slack" | "jira" =>
 			Ok(Arc::new(TxtIngestor::new())),
-		"osdu" => Ok(Arc::new(OSDURecordIngestor::new())),
 		_ => Ok(Arc::new(UnsupportedIngestor::new())),
 	}
 }

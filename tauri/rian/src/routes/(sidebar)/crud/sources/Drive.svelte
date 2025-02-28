@@ -36,7 +36,7 @@
 	};
 
 	function handleClose() {
-		$isVisible = false;
+		$isVisible = true;
 	}
 	let collector_config: CollectorConfig = {
 		name: '',

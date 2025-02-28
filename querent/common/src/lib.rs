@@ -51,8 +51,10 @@ pub mod memory;
 pub use memory::*;
 pub mod schemas;
 pub use schemas::*;
+pub mod streaming;
 pub mod tools;
 use std::path::PathBuf;
+pub use streaming::*;
 
 pub fn get_querent_data_path() -> PathBuf {
 	let data_path = dirs::data_dir().expect("Failed to get Querent data directory");

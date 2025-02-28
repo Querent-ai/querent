@@ -244,7 +244,7 @@ export const universalConstant = 42;
  */
 
 /**
- * @typedef { { azure: AzureCollectorConfig } | { gcs: GcsCollectorConfig } | { s3: S3CollectorConfig } | { jira: JiraCollectorConfig } | { drive: GoogleDriveCollectorConfig } | { email: EmailCollectorConfig } | { dropbox: DropBoxCollectorConfig } | { github: GithubCollectorConfig } | { slack: SlackCollectorConfig } | { news: NewsCollectorConfig } | { files: FileCollectorConfig } | { onedrive: OneDriveConfig } | { notion: NotionConfig } } Backend
+ * @typedef { { azure: AzureCollectorConfig } | { gcs: GcsCollectorConfig } | { s3: S3CollectorConfig } | { jira: JiraCollectorConfig } | { drive: GoogleDriveCollectorConfig } | { email: EmailCollectorConfig } | { dropbox: DropBoxCollectorConfig } | { github: GithubCollectorConfig } | { slack: SlackCollectorConfig } | { news: NewsCollectorConfig } | { files: FileCollectorConfig } | { onedrive: OneDriveConfig } | { notion: NotionConfig } | { osdu: OsduServiceConfig } } Backend
  */
 
 /**
@@ -380,6 +380,10 @@ export const universalConstant = 42;
 
 /**
  * @typedef { { client_id: string; client_secret: string; redirect_uri: string; refresh_token: string; folder_path: string; id: string } } OneDriveConfig
+ */
+
+/**
+ * @typedef { { base_url: string; storage_version: string; schema_version: string; file_version: string; data_partition_id: string; service_account_key: string; scopes: string[]; x_collaboration: string | null; correlation_id: string | null; record_kinds: string[] } } OsduServiceConfig
  */
 
 /**

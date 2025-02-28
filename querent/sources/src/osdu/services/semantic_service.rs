@@ -17,12 +17,14 @@
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
 use crate::{
-	osdu::osdu::OSDUClient, string_to_async_read, DataSource, SendableAsync, SourceResult,
+	osdu::osdu::OSDUClient, resolve_ingestor_with_extension, string_to_async_read, DataSource,
+	SendableAsync, SourceResult,
 };
 use async_trait::async_trait;
-use common::CollectedBytes;
+use common::{CollectedBytes, OsduFileGeneric};
 use futures::Stream;
 use proto::semantics::OsduServiceConfig;
+use reqwest::Client;
 use std::{
 	ops::Range,
 	path::{Path, PathBuf},
@@ -86,6 +88,23 @@ impl OSDUStorageService {
 			retry_params: common::RetryParams::aggressive(),
 		})
 	}
+
+	pub fn extract_file_size_from_record(record: &OsduFileGeneric) -> Option<usize> {
+		// Try to parse TotalSize or FileSize as a number
+		record.data.total_size.parse::<usize>().ok().or_else(|| {
+			record.data.dataset_properties.file_source_info.file_size.parse::<usize>().ok()
+		})
+	}
+
+	pub fn extract_file_extension_from_record(record: &OsduFileGeneric) -> Option<String> {
+		// If no extension found from name, try to get it from EncodingFormatTypeID
+		// This would require mapping the EncodingFormatTypeID to common extensions
+		map_encoding_format_to_extension(&record.data.encoding_format_type_id).or_else(|| {
+			map_encoding_format_to_extension(
+				&record.data.dataset_properties.file_source_info.encoding_format_type_id,
+			)
+		})
+	}
 }
 
 #[async_trait]
@@ -133,42 +152,87 @@ impl DataSource for OSDUStorageService {
 		let record_kinds = self.config.record_kinds.clone();
 		let retry_params = self.retry_params.clone();
 		let stream = async_stream::stream! {
-			let mut schema_fetch_receiver =
-				schema_client.fetch_all_kinds(record_kinds, None, retry_params).await?;
+			for kind_local in record_kinds.iter() {
+				let record_kinds = vec![kind_local.name.clone()];
+				let mut schema_fetch_receiver =
+					schema_client.fetch_all_kinds(record_kinds, None, retry_params).await?;
+				while let Some(kind) = schema_fetch_receiver.recv().await {
+					let mut records_id_fetch_receiver =
+						storage_client.fetch_record_ids_from_kind(&kind.clone(), None, retry_params).await?;
+					while let Some(record_id) = records_id_fetch_receiver.recv().await {
+						let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
+						while let Some(record) = records.recv().await {
+							let mut file_extension = kind_local.clone().file_extension.clone();
+							let record_json_str = serde_json::to_string(&record)?;
+							let size = record_json_str.len();
+							let collected_bytes = CollectedBytes {
+								data: Some(Box::pin(string_to_async_read(record_json_str))),
+								file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
+								doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+								eof: true,
+								extension: Some("txt".to_string()),
+								size: Some(size),
+								source_id: record_id.clone(),
+								_owned_permit: None,
+								image_id: None,
+							};
 
-			while let Some(kind) = schema_fetch_receiver.recv().await {
-				let mut records_id_fetch_receiver =
-					storage_client.fetch_record_ids_from_kind(&kind.clone(), None, retry_params).await?;
-				while let Some(record_id) = records_id_fetch_receiver.recv().await {
-					let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
-					while let Some(record) = records.recv().await {
-						let record_json_str = serde_json::to_string(&record)?;
-						let size = record_json_str.len();
-						let collected_bytes = CollectedBytes {
-							data: Some(Box::pin(string_to_async_read(record_json_str))),
-							file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
-							doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
-							eof: true,
-							extension: Some("osdu".to_string()),
-							size: Some(size),
-							source_id: record_id.clone(),
-							_owned_permit: None,
-							image_id: None,
-						};
-
-						yield Ok(collected_bytes);
-
-						// TODO Fetch the file signedurl and stream the file
-						let _signed_url_res = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await;
-						// Here we need to figure out few things
-						// 1. What types of files we are expecting, can we know any metadata about the file
-						// 2. Create async read stream from the signed url
-						// 3. Yield the stream
-						// 4. Support Ingestors for file types
+							yield Ok(collected_bytes);
+							// Get file metadata from the record
+							let file_size = OSDUStorageService::extract_file_size_from_record(&record);
+							// If file extention is not known and size is less than 10MB then consider reading it as text
+							if file_extension.is_empty(){
+								file_extension = "txt".to_string();
+							}
+							if let Ok(signed_url_res) = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await {
+								if !signed_url_res.is_empty() {
+									// Create a client to download the file
+									let client = Client::new();
+									// Start downloading the file as a stream
+									match client.get(&signed_url_res)
+										.send()
+										.await {
+										Ok(response) => {
+											if response.status().is_success() {
+												// Convert the response body into an AsyncRead
+												let stream = response.bytes_stream();
+												let reader = common::BytesStreamReader::new(stream);
+												let file_collected_bytes = CollectedBytes {
+													data: Some(Box::pin(reader)),
+													file: Some(PathBuf::from(format!("osdu://file/{}.{}", record_id.clone(), file_extension))),
+													doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
+													eof: true,
+													extension: Some(file_extension),
+													size: file_size,
+													source_id: format!("{}", record_id.clone()),
+													_owned_permit: None,
+													image_id: None,
+												};
+												yield Ok(file_collected_bytes);
+											} else {
+												log::warn!("Failed to download file from signed URL for record {}: HTTP {}",
+														   record_id, response.status());
+											}
+										},
+										Err(e) => {
+											log::error!("Error downloading file from signed URL for record {}: {}", record_id, e);
+										}
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 		};
 		Ok(Box::pin(stream))
 	}
+}
+
+fn map_encoding_format_to_extension(encoding_format_id: &str) -> Option<String> {
+	let support_format = resolve_ingestor_with_extension(encoding_format_id);
+	if support_format.is_ok() {
+		return Some(support_format.unwrap());
+	}
+	None
 }

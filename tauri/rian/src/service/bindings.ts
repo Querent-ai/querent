@@ -198,7 +198,8 @@ export type Backend =
 	| { news: NewsCollectorConfig }
 	| { files: FileCollectorConfig }
 	| { onedrive: OneDriveConfig }
-	| { notion: NotionConfig };
+	| { notion: NotionConfig }
+	| { osdu: OsduServiceConfig };
 export type CheckUpdateEvent = null;
 export type CheckUpdateResultEvent = UpdateResult;
 /**
@@ -680,6 +681,48 @@ export type OneDriveConfig = {
 	 * / Id for the collector
 	 */
 	id: string;
+};
+export type OsduServiceConfig = {
+	/**
+	 * Base Host URL of the OSDU Storage Service
+	 */
+	base_url: string;
+	/**
+	 * Version of the OSDU Storage Service
+	 */
+	storage_version: string;
+	/**
+	 * Version of OSDU Schema Service
+	 */
+	schema_version: string;
+	/**
+	 * Version of OSDU File Service
+	 */
+	file_version: string;
+	/**
+	 * Data partition id to query
+	 */
+	data_partition_id: string;
+	/**
+	 * Service Account Key for token generation
+	 */
+	service_account_key: string;
+	/**
+	 * Scopes for the OSDU Service
+	 */
+	scopes: string[];
+	/**
+	 * Optional x-collaboration
+	 */
+	x_collaboration: string | null;
+	/**
+	 * Optional correlation id
+	 */
+	correlation_id: string | null;
+	/**
+	 * Optional specify record kinds to model
+	 */
+	record_kinds: string[];
 };
 export type PinnedFromWindowEvent = { pinned: boolean };
 export type PipelineRequestInfo = { pipeline_id: string; request: SemanticPipelineRequest | null };
