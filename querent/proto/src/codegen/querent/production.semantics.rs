@@ -630,9 +630,21 @@ pub struct OsduServiceConfig {
     /// Optional correlation id
     #[prost(string, optional, tag = "9")]
     pub correlation_id: ::core::option::Option<::prost::alloc::string::String>,
-    /// Optional specify record kinds to model
-    #[prost(string, repeated, tag = "10")]
-    pub record_kinds: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+	// Record Kinds
+    #[prost(message, repeated, tag = "10")]
+    pub record_kinds: ::prost::alloc::vec::Vec<RecordKind>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
+pub struct RecordKind {
+    /// Record Kind Name
+    #[prost(string, tag = "1")]
+    pub name: ::prost::alloc::string::String,
+    /// File extension
+    #[prost(string, tag = "2")]
+    pub file_extension: ::prost::alloc::string::String,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

@@ -377,5 +377,12 @@ message OSDUServiceConfig {
   // Optional correlation id
   optional string correlation_id = 9;
   // Optional specify record kinds to model 
-  repeated string record_kinds = 10;
+  repeated RecordKind record_kinds = 10;
+}
+
+message RecordKind {
+  // Record Kind Name
+  string name = 1;
+  // File extension
+  string file_extension = 2;
 }

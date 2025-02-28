@@ -114,3 +114,18 @@ impl AsMut<File> for DownloadTempFile {
 pub fn string_to_async_read(description: String) -> impl AsyncRead + Send + Unpin {
 	Cursor::new(description.into_bytes())
 }
+
+pub fn resolve_ingestor_with_extension(extension: &str) -> SourceResult<String> {
+	let programming_languages = vec![
+		"py", "pyw", "pyp", "js", "mjs", "java", "cpp", "h", "hpp", "c", "cs", "rb", "swift",
+		"php", "php3", "php4", "php5", "phtml", "html", "htm", "css", "go", "rs", "kt", "ts", "pl",
+		"sql", "r", "m", "sh", "bash", "zsh", "dart", "scala", "groovy", "lua", "vb", "pdf", "csv",
+		"xml", "docx", "doc", "jpeg", "jpg", "png", "json", "pptx", "odp", "dds", "news",
+	];
+
+	if let Some(found) = programming_languages.iter().find(|&&ext| extension.contains(ext)) {
+		return Ok(found.to_string());
+	}
+
+	Ok("".to_string())
+}

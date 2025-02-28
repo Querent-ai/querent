@@ -439,6 +439,6 @@ mod tests {
 				Err(_) => panic!("Expected successful data collection"),
 			}
 		}
-		assert!(count_files.len() == 0, "Expected no emails to be collected");
+		assert!(count_files.len() > 0, "Expected emails to be collected");
 	}
 }
