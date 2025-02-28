@@ -110,6 +110,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		NotionConfig,
 		OsduServiceConfig,
 		RecordKind,
+		SalesForceConfig,
 	))
 )]
 pub struct SemanticApi;

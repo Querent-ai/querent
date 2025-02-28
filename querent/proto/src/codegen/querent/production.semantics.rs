@@ -252,6 +252,8 @@ pub mod collector_config {
 		Notion(NotionConfig),
 		#[prost(message, tag = "15")]
         Osdu(OsduServiceConfig),
+		#[prost(message, tag = "16")]
+        Salesforce(super::SalesForceConfig),
 	}
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
@@ -645,6 +647,24 @@ pub struct RecordKind {
     /// File extension
     #[prost(string, tag = "2")]
     pub file_extension: ::prost::alloc::string::String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message, specta::Type)]
+pub struct SalesForceConfig {
+    /// Client ID of the app
+    #[prost(string, tag = "1")]
+    pub client_id: ::prost::alloc::string::String,
+    /// Client secret of the app
+    #[prost(string, tag = "2")]
+    pub client_secret: ::prost::alloc::string::String,
+    /// Username
+    #[prost(string, tag = "3")]
+    pub username: ::prost::alloc::string::String,
+    /// Password
+    #[prost(string, tag = "4")]
+    pub password: ::prost::alloc::string::String,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
