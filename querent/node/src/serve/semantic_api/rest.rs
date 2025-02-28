@@ -38,8 +38,9 @@ use proto::{
 		JiraCollectorConfig, ListCollectorConfig, ListCollectorRequest, Neo4jConfig,
 		NewsCollectorConfig, NotionConfig, OneDriveConfig, OsduServiceConfig, PipelineMetadata,
 		PipelineRequestInfo, PipelineRequestInfoList, PipelinesMetadata, PostgresConfig,
-		S3CollectorConfig, SampleEntities, SemanticPipelineRequest, SemanticPipelineResponse,
-		SendIngestedTokens, SlackCollectorConfig, StorageConfig, StorageType,
+		RecordKind, S3CollectorConfig, SampleEntities, SemanticPipelineRequest,
+		SemanticPipelineResponse, SendIngestedTokens, SlackCollectorConfig, StorageConfig,
+		StorageType,
 	},
 };
 use serde_json::from_str;
@@ -108,6 +109,7 @@ use crate::{extract_format_from_qs, make_json_api_response, serve::require, Mode
 		PipelineRequestInfo,
 		NotionConfig,
 		OsduServiceConfig,
+		RecordKind,
 	))
 )]
 pub struct SemanticApi;
