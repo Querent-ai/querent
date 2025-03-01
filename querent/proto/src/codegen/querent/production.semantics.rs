@@ -635,6 +635,9 @@ pub struct OsduServiceConfig {
 	// Record Kinds
     #[prost(message, repeated, tag = "10")]
     pub record_kinds: ::prost::alloc::vec::Vec<RecordKind>,
+    /// ID
+    #[prost(string, tag = "11")]
+    pub id: ::prost::alloc::string::String,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -665,6 +668,12 @@ pub struct SalesForceConfig {
     /// Password
     #[prost(string, tag = "4")]
     pub password: ::prost::alloc::string::String,
+    /// ID
+    #[prost(string, tag = "5")]
+    pub id: ::prost::alloc::string::String,
+    /// Query of the Salesforce collector.
+    #[prost(string, optional, tag = "6")]
+    pub query: ::core::option::Option<::prost::alloc::string::String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]

@@ -379,6 +379,8 @@ message OSDUServiceConfig {
   optional string correlation_id = 9;
   // Optional specify record kinds to model 
   repeated RecordKind record_kinds = 10;
+  // ID for the collector
+  string id = 11;
 }
 
 message RecordKind {
@@ -397,4 +399,8 @@ message SalesForceConfig {
   string username = 3;
   // Password
   string password = 4;
+  // ID for the collector
+  string id = 5;
+  // Query of the Salesforce collector.
+  optional string query = 6;
 }

@@ -38,6 +38,7 @@ pub mod notion;
 pub mod onedrive;
 pub mod osdu;
 pub mod s3;
+pub mod sales_force;
 pub mod slack;
 pub mod zip;
 use once_cell::sync::Lazy;
