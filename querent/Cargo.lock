@@ -10621,6 +10621,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustforce"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "742f441b5005f8b38c5430e1bc15e37ea96ed1de10fdb3dfa625e68add265f3d"
+dependencies = [
+ "regex",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "rustix"
 version = "0.36.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11753,6 +11765,7 @@ dependencies = [
  "regex",
  "reqwest 0.12.8",
  "rmp-serde",
+ "rustforce",
  "rustls 0.23.23",
  "serde",
  "serde_json",

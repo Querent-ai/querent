@@ -237,7 +237,7 @@ pub struct CollectorConfig {
     pub name: ::prost::alloc::string::String,
     #[prost(
         oneof = "collector_config::Backend",
-        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15"
+        tags = "2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16"
     )]
     pub backend: ::core::option::Option<collector_config::Backend>,
 }
@@ -277,6 +277,8 @@ pub mod collector_config {
         Notion(super::NotionConfig),
         #[prost(message, tag = "15")]
         Osdu(super::OsduServiceConfig),
+        #[prost(message, tag = "16")]
+        Salesforce(super::SalesForceConfig),
     }
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
@@ -612,6 +614,9 @@ pub struct OsduServiceConfig {
     /// Optional specify record kinds to model
     #[prost(message, repeated, tag = "10")]
     pub record_kinds: ::prost::alloc::vec::Vec<RecordKind>,
+    /// ID for the collector
+    #[prost(string, tag = "11")]
+    pub id: ::prost::alloc::string::String,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
@@ -624,6 +629,30 @@ pub struct RecordKind {
     /// File extension
     #[prost(string, tag = "2")]
     pub file_extension: ::prost::alloc::string::String,
+}
+#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
+#[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SalesForceConfig {
+    /// Client ID of the app
+    #[prost(string, tag = "1")]
+    pub client_id: ::prost::alloc::string::String,
+    /// Client secret of the app
+    #[prost(string, tag = "2")]
+    pub client_secret: ::prost::alloc::string::String,
+    /// Username
+    #[prost(string, tag = "3")]
+    pub username: ::prost::alloc::string::String,
+    /// Password
+    #[prost(string, tag = "4")]
+    pub password: ::prost::alloc::string::String,
+    /// ID for the collector
+    #[prost(string, tag = "5")]
+    pub id: ::prost::alloc::string::String,
+    /// Query of the Salesforce collector.
+    #[prost(string, optional, tag = "6")]
+    pub query: ::core::option::Option<::prost::alloc::string::String>,
 }
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[derive(serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
