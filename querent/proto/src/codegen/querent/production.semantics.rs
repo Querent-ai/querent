@@ -253,7 +253,7 @@ pub mod collector_config {
 		#[prost(message, tag = "15")]
         Osdu(OsduServiceConfig),
 		#[prost(message, tag = "16")]
-        Salesforce(super::SalesForceConfig),
+        Salesforce(SalesForceConfig),
 	}
 }
 /// FileCollectorConfig is a message to hold configuration for a file collector.
