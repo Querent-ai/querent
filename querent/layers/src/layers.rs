@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use tch::{Device, Tensor};
+use tch::Tensor;
 
 pub trait NNModel {
 	// Forward pass of the model

@@ -76,3 +76,13 @@ archive:
 	@cp "${BINARY_FILE}" "./rian-${BINARY_VERSION}"
 	@tar -czf "${ARCHIVE_NAME}.tar.gz" "./rian-${BINARY_VERSION}"
 	@rm -rf "./rian-${BINARY_VERSION}"
+
+.PHONY: create-env
+create-env:
+	@echo "Creating Python virtual environment: pytorch_env"
+	@python3 -m venv pytorch_env
+
+.PHONY: install-requirements
+install-requirements:
+	@echo "Installing Python requirements"
+	@. pytorch_env/bin/activate && pip install torch torchvision torchaudio
