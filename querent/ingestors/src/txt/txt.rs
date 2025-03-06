@@ -134,6 +134,7 @@ mod tests {
 	use std::{
 		fs::File,
 		io::{Cursor, Write},
+		path::Path,
 	};
 	use tokio::fs::read;
 
@@ -150,6 +151,41 @@ mod tests {
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
 			file: Some(test_file_path.into()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("txt".to_string()),
+			size: Some(10),
+			source_id: "Filesystem".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		// Create a TxtIngestor instance
+		let ingestor = TxtIngestor::new();
+
+		// Ingest the file
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		// Collect the stream into a Vec
+		let mut count = 0;
+		let mut stream = result_stream;
+		while let Some(tokens) = stream.next().await {
+			let tokens = tokens.unwrap();
+			if tokens.data.len() > 0 {
+				count += 1;
+			}
+		}
+		assert_eq!(count, 1);
+	}
+
+	#[tokio::test]
+	async fn test_txt_ingestor_osdu() {
+		let included_bytes = include_bytes!("../../../../test_data/json_osdu_record.json");
+		let bytes = included_bytes.to_vec();
+		// Create a CollectedBytes instance
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("json_osdu_record.json").to_path_buf()),
 			doc_source: Some("test_source".to_string()),
 			eof: false,
 			extension: Some("txt".to_string()),

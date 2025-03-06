@@ -108,26 +108,24 @@ impl BaseIngestor for JsonIngestor {
 				}
 			}
 
-			for (key, value) in json.as_object().expect("Failed to get object").iter() {
-				let res = format!("{:?}   {:?}", key, value).to_string();
-				let ingested_tokens = IngestedTokens {
-					data: vec![res.to_string()],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
-				};
-				yield Ok(ingested_tokens);
-				}
+			let ingested_tokens = IngestedTokens {
+				data: vec![json.to_string()],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
+			};
+			yield Ok(ingested_tokens);
 
-				yield Ok(IngestedTokens {
-					data: vec![],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
+
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 
@@ -188,12 +186,12 @@ mod tests {
 
 		let collected_bytes = CollectedBytes {
 			data: Some(Box::pin(Cursor::new(bytes))),
-			file: Some(Path::new("dc_universe.json").to_path_buf()),
-			doc_source: Some("test_source".to_string()),
+			file: Some(Path::new("json_osdu_record.json").to_path_buf()),
+			doc_source: Some("json_osdu_record".to_string()),
 			eof: false,
 			extension: Some("json".to_string()),
 			size: Some(10),
-			source_id: "FileSystem1".to_string(),
+			source_id: "json_osdu_record".to_string(),
 			_owned_permit: None,
 			image_id: None,
 		};
