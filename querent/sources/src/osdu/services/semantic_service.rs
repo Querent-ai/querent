@@ -170,7 +170,7 @@ impl DataSource for OSDUStorageService {
 								file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
 								doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
 								eof: true,
-								extension: Some("txt".to_string()),
+								extension: Some("json".to_string()),
 								size: Some(size),
 								source_id: record_id.clone(),
 								_owned_permit: None,
