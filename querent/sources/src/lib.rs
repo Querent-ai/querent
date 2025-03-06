@@ -121,7 +121,7 @@ pub fn resolve_ingestor_with_extension(extension: &str) -> SourceResult<String> 
 		"py", "pyw", "pyp", "js", "mjs", "java", "cpp", "h", "hpp", "c", "cs", "rb", "swift",
 		"php", "php3", "php4", "php5", "phtml", "html", "htm", "css", "go", "rs", "kt", "ts", "pl",
 		"sql", "r", "m", "sh", "bash", "zsh", "dart", "scala", "groovy", "lua", "vb", "pdf", "csv",
-		"xml", "docx", "doc", "jpeg", "jpg", "png", "json", "pptx", "odp", "dds", "news",
+		"xml", "docx", "doc", "jpeg", "jpg", "png", "json", "pptx", "odp", "dds", "news", "xlsx",
 	];
 
 	if let Some(found) = programming_languages.iter().find(|&&ext| extension.contains(ext)) {
