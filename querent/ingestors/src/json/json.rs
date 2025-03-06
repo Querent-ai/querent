@@ -108,26 +108,24 @@ impl BaseIngestor for JsonIngestor {
 				}
 			}
 
-			for (key, value) in json.as_object().expect("Failed to get object").iter() {
-				let res = format!("{:?}   {:?}", key, value).to_string();
-				let ingested_tokens = IngestedTokens {
-					data: vec![res.to_string()],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
-				};
-				yield Ok(ingested_tokens);
-				}
+			let ingested_tokens = IngestedTokens {
+				data: vec![json.to_string()],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
+			};
+			yield Ok(ingested_tokens);
 
-				yield Ok(IngestedTokens {
-					data: vec![],
-					file: file.clone(),
-					doc_source: doc_source.clone(),
-					is_token_stream: false,
-					source_id: source_id.clone(),
-					image_id: None,
+
+			yield Ok(IngestedTokens {
+				data: vec![],
+				file: file.clone(),
+				doc_source: doc_source.clone(),
+				is_token_stream: false,
+				source_id: source_id.clone(),
+				image_id: None,
 			})
 		};
 
@@ -157,6 +155,43 @@ mod tests {
 			extension: Some("json".to_string()),
 			size: Some(10),
 			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = JsonIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					tracing::error!("Failed to get tokens from images: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
+	}
+
+	#[tokio::test]
+	async fn test_json_ingestor_osdu_record() {
+		let included_bytes = include_bytes!("../../../../test_data/json_osdu_record.json");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("json_osdu_record.json").to_path_buf()),
+			doc_source: Some("json_osdu_record".to_string()),
+			eof: false,
+			extension: Some("json".to_string()),
+			size: Some(10),
+			source_id: "json_osdu_record".to_string(),
 			_owned_permit: None,
 			image_id: None,
 		};
