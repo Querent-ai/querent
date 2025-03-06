@@ -75,3 +75,5 @@ hex = { workspace = true }
 lopdf = { workspace = true }
 pdf-extract = { workspace = true }
 image = { workspace = true }
+tch = { workspace = true }
+petgraph = { workspace = true }
