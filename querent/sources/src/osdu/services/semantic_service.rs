@@ -163,6 +163,7 @@ impl DataSource for OSDUStorageService {
 						let mut records = storage_client.fetch_records_by_ids(vec![record_id.clone()], vec![], retry_params).await?;
 						while let Some(record) = records.recv().await {
 							let mut file_extension = kind_local.clone().file_extension.clone();
+							let record_source = record.data.source.clone();
 							let record_json_str = serde_json::to_string(&record)?;
 							let size = record_json_str.len();
 							let collected_bytes = CollectedBytes {
@@ -170,7 +171,7 @@ impl DataSource for OSDUStorageService {
 								file: Some(PathBuf::from(format!("osdu://record/{}", record_id.clone()))),
 								doc_source: Some(format!("osdu://kind/{}", kind.clone()).to_string()),
 								eof: true,
-								extension: Some("txt".to_string()),
+								extension: Some("json".to_string()),
 								size: Some(size),
 								source_id: record_id.clone(),
 								_owned_permit: None,
@@ -182,6 +183,15 @@ impl DataSource for OSDUStorageService {
 							let file_size = OSDUStorageService::extract_file_size_from_record(&record);
 							// If file extention is not known and size is less than 10MB then consider reading it as text
 							if file_extension.is_empty(){
+								if !record_source.is_empty() && file_size.is_some() && file_size.unwrap() < 10 * 1024 * 1024 {
+									let file_extension_res = resolve_ingestor_with_extension(&record_source);
+									if file_extension_res.is_ok() {
+										file_extension = file_extension_res.unwrap();
+									} else {
+										file_extension = "txt".to_string();
+									}
+								}
+							} else {
 								file_extension = "txt".to_string();
 							}
 							if let Ok(signed_url_res) = file_client.get_signed_url(record_id.clone().as_str(), None, retry_params).await {

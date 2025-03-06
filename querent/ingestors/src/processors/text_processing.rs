@@ -41,6 +41,10 @@ impl TextCleanupProcessor {
 		data = cleaned_data.replace("\"", "").replace('“', "").replace('”', "");
 		data = data.replace("\\n", " ").replace("\\t", " ");
 
+		// Replace special characters (except letters, numbers, and spaces) with a space
+		let re_special = Regex::new(r"[^a-zA-Z0-9\s]").unwrap();
+		data = re_special.replace_all(&data, " ").to_string();
+
 		let re_hex = Regex::new(r"\\x[0-9a-fA-F]{2}").unwrap();
 		data = re_hex.replace_all(&data, "").to_string();
 
