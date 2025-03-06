@@ -1,0 +1,34 @@
+{
+    "id": "{{NAMESPACE}}:reference-data--StratigraphicColumnValidityAreaType:global",
+    "kind": "osdu:wks:reference-data--StratigraphicColumnValidityAreaType:1.0.0",
+    "acl": {
+        "owners": [
+            "{{DATA_OWNERS_GROUP}}"
+        ],
+        "viewers": [
+            "data.default.viewers"
+        ]
+    },
+    "legal": {
+        "legaltags": [
+            "{{LEGAL_TAG}}"
+        ],
+        "otherRelevantDataCountries": [
+            "{{ISO_3166_ALPHA_2_CODE}}"
+        ]
+    },
+    "data": {
+        "Name": "global",
+        "NameAlias": [
+            {
+                "DefinitionOrganisationID": "{{NAMESPACE}}:reference-data--StandardsOrganisation:EQN:"
+            }
+        ],
+        "Description": "Stratigraphic Column which is valid globally, for example the international chronostratigraphic column.",
+        "Code": "global",
+        "AttributionRevision": "1",
+        "(COMPANY: insert comment)": "EQN",
+        "Source": "Workbook ReferenceValues/Published/StratigraphicColumnValidityAreaType.1.xlsx; commit SHA 56f7c736.",
+        "CommitDate": "2024-02-09T16:51:15+00:00"
+    }
+}

@@ -182,6 +182,43 @@ mod tests {
 	}
 
 	#[tokio::test]
+	async fn test_json_ingestor_osdu_record() {
+		let included_bytes = include_bytes!("../../../../test_data/json_osdu_record.json");
+		let bytes = included_bytes.to_vec();
+
+		let collected_bytes = CollectedBytes {
+			data: Some(Box::pin(Cursor::new(bytes))),
+			file: Some(Path::new("dc_universe.json").to_path_buf()),
+			doc_source: Some("test_source".to_string()),
+			eof: false,
+			extension: Some("json".to_string()),
+			size: Some(10),
+			source_id: "FileSystem1".to_string(),
+			_owned_permit: None,
+			image_id: None,
+		};
+
+		let ingestor = JsonIngestor::new();
+
+		let result_stream = ingestor.ingest(vec![collected_bytes]).await.unwrap();
+
+		let mut stream = result_stream;
+		let mut all_data = Vec::new();
+		while let Some(tokens) = stream.next().await {
+			match tokens {
+				Ok(tokens) =>
+					if !tokens.data.is_empty() {
+						all_data.push(tokens.data);
+					},
+				Err(e) => {
+					tracing::error!("Failed to get tokens from images: {:?}", e);
+				},
+			}
+		}
+		assert!(all_data.len() >= 1, "Unable to ingest JSON file");
+	}
+
+	#[tokio::test]
 	async fn test_json_ingestor_with_corrupt_file() {
 		let included_bytes = include_bytes!("../../../../test_data/corrupt-data/Demo.json");
 		let bytes = included_bytes.to_vec();
