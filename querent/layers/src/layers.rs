@@ -1,4 +1,4 @@
-use petgraph::graph::Graph;
+use petgraph::graph::{Graph, NodeIndex};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tch::{Device, Tensor};
