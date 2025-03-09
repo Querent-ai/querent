@@ -1,86 +1,112 @@
-use tch::{nn, Tensor, Device, nn::OptimizerConfig};
-use petgraph::graph::{Graph, NodeIndex};
-use petgraph::visit::EdgeRef;
+use crate::NNLayer;
+use petgraph::{
+	algo::{all_simple_paths, dijkstra},
+	graph::{Graph, NodeIndex},
+};
+use serde::{Deserialize, Serialize};
+use std::{borrow::Cow, collections::HashMap, sync::Arc};
+use tch::{Device, Kind, Tensor};
+use thiserror::Error;
 
-#[derive(Debug)]
-pub struct GCNModel {
-    conv1: nn::Linear,
-    conv2: nn::Linear,
-    optimizer: nn::Optimizer,
-    vs: nn::VarStore,
+/// A simple neural network model for link prediction.
+pub struct LinkPredictionModel {
+	pub device: Device,
 }
 
-impl GCNModel {
-    pub fn new(input_dim: i64, hidden_dim: i64, output_dim: i64, device: Device) -> Self {
-        let vs = nn::VarStore::new(device);
-        let conv1 = nn::linear(&vs.root(), input_dim, hidden_dim, Default::default());
-        let conv2 = nn::linear(&vs.root(), hidden_dim, output_dim, Default::default());
-        let optimizer = nn::Adam::default().build(&vs, 1e-3).unwrap();
-
-        GCNModel { conv1, conv2, optimizer, vs }
-    }
+impl LinkPredictionModel {
+	pub fn new(device: Device) -> Self {
+		Self { device }
+	}
 }
 
-impl NNModel for GCNModel {
-    fn forward(&self, x: &Tensor, edge_index: &Tensor) -> Tensor {
-        let x = x.apply(&self.conv1).relu();
-        let x = x.apply(&self.conv2);
-        x
-    }
-    
-    fn train_step(&mut self, x: &Tensor, edge_index: &Tensor, targets: &Tensor) -> f64 {
-        self.optimizer.zero_grad();
-        let output = self.forward(x, edge_index);
-        let loss = output.mse_loss(targets, tch::Reduction::Mean);
-        loss.backward();
-        self.optimizer.step();
-        loss.double_value(&[])
-    }
-    
-    fn evaluate(&self, x: &Tensor, edge_index: &Tensor, targets: &Tensor) -> f64 {
-        let output = self.forward(x, edge_index);
-        let loss = output.mse_loss(targets, tch::Reduction::Mean);
-        loss.double_value(&[])
-    }
-    
-    fn predict(&self, x: &Tensor, edge_index: &Tensor) -> Tensor {
-        self.forward(x, edge_index).sigmoid()
-    }
-    
-    fn evaluate_metrics(&self, pos_scores: &Tensor, neg_scores: &Tensor) {
-        let all_scores = Tensor::cat(&[pos_scores, neg_scores], 0);
-        let labels = Tensor::cat(&[Tensor::ones(&[pos_scores.size()[0]]), Tensor::zeros(&[neg_scores.size()[0]])], 0);
-        let auc_score = 0.85; // Placeholder for actual AUC computation
-        println!("AUC Score: {:.4}", auc_score);
-    }
-    
-    fn generate_insights(&self, data: &HashMap<String, String>, predictions: &Tensor) {
-        for (key, value) in data.iter() {
-            let prediction = predictions.double_value(&[]);
-            println!("For {}: {} -> Prediction: {:.4}", key, value, prediction);
-        }
-    }
-}
+impl NNLayer for LinkPredictionModel {
+	/// Encodes node embeddings (basic identity function for now).
+	fn encode(
+		&self,
+		input: Cow<Tensor>,
+		_edge_index: &Tensor,
+		_edge_attr: Option<&Tensor>,
+	) -> LayersResult<Tensor> {
+		Ok(input.into_owned()) // Identity mapping for simplicity
+	}
 
-pub fn build_graph(data: &Vec<(String, String, String)>) -> (Graph<String, String>, HashMap<String, NodeIndex>) {
-    let mut graph = Graph::<String, String>::new();
-    let mut node_map = HashMap::new();
-    
-    for (subject, object, context) in data {
-        let subject_idx = *node_map.entry(subject.clone()).or_insert_with(|| graph.add_node(subject.clone()));
-        let object_idx = *node_map.entry(object.clone()).or_insert_with(|| graph.add_node(object.clone()));
-        graph.add_edge(subject_idx, object_idx, context.clone());
-    }
-    
-    (graph, node_map)
-}
+	/// Decodes edge probabilities (using simple dot product for now).
+	fn decode(&self, z: &Tensor, edge_index: &Tensor) -> LayersResult<Tensor> {
+		let indices = edge_index.to_kind(Kind::Int64);
+		let src = z.index_select(0, &indices.get(0)?);
+		let dst = z.index_select(0, &indices.get(1)?);
+		let scores = src.mul(&dst).sum_dim_intlist(&[1], false, Kind::Float);
+		Ok(scores)
+	}
 
-pub fn predict_links(model: &GCNModel, x: &Tensor, edge_index: &Tensor, num_samples: usize) -> Vec<(usize, usize, f64)> {
-    let predictions = model.forward(x, edge_index);
-    let mut results = Vec::new();
-    for i in 0..num_samples {
-        let prob = predictions.get(i as i64).double_value(&[]);
-        results.push((i, i + 1, prob));
-    }
-    results
+	/// Performs a single training step (placeholder implementation).
+	fn train(
+		&mut self,
+		_input: &Tensor,
+		_edge_index: &Tensor,
+		_target: &Tensor,
+	) -> LayersResult<f64> {
+		Ok(0.0) // Placeholder loss value
+	}
+
+	/// Computes the reconstruction loss (placeholder MSE loss).
+	fn compute_loss(
+		&self,
+		z: &Tensor,
+		pos_edges: &Tensor,
+		neg_edges: &Tensor,
+	) -> LayersResult<f64> {
+		let pos_scores = self.decode(z, pos_edges)?;
+		let neg_scores = self.decode(z, neg_edges)?;
+		let loss = pos_scores.mean(Kind::Float)? - neg_scores.mean(Kind::Float)?;
+		Ok(loss.double_value(&[]))
+	}
+
+	/// Predicts missing links using negative sampling.
+	fn predict(
+		&self,
+		z: &Tensor,
+		edge_index: &Tensor,
+		num_samples: usize,
+	) -> LayersResult<Vec<(usize, usize, f64)>> {
+		let num_nodes = z.size()[0] as usize;
+		let mut predictions = Vec::new();
+
+		for _ in 0..num_samples {
+			let i = rand::random::<usize>() % num_nodes;
+			let j = rand::random::<usize>() % num_nodes;
+			let score =
+				self.decode(z, &Tensor::of_slice(&[i as i64, j as i64]).reshape(&[2, 1]))?;
+			predictions.push((i, j, score.double_value(&[])));
+		}
+		Ok(predictions)
+	}
+
+	/// Evaluates link prediction using AUC and Precision-Recall AUC.
+	fn evaluate(&self, pos_probs: &Tensor, neg_probs: &Tensor) -> LayersResult<(f64, f64)> {
+		let auc = pos_probs.mean(Kind::Float)? - neg_probs.mean(Kind::Float)?;
+		Ok((auc.double_value(&[]), auc.double_value(&[]))) // Placeholder, real PR-AUC needed
+	}
+
+	/// Multi-hop reasoning using Dijkstra's shortest path.
+	fn multi_hop_reasoning(
+		&self,
+		graph: &Graph<usize, ()>,
+		src: NodeIndex,
+		tgt: NodeIndex,
+	) -> LayersResult<Option<Vec<NodeIndex>>> {
+		let path = dijkstra(graph, src, Some(tgt), |_| 1);
+		Ok(path.get(&tgt).cloned())
+	}
+
+	/// Generates insights from predicted links.
+	fn generate_insights(&self, subject: &str, object: &str, contexts: &[String]) -> String {
+		format!("Possible relation between '{}' and '{}': {:?}", subject, object, contexts)
+	}
+
+	/// Sets the computation device (CPU/GPU).
+	fn set_device(&mut self, device: Device) -> LayersResult<()> {
+		self.device = device;
+		Ok(())
+	}
 }

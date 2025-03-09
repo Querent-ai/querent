@@ -77,3 +77,4 @@ pdf-extract = { workspace = true }
 image = { workspace = true }
 tch = { workspace = true }
 petgraph = { workspace = true }
+llms = { workspace = true }

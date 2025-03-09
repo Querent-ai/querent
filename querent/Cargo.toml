@@ -288,6 +288,7 @@ aws-sdk-sts = "1.51.0"  # Security Token Service (STS) client
 rustforce = "0.2.2"
 tch = "0.19.0"
 petgraph="0.7.1"
+ndarray = "0.15"
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates

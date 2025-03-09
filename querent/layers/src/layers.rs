@@ -1,22 +1,70 @@
-use std::collections::HashMap;
-use tch::Tensor;
+use petgraph::{graph::Graph, prelude::NodeIndex};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+use tch::{Device, Tensor};
+use thiserror::Error;
 
-pub trait NNModel {
-	// Forward pass of the model
-	fn forward(&self, input: &Tensor) -> Tensor;
+/// Error types for neural network operations.
+#[derive(Debug, Clone, Error)]
+#[error("{kind:?}: {source}")]
+pub struct LayersError {
+	pub kind: LayersErrorKind,
+	#[source]
+	pub source: Arc<anyhow::Error>,
+}
 
-	// Training step, computes the loss and updates model parameters
-	fn train_step(&mut self, input: &Tensor, target: &Tensor) -> f64;
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum LayersErrorKind {
+	Io,
+	NotFound,
+	ModelError,
+}
 
-	// Evaluate model on a dataset
-	fn evaluate(&self, input: &Tensor, target: &Tensor) -> f64;
+/// Result type alias.
+pub type LayersResult<T> = Result<T, LayersError>;
 
-	// Perform link prediction (or any task-specific prediction)
-	fn predict(&self, input: &Tensor) -> Tensor;
+/// Trait for neural network models supporting link prediction.
+pub trait NNLayer: Sized {
+	/// Encodes node embeddings.
+	fn encode(
+		&self,
+		input: &Tensor,
+		edge_index: &Tensor,
+		edge_attr: Option<&Tensor>,
+	) -> LayersResult<Tensor>;
 
-	// Compute metrics for performance evaluation, e.g., AUC, accuracy, etc.
-	fn evaluate_metrics(&self, pos_probs: &Tensor, neg_probs: &Tensor);
+	/// Decodes edge probabilities.
+	fn decode(&self, z: &Tensor, edge_index: &Tensor) -> LayersResult<Tensor>;
 
-	// Generate insights or interpretations based on model predictions
-	fn generate_insights(&self, data: &HashMap<String, String>, predictions: &Tensor);
+	/// Performs a single training step.
+	fn train(&mut self, input: &Tensor, edge_index: &Tensor, target: &Tensor) -> LayersResult<f64>;
+
+	/// Computes the reconstruction loss.
+	fn compute_loss(&self, z: &Tensor, pos_edges: &Tensor, neg_edges: &Tensor)
+		-> LayersResult<f64>;
+
+	/// Predicts missing links using negative sampling.
+	fn predict(
+		&self,
+		z: &Tensor,
+		edge_index: &Tensor,
+		num_samples: usize,
+	) -> LayersResult<Vec<(usize, usize, f64)>>;
+
+	/// Evaluates link prediction using AUC and Precision-Recall AUC.
+	fn evaluate(&self, pos_probs: &Tensor, neg_probs: &Tensor) -> LayersResult<(f64, f64)>;
+
+	/// Generates insights by analyzing multi-hop reasoning using Petgraph.
+	fn multi_hop_reasoning(
+		&self,
+		graph: &Graph<usize, ()>,
+		src: NodeIndex,
+		tgt: NodeIndex,
+	) -> LayersResult<Option<Vec<NodeIndex>>>;
+
+	/// Generates natural language insights from the predicted links.
+	fn generate_insights(&self, subject: &str, object: &str, contexts: &[String]) -> String;
+
+	/// Sets the computation device (CPU/GPU).
+	fn set_device(&mut self, device: Device) -> LayersResult<()>;
 }
