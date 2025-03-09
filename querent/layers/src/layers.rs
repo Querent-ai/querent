@@ -31,7 +31,7 @@ pub trait NNLayer: Sized {
 		input: &Tensor,
 		edge_index: &Tensor,
 		edge_attr: Option<&Tensor>,
-	) -> LayersResult<Tensor>;
+	) -> LayersResult<Option<&Tensor>>;
 
 	/// Decodes edge probabilities.
 	fn decode(&self, z: &Tensor, edge_index: &Tensor) -> LayersResult<Tensor>;

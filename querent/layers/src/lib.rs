@@ -3,6 +3,8 @@ use std::collections::HashMap;
 
 pub mod layers;
 // Link prediction using KAN (Knowledge-aware Attention Network).
+pub mod kan;
+pub use kan::*;
 
 /// Converts an adjacency list into a `petgraph::Graph<usize, ()>`.
 pub fn adjacency_list_to_graph(adj_list: &HashMap<usize, Vec<usize>>) -> Graph<usize, ()> {

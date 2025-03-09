@@ -11,6 +11,7 @@ env:
   RUST_BACKTRACE: 1
   RUSTFLAGS: -D warnings
   REGISTRY_IMAGE: querent/rian
+  LIBTORCH_USE_PYTORCH: 1
 
 jobs:
   changes:
