@@ -15,22 +15,22 @@ CBINDGEN=${HOME}/.cargo/bin/cbindgen
 .PHONY: check
 check:
 	@echo "Running Cargo check..."
-	@cargo check --all --all-features --all-targets
+	@. pytorch_env/bin/activate && cargo check --all --all-features --all-targets
 
 .PHONY: test
 test:
 	@echo "Running Cargo test..."
-	@cargo test --all --all-features --all-targets
+	@. pytorch_env/bin/activate && cargo test --all --all-features --all-targets
 
 .PHONY: clippy
 clippy:
 	@echo "Running Cargo clippy..."
-	@cargo clippy --all --all-features --all-targets -- -D warnings
+	@. pytorch_env/bin/activate && cargo clippy --all --all-features --all-targets -- -D warnings
 
 .PHONY: deny
 deny:
 	@echo "Running Cargo deny..."
-	@cargo deny check -c .cargo-deny.toml
+	@. pytorch_env/bin/activate && cargo deny check -c .cargo-deny.toml
 
 .PHONY: format
 format:
