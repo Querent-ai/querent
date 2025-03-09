@@ -80,8 +80,12 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "./querent -> target"
-      - name: Cargo check
-        run: cd querent && make create-env && make install-requirements && make check
+      - name: Install dependencies and create pytorch env
+        run: cd querent && make create-env
+      - name: Install torch
+        run: cd querent && make install-requirements
+      - name: Check for build errors
+        run: cd querent && make check
 
   test:
     name: Run tests
