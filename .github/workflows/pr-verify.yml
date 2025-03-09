@@ -80,7 +80,7 @@ jobs:
         with:
           workspaces: "./querent -> target"
       - name: Cargo check
-        run: cd querent && make check
+        run: cd querent && make create-env && make install-requirements make check
 
   test:
     name: Run tests

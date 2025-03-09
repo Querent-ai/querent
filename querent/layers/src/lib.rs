@@ -1,4 +1,4 @@
-use petgraph::graph::{Graph, NodeIndex};
+use petgraph::graph::Graph;
 use std::collections::HashMap;
 
 pub mod layers;
