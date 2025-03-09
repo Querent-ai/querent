@@ -80,7 +80,10 @@ archive:
 .PHONY: create-env
 create-env:
 	@echo "Creating Python virtual environment: pytorch_env"
-	@python3 -m venv pytorch_env
+	@echo "Checking in pytorch_env exists..."
+	@if [ ! -d "pytorch_env" ]; then \
+		python3 -m venv pytorch_env; \
+	fi
 
 .PHONY: install-requirements
 install-requirements:
