@@ -1,6 +1,6 @@
 /// Start a layer agent to query insights from data
-/// The agent will respond with insights discovered based on the user's query
-/// The agent use vector and graph embeddings to discover insights from data
+/// The agent will respond with insights layereded based on the user's query
+/// The agent use vector and graph embeddings to layered insights from data
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -40,7 +40,7 @@ pub struct LayerRequest {
     #[prost(string, repeated, tag = "3")]
     pub top_pairs: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
-/// Response message containing insights discovered from the data
+/// Response message containing insights layereded from the data
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -51,7 +51,7 @@ pub struct LayerResponse {
     /// Query or question posed by the user
     #[prost(string, tag = "2")]
     pub query: ::prost::alloc::string::String,
-    /// The insights discovered based on the user's query
+    /// The insights layereded based on the user's query
     #[prost(message, repeated, tag = "3")]
     pub insights: ::prost::alloc::vec::Vec<Insight>,
     /// The search result page number
@@ -76,7 +76,7 @@ pub struct StopLayerSessionResponse {
     #[prost(string, tag = "1")]
     pub session_id: ::prost::alloc::string::String,
 }
-/// Represents an insight discovered from the data
+/// Represents an insight layereded from the data
 #[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -233,7 +233,7 @@ pub mod layer_client {
             self.inner.unary(req, path, codec).await
         }
         /// Query insights from data
-        pub async fn discover_insights(
+        pub async fn layer_insights(
             &mut self,
             request: impl tonic::IntoRequest<super::LayerRequest>,
         ) -> std::result::Result<tonic::Response<super::LayerResponse>, tonic::Status> {
@@ -248,11 +248,11 @@ pub mod layer_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/querent.layer.Layer/DiscoverInsights",
+                "/querent.layer.Layer/LayerInsights",
             );
             let mut req = request.into_request();
             req.extensions_mut()
-                .insert(GrpcMethod::new("querent.layer.Layer", "DiscoverInsights"));
+                .insert(GrpcMethod::new("querent.layer.Layer", "LayerInsights"));
             self.inner.unary(req, path, codec).await
         }
         /// Stop the layer session
@@ -325,7 +325,7 @@ pub mod layer_server {
             tonic::Status,
         >;
         /// Query insights from data
-        async fn discover_insights(
+        async fn layer_insights(
             &self,
             request: tonic::Request<super::LayerRequest>,
         ) -> std::result::Result<tonic::Response<super::LayerResponse>, tonic::Status>;
@@ -472,11 +472,11 @@ pub mod layer_server {
                     };
                     Box::pin(fut)
                 }
-                "/querent.layer.Layer/DiscoverInsights" => {
+                "/querent.layer.Layer/LayerInsights" => {
                     #[allow(non_camel_case_types)]
-                    struct DiscoverInsightsSvc<T: Layer>(pub Arc<T>);
+                    struct LayerInsightsSvc<T: Layer>(pub Arc<T>);
                     impl<T: Layer> tonic::server::UnaryService<super::LayerRequest>
-                    for DiscoverInsightsSvc<T> {
+                    for LayerInsightsSvc<T> {
                         type Response = super::LayerResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
@@ -488,7 +488,7 @@ pub mod layer_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                (*inner).discover_insights(request).await
+                                (*inner).layer_insights(request).await
                             };
                             Box::pin(fut)
                         }
@@ -500,7 +500,7 @@ pub mod layer_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = DiscoverInsightsSvc(inner);
+                        let method = LayerInsightsSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

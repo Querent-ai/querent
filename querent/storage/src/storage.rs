@@ -16,20 +16,20 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use std::{
-	fmt::{self, Debug},
-	sync::Arc,
-};
-
 use crate::{
 	postgres_index::QuerySuggestion, utils::FilteredSemanticKnowledge, DiscoveredKnowledge,
 };
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
 use proto::{
-	discovery::DiscoverySessionRequest, semantics::SemanticPipelineRequest, InsightAnalystRequest,
+	discovery::DiscoverySessionRequest, layer::LayerSessionRequest,
+	semantics::SemanticPipelineRequest, InsightAnalystRequest,
 };
 use serde::{Deserialize, Serialize};
+use std::{
+	fmt::{self, Debug},
+	sync::Arc,
+};
 use thiserror::Error;
 
 pub const RIAN_API_KEY: &str = "RIAN_API_KEY";
@@ -301,6 +301,20 @@ pub trait MetaStorage: Send + Sync {
 		&self,
 		session_id: &String,
 	) -> StorageResult<Option<InsightAnalystRequest>>;
+
+	/// Set Layer session ran by this node
+	async fn set_layer_session(
+		&self,
+		_session_id: &String,
+		_session: LayerSessionRequest,
+	) -> StorageResult<()> {
+		Ok(())
+	}
+
+	/// Get all Layer sessions ran by this node
+	async fn get_all_layer_sessions(&self) -> StorageResult<Vec<(String, LayerSessionRequest)>> {
+		Ok(vec![])
+	}
 }
 
 impl Debug for dyn MetaStorage {

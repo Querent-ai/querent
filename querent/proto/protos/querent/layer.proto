@@ -3,8 +3,8 @@ syntax = "proto3";
 package querent.layer;
 
 // Start a layer agent to query insights from data
-// The agent will respond with insights discovered based on the user's query
-// The agent use vector and graph embeddings to discover insights from data
+// The agent will respond with insights layereded based on the user's query
+// The agent use vector and graph embeddings to layered insights from data
 message LayerSessionRequest {
   // Name of the layer agent
   string agent_name = 1;
@@ -36,13 +36,13 @@ message LayerRequest {
   repeated string top_pairs = 3;
 }
 
-// Response message containing insights discovered from the data
+// Response message containing insights layereded from the data
 message LayerResponse {
   // The ID of the layer session
   string session_id = 1;
   // Query or question posed by the user
   string query = 2;
-  // The insights discovered based on the user's query
+  // The insights layereded based on the user's query
   repeated Insight insights = 3;
   // The search result page number
   int32 page_ranking = 4;
@@ -60,7 +60,7 @@ message StopLayerSessionResponse {
   string session_id = 1;
 }
 
-// Represents an insight discovered from the data
+// Represents an insight layereded from the data
 message Insight {
   // The document id of the search result
   string document = 1;
@@ -93,7 +93,7 @@ service Layer {
   rpc StartLayerSession(LayerSessionRequest) returns (LayerSessionResponse) {}
   
   // Query insights from data
-  rpc DiscoverInsights(LayerRequest) returns (LayerResponse) {}
+  rpc LayerInsights(LayerRequest) returns (LayerResponse) {}
 
   // Stop the layer session
   rpc StopLayerSession(StopLayerSessionRequest) returns (StopLayerSessionResponse) {}

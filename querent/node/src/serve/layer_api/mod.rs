@@ -16,5 +16,7 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-pub mod layer_link_pred;
-pub mod layering_service;
+pub mod rest;
+pub use rest::*;
+pub mod grpc_layer_adapter;
+pub mod layer_service;

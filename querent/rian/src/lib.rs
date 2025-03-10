@@ -37,8 +37,8 @@ pub mod discovery;
 pub use discovery::*;
 pub mod insights;
 pub use insights::*;
-pub mod layers;
-pub use layers::*;
+pub mod layer;
+pub use layer::*;
 pub mod ingest;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "license-check")]

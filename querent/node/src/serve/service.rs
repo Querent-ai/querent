@@ -23,6 +23,7 @@ use crate::{
 	grpc,
 	insight_api::insights_service::InsightService,
 	insights_service::start_insight_service,
+	layer_api::layer_service::{start_layer_service, LayerService},
 	rest,
 };
 use actors::{ActorExitStatus, MessageBus, Querent};
@@ -54,6 +55,7 @@ pub struct QuerentServices {
 	pub semantic_service_bus: MessageBus<SemanticService>,
 	pub discovery_service: Option<Arc<dyn DiscoveryService>>,
 	pub insight_service: Option<Arc<dyn InsightService>>,
+	pub layer_service: Option<Arc<dyn LayerService>>,
 	pub event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
 	pub index_storages: Vec<Arc<dyn Storage>>,
 	pub secret_store: Arc<dyn SecretStorage>,
@@ -106,7 +108,17 @@ pub async fn serve_quester(
 		secret_store.clone(),
 	)
 	.await?;
-
+	log::info!("Starting Layer Service 🧠");
+	let layer_service = start_layer_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+		metadata_store.clone(),
+		secret_store.clone(),
+	)
+	.await?;
 	log::info!("Starting Insight Service 🧠");
 	let insight_service = start_insight_service(
 		&node_config,
@@ -148,6 +160,7 @@ pub async fn serve_quester(
 		index_storages,
 		discovery_service: Some(discovery_service),
 		insight_service: Some(insight_service),
+		layer_service: Some(layer_service),
 		secret_store,
 		metadata_store,
 	});
@@ -277,6 +290,18 @@ pub async fn serve_quester_without_servers(
 	)
 	.await?;
 
+	info!("Starting Layer Service 🧠");
+	let layer_service = start_layer_service(
+		&node_config,
+		&quester_cloud,
+		&cluster,
+		event_storages.clone(),
+		index_storages.clone(),
+		metadata_store.clone(),
+		secret_store.clone(),
+	)
+	.await?;
+
 	let services = Arc::new(QuerentServices {
 		pipeline_id: None,
 		node_config,
@@ -285,6 +310,7 @@ pub async fn serve_quester_without_servers(
 		semantic_service_bus,
 		discovery_service: Some(discovery_service),
 		insight_service: Some(insight_service),
+		layer_service: Some(layer_service),
 		event_storages,
 		index_storages,
 		secret_store,

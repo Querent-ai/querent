@@ -18,7 +18,7 @@
 
 #[cfg(feature = "license-check")]
 use crate::is_layer_agent_type_allowed;
-use crate::layer_link_pred::LayerLink;
+use crate::layer_link_prediction::LayerLink;
 use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz, MessageBus};
 use async_trait::async_trait;
 use cluster::Cluster;
