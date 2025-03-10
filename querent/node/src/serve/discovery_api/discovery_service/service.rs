@@ -19,7 +19,7 @@
 use actors::MessageBus;
 use async_trait::async_trait;
 use common::EventType;
-use proto::{
+use proto::discovery::{
 	DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest, DiscoverySessionRequestInfo,
 	DiscoverySessionRequestInfoList, DiscoverySessionResponse, StopDiscoverySessionRequest,
 	StopDiscoverySessionResponse,

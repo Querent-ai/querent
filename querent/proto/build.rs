@@ -72,5 +72,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.out_dir("src/codegen/querent")
 		.compile_with_config(prost_config, &["protos/querent/insights.proto"], &["protos"])?;
 
+	// NNLayer service proto code generation
+	let mut prost_config = prost_build::Config::default();
+	prost_config.protoc_arg("--experimental_allow_proto3_optional");
+	prost_config.extern_path(".querent.discovery.LayerAgentType", "LayerAgentType");
+	tonic_build::configure()
+		.enum_attribute(".", "#[serde(rename_all=\"snake_case\")]")
+		.type_attribute(".", "#[derive(Serialize, Deserialize, utoipa::ToSchema, specta::Type)]")
+		.type_attribute("LayerRequest", "#[derive(Eq, Hash)]")
+		.type_attribute("SortFld", "#[derive(Eq, Hash)]")
+		.out_dir("src/codegen/querent")
+		.compile_with_config(prost_config, &["protos/querent/layer.proto"], &["protos"])?;
+
 	Ok(())
 }

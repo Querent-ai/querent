@@ -23,7 +23,7 @@ use actors::{Actor, ActorContext, ActorExitStatus, ActorHandle, Handler, Healthz
 use async_trait::async_trait;
 use cluster::Cluster;
 use common::EventType;
-use proto::{
+use proto::discovery::{
 	DiscoveryAgentType, DiscoveryError, DiscoveryRequest, DiscoveryResponse,
 	DiscoverySessionRequest, DiscoverySessionResponse, StopDiscoverySessionRequest,
 	StopDiscoverySessionResponse,

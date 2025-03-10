@@ -40,7 +40,7 @@ impl grpc::Discovery for DiscoveryAdapter {
 		request: tonic::Request<proto::discovery::DiscoverySessionRequest>,
 	) -> Result<tonic::Response<proto::discovery::DiscoverySessionResponse>, tonic::Status> {
 		let req = request.into_inner();
-		let res: Result<proto::DiscoverySessionResponse, DiscoveryError> =
+		let res: Result<proto::discovery::DiscoverySessionResponse, DiscoveryError> =
 			self.0.start_discovery_session(req).await;
 		convert_to_grpc_result(res)
 	}
@@ -51,7 +51,7 @@ impl grpc::Discovery for DiscoveryAdapter {
 		request: tonic::Request<proto::discovery::DiscoveryRequest>,
 	) -> Result<tonic::Response<proto::discovery::DiscoveryResponse>, tonic::Status> {
 		let req = request.into_inner();
-		let res: Result<proto::DiscoveryResponse, DiscoveryError> =
+		let res: Result<proto::discovery::DiscoveryResponse, DiscoveryError> =
 			self.0.discover_insights(req).await;
 		convert_to_grpc_result(res)
 	}
@@ -62,7 +62,7 @@ impl grpc::Discovery for DiscoveryAdapter {
 		request: tonic::Request<proto::discovery::StopDiscoverySessionRequest>,
 	) -> Result<tonic::Response<proto::discovery::StopDiscoverySessionResponse>, tonic::Status> {
 		let req = request.into_inner();
-		let res: Result<proto::StopDiscoverySessionResponse, DiscoveryError> =
+		let res: Result<proto::discovery::StopDiscoverySessionResponse, DiscoveryError> =
 			self.0.stop_discovery_session(req).await;
 		convert_to_grpc_result(res)
 	}
@@ -74,7 +74,7 @@ impl grpc::Discovery for DiscoveryAdapter {
 	) -> Result<tonic::Response<proto::discovery::DiscoverySessionRequestInfoList>, tonic::Status>
 	{
 		let _req = empty.into_inner();
-		let res: Result<proto::DiscoverySessionRequestInfoList, DiscoveryError> =
+		let res: Result<proto::discovery::DiscoverySessionRequestInfoList, DiscoveryError> =
 			self.0.get_discovery_session_list().await;
 		convert_to_grpc_result(res)
 	}

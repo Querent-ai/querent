@@ -31,11 +31,11 @@ use ::opentelemetry::{
 	global,
 	propagation::{Extractor, Injector},
 };
-pub use discovery::*;
 use tonic::{service::Interceptor, Status};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 pub mod insights;
 pub use insights::*;
+pub mod layer;
 
 #[derive(Clone, Debug)]
 pub struct SpanContextInterceptor;

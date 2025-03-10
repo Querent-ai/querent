@@ -23,7 +23,9 @@ use cluster::Cluster;
 use common::PubSubBroker;
 pub mod core;
 pub use core::*;
-use proto::{semantics::CollectorConfig, DiscoveryAgentType, NodeConfig};
+use proto::{
+	discovery::DiscoveryAgentType, layer::LayerAgentType, semantics::CollectorConfig, NodeConfig,
+};
 pub mod events;
 pub use events::*;
 pub mod storage;
@@ -35,6 +37,8 @@ pub mod discovery;
 pub use discovery::*;
 pub mod insights;
 pub use insights::*;
+pub mod layers;
+pub use layers::*;
 pub mod ingest;
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "license-check")]
@@ -469,6 +473,20 @@ pub fn is_insight_allowed_by_product(
 			"querent.insights.x_ai.openai" => Ok(true),
 
 			_ => Ok(false),
+		},
+		ProductType::RianPro => Ok(true),
+		ProductType::RianEnterprise => Ok(true),
+	}
+}
+
+pub fn is_layer_agent_type_allowed(
+	licence_key: String,
+	agent_type: &LayerAgentType,
+) -> Result<bool, anyhow::Error> {
+	let info = get_product_info(licence_key)?;
+	match info.product {
+		ProductType::Rian => match agent_type {
+			LayerAgentType::Link => Ok(true),
 		},
 		ProductType::RianPro => Ok(true),
 		ProductType::RianEnterprise => Ok(true),

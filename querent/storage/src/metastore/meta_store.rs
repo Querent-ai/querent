@@ -23,7 +23,9 @@ use std::{
 
 use crate::{MetaStorage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
+use proto::{
+	discovery::DiscoverySessionRequest, semantics::SemanticPipelineRequest, InsightAnalystRequest,
+};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 

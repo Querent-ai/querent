@@ -25,7 +25,7 @@ use common::{EventType, SemanticKnowledgePayload};
 use fastembed::TextEmbedding;
 use futures::Stream;
 use lazy_static::lazy_static;
-use proto::{Neo4jConfig, StorageType};
+use proto::semantics::{Neo4jConfig, StorageType};
 use serde_json::Value;
 use std::{
 	collections::{HashMap, HashSet},

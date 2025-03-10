@@ -26,7 +26,9 @@ use crate::{
 };
 use async_trait::async_trait;
 use common::{DocumentPayload, SemanticKnowledgePayload, VectorPayload};
-use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
+use proto::{
+	discovery::DiscoverySessionRequest, semantics::SemanticPipelineRequest, InsightAnalystRequest,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 

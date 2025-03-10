@@ -22,7 +22,7 @@ use bytesize::ByteSize;
 use cluster::cluster_grpc_server;
 use common::BoxFutureInfaillible;
 use proto::{
-	discovery_server::DiscoveryServer,
+	discovery::discovery_server::DiscoveryServer,
 	semantics::semantics_service_grpc_server::SemanticsServiceGrpcServer,
 };
 use tonic::transport::Server;
