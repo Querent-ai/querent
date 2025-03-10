@@ -11,6 +11,7 @@ env:
   RUST_BACKTRACE: 1
   RUSTFLAGS: -D warnings
   REGISTRY_IMAGE: querent/rian
+  LIBTORCH_USE_PYTORCH: 1
 
 jobs:
   changes:
@@ -79,7 +80,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "./querent -> target"
-      - name: Cargo check
+      - name: Install dependencies and create pytorch env
+        run: cd querent && make create-env
+      - name: Install torch
+        run: cd querent && make install-requirements
+      - name: Check for build errors
         run: cd querent && make check
 
   test:
@@ -131,6 +136,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "./querent -> target"
+      - name: Install dependencies and create pytorch env
+        run: cd querent && make create-env
+      - name: Install torch
+        run: cd querent && make install-requirements
       - name: Cargo test
         run: cd querent && make test
 
@@ -183,5 +192,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: "./querent -> target"
+      - name: Install dependencies and create pytorch env
+        run: cd querent && make create-env
+      - name: Install torch
+        run: cd querent && make install-requirements
       - name: Build
         run: cd querent && make build

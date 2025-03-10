@@ -15,22 +15,22 @@ CBINDGEN=${HOME}/.cargo/bin/cbindgen
 .PHONY: check
 check:
 	@echo "Running Cargo check..."
-	@cargo check --all --all-features --all-targets
+	@. pytorch_env/bin/activate && cargo check --all --all-features --all-targets
 
 .PHONY: test
 test:
 	@echo "Running Cargo test..."
-	@cargo test --all --all-features --all-targets
+	@. pytorch_env/bin/activate && cargo test --all --all-features --all-targets
 
 .PHONY: clippy
 clippy:
 	@echo "Running Cargo clippy..."
-	@cargo clippy --all --all-features --all-targets -- -D warnings
+	@. pytorch_env/bin/activate && cargo clippy --all --all-features --all-targets -- -D warnings
 
 .PHONY: deny
 deny:
 	@echo "Running Cargo deny..."
-	@cargo deny check -c .cargo-deny.toml
+	@. pytorch_env/bin/activate && cargo deny check -c .cargo-deny.toml
 
 .PHONY: format
 format:
@@ -76,3 +76,16 @@ archive:
 	@cp "${BINARY_FILE}" "./rian-${BINARY_VERSION}"
 	@tar -czf "${ARCHIVE_NAME}.tar.gz" "./rian-${BINARY_VERSION}"
 	@rm -rf "./rian-${BINARY_VERSION}"
+
+.PHONY: create-env
+create-env:
+	@echo "Creating Python virtual environment: pytorch_env"
+	@echo "Checking in pytorch_env exists..."
+	@if [ ! -d "pytorch_env" ]; then \
+		python3 -m venv pytorch_env; \
+	fi
+
+.PHONY: install-requirements
+install-requirements:
+	@echo "Installing Python requirements"
+	@. pytorch_env/bin/activate && pip install torch torchvision torchaudio

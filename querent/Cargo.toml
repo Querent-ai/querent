@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sources", "ingestors", "engines", "llms", "insights", "actors", "common", "rian", "storage", "cluster", "node", "codegen", "proto",]
+members = ["sources", "ingestors", "engines", "llms", "insights", "actors", "common", "rian", "storage", "cluster", "node", "codegen", "proto", "layers"]
 
 [profile.dev]
 debug = false
@@ -198,6 +198,7 @@ ingestors = { version = "1.1.0", path = "./ingestors" }
 engines = { version = "1.1.0", path = "./engines" }
 llms = { version = "1.1.0", path = "./llms" }
 insights = { version = "1.1.0", path = "./insights" }
+layers = { version = "1.1.0", path = "../layers"}
 neo4rs = "0.7.0"
 diesel-async = { version = "0.5.0", features = ["bb8", "postgres", "async-connection-wrapper"] }
 tokio-postgres = "0.7.10"
@@ -285,6 +286,9 @@ tar = "0.4.42"
 flate2 = "1.0.34"
 aws-sdk-sts = "1.51.0"  # Security Token Service (STS) client
 rustforce = "0.2.2"
+tch = "0.19.0"
+petgraph="0.7.1"
+ndarray = "0.15"
 
 # patch unicode-normalization to version 1.22.0
 # TODO Querent to research on few third party crates

@@ -25,3 +25,5 @@ querent/.fastembed_cache/
 node_modules/
 **/.fastembed_cache/
 .env
+venv/
+pytorch_env/
