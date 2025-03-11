@@ -15,7 +15,7 @@
 // and non-infringement. See the Business Source License for more details.
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
-
+#![recursion_limit = "256"]
 pub mod cli;
 pub mod serve;
 use std::sync::Arc;
