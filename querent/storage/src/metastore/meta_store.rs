@@ -63,6 +63,7 @@ impl MetaStore {
 		write_txn.open_table(TABLE_PIPELINES).unwrap();
 		write_txn.open_table(TABLE_DISCOVERY_SESSIONS).unwrap();
 		write_txn.open_table(TABLE_INSIGHT_SESSIONS).unwrap();
+		write_txn.open_table(TABLE_LAYER_SESSIONS).unwrap();
 		write_txn.commit().unwrap();
 
 		Self { db: Arc::new(db) }
