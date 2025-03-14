@@ -4,7 +4,6 @@ use std::collections::HashMap;
 pub mod layers;
 // Link prediction using KAN (Knowledge-aware Attention Network).
 pub mod experiments;
-pub use experiments::*;
 pub mod graph;
 pub use graph::*;
 
