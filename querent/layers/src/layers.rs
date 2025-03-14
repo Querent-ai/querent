@@ -1,7 +1,7 @@
+use candle_core::{Device, Tensor};
 use petgraph::graph::{Graph, NodeIndex};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tch::{Device, Tensor};
 use thiserror::Error;
 
 /// Error types for neural network operations.
