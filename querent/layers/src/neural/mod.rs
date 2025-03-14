@@ -1,4 +1,5 @@
 pub mod gcn;
+pub mod gin;
 pub mod utils;
 
 use std::collections::HashMap;
