@@ -22,7 +22,7 @@ use bytesize::ByteSize;
 use cluster::cluster_grpc_server;
 use common::BoxFutureInfaillible;
 use proto::{
-	discovery_server::DiscoveryServer,
+	discovery::discovery_server::DiscoveryServer, layer::layer_server::LayerServer,
 	semantics::semantics_service_grpc_server::SemanticsServiceGrpcServer,
 };
 use tonic::transport::Server;
@@ -30,7 +30,8 @@ use tracing::info;
 
 use crate::{
 	discovery_api::grpc_discovery_adapter::DiscoveryAdapter,
-	insight_api::grpc_insight_adapter::InsightAdapter, QuerentServices, SemanticsGrpcAdapter,
+	insight_api::grpc_insight_adapter::InsightAdapter, layer_api::grpc_layer_adapter::LayerAdapter,
+	QuerentServices, SemanticsGrpcAdapter,
 };
 
 /// Starts and binds gRPC services to `grpc_listen_addr`.
@@ -65,6 +66,19 @@ pub(crate) async fn start_grpc_server(
 	} else {
 		None
 	};
+
+	let layer_grpc_service = if services.layer_service.is_some() {
+		let layer_service = services.layer_service.clone().unwrap();
+		let grpc_layer_adapater = LayerAdapter::from(layer_service);
+		Some(
+			LayerServer::new(grpc_layer_adapater)
+				.max_decoding_message_size(max_message_size.0 as usize)
+				.max_encoding_message_size(max_message_size.0 as usize),
+		)
+	} else {
+		None
+	};
+
 	let insights_grpc_service = if services.insight_service.is_some() {
 		let insight_service = services.insight_service.clone().unwrap();
 		let grpc_insight_adapater = InsightAdapter::from(insight_service);
@@ -82,7 +96,8 @@ pub(crate) async fn start_grpc_server(
 		.add_service(cluster_grpc_service)
 		.add_service(semantics_service_grpc_server)
 		.add_optional_service(discovery_grpc_service)
-		.add_optional_service(insights_grpc_service);
+		.add_optional_service(insights_grpc_service)
+		.add_optional_service(layer_grpc_service);
 
 	info!(
 		grpc_listen_addr=?grpc_listen_addr,

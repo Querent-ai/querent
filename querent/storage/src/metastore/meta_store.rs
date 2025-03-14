@@ -23,7 +23,10 @@ use std::{
 
 use crate::{MetaStorage, StorageError, StorageErrorKind, StorageResult};
 use async_trait::async_trait;
-use proto::{semantics::SemanticPipelineRequest, DiscoverySessionRequest, InsightAnalystRequest};
+use proto::{
+	discovery::DiscoverySessionRequest, layer::LayerSessionRequest,
+	semantics::SemanticPipelineRequest, InsightAnalystRequest,
+};
 use redb::{Database, ReadableTable, TableDefinition};
 use std::path::PathBuf;
 
@@ -32,6 +35,9 @@ const TABLE_DISCOVERY_SESSIONS: TableDefinition<&str, &[u8]> =
 	TableDefinition::new("querent_discovery_sessions");
 const TABLE_INSIGHT_SESSIONS: TableDefinition<&str, &[u8]> =
 	TableDefinition::new("querent_insight_sessions");
+
+const TABLE_LAYER_SESSIONS: TableDefinition<&str, &[u8]> =
+	TableDefinition::new("querent_layer_sessions");
 
 pub struct MetaStore {
 	db: Arc<Database>,
@@ -57,6 +63,7 @@ impl MetaStore {
 		write_txn.open_table(TABLE_PIPELINES).unwrap();
 		write_txn.open_table(TABLE_DISCOVERY_SESSIONS).unwrap();
 		write_txn.open_table(TABLE_INSIGHT_SESSIONS).unwrap();
+		write_txn.open_table(TABLE_LAYER_SESSIONS).unwrap();
 		write_txn.commit().unwrap();
 
 		Self { db: Arc::new(db) }
@@ -222,6 +229,41 @@ impl MetaStorage for MetaStore {
 		Ok(sessions)
 	}
 
+	/// get all layer sessions
+	async fn get_all_layer_sessions(&self) -> StorageResult<Vec<(String, LayerSessionRequest)>> {
+		let read_txn = self.db.begin_read().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let mut sessions = Vec::new();
+		{
+			let table = read_txn.open_table(TABLE_LAYER_SESSIONS).map_err(|e| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(e)),
+			})?;
+			let iter = table.iter().map_err(|err| StorageError {
+				kind: StorageErrorKind::Internal,
+				source: Arc::new(anyhow::Error::from(err)),
+			})?;
+			for result in iter {
+				let (key_access_guard, value_access_guard) =
+					result.map_err(|err| StorageError {
+						kind: StorageErrorKind::Internal,
+						source: Arc::new(anyhow::Error::from(err)),
+					})?;
+				let key = key_access_guard.value();
+				let value = value_access_guard.value();
+				let session: LayerSessionRequest =
+					bincode::deserialize(value).map_err(|e| StorageError {
+						kind: StorageErrorKind::Serialization,
+						source: Arc::new(anyhow::Error::from(e)),
+					})?;
+				sessions.push((key.to_string(), session));
+			}
+		}
+		Ok(sessions)
+	}
+
 	/// Set Discovery session ran by this node
 	async fn set_discovery_session(
 		&self,
@@ -240,6 +282,40 @@ impl MetaStorage for MetaStore {
 		{
 			let mut table =
 				write_txn.open_table(TABLE_DISCOVERY_SESSIONS).map_err(|e| StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				})?;
+			table.insert(session_id.as_str(), encoded_data.as_slice()).map_err(|e| {
+				StorageError {
+					kind: StorageErrorKind::Internal,
+					source: Arc::new(anyhow::Error::from(e)),
+				}
+			})?;
+		}
+		write_txn.commit().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})
+	}
+
+	/// Set Layer session ran by this node
+	/// Set Discovery session ran by this node
+	async fn set_layer_session(
+		&self,
+		session_id: &String,
+		session: LayerSessionRequest,
+	) -> StorageResult<()> {
+		let encoded_data = bincode::serialize(&session).map_err(|e| StorageError {
+			kind: StorageErrorKind::Serialization,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		let write_txn = self.db.begin_write().map_err(|e| StorageError {
+			kind: StorageErrorKind::Internal,
+			source: Arc::new(anyhow::Error::from(e)),
+		})?;
+		{
+			let mut table =
+				write_txn.open_table(TABLE_LAYER_SESSIONS).map_err(|e| StorageError {
 					kind: StorageErrorKind::Internal,
 					source: Arc::new(anyhow::Error::from(e)),
 				})?;

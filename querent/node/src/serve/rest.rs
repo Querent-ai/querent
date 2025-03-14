@@ -51,6 +51,10 @@ use crate::{
 		start_insights_session_filter, stop_insight_session_filter,
 	},
 	json_api_response::{ApiError, JsonApiResponse},
+	layer_api::{
+		get_layer_history_handler, layer_get_filter, layer_post_filter, start_layer_session_filter,
+		stop_layer_session_filter,
+	},
 	list_collectors_list_handler, metrics_handler, node_info_handler, observe_pipeline_get_handler,
 	pipelines_get_all_handler, restart_pipeline_post_handler, set_collectors_post_handler,
 	start_pipeline_post_handler, stop_pipeline_delete_handler, BodyFormat, BuildInfo,
@@ -230,7 +234,12 @@ fn api_v1_routes(
 				.or(list_insights_handler())
 				.or(get_pipelines_history_handler(services.metadata_store.clone()))
 				.or(get_insights_history_handler(services.insight_service.clone()))
-				.or(get_discovery_history_handler(services.discovery_service.clone())),
+				.or(get_discovery_history_handler(services.discovery_service.clone()))
+				.or(layer_get_filter(services.layer_service.clone()))
+				.or(layer_post_filter(services.layer_service.clone()))
+				.or(start_layer_session_filter(services.layer_service.clone()))
+				.or(stop_layer_session_filter(services.layer_service.clone()))
+				.or(get_layer_history_handler(services.layer_service.clone())),
 		)
 		.boxed()
 }

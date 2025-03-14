@@ -249,9 +249,9 @@ mailparse = "0.15.0"
 yup-oauth2 = "10.0.1"
 oauth2 = "4.4.2"
 zip = "2.2.0"
-candle-core = { version = "0.5.0" }
-candle-transformers = { version = "0.5.0" }
-candle-nn = { version = "0.5.0" }
+candle-core = { version = "0.8.3" }
+candle-transformers = { version = "0.8.3" }
+candle-nn = { version = "0.8.3" }
 onedrive-api = "0.10.0"
 secrecy = "0.8.0"
 ollama-rs = { version = "0.2.0", features = [
@@ -286,7 +286,6 @@ tar = "0.4.42"
 flate2 = "1.0.34"
 aws-sdk-sts = "1.51.0"  # Security Token Service (STS) client
 rustforce = "0.2.2"
-tch = "0.19.0"
 petgraph="0.7.1"
 ndarray = "0.15"
 

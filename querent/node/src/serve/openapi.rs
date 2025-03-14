@@ -18,7 +18,7 @@
 
 use crate::{
 	cluster_api::ClusterApi, discovery_api::DiscoveryApi, health_check_api::HealthCheckApi,
-	insight_api::rest::InsightsApi, SemanticApi,
+	insight_api::rest::InsightsApi, layer_api::LayerApi, SemanticApi,
 };
 use std::mem;
 use utoipa::{openapi::Tag, OpenApi};
@@ -54,6 +54,7 @@ pub fn build_docs() -> utoipa::openapi::OpenApi {
 	docs_base.merge_components_and_paths(SemanticApi::openapi().with_path_prefix("/api/v1"));
 	docs_base.merge_components_and_paths(DiscoveryApi::openapi().with_path_prefix("/api/v1"));
 	docs_base.merge_components_and_paths(InsightsApi::openapi().with_path_prefix("/api/v1"));
+	docs_base.merge_components_and_paths(LayerApi::openapi().with_path_prefix("/api/v1"));
 	docs_base
 }
 

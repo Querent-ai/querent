@@ -19,11 +19,11 @@
 use proto::{
 	discovery::{
 		DiscoveryAgentType, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
-		DiscoverySessionResponse, Insight, Neo4jConfig, PostgresConfig,
-		StopDiscoverySessionRequest, StopDiscoverySessionResponse, StorageConfig,
+		DiscoverySessionRequestInfo, DiscoverySessionRequestInfoList, DiscoverySessionResponse,
+		Insight, Neo4jConfig, PostgresConfig, StopDiscoverySessionRequest,
+		StopDiscoverySessionResponse, StorageConfig,
 	},
 	semantics::StorageType,
-	DiscoverySessionRequestInfo, DiscoverySessionRequestInfoList,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

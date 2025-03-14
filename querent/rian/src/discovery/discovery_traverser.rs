@@ -20,9 +20,8 @@ use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{get_querent_data_path, DocumentPayload, EventType, RuntimeType};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-use proto::{
-	discovery::{DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest},
-	DiscoveryError,
+use proto::discovery::{
+	DiscoveryError, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
 };
 use std::{
 	collections::{HashMap, HashSet},
@@ -363,7 +362,7 @@ impl Handler<DiscoveryRequest> for DiscoveryTraverse {
 
 fn process_documents(
 	traverser_results: &Vec<(String, String, String, String, String, String, String, f32)>,
-	insights: &mut Vec<proto::Insight>,
+	insights: &mut Vec<proto::discovery::Insight>,
 	document_payloads: &mut Vec<DocumentPayload>,
 	current_query_embedding: &[f32],
 	query: &str,
@@ -376,7 +375,7 @@ fn process_documents(
 			document.2.replace('_', " "), // subject
 			document.3.replace('_', " "), // object
 		);
-		let insight = proto::Insight {
+		let insight = proto::discovery::Insight {
 			document: document.1.to_string(),
 			source: document.4.to_string(),
 			relationship_strength: document.7.to_string(),
@@ -407,13 +406,13 @@ fn process_documents(
 }
 pub fn process_auto_generated_suggestions(
 	suggestions: &Vec<QuerySuggestion>,
-	insights: &mut Vec<proto::Insight>,
+	insights: &mut Vec<proto::discovery::Insight>,
 ) {
 	for suggestion in suggestions {
 		let unique_tags: HashSet<String> = suggestion.tags.iter().cloned().collect();
 		let tags: Vec<String> = unique_tags.into_iter().collect();
 
-		let insight = proto::Insight {
+		let insight = proto::discovery::Insight {
 			document: suggestion.document_source.to_string(),
 			source: suggestion.document_source.to_string(),
 			relationship_strength: suggestion.frequency.to_string(),

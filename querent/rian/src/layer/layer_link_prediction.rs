@@ -16,28 +16,22 @@
 
 // This software includes code developed by QuerentAI LLC (https://querent.xyz).
 
-use crate::discovery_traverser::process_auto_generated_suggestions;
 use actors::{Actor, ActorContext, ActorExitStatus, Handler, QueueCapacity};
 use async_trait::async_trait;
 use common::{get_querent_data_path, EventType, RuntimeType};
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
-use proto::discovery::{
-	DiscoveryError, DiscoveryRequest, DiscoveryResponse, DiscoverySessionRequest,
-};
+use proto::layer::{LayerError, LayerRequest, LayerResponse, LayerSessionRequest};
 use std::{
 	collections::{HashMap, HashSet},
 	sync::Arc,
 };
 use storage::Storage;
 use tokio::runtime::Handle;
-
-use super::insert_discovered_knowledge_async;
-
-pub struct DiscoverySearch {
+pub struct LayerLink {
 	agent_id: String,
 	timestamp: u64,
 	event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
-	discovery_agent_params: DiscoverySessionRequest,
+	layer_agent_params: LayerSessionRequest,
 	embedding_model: Option<TextEmbedding>,
 	current_query: String,
 	current_offset: i64,
@@ -45,18 +39,18 @@ pub struct DiscoverySearch {
 	current_page_rank: i32,
 }
 
-impl DiscoverySearch {
+impl LayerLink {
 	pub fn new(
 		agent_id: String,
 		timestamp: u64,
 		event_storages: HashMap<EventType, Vec<Arc<dyn Storage>>>,
-		discovery_agent_params: DiscoverySessionRequest,
+		layer_agent_params: LayerSessionRequest,
 	) -> Self {
 		Self {
 			agent_id,
 			timestamp,
 			event_storages,
-			discovery_agent_params,
+			layer_agent_params,
 			embedding_model: None,
 			current_query: "".to_string(),
 			current_offset: 0,
@@ -79,7 +73,7 @@ impl DiscoverySearch {
 }
 
 #[async_trait]
-impl Actor for DiscoverySearch {
+impl Actor for LayerLink {
 	type ObservableState = ();
 
 	async fn initialize(&mut self, _ctx: &ActorContext<Self>) -> Result<(), ActorExitStatus> {
@@ -95,7 +89,7 @@ impl Actor for DiscoverySearch {
 	fn observable_state(&self) -> Self::ObservableState {}
 
 	fn name(&self) -> String {
-		format!("DiscoverySearch-{}", self.agent_id)
+		format!("LayerLink-{}", self.agent_id)
 	}
 
 	fn queue_capacity(&self) -> QueueCapacity {
@@ -122,7 +116,7 @@ impl Actor for DiscoverySearch {
 			ActorExitStatus::Failure(_) |
 			ActorExitStatus::Panicked => return Ok(()),
 			ActorExitStatus::Quit | ActorExitStatus::Success => {
-				log::info!("Discovery agent {} exiting with success", self.agent_id);
+				log::info!("Layer agent {} exiting with success", self.agent_id);
 			},
 		}
 		Ok(())
@@ -130,19 +124,19 @@ impl Actor for DiscoverySearch {
 }
 
 #[async_trait]
-impl Handler<DiscoveryRequest> for DiscoverySearch {
-	type Reply = Result<DiscoveryResponse, DiscoveryError>;
+impl Handler<LayerRequest> for LayerLink {
+	type Reply = Result<LayerResponse, LayerError>;
 
 	async fn handle(
 		&mut self,
-		message: DiscoveryRequest,
+		message: LayerRequest,
 		_ctx: &ActorContext<Self>,
 	) -> Result<Self::Reply, ActorExitStatus> {
 		let embedder = match self.embedding_model.as_ref() {
 			Some(embedder) => embedder,
 			None => {
-				return Ok(Err(DiscoveryError::Unavailable(
-					"Discovery agent embedding model is not initialized".to_string(),
+				return Ok(Err(LayerError::Unavailable(
+					"Layer agent embedding model is not initialized".to_string(),
 				)));
 			},
 		};
@@ -158,7 +152,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 		}
 		let embeddings = embedder.embed(vec![&self.current_query], None)?;
 		let current_query_embedding = &embeddings[0];
-		let mut insights = Vec::new();
+		let insights = Vec::new(); // TODO Link Prediction Experiment
 		let mut documents = Vec::new();
 		let mut unique_sentences: HashSet<String> = HashSet::new();
 		let mut top_pairs_incoming = message.top_pairs.clone();
@@ -188,7 +182,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 			if *event_type == EventType::Vector {
 				for storage in storage.iter() {
 					if self.current_query.is_empty() && self.current_top_pairs.is_empty() {
-						let auto_suggestions = match storage.autogenerate_queries(3).await {
+						let _auto_suggestions = match storage.autogenerate_queries(3).await {
 							Ok(suggestions) => suggestions,
 							Err(e) => {
 								tracing::info!("Failed to auto-generate queries: {:?}", e);
@@ -196,9 +190,9 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 							},
 						};
 
-						process_auto_generated_suggestions(&auto_suggestions, &mut insights);
+						//process_auto_generated_suggestions(&auto_suggestions, &mut insights);
 
-						let response = DiscoveryResponse {
+						let response = LayerResponse {
 							session_id: message.session_id,
 							query: "Auto-generated suggestions".to_string(),
 							insights,
@@ -255,7 +249,7 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 								.similarity_search_l2(
 									message.session_id.clone(),
 									message.query.clone(),
-									self.discovery_agent_params.semantic_pipeline_id.clone(),
+									self.layer_agent_params.semantic_pipeline_id.clone(),
 									current_query_embedding,
 									10,
 									self.current_offset + total_fetched,
@@ -324,16 +318,15 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 											if let Some(source) =
 												results.iter().find(|doc| doc.sentence == sentence)
 											{
-												let formatted_document =
-													proto::discovery::Insight {
-														document: source.doc_id.clone(),
-														source: source.doc_source.clone(),
-														relationship_strength: total_strength
-															.to_string(),
-														sentence,
-														tags: formatted_tags,
-														top_pairs: top_pairs_incoming.to_vec(),
-													};
+												let formatted_document = proto::layer::Insight {
+													document: source.doc_id.clone(),
+													source: source.doc_source.clone(),
+													relationship_strength: total_strength
+														.to_string(),
+													sentence,
+													tags: formatted_tags,
+													top_pairs: top_pairs_incoming.to_vec(),
+												};
 
 												documents.push(formatted_document);
 											} else {
@@ -358,14 +351,10 @@ impl Handler<DiscoveryRequest> for DiscoverySearch {
 					}
 
 					self.current_offset += total_fetched;
-					tokio::spawn(insert_discovered_knowledge_async(
-						storage.clone(),
-						fetched_results,
-					));
 				}
 			}
 		}
-		let response = DiscoveryResponse {
+		let response = LayerResponse {
 			session_id: message.session_id,
 			query: self.current_query.to_string(),
 			insights: documents,

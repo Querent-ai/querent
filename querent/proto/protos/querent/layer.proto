@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package querent.layer;
+
+// Start a layer agent to query insights from data
+// The agent will respond with insights layereded based on the user's query
+// The agent use vector and graph embeddings to layered insights from data
+message LayerSessionRequest {
+  // Name of the layer agent
+  string agent_name = 1;
+  // Semantic pipeline ID
+  string semantic_pipeline_id = 2;
+  // Layer Session Type
+  LayerAgentType session_type = 3;
+}
+
+// Enum for LayerSessionType, either Retriever or Traverser
+message LayerAgentType {
+  string session_type = 1;
+}
+
+
+// Session AgentID as a response
+message LayerSessionResponse {
+  // The ID of the layer session
+  string session_id = 1;
+}
+
+// Request message for querying insights from data
+message LayerRequest {
+  // The ID of the layer session
+  string session_id = 1;
+  // The query or question posed by the user
+  string query = 2;
+  // The subject - object pairs based on the user selected filter
+  repeated string top_pairs = 3;
+}
+
+// Response message containing insights layereded from the data
+message LayerResponse {
+  // The ID of the layer session
+  string session_id = 1;
+  // Query or question posed by the user
+  string query = 2;
+  // The insights layereded based on the user's query
+  repeated Insight insights = 3;
+  // The search result page number
+  int32 page_ranking = 4;
+}
+
+// Request to stop the layer session
+message StopLayerSessionRequest {
+  // The ID of the layer session
+  string session_id = 1;
+}
+
+// Response to stop the layer session
+message StopLayerSessionResponse {
+  // The ID of the layer session
+  string session_id = 1;
+}
+
+// Represents an insight layereded from the data
+message Insight {
+  // The document id of the search result
+  string document = 1;
+   // The document source
+  string source = 2;
+   // The attention score retrieved from the search result
+  string relationship_strength = 3;
+   // The sentence retrieved from the search resulty
+  string sentence = 4;
+   // The tags of the search result, comma separated subject, object , predicate
+  string tags = 5;
+  // The top 10 subject_object_pairs, comma separated e.g. subject 1 - object 1, subject 2 - object 2 etc.
+  repeated string top_pairs = 6;
+}
+
+message LayerSessionRequestInfo{
+  string session_id = 1;
+  LayerSessionRequest request = 2;
+}
+
+message LayerSessionRequestInfoList{
+  repeated LayerSessionRequestInfo requests = 1;
+}
+
+message Empty {}
+
+// The Layer service provides a method to query insights from data
+service Layer {
+  // Start a layer session to query insights from data
+  rpc StartLayerSession(LayerSessionRequest) returns (LayerSessionResponse) {}
+  
+  // Query insights from data
+  rpc LayerInsights(LayerRequest) returns (LayerResponse) {}
+
+  // Stop the layer session
+  rpc StopLayerSession(StopLayerSessionRequest) returns (StopLayerSessionResponse) {}
+
+  // List all layer sessions
+  rpc ListLayerSessions(Empty) returns (LayerSessionRequestInfoList) {}
+}
