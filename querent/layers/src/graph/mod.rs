@@ -1,5 +1,7 @@
+pub mod gat;
 pub mod gcn;
 pub mod gin;
+pub mod hgcn;
 pub mod utils;
 
 use std::collections::HashMap;
