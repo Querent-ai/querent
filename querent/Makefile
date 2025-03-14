@@ -15,22 +15,22 @@ CBINDGEN=${HOME}/.cargo/bin/cbindgen
 .PHONY: check
 check:
 	@echo "Running Cargo check..."
-	@. cargo check --all --all-features --all-targets
+	@cargo check --all --all-features --all-targets
 
 .PHONY: test
 test:
 	@echo "Running Cargo test..."
-	@. cargo test --all --all-features --all-targets
+	@cargo test --all --all-features --all-targets
 
 .PHONY: clippy
 clippy:
 	@echo "Running Cargo clippy..."
-	@. cargo clippy --all --all-features --all-targets -- -D warnings
+	@cargo clippy --all --all-features --all-targets -- -D warnings
 
 .PHONY: deny
 deny:
 	@echo "Running Cargo deny..."
-	@. cargo deny check -c .cargo-deny.toml
+	@cargo deny check -c .cargo-deny.toml
 
 .PHONY: format
 format:

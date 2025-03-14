@@ -16,6 +16,7 @@ struct Mlp {
 	normalization_fn: BatchNorm,
 	fc2: Linear,
 }
+
 impl Mlp {
 	fn new(
 		in_dim: usize,
@@ -34,24 +35,28 @@ impl Mlp {
 		})
 	}
 }
+
 impl ModuleT for Mlp {
 	fn forward_t(&self, xs: &Tensor, train: bool) -> Result<Tensor> {
 		let xs = self.fc1.forward(xs)?;
 		let xs = self.activation_fn.forward(&xs)?;
 		let xs = self.dropout.forward(&xs, train)?;
-		let xs = self.normalization_fn.forward(&xs)?;
+		let xs = self.normalization_fn.forward_train(&xs)?;
 		let xs = self.fc2.forward(&xs)?;
 		Ok(xs)
 	}
 }
+
 pub struct GinConv {
 	nn: Box<dyn ModuleT>,
 }
+
 impl GinConv {
 	pub fn new(nn: Box<dyn ModuleT>, _vs: VarBuilder) -> Result<Self> {
 		Ok(Self { nn })
 	}
 }
+
 impl GnnModule for GinConv {
 	fn forward_t(&self, xs: &Tensor, edge_index: &Tensor, train: bool) -> Result<Tensor> {
 		let out = sum_agg(xs, edge_index, xs)?;
@@ -68,9 +73,11 @@ impl Default for GinParams {
 		Self { activation_fn: Activation::Relu, dropout_rate: 0.5 }
 	}
 }
+
 pub struct Gin {
 	layers: Vec<GinConv>,
 }
+
 impl Gin {
 	pub fn new(sizes: &[usize], vs: VarBuilder) -> Result<Self> {
 		Self::with_params(sizes, GinParams::default(), vs)
@@ -93,6 +100,7 @@ impl Gin {
 		Ok(Self { layers })
 	}
 }
+
 impl GnnModule for Gin {
 	fn forward_t(&self, x: &Tensor, edge_index: &Tensor, _train: bool) -> Result<Tensor> {
 		let mut h = x.clone();
