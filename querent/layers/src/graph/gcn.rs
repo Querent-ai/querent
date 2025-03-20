@@ -1,5 +1,8 @@
 use candle_core::{DType, Device, IndexOp, Result, Tensor};
-use candle_nn::{Activation, Dropout, Init, Module, VarBuilder, VarMap};
+use candle_nn::{
+	init::{FanInOut, NonLinearity, NormalOrUniform},
+	Activation, Dropout, Init, Module, VarBuilder, VarMap,
+};
 
 use super::{
 	utils::{in_degree, out_degree, weighted_sum_agg},
@@ -26,12 +29,16 @@ pub struct GcnConv {
 
 impl GcnConv {
 	pub fn new(in_dim: usize, out_dim: usize, vs: VarBuilder) -> Result<Self> {
-		let bound = (6.0 / (in_dim + out_dim) as f64).sqrt();
 		let weight = vs.get_with_hints(
 			(in_dim, out_dim),
 			"weight",
-			Init::Uniform { lo: -bound, up: bound },
+			Init::Kaiming {
+				dist: NormalOrUniform::Uniform,
+				fan: FanInOut::FanIn,
+				non_linearity: NonLinearity::Linear, // Linear is closest to Glorot
+			},
 		)?;
+
 		let bias = vs.get_with_hints(out_dim, "bias", Init::Const(0.0))?;
 		Ok(Self { weight, bias })
 	}

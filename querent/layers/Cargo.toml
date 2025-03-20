@@ -77,6 +77,8 @@ pdf-extract = { workspace = true }
 image = { workspace = true }
 petgraph = { workspace = true }
 llms = { workspace = true }
+storage = { workspace = true }
 rand = { workspace = true }
 candle-core = { workspace = true }
 candle-nn = { workspace = true }
+fastembed = { workspace = true }

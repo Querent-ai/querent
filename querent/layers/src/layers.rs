@@ -1,7 +1,8 @@
-use candle_core::{Device, Tensor};
-use petgraph::graph::{Graph, NodeIndex};
+use async_trait::async_trait;
+use common::SemanticKnowledgePayload;
+use petgraph::{adj::NodeIndex, graph::Graph, Directed};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 
 /// Error types for neural network operations.
@@ -18,53 +19,80 @@ pub enum LayersErrorKind {
 	Io,
 	NotFound,
 	ModelError,
+	InvalidInput,
 }
 
 /// Result type alias.
 pub type LayersResult<T> = Result<T, LayersError>;
 
-/// Trait for neural network models supporting link prediction.
-pub trait NNLayer: Sized {
-	/// Encodes node embeddings.
-	fn encode(
+/// Graph data structure.
+#[derive(Clone)]
+pub struct GraphData {
+	pub graph: Graph<String, (), Directed>,
+	pub node_map: HashMap<String, NodeIndex>,
+	pub embeddings: HashMap<NodeIndex, Vec<f32>>,
+	pub is_directed: bool,
+}
+
+/// Training result.
+pub struct TrainResult {
+	pub final_loss: f32,
+	pub epoch_losses: Vec<f32>,
+}
+
+/// Predicted relationship with confidence score.
+pub struct PredictionResult {
+	pub source: String,
+	pub target: String,
+	pub probability: f32,
+}
+
+/// Negative sample structure.
+pub struct NegativeSample {
+	pub source: usize,
+	pub target: usize,
+	pub weight: f32,
+}
+
+/// Multi-hop reasoning result.
+pub struct MultiHopPath {
+	pub path: Vec<String>,
+	pub confidence: Option<f32>,
+}
+
+/// Model format
+pub enum ModelFormat {
+	Json,
+	Binary,
+}
+
+/// Async Trait for neural network models supporting link prediction.
+#[async_trait]
+pub trait GraphExperiment {
+	/// Loads the graph data and node mapping.
+	async fn load_data(&mut self, data: Vec<SemanticKnowledgePayload>) -> LayersResult<GraphData>;
+	/// Computes the embeddings for the graph.
+	async fn compute_embeddings(&mut self) -> LayersResult<()>;
+	/// Trains the GCN model.
+	async fn train(&mut self, epochs: usize, learning_rate: f32) -> LayersResult<TrainResult>;
+	/// Predicts missing relationships between nodes.
+	async fn predict_links(&self, source: &str, target: &str) -> LayersResult<PredictionResult>;
+	/// Generates negative samples for training.
+	async fn generate_negative_samples(
 		&self,
-		input: &Tensor,
-		edge_index: &Tensor,
-		edge_attr: Option<&Tensor>,
-	) -> LayersResult<Option<&Tensor>>;
-
-	/// Decodes edge probabilities.
-	fn decode(&self, z: &Tensor, edge_index: &Tensor) -> LayersResult<Tensor>;
-
-	/// Performs a single training step.
-	fn train(&mut self, input: &Tensor, edge_index: &Tensor, target: &Tensor) -> LayersResult<f64>;
-
-	/// Computes the reconstruction loss.
-	fn compute_loss(&self, z: &Tensor, pos_edges: &Tensor, neg_edges: &Tensor)
-		-> LayersResult<f64>;
-
-	/// Predicts missing links using negative sampling.
-	fn predict(
-		&self,
-		z: &Tensor,
-		edge_index: &Tensor,
 		num_samples: usize,
-	) -> LayersResult<Vec<(usize, usize, f64)>>;
-
-	/// Evaluates link prediction using AUC and Precision-Recall AUC.
-	fn evaluate(&self, pos_probs: &Tensor, neg_probs: &Tensor) -> LayersResult<(f64, f64)>;
-
-	/// Generates insights by analyzing multi-hop reasoning using Petgraph.
-	fn multi_hop_reasoning(
+	) -> LayersResult<Vec<NegativeSample>>;
+	/// Performs multi-hop reasoning.
+	async fn multi_hop_reasoning(
 		&self,
-		graph: &Graph<usize, ()>,
-		src: NodeIndex,
-		tgt: NodeIndex,
-	) -> LayersResult<Option<Vec<NodeIndex>>>;
-
-	/// Generates natural language insights from the predicted links.
-	fn generate_insights(&self, subject: &str, object: &str, contexts: &[String]) -> String;
-
-	/// Sets the computation device (CPU/GPU).
-	fn set_device(&mut self, device: Device) -> LayersResult<()>;
+		source: &str,
+		target: &str,
+		max_hops: usize,
+	) -> LayersResult<MultiHopPath>;
+	/// Saves the model to disk.
+	async fn save_model(&self, path: &str, format: ModelFormat) -> LayersResult<()>;
+	/// Loads the model from disk.
+	async fn load_model(&self, path: &str) -> LayersResult<()>;
+	/// Generate natural language explanations for the model.
+	async fn explain(&self, source: &str, target: &str) -> LayersResult<String>;
 }
