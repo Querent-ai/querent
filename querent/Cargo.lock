@@ -12831,6 +12831,55 @@ dependencies = [
 ]
 
 [[package]]
+name = "strataiq-core"
+version = "1.1.0"
+dependencies = [
+ "actors",
+ "anyhow",
+ "async-openai",
+ "async-stream",
+ "async-trait",
+ "base64 0.21.7",
+ "chrono",
+ "cluster",
+ "common 1.1.0",
+ "crossbeam-channel",
+ "csv",
+ "engines",
+ "fastembed",
+ "futures",
+ "futures-util",
+ "hex",
+ "ingestors",
+ "insights",
+ "log 0.4.22",
+ "once_cell",
+ "proto",
+ "readability",
+ "regex",
+ "reqwest 0.12.8",
+ "reqwest-eventsource",
+ "serde",
+ "serde_json",
+ "sources",
+ "sp-core",
+ "sp-runtime",
+ "storage",
+ "text-splitter",
+ "thiserror",
+ "tiktoken-rs",
+ "tokenizers 0.15.2",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.9.2",
+ "tracing",
+ "url 2.5.2",
+ "urlencoding",
+ "utoipa 4.2.3",
+ "uuid",
+]
+
+[[package]]
 name = "string_cache"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

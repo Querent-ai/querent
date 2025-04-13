@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["sources", "ingestors", "engines", "llms", "insights", "actors", "common", "rian", "storage", "cluster", "node", "codegen", "proto", "layers"]
+members = ["sources", "ingestors", "engines", "llms", "insights", "actors", "common", "rian", "storage", "cluster", "node", "codegen", "proto", "layers", "strataiq"]
 
 [profile.dev]
 debug = false
@@ -188,6 +188,7 @@ log = { version = "^0.4.17", features = [
 actors = { version = "1.1.0", path = "./actors" }
 common = { version = "1.1.0", path = "./common" }
 rian-core = { version = "1.1.0", path = "./rian" }
+strataiq-core = { version = "1.1.0", path = "./strataiq" }
 storage = { version = "1.1.0", path = "./storage" }
 cluster = { version = "1.1.0", path = "./cluster" }
 codegen = { version = "1.1.0", path = "./codegen" }
